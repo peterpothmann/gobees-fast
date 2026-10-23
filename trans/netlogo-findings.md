@@ -13,6 +13,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Affects:** only `Weather = "foragingHoursExample"`. The default `"Constant 8 hrs"` is not affected.
 - **Consequence for gobees:** copy the list exactly, with 366 items.
 - **Second Check**: 23-10-2026, PP
+- **Implemented:** `util/foraging_period.go`, list generated token by token from the NetLogo code. Test: `util/foraging_period_test.go` (366 items, day 42 = 0 h, day 43 = 0.5 h).
 
 ### 2. `Habitats.csv` is needed for a simulation run
 
@@ -20,6 +21,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Finding:** During setup, `ParametersProc` calls `AllCSOlistREP`. The reporter reads the `HabitatsFile` and collects the `habitatType` of all rows whose `habitatColourID` contains the text `FlowerSpeciesList_`. For `_SYSTEM_Habitats.csv` the result is `["Legume" "Margin" "newCSO_Legume" "BirdBumble_Margin" "GameCover_Plot" "Plot"]`. `CreateLayersProc` needs this list to recognise entries like `["Margin"]` in a `flowerSpeciesList`. Rows with a numeric `habitatColourID` are skipped silently by `carefully`.
 - **Consequence for gobees:** the `HabitatsFile` is an input file of every run, not only of map processing.
 - **Second Check**: 23-10-2026, PP
+- **Implemented:** `allCSOList` in `sys/parameters.go`. Test: `sys/parameters_test.go` (the 6 names for the default files).
 
 ### 3. `ListFromStringREP` handles edge cases differently from Go
 
@@ -34,6 +36,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Why it matters:** `CropRotationListAsString` is `""` by default. NetLogo turns it into `[""]` with length 1, and `UpdateMorning_Proc` starts the crop rotation only for a length greater than 1.
 - **Consequence for gobees:** a dedicated function with exactly this behaviour, plus a test for both edge cases.
 - **Second Check**: 23-10-2026, PP
+- **Implemented:** `util/list_from_string.go`. Test: `util/list_from_string_test.go`. `sys/parameters_test.go` checks that the default crop rotation gives `[""]`.
 
 ### 4. Setup runs at `Day = 0`
 
@@ -63,6 +66,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
   With 0, foragers never die during foraging and queens never die during nest search. The model runs normally, but with different dynamics.
 - **Consequence for gobees:** keep the behaviour. In Go a `float64` also starts at 0, so a `switch` without `default` reproduces it exactly. A warning when reading the parameters (e.g. "unknown ForagingMortalityModel, foraging mortality is 0") would not change the dynamics, helps against typos and should be implemented.
 - **Second Check**: 23-10-2026, PP
+- **Implemented:** `mortalityForager` in `sys/parameters.go`, with the warning. Test: `sys/parameters_test.go` (`"High"`, `"medium"` and `""` give 0).
 
 ### 6. The parameter file and `ParametersProc` share no names
 
@@ -78,6 +82,14 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Finding:** The global `Date` is set in `UpdateMorning_Proc` and only shown in the interface. No model procedure reads it. The model works with `Day`, which `UpdateMorning_Proc` computes separately.
 - **Consequence for gobees:** `DateREP` is not translated.
 - **Second Check**: 23-10-2026, PP
+
+### 13. With the default interface settings, NetLogo reads `_SYSTEM_Example_Farm_Parameters.csv`
+
+- **Code:** `[INIT-02]`, `[RPAR-01]`
+- **Finding:** The interface stores `MyMap = "_SYSTEM_Example_Farm.png"` and `MyParametersFile = "_SYSTEM_Example_Farm_Parameters.csv"`. For exactly this combination, `[INIT-02]` sets `ProjectsOwnParameterFile?` to false, so `ReadAllParametersProc` loads `MyParametersFile`. A default run therefore uses `_SYSTEM_Example_Farm_Parameters.csv`, not `_SYSTEM_Parameters.csv`. The two files differ only in `SetColour` (`"Magenta"` vs. `"Yellow"`, display only) and in the spelling `true`/`TRUE`. For the model they are equal.
+- **Consequence for gobees:** `main.go` reads `_SYSTEM_Example_Farm_Parameters.csv`, like a default NetLogo run.
+- **Second Check**: 23-10-2026, PP
+- **Implemented:** `main.go`. Test: `params/parameter_file_test.go` reads both files.
 
 ## Findings from the model map and from `Go`
 

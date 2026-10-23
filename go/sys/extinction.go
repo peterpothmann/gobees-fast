@@ -17,17 +17,19 @@ import (
 type Extinction struct {
 	termRes    *resource.Termination
 	termParams *params.Termination
+	file       *params.ParameterFile
 	ticks      *globals.Ticks
 }
 
 func (s *Extinction) Initialize(w *ecs.World) {
 	s.termRes = ecs.GetResource[resource.Termination](w)
 	s.termParams = ecs.GetResource[params.Termination](w)
+	s.file = ecs.GetResource[params.ParameterFile](w)
 	s.ticks = ecs.GetResource[globals.Ticks](w)
 }
 
 func (s *Extinction) Update(w *ecs.World) {
-	// The extinction check (count Colonies + count Bees = 0, TimeToExtinction, Survived?)
+	// The extinction check (count Colonies + count Bees = 0, TimeToExtinction, Survived?, s.file.StopExtinct)
 	// is not yet translated, as there are no colonies and bees yet.
 	if s.termParams.MaxTicks > 0 && s.ticks.Ticks >= int64(s.termParams.MaxTicks) {
 		s.termRes.Terminate = true
