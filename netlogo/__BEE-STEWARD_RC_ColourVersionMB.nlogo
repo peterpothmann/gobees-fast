@@ -689,6 +689,14 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [NHAB] NestHabitatsListREP
+; Called by: CreateSpeciesProc [SPEC-04]
+; Context:   oneSpecies (runs inside create-Species)
+; Purpose:   expands entries ending with "*" in a species' nestHabitatsList to all habitat types on the map
+;            that contain this text, e.g. "Grassland*" -> "Grassland_neutral1", "Grassland_neutral2", ...
+; Translate: yes
+; ===============================================================================
 ; *MB RC* NEW REPORTER PROCEDURE
 to-report NestHabitatsListREP [myNestHabitatsList]
 ; replaces some generic entries (marked with *) of nestHabitatsList by specific habitat types
@@ -697,6 +705,8 @@ to-report NestHabitatsListREP [myNestHabitatsList]
 
 ;let allHabitatsList ["Grassland_neutral1" "Grassland_neutral2" "Grassland_neutral3"]
 
+; [NHAB-01] all habitat types (patchType) of the masterpatches on the map, each once, in the random order of ask.
+;           ORDER: irrelevant because nestHabitatsList is only used with member? (CreateSpeciesProc, CropRotationProc).
 let allHabitatsList [] ; will contain all habitat types actually present on the map
 ask foodsources with [masterpatch? = true] ; only materpatches need to be addressed
 [
@@ -709,6 +719,11 @@ ask foodsources with [masterpatch? = true] ; only materpatches need to be addres
 let resultList [] ; this list will finally be reported
 ;type "myNestHabitatsList: " print myNestHabitatsList
 
+; [NHAB-02] entry with "*": the last character is removed, then every habitat type on the map that CONTAINS the rest
+;           (substring, case-sensitive) is added, e.g. "Grassland*" also matches "Improved_Grassland".
+;           A "*" anywhere else than at the end causes an assertion.
+;           Entry without "*": copied as it is, also if this habitat type does not exist on the map.
+;           Duplicates are possible (no remove-duplicates), irrelevant for member?.
 foreach myNestHabitatsList ; goes through all suitable nesting habitat of the current BB species
 [
   ; CAUTION: Netlogo 'member?'-command is CASE SENSITIVE!!!
@@ -733,7 +748,18 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [SPEC] CreateSpeciesProc
+; Called by: SetupWithoutClearingProc [INIT-07]. CropRotationProc repeats the nest-site part [SPEC-06].
+; Context:   observer
+; Purpose:   creates one oneSpecies agent per simulated species with the parameters from the BeespeciesFile,
+;            derived development values and the list of nest-site foodsources.
+;            Runs after CreateFoodsourcesProc, because the nest sites are foodsources.
+; Translate: yes
+; ===============================================================================
 to CreateSpeciesProc
+ ; [SPEC-01] read the species table. BeeSpeciesDefinedList collects column 1 of all rows (header removed at the end).
+ ;           It is only read by the GUI (ButtonInitialQueensProc), not translated.
  let speciesDataCSV csv:from-file BeespeciesFile ; a csv input file is loaded and saved
  let header item 0 speciesDataCSV  ; first line of the input file is the header
  set BeeSpeciesDefinedList []
@@ -741,10 +767,17 @@ to CreateSpeciesProc
   [
     ; CAUTION: Netlogo 'member?'-command is CASE SENSITIVE!!!
     set BeeSpeciesDefinedList lput item 0 ? BeeSpeciesDefinedList
+    ; [SPEC-02] one species per file row whose first column ("species") is in SpeciesList (case-sensitive).
+    ;           Species are created in FILE order, not in the order of BeeSpeciesInitialQueensList, so their who
+    ;           numbers follow the file. A row listed twice in the file creates the species twice. A name in
+    ;           SpeciesList that is missing in the file creates no species (CreateInitialQueensProc then fails).
     if member? item 0 ? SpeciesList ; if the species (i.e.first entry) of the current row is member of the SpeciesList (i.e. the list with those bee species added to the simulation, which was created in ParametersProc)
     [
       create-Species 1
       [
+        ; [SPEC-03] copy the columns by header name. Column "dailyNestSiteChance" goes to chanceFindNest.
+        ;           NOTE: emergingDay_sd is ROUNDED (default file: 14.5 -> 15, 20.5 -> 21, 30.5 -> 31).
+        ;           flightCosts_kJ/m/mg is derived from the constant MetabolicRateFlight_W/kg [PAR-03].
         set name item (position "name" header) ?  ; checks in which column of the input data the species are listed and uses the value of the current row
         set maxLifespanWorkers item (position  "maxLifespanWorkers" header) ?
         set emergingDay_mean item (position "emergingDay_mean" header) ?
@@ -757,6 +790,7 @@ to CreateSpeciesProc
         set timeUnloading item (position "timeUnloading" header) ?
         set specMax_cropVolume_myl item (position "specMax_cropVolume_myl" header) ?
         set specMax_pollenPellets_g item (position "specMax_pollenPellets_g" header) ?
+        ; [SPEC-04] nest habitats: list literal from the file, e.g. ["Grassland*" "Garden"], expanded by NestHabitatsListREP
         set nestHabitatsList []
         set nestHabitatsList read-from-string item (position "nestHabitatsList" header) ?
         set nestHabitatsList NestHabitatsListREP nestHabitatsList ; *MB RC* (new: auto-completion of nest habitats list)
@@ -777,6 +811,8 @@ to CreateSpeciesProc
         set proboscis_min_mm item (position "proboscis_min_mm" header) ?
         set proboscis_max_mm item (position "proboscis_max_mm" header) ?
         set chanceFindNest   item (position "dailyNestSiteChance" header) ?  ;dailychance for queen finding nest site
+        ; [SPEC-05] derived development values (incubation quota, maximum ages, incubation thresholds).
+        ;           dev_larvalAge_QueenDetermination_d is a constant (3 d), not from the file.
         set devQuotaIncubationToday_kJ 10 / (1.5 * batchsize)   ; 10 kJ: Silvola 1984: Queen (B. terrestris) spends ca. 10kJ/day for incubation; during this time it incubates about 1.5 batches of brood
         set devAgeHatchingMax_d devAgeHatchingMin_d * minToMaxFactor
         set devAgePupationMax_d devAgePupationMin_d * minToMaxFactor - devAgeHatchingMin_d
@@ -790,11 +826,17 @@ to CreateSpeciesProc
         set devIncubation_Q_PupationTH_kJ devQuotaIncubationToday_kJ * devAge_Q_PupationMin_d
         set devIncubation_Q_EmergingTH_kJ devQuotaIncubationToday_kJ * devAge_Q_EmergingMin_d ; * Incubation_Q_Factor
 
+       ; [SPEC-06] nest sites: all MASTERPATCHES whose patchType is in nestHabitatsList (exact match, case-sensitive).
+       ;           nestsiteFoodsourceList is an agentset: fixed after setup, NetLogo drops dead agents from it.
+       ;           nestSiteArea: sum of their areas (a masterpatch has the area of the whole flower patch).
+       ;           ORDER: irrelevant, agentset and sum.
        ;Create list of foodSources as nest sites and calculate their total area    ; CAUTION: Netlogo 'member?'-command is CASE SENSITIVE!!!
         set nestsiteFoodsourceList    FoodSources with [ (member? patchtype [nestHabitatsList] of myself) AND masterPatch? ]
         set nestSiteArea sum [area_sqm] of nestsiteFoodsourceList
+       ; [SPEC-07] minimum pollen store before egg laying: 50 % of the pollen for one batch
        ; queen may start egg lying once 50% of pollen needed to raise 1 batch of eggs is stored:
         set minPollenStore_g 0.5 * 0.001 * devWeightPupationMin_mg * batchsize / pollenToBodymassFactor
+       ; [SPEC-08] message only: no nest sites for this species (Psithyrus needs none, it takes over host colonies)
         if count nestsiteFoodsourceList = 0 and name != "Psithyrus"
          [output-print (word name " has no suitable nesting foodsources. No colonies will form")]
       ]
@@ -1030,7 +1072,17 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [FSRC] CreateFoodsourcesProc
+; Called by: SetupWithoutClearingProc [INIT-06], CropRotationProc
+; Context:   observer
+; Purpose:   reads the FoodsourcesFile: one foodsource (flower patch) per line. Optionally merges small hedges
+;            (MergeHedgesProc), then splits every flower patch into one layer per flower species (CreateLayersProc).
+;            These are the first turtles of the run (PanelSettingProc creates none), so who numbers start at 0.
+; Translate: partly. The map image and all display settings are GUI only.
+; ===============================================================================
 to CreateFoodsourcesProc
+  ; [FSRC-01] GUI ONLY, not translated: map image as background (patch colours)
   ifelse ( file-exists? MyMap )
    [
      import-pcolors MyMap
@@ -1045,10 +1097,18 @@ to CreateFoodsourcesProc
     ]
   ifelse ( file-exists? FoodsourcesFile )
     [
+      ; [FSRC-02] line 1: metres per NetLogo patch. Scaling_NLpatches/m = 1 / value, ROUNDED to 8 decimals (precision).
+      ;           All distances in the model are converted with this value.
       file-open FoodsourcesFile
       set SCALING_NLpatches/m precision (1 / file-read) 8  ; CAUTION! Scaling in BEESCOUT: m/NLpatch; Scaling Bumbleworld: NLpatches per m !!!
+      ; [FSRC-03] skip the header. Line 2 is either the number of flower patches (old format, <= 10 characters,
+      ;           then line 3, the header, is skipped as well) or the header itself (new format).
+      ;           _SYSTEM_Example_Farm_Foodsources.txt: line 1 "10", line 2 "73", line 3 header, 73 data lines.
       let dustbin file-read-line  ; N patches in old input file format or heading in new format
       if length dustbin <= 10 [ set dustbin file-read-line ] ; heading
+      ; [FSRC-04] one foodsource per data line. Columns 1-8 are read with file-read as NetLogo values
+      ;           (strings in quotes, flowerSpeciesList as nested list [["Bramble" 0.331] ...]).
+      ;           Column 9 (patchInfo) is the raw rest of the line, incl. leading blank and quotes, e.g. ' "no info" '.
       while [ not file-at-end? ]
       [
         create-foodsources 1
@@ -1069,6 +1129,8 @@ to CreateFoodsourcesProc
           set perimeter_m file-read   ;   column 8: perimeter_m NEW FOR BEESTEWARD!
           set occurrence "Patch"   ; NEW FOR BEESTEWARD!
           set patchInfo file-read-line        ; column 9: patchInfo: the rest of the line is now read in
+          ; [FSRC-05] radius of a circle with this area. Read by DetectionProbREP and NestSitesSearchingProc.
+          ;           shape, size, show/hide-turtle: GUI only.
           set radius_m sqrt (area_sqm / pi)   ; [m]
           set shape "circle"
           set size FoodsourceSymbolSizeFactor * radius_m * Scaling_NLpatches/m
@@ -1076,12 +1138,20 @@ to CreateFoodsourcesProc
           ifelse ShowFoodsources? = false
             [ hide-turtle ]
             [ show-turtle ]
+          ; [FSRC-06] every flower patch is its own masterpatch for now. CreateLayersProc replaces it by its layers.
           set masterpatch? true
           set layersInPatchList (list who)
           set masterpatchID who
+          ; [FSRC-07] not translated: farmland? is never read anywhere in the code, so MyFarmlandPatches has no effect.
+          ;           stewardshipSpeciesList is only used by the stewardship GUI.
+          ;           SIMPLIFY: drop farmland?, MyFarmlandPatches and stewardshipSpeciesList.
           set farmland? false
           if member? (word " " who " ") MyFarmlandPatches [ set farmland? true ]    ; CAUTION: Netlogo 'member?'-command is CASE SENSITIVE!!!
           set stewardshipSpeciesList []
+          ; [FSRC-08] MapAreaIncluded: remove flower patches outside the chosen part of the map
+          ;           (max-pxcor / 2 = 150, max-pycor / 2 = 105). Default "complete" removes nothing.
+          ;           NOTE: the foodsource was already created and has used up a who number before it dies,
+          ;           so who numbers have gaps. The Who counter in gobees must count these too.
           if MapAreaIncluded = "top left quarter" and (xcor > max-pxcor / 2 or ycor < max-pycor / 2)  [ die ]
           if MapAreaIncluded = "top right quarter" and (xcor <= max-pxcor / 2 or ycor < max-pycor / 2)  [ die ]
           if MapAreaIncluded = "bottom left quarter" and (xcor > max-pxcor / 2 or ycor >= max-pycor / 2)  [ die ]
@@ -1095,12 +1165,16 @@ to CreateFoodsourcesProc
       file-close
     ]
     [
+      ; [FSRC-09] no file: message, and "stop" leaves only this procedure. Setup continues without foodsources.
+      ;           In Go: error.
       user-message (word "There is no such FoodsourcesFile " FoodsourcesFile " in current directory!")
       stop
     ]
 
+    ; [FSRC-10] merge small hedge patches (MergeHedges? is TRUE in the default parameter files)
     if MergeHedges? = true [ MergeHedgesProc ]
 
+    ; [FSRC-11] GUI ONLY, not translated: area of the drawing brush
     ifelse CircularBrush? = false
      [ ; square brush
        set BrushArea_ha (BrushSize / Scaling_NLpatches/m) ^ 2 / 10000
@@ -1109,12 +1183,23 @@ to CreateFoodsourcesProc
        set BrushArea_ha (pi * ((BrushSize / Scaling_NLpatches/m) / 2) ^ 2) / 10000
      ]
 
+    ; [FSRC-12] split every flower patch into one layer per flower species
     CreateLayersProc   ; creates new foodsources from those foodsources with multiple species (i.e. with flowerSpeciesList != [] )
+    ; [FSRC-13] output only: number of foodsources incl. all layers
     set TotalFoodSources count foodsources
 end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [HEDG] MergeHedgesProc
+; Called by: CreateFoodsourcesProc [FSRC-10], only if MergeHedges? (TRUE in the default parameter files)
+; Context:   observer
+; Purpose:   each hedge patch ("Hedgerow") is linked to its nearest non-hedge flower patch of at least 6500 m2.
+;            All hedges linked to the same patch are merged into the largest of them: it gets their area,
+;            the others get area 0. Runs BEFORE CreateLayersProc, so every foodsource is still a whole flower patch.
+; Translate: yes
+; ===============================================================================
 to MergeHedgesProc
   ; hedges are often represented by a large number of very small patches. If "MinSizeFoodSources?" (and "RemoveEmptyFoodSources?") are switched on,
   ; they may only contain one (Average willow) or very few foodsources.
@@ -1123,12 +1208,19 @@ to MergeHedgesProc
   ; is determined. Then hedges sharing the same closest non-hedge patch are merged by
   ; adding up their areas to the biggest of those hedge patches, the other hedge patches get an area of 0 and will be removed in CreateLayersProc.
 
+  ; [HEDG-01] minimum area of the non-hedge patch a hedge can be linked to [m2]
   let areaTH_sqm 6500 ; 1000 ; NEW for Beestew! To reduce the risk that hedges are linked to a non-hedge patch which will disappear because it does not provide
     ; enough resources (area is used as max. nectar and pollen is not defined yet. (The actual removal TH area for Grassland is just below 800m2, other defined SNH types lower.
     ; for Improved Grassland it is below 6500m2)
   let fieldsHedgeLinksList [] ; to link hedges with their closest non-hedge field, format e.g. [[1 17] [5 29] [1 18]..] each sublist with 2 elements: 1st: who of closest non-hedge patch, 2nd: who of hedge
   let fieldsWithHedgesList [] ; contains who of all non-hedge patches that are closest to at least one hedge patch
 
+  ; [HEDG-02] hedges sorted by area, largest first. The order decides which hedge keeps the merged area [HEDG-04].
+  ;           ORDER: MATTERS. sort-on breaks ties RANDOMLY (verified in NetLogo 5.3.1, finding 14). Hedges with equal
+  ;           area are common (example farm: 30 of 44 hedges). In Go: shuffle, then stable sort by area.
+  ; [HEDG-03] for each hedge: nearest non-hedge foodsource with area >= 6500 m2 (distance between centres in
+  ;           NetLogo patches, no wrapping). min-one-of picks a random one among equally near foodsources.
+  ;           No range limit: a hedge is linked as long as any such foodsource exists on the map.
   foreach sort-on [(- area_sqm)] foodsources with [ patchType = "Hedgerow" ] ; NEW for BEESTEW: hedges are sorted by area, starting with largest.
                   ; The largest hedge patch will be kept, all other linked hedge patches add their area to it and are removed.
   [
@@ -1146,6 +1238,15 @@ to MergeHedgesProc
   ]
   set fieldsWithHedgesList remove-duplicates fieldsWithHedgesList  ; duplicates are removed from the list
 
+  ; [HEDG-04] per linked patch: the first linked hedge (= the largest, see [HEDG-02]) is the master hedge.
+  ;           Every other hedge adds its area to the master hedge, gets area 0 and is hidden.
+  ;           NOTE: the master hedge keeps its own position and flowerSpeciesList, the flower lists of the
+  ;           merged hedges are lost. Their area now carries the master hedge's flower mix.
+  ;           NOTE: nectarMax_myl and pollenMax_g are still 0 here (set only in CreateLayersProc),
+  ;           so adding them has no effect. SIMPLIFY: drop these two additions.
+  ;           Hedges with area 0 get layers with 0 nectar and pollen in CreateLayersProc. These are removed if
+  ;           RemoveEmptyFoodSources? (TRUE in the default parameter files), otherwise they stay as empty layers.
+  ;           ORDER: irrelevant, foreach over lists.
   foreach fieldsWithHedgesList
   [
     let myFieldID ?
@@ -1176,6 +1277,8 @@ to MergeHedgesProc
        ]
      ]
    ]
+  ; [HEDG-05] new radius of all hedges (0 for merged ones). size: GUI only.
+  ;           ORDER: irrelevant, each hedge only changes itself.
   ask foodsources with [ patchType = "Hedgerow" ]
    [
      set radius_m sqrt (area_sqm / pi)   ; [m]
@@ -1188,6 +1291,15 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [LAYR] CreateLayersProc
+; Called by: CreateFoodsourcesProc [FSRC-12]
+; Context:   observer
+; Purpose:   splits every flower patch into one foodsource ("layer") per flower species of its flowerSpeciesList,
+;            at the same position, and removes the flower patch itself. The first surviving layer becomes the
+;            masterpatch. Nectar, pollen and flowering period of each layer come from the FlowerspeciesFile.
+; Translate: yes, except shapes [LAYR-11] and the stewardship area totals [LAYR-12]
+; ===============================================================================
 to CreateLayersProc
 
 ; if the flowerSpeciesList of food source is not empty (i.e. it usually contains several plant species that might be in flower at different times)
@@ -1204,12 +1316,16 @@ to CreateLayersProc
                 ; the model, which greatly improves the speed of the model.
 
  ; set minimum resource limits for foodsources. FSs with lower nectar or pollen amounts than these will have their values set to 0 if SetEmptySmallFoodSources? is TRUE
+ ; [LAYR-01] minimum resources of a layer: FoodSourceLimit trips of a queen with 180 microlitres crop and 0.05 g pollen.
+ ;           Default FoodSourceLimit 25: 4500 microlitres nectar, 1.25 g pollen. Used only if MinSizeFoodSources? [LAYR-06].
  let foodsourcesRemoved false
  let minNectSize_myl  FoodSourceLimit  * 180  ; minimum nectar for a foodsource is amount equal to "FoodSourceLimit" number of trips by a queen with a crop volume of 180myl
  let minPolsize_g     FoodSourceLimit  * 0.05 ; minimum pollen for a foodsource is amount equal to "FoodSourceLimit" number of trips by a queen with pollen pellet size of 0.05g
 
  ifelse ( file-exists? FlowerspeciesFile )
  [
+   ; [LAYR-02] read the flower species table. The names are stored as """Name""" in the file,
+   ;           read-from-string turns them into plain strings.
    let flowerspeciesDataCSV csv:from-file FlowerspeciesFile ; reads flower species data from csv file and saves it in list, i.e. [[line 1][line 2]..[last line]]
    let header item 0 flowerspeciesDataCSV  ; saves header = first line of csv file = item 0 of list
      ; e.g. ["Flowerspecies" "Default_pollen_g/m2" "Default_nectar_ml/m2" "proteinPollenProp" "concentration_mol/l" "startDay" "stopDay" "corollaDepth_mm" "nectarFlowerVolume_myl" "intFlowerTime_s"]
@@ -1221,15 +1337,31 @@ to CreateLayersProc
          ; e.g. ["Bugle" "Burdock" "Oilseed_rape" "Giant_bindweed" "Common_knapweed" ... ]
    ]
 
+   ; [LAYR-03] every flower patch with a non-empty flowerSpeciesList is split.
+   ;           ORDER: MATTERS. hatch gives the layers their who numbers in the random order of this ask. Layers of one
+   ;           flower patch get consecutive who numbers, but the order between flower patches is random. The who order
+   ;           decides the order of layersInPatchList [LAYR-10] and thereby ties in Foraging_bestLayerREP.
    ask foodsources with [ flowerSpeciesList != [] ]  ; if foodsource is composed of several flower species
    [
      let memoMasterpatchID -1
      let currentoccurrence "Patch"
+     ; [LAYR-04] walk through the flowerSpeciesList in file order. An entry whose name is a stewardship option
+     ;           (CSS_OptionsList [PAR-06], e.g. ["Margin"]) creates no layer but sets the occurrence of all
+     ;           following entries. Every other entry creates one layer with hatch.
+     ;           ORDER: irrelevant, foreach over a list.
      foreach flowerSpeciesList  ; for each flowerspecies a new foodsource is created (flowerSpeciesList is a Foodsources-own)
      [                           ; NOTE: flowerSpeciesList is a nested list, hence every item is a list itself
        ifelse member? item 0 ? CSS_OptionsList ; = true    ; "?": e.g. ["Crop_Maize" 42.462] or ["Margin"] or ["Alsike_clover" 0.009] hence item 0 ? e.g. "Margin"
          [ set currentoccurrence item 0 ? ]
          [
+           ; [LAYR-05] hatch copies ALL variables of the flower patch (position, area, patchType, patchInfo,
+           ;           masterpatch? true, masterpatchID = who of the flower patch, ...). Then the flower data is set:
+           ;             relative abundance = AbundanceBoost * value from the flowerSpeciesList
+           ;             pollenMax_g   = area_sqm * relative abundance * pollen_g/flower
+           ;             nectarMax_myl = area_sqm * relative abundance * nectar_ml/flower * 1000
+           ;           NOTE: the value is multiplied by area and by amounts PER FLOWER, so it acts as flowers per m2
+           ;           (finding 10), although it is called relative abundance.
+           ;           A flower species missing in the FlowerspeciesFile gives a message and then a runtime error.
            hatch 1
            [
              set flowerSpecies_relativeAbundanceList ?   ; e.g. ["Bugle" 0.236]
@@ -1252,12 +1384,19 @@ to CreateLayersProc
              set stopDay (item (position "stopDay" header) myDataLine)
              set corollaDepth_mm (item (position "corollaDepth_mm" header) myDataLine)
              set interFlowerTime_s (item (position "intFlowerTime_s" header) myDataLine)
+             ; not translated: farmland? is never read [FSRC-07]. NOTE: here the LAYER's who is compared with
+             ; MyFarmlandPatches, and this who depends on the random order of [LAYR-03].
              if member? (word " " who " ") MyFarmlandPatches [ set farmland? true ]    ; CAUTION: Netlogo 'member?'-command is CASE SENSITIVE!!!
+             ; [LAYR-06] MinSizeFoodSources? (TRUE in the default parameter files): nectar or pollen below the
+             ;           limits of [LAYR-01] is set to 0, each separately.
              ; Set nectar / pollen levels to 0 if smaller than the minimum size
              if MinSizeFoodSources? AND nectarMax_myl < minNectSize_myl
                [ set nectarMax_myl 0 ]
              if MinSizeFoodSources? AND pollenMax_g < minPolsize_g
                [ set pollenMax_g   0 ]
+             ; [LAYR-07] RemoveEmptyFoodSources? (TRUE in the default parameter files): a layer without nectar AND
+             ;           without pollen is removed, except if its patchType contains "Crop_" (substring).
+             ;           NOTE: the removed layer has used up a who number (see [FSRC-08]).
              ; kill the foodSource if both nectar and pollen are below the respective minimum values and if RemoveEmptyFoodSources? is TRUE
              if nectarMax_myl = 0 AND pollenMax_g = 0 AND RemoveEmptyFoodSources?   ; CAUTION: Netlogo 'member?'-command is CASE SENSITIVE!!!
                 AND member? "Crop_" patchType = false                              ; NEW FOR BEESTEW: crops are not removed to allow having e.g. margins around cerial fields
@@ -1265,6 +1404,9 @@ to CreateLayersProc
                   set foodsourcesRemoved true
                   die
                ]
+             ; [LAYR-08] the first SURVIVING layer of the flower patch becomes the masterpatch (masterpatchID = own who).
+             ;           All further layers: masterpatch? false, masterpatchID = who of the masterpatch, hidden.
+             ;           If all layers are removed, the flower patch disappears completely.
              ifelse memoMasterpatchID < 0  ; if the masterpatch hasn't been set yet..
              [
                set memoMasterpatchID who  ; ..the first foodsource/layer will be the masterpatch
@@ -1282,14 +1424,26 @@ to CreateLayersProc
        ;set currentoccurrence "Patch" ; occurrence needs to be set back to default ("Patch"), otherwise all other foodsources will be implemented as CSS option
 
      ]  ; end of "foreach flowerSpeciesList" loop
+     ; [LAYR-09] the flower patch itself is removed, only its layers remain.
+     ;           NOTE: a foodsource with an EMPTY flowerSpeciesList is not split and stays as it is: a masterpatch
+     ;           with nectarMax_myl = pollenMax_g = 0 and startDay = stopDay = 0 (values after create), so it never
+     ;           offers food. It can still be a nest site [SPEC-06]. (The example farm file has no empty list.)
      die ; the original foodsource  is no longer needed and can be removed
    ]
  ]
+ ; no FlowerspeciesFile: message (unless "No Input File"), no layers are created. In Go: error.
  [ if FlowerspeciesFile != "No Input File"
    [ user-message "There is no such FlowerspeciesFile in current directory!" ]
  ]
 ; if foodsourcesRemoved = true [ output-print "One or more very small food sources removed! To avoid, set RemoveEmptyFoodSources? 'false'!" ]
 
+ ; [LAYR-10] layersInPatchList of EVERY foodsource (not only of masterpatches, unlike the comment at the declaration):
+ ;           all foodsources on the same NetLogo PATCH CELL, sorted by who. Read by Foraging_bestLayerREP.
+ ;           NOTE: same cell, not same flower patch. Layers of another flower patch whose centre lies in the same
+ ;           cell (patch = rounded coordinates) are included and can be chosen by foragers.
+ ;           ORDER: irrelevant for this ask (each foodsource only changes itself), but the sort uses the who order
+ ;           of [LAYR-03].
+ ;           [LAYR-11] GUI ONLY, not translated: shapes for Margin, Plot and Legume.
  ; set layersInPatchList to a list of all foodsources at same location
  ask foodsources
  [
@@ -1311,6 +1465,9 @@ to CreateLayersProc
    ]
  ]
 
+ ; [LAYR-12] not translated: total areas of the stewardship options (CSS_TotalArea..._ha), read only by
+ ;           StewardshipAreasProc (GUI). The area is read from patchInfo. member? is a substring test, so e.g.
+ ;           "BirdBumble_Margin" counts as "Margin".
  ; Update total CSO areas:
  ask foodsources with [ masterpatch? = true ] ; and not member? "no info" patchInfo ]
  [
