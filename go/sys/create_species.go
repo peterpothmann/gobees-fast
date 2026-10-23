@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math"
 	"math/rand/v2"
 	"os"
 	"path/filepath"
@@ -52,7 +51,7 @@ func (s *CreateSpecies) Initialize(w *ecs.World) {
 	for i := range species {
 		sp := &species[i]
 		// [SPEC-04]
-		expanded, err := nestHabitatsList(sp.NestHabitatsList, masterpatches, rng)
+		expanded, err := NestHabitatsListREP(sp.NestHabitatsList, masterpatches, rng)
 		if err != nil {
 			panic(err)
 		}
@@ -148,7 +147,7 @@ func parseSpeciesFile(r io.Reader, speciesList []string, constants *params.Const
 				return nil, err
 			}
 		}
-		sp.EmergingDay_sd = netlogoRound(sp.EmergingDay_sd) // finding 20 (see trans/netlogo-findings.md#finding-20)
+		sp.EmergingDay_sd = util.Round(sp.EmergingDay_sd) // finding 20 (see trans/netlogo-findings.md#finding-20)
 		sp.FlightCosts_kJ_per_m_per_mg = constants.MetabolicRateFlight_W_per_kg / sp.FlightVelocity_m_per_s / (1000 * 1000 * 1000)
 
 		// [SPEC-04] list literal from the file, expanded later
@@ -182,11 +181,9 @@ func parseSpeciesFile(r io.Reader, speciesList []string, constants *params.Const
 	return result, nil
 }
 
-// nestHabitatsList expands entries ending with "*" to all habitat types of the masterpatches that contain
+// NestHabitatsListREP expands entries ending with "*" to all habitat types of the masterpatches that contain
 // the text before the "*" [NHAB], finding 20 (see trans/netlogo-findings.md#finding-20).
-//
-// NetLogo: NestHabitatsListREP.
-func nestHabitatsList(list []string, masterpatches []masterpatch, rng *rand.Rand) ([]string, error) {
+func NestHabitatsListREP(list []string, masterpatches []masterpatch, rng *rand.Rand) ([]string, error) {
 	// [NHAB-01] ORDER: irrelevant, nestHabitatsList is only used with member?. Shuffled anyway (decision C).
 	order := slices.Clone(masterpatches)
 	rng.Shuffle(len(order), func(i, j int) { order[i], order[j] = order[j], order[i] })
@@ -229,11 +226,6 @@ func nestSites(habitats []string, masterpatches []masterpatch) ([]ecs.Entity, fl
 		}
 	}
 	return sites, area
-}
-
-// netlogoRound rounds like NetLogo's round: .5 rounds up (towards positive infinity).
-func netlogoRound(x float64) float64 {
-	return math.Floor(x + 0.5)
 }
 
 // stringList reads a NetLogo list literal of strings, e.g. ["Grassland*" "Garden"]. NetLogo: read-from-string.

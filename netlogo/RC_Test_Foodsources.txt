@@ -1,0 +1,8 @@
+9.174311926605505
+5
+id patchType patchColour xcor ycor size_sqm flowerSpeciesList perimeter_m info
+0 "Crop_Oilseed_rape" 45 195 139 26681 [["Crop_Oilseed_rape" 868.5]] 697.2477064220184  "no info" 
+1 "Crop_Oilseed_rape" 45 111 134 26681 [["Crop_Oilseed_rape" 868.5]] 697.2477064220184  "no info" 
+2 "Crop_Oilseed_rape" 45 52 126 26681 [["Crop_Oilseed_rape" 868.5]] 697.2477064220184  "no info" 
+3 "Crop_Oilseed_rape" 45 159 90 26681 [["Crop_Oilseed_rape" 868.5]] 697.2477064220184  "no info" 
+4 "Crop_Oilseed_rape" 45 88 81 26681 [["Crop_Oilseed_rape" 868.5]] 697.2477064220184  "no info" 

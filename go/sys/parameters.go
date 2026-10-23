@@ -34,12 +34,12 @@ func (s *Parameters) Initialize(w *ecs.World) {
 	dir := ecs.GetResource[params.WorkingDirectory](w)
 
 	// [PAR-01]
-	queens, species, err := queensInitial(file.BeeSpeciesInitialQueensListAsString)
+	queens, species, err := QueensInitialProc(file.BeeSpeciesInitialQueensListAsString)
 	if err != nil {
 		panic(err)
 	}
 	// [PAR-06]
-	cso, err := allCSOList(filepath.Join(dir.Path, file.HabitatsFile))
+	cso, err := AllCSOlistREP(filepath.Join(dir.Path, file.HabitatsFile))
 	if err != nil {
 		panic(err)
 	}
@@ -50,7 +50,7 @@ func (s *Parameters) Initialize(w *ecs.World) {
 		MortalityForager_per_s:      mortalityForager(file.ForagingMortalityModel),                    // [PAR-04]
 		FoodsourcesFile:             strings.ReplaceAll(iface.MyMap, ".png", "") + "_Foodsources.txt", // [PAR-05]
 		CSS_OptionsList:             cso,
-		CropRotationList:            util.ListFromString(file.CropRotationListAsString), // [PAR-07]
+		CropRotationList:            util.ListFromStringREP(file.CropRotationListAsString), // [PAR-07]
 	}
 	ecs.AddResource(w, &s.derived)
 }
@@ -75,15 +75,13 @@ func mortalityForager(model string) float64 {
 	return 0
 }
 
-// queensInitial parses BeeSpeciesInitialQueensListAsString, e.g. "B_hortorum 100 B_terrestris 500" [QINI].
+// QueensInitialProc parses BeeSpeciesInitialQueensListAsString, e.g. "B_hortorum 100 B_terrestris 500" [QINI].
 //
 // Items alternate between species name and number of queens. A trailing name without number is dropped.
-//
-// NetLogo: QueensInitialProc.
-func queensInitial(s string) ([]globals.SpeciesQueens, []string, error) {
+func QueensInitialProc(s string) ([]globals.SpeciesQueens, []string, error) {
 	queens := []globals.SpeciesQueens{}
 	// [QINI-01]
-	items := util.ListFromString(s)
+	items := util.ListFromStringREP(s)
 	// [QINI-02]
 	for i := 0; i+1 < len(items); i += 2 {
 		n, err := strconv.ParseFloat(items[i+1], 64) // NetLogo: read-from-string
@@ -100,13 +98,11 @@ func queensInitial(s string) ([]globals.SpeciesQueens, []string, error) {
 	return queens, species, nil
 }
 
-// allCSOList returns the stewardship option names from the HabitatsFile [CSO].
+// AllCSOlistREP returns the stewardship option names from the HabitatsFile [CSO].
 //
 // These are the habitatType values of all rows whose habitatColourID contains "FlowerSpeciesList_", in file order.
 // NetLogo shows a message and continues with an empty list if the file is missing. Here it is an error.
-//
-// NetLogo: AllCSOlistREP.
-func allCSOList(path string) ([]string, error) {
+func AllCSOlistREP(path string) ([]string, error) {
 	// [CSO-01]
 	f, err := os.Open(path)
 	if err != nil {

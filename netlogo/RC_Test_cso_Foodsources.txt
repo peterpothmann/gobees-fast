@@ -1,0 +1,8 @@
+9.174311926605505
+5
+id patchType patchColour xcor ycor size_sqm flowerSpeciesList perimeter_m info
+5 "Crop_Oilseed_rape" 45 52 126 26681 [["Crop_Oilseed_rape" 0] ["newCSO_Legume"] ["Alsike_clover" 99] ["Bugle" 1] ["Burdock" 2] ["Common_knapweed" 24] ["Spear_thistle" 10] ["Red_dead_nettle" 9.167] ["Birdsfoot_trefoil" 39] ["Buttercup" 8] ["Dandelion" 10] ["Red_clover" 32] ["White_clover" 36] ["Common_vetch" 10]] 697.25  "26681  " 
+18 "Crop_Oilseed_rape" 45 159 90 26681 [["Crop_Oilseed_rape" 868.5]] 697.25  "no info   " 
+19 "Crop_Oilseed_rape" 45 111 134 26681 [["Crop_Oilseed_rape" 868.337] ["Margin"] ["Alsike_clover" 0.002] ["Common_knapweed" 0.003] ["Spear_thistle" 0.002] ["Red_dead_nettle" 0.002] ["Birdsfoot_trefoil" 0.007] ["Buttercup" 0.001] ["Dandelion" 0.002] ["Red_clover" 0.006] ["White_clover" 0.007] ["Common_vetch" 0.002]] 697.25  "5 " 
+30 "Crop_Oilseed_rape" 45 88 81 26681 [["Crop_Oilseed_rape" 868.5]] 697.25  "no info   " 
+31 "Crop_Oilseed_rape" 45 195 139 26681 [["Crop_Oilseed_rape" 542.987] ["newCSO_Plot"] ["Alsike_clover"  37.105] ["Common_knapweed"  5.247] ["Spear_thistle"  3.748] ["Red_dead_nettle"  3.436] ["Birdsfoot_trefoil"  14.617] ["Buttercup"  2.998] ["Dandelion"  3.748] ["Red_clover"  11.994] ["White_clover"  13.493] ["Common_vetch"  3.748]] 697.25  "10000" 

@@ -1,0 +1,74 @@
+# Runs on every push and pull request: formatting, go vet and all Go tests, incl. the comparison with
+# NetLogo (go/sys/validation_*_test.go). NetLogo itself does not run here: its reference results are embedded
+# in go/internal/validation, see trans/validation/README.md.
+#
+# The summary of each run shows all test results and the comparison report (gobees vs. NetLogo).
+# Both are also uploaded as artifact "reports".
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: go
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go/go.mod
+          cache-dependency-path: go/go.sum
+
+      - name: Check formatting
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "Not formatted with gofmt:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Vet
+        run: go vet ./...
+
+      # v1.12.x does not build with Go 1.26 (old golang.org/x/tools), v1.13.0 does.
+      - name: Install gotestsum
+        run: go install gotest.tools/gotestsum@v1.13.0
+
+      # The comparison tests append their results to VALIDATION_REPORT (Markdown).
+      - name: Test
+        env:
+          VALIDATION_REPORT: ${{ github.workspace }}/validation-report.md
+        run: gotestsum --format testname --junitfile ${{ github.workspace }}/test-results.xml -- -count=1 ./...
+
+      - name: Summary of all tests
+        if: always()
+        uses: test-summary/action@v2
+        with:
+          paths: test-results.xml
+
+      - name: Comparison with NetLogo
+        if: always()
+        working-directory: .
+        run: |
+          if [ -f validation-report.md ]; then
+            echo "# Comparison with NetLogo" >> "$GITHUB_STEP_SUMMARY"
+            cat validation-report.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No comparison report was written." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: |
+            test-results.xml
+            validation-report.md
+          if-no-files-found: ignore

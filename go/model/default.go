@@ -29,6 +29,10 @@ func Default(p params.Params, a *app.App) *app.App {
 	p.Apply(a.World) // [INIT-01] random seed, parameters as resources
 	who := globals.WhoCounter{}
 	ecs.AddResource(a.World, &who)
+	counters := globals.Counters{}
+	ecs.AddResource(a.World, &counters)
+	activeBees := globals.ActiveBees{}
+	ecs.AddResource(a.World, &activeBees)
 	// [INIT-02] choice of the parameter file: GUI logic, the caller passes the file.
 	// [INIT-03] PanelSettingProc: GUI only, not translated.
 	// [INIT-04] ReadAllParametersProc: params.ReadParameterFile, before calling Default.
@@ -47,7 +51,8 @@ func Default(p params.Params, a *app.App) *app.App {
 	// [GO-01] Assertions are not a system. Violations will panic where they occur (NetLogo: AssertionProc).
 	// [GO-02] InspectTurtle: GUI only, not translated.
 	a.AddSystem(&sys.Tick{})                        // [GO-03] tick
-	a.AddSystem(&sys.UpdateMorning{})               // [GO-04] UpdateMorning_Proc
+	a.AddSystem(&sys.UpdateMorning{})               // [GO-04] UpdateMorning_Proc (not yet translated)
+	a.AddSystem(&sys.EmergenceNewQueens{})          // [GO-04] part of UpdateMorning_Proc: EmergenceNewQueensProc [EMER]
 	a.AddSystem(&sys.NeedNectarPollenLarvaeToday{}) // [GO-05] NeedNectarPollenLarvaeTodayProc
 	a.AddSystem(&sys.ActivityLoop{})                // [GO-06] to [GO-10] event loop, NextActiveBeeREP, ActivityProc
 	a.AddSystem(&sys.EndOfDayResting{})             // [GO-11] all adult females resting

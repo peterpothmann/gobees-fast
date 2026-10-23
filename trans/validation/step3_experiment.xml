@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<!DOCTYPE experiments SYSTEM "behaviorspace.dtd">
+<!--
+  Validation of steps 1 to 3 against NetLogo (see trans/validation/README.md).
+  Year 1 only: colony foundation by the initial queens depends only on emergence, winter mortality and nest
+  search, which are translated. Brood, foraging etc. do not influence these metrics in year 1.
+  250 days: the initial queens emerge around day 91 (sd 28), so by day 250 all have emerged and finished searching.
+  Initial queens are the queens with 0 < emergingDate < 365. Young queens of the colonies have emergingDate =
+  NotSetLow until they leave the nest, and >= 365 afterwards.
+  Mean weight and emergence date are only comparable at step 0: later NetLogo colonies die with their queen
+  (not yet translated).
+  Kept outside the .nlogo, so that the model file stays unchanged.
+-->
+<experiments>
+  <experiment name="step3_colony_foundation" repetitions="100" runMetricsEveryStep="true">
+    <setup>Setup</setup>
+    <go>Go</go>
+    <timeLimit steps="250"/>
+    <metric>count foodsources</metric>
+    <metric>count foodsources with [ masterpatch? ]</metric>
+    <metric>[ count nestsiteFoodsourceList ] of one-of species with [ name = "B_terrestris" ]</metric>
+    <metric>[ nestSiteArea ] of one-of species with [ name = "B_terrestris" ]</metric>
+    <metric>TotalColoniesEverProduced</metric>
+    <metric>count bees with [ caste = "queen" and colonyID = -1 and activity != "hibernate" and emergingDate &gt; 0 and emergingDate &lt; 365 ]</metric>
+    <metric>count bees with [ caste = "queen" and activity = "hibernate" and emergingDate &gt; 0 and emergingDate &lt; 365 ]</metric>
+    <metric>ifelse-value (any? bees with [ caste = "queen" and emergingDate &gt; 0 and emergingDate &lt; 365 ]) [ mean [ weight_mg ] of bees with [ caste = "queen" and emergingDate &gt; 0 and emergingDate &lt; 365 ] ] [ 0 ]</metric>
+    <metric>ifelse-value (any? bees with [ caste = "queen" and emergingDate &gt; 0 and emergingDate &lt; 365 ]) [ mean [ emergingDate ] of bees with [ caste = "queen" and emergingDate &gt; 0 and emergingDate &lt; 365 ] ] [ 0 ]</metric>
+  </experiment>
+</experiments>

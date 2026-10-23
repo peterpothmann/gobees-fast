@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestListFromString(t *testing.T) {
+func TestListFromStringREP(t *testing.T) {
 	cases := []struct {
 		input string
 		want  []string
@@ -17,8 +17,8 @@ func TestListFromString(t *testing.T) {
 		{"B_terrestris 500", []string{"B_terrestris", "500"}},
 	}
 	for _, c := range cases {
-		if got := ListFromString(c.input); !reflect.DeepEqual(got, c.want) {
-			t.Errorf("ListFromString(%q) = %q, want %q", c.input, got, c.want)
+		if got := ListFromStringREP(c.input); !reflect.DeepEqual(got, c.want) {
+			t.Errorf("ListFromStringREP(%q) = %q, want %q", c.input, got, c.want)
 		}
 	}
 }

@@ -1,12 +1,10 @@
 package util
 
-// ForagingPeriod returns the length of today's foraging period [s] for the parameter Weather [FPER].
+// Foraging_periodREP returns the length of today's foraging period [s] for the parameter Weather [FPER].
 //
 // day is NetLogo's Day (1 to 365). An unknown Weather gives -1 [FPER-01].
 // NetLogo calls the reporter only for Day > 0, see [INIT-10].
-//
-// NetLogo: Foraging_periodREP.
-func ForagingPeriod(weather string, day int) float64 {
+func Foraging_periodREP(weather string, day int) float64 {
 	foragingPeriod_s := -1.0
 	// [FPER-02]
 	if weather == "foragingHoursExample" {

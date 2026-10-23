@@ -1,4 +1,9 @@
-*.txt
-*.csv
-*.png
-*.xlsm
+# NetLogo: temporary parameter files of SetupBehaviorSpace
+netlogo/____ParameterFileTemporary_*.cs
+Example_Farm_Parameters.csv
+# BehaviorSpace tables of the validation runs (aggregated into go/internal/validation)
+*_netlogo.csv
+# Test reports written locally (in CI they go to the run summary)
+validation-report.md
+test-results.xml
+data-model.md

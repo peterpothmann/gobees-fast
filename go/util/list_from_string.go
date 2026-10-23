@@ -3,13 +3,11 @@ package util
 
 import "strings"
 
-// ListFromString splits a string at blanks into a list of strings [LIST].
+// ListFromStringREP splits a string at blanks into a list of strings [LIST].
 //
 // Multiple and leading blanks are skipped. Unlike strings.Fields, it keeps two NetLogo edge cases:
 // "" gives [""] (one empty item), and a trailing blank gives an empty last item ("a b " -> ["a" "b" ""]).
-//
-// NetLogo: ListFromStringREP.
-func ListFromString(input string) []string {
+func ListFromStringREP(input string) []string {
 	result := []string{}
 	remaining := input
 	for strings.Contains(remaining, " ") {

@@ -25,7 +25,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Finding:** During setup, `ParametersProc` calls `AllCSOlistREP`. The reporter reads the `HabitatsFile` and collects the `habitatType` of all rows whose `habitatColourID` contains the text `FlowerSpeciesList_`. For `_SYSTEM_Habitats.csv` the result is `["Legume" "Margin" "newCSO_Legume" "BirdBumble_Margin" "GameCover_Plot" "Plot"]`. `CreateLayersProc` needs this list to recognise entries like `["Margin"]` in a `flowerSpeciesList`. Rows with a numeric `habitatColourID` are skipped silently by `carefully`.
 - **Consequence for gobees:** the `HabitatsFile` is an input file of every run, not only of map processing.
 - **Second Check**: 23-10-2026, PP
-- **Implemented:** `allCSOList` in `sys/parameters.go`. Test: `sys/parameters_test.go` (the 6 names for the default files).
+- **Implemented:** `AllCSOlistREP` in `sys/parameters.go`. Test: `sys/parameters_test.go` (the 6 names for the default files).
 
 <a id="finding-3"></a>
 
@@ -122,7 +122,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Consequence for the merge order in gobees:** shuffle the hedges with the model RNG, then sort them by area (largest first) with a STABLE sort.
 - **Consequence for gobees:** reproduce the merge exactly, incl. the loss of the flower lists. The two additions can be dropped (SIMPLIFY), they do not change any value.
 - **Second Check**:
-- **Implemented:** `mergeHedges` in `sys/create_foodsources.go`: shuffle, then `slices.SortStableFunc` by area. Tests: `TestMergeHedges`, `TestMergeHedgesEqualAreaIsRandom` (both equally large hedges become master in some of 50 runs), `TestMergeHedgesEquallyNearFieldIsRandom`.
+- **Implemented:** `MergeHedgesProc` in `sys/create_foodsources.go`: shuffle, then `slices.SortStableFunc` by area. Tests: `TestMergeHedges`, `TestMergeHedgesEqualAreaIsRandom` (both equally large hedges become master in some of 50 runs), `TestMergeHedgesEquallyNearFieldIsRandom`.
 
 <a id="finding-15"></a>
 
@@ -144,7 +144,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Finding:** `CreateLayersProc` creates the layers with `hatch` inside `ask foodsources`. The layers of one flower patch get consecutive `who` numbers, but the order between flower patches follows the random order of `ask`. `layersInPatchList` (finding 15) is sorted by `who`, and `Foraging_bestLayerREP` keeps the first layer with the shortest handling time. For layers of different flower patches in the same cell with equal handling time, the random `who` order therefore decides which one a forager takes.
 - **Consequence for gobees:** shuffle the flower patches before creating the layers, and give each layer a `Who` number in creation order (decision C and `who` numbers in `trans/data-model.md`).
 - **Second Check**: 23.10.2026, PP
-- **Implemented:** `createLayers` shuffles the flower patches before the layers get their `Who` numbers. Test: `TestCreateLayers`.
+- **Implemented:** `CreateLayersProc` shuffles the flower patches before the layers get their `Who` numbers. Test: `TestCreateLayers`.
 
 <a id="finding-17"></a>
 
@@ -174,7 +174,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Finding:** `CreateLayersProc` splits only flower patches with a non-empty `flowerSpeciesList`. A flower patch with an empty list stays as it is: a masterpatch with `nectarMax_myl = pollenMax_g = 0` and `startDay = stopDay = 0`, the values after creation. It never offers food, but it can still be a nest site (`[SPEC-06]`). `_SYSTEM_Example_Farm_Foodsources.txt` contains no empty list.
 - **Consequence for gobees:** keep such flower patches as masterpatches without food.
 - **Second Check**: 23.10.2026, PP
-- **Implemented:** `createLayers` in `sys/create_foodsources.go`. Test: `TestCreateLayers` (the Scrub patch with an empty list).
+- **Implemented:** `CreateLayersProc` in `sys/create_foodsources.go`. Test: `TestCreateLayers` (the Scrub patch with an empty list).
 
 <a id="finding-23"></a>
 
@@ -196,7 +196,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
   - A nest habitat ending with `*` matches every habitat type on the map that contains the text before the `*` anywhere, e.g. `"Grassland*"` also matches `"Improved_Grassland"`.
 - **Consequence for gobees:** reproduce all three. NetLogo `round` rounds .5 up, `math.Round` in Go rounds .5 away from zero, which gives the same result for positive values.
 - **Second Check**: 23.10.2026, PP
-- **Implemented:** `parseSpeciesFile` and `nestHabitatsList` in `sys/create_species.go`. Tests: `TestParseSpeciesFileOrder`, `TestParseSpeciesFileExample` (rounded standard deviations), `TestNestHabitatsList`.
+- **Implemented:** `parseSpeciesFile` and `NestHabitatsListREP` in `sys/create_species.go`. Tests: `TestParseSpeciesFileOrder`, `TestParseSpeciesFileExample` (rounded standard deviations), `TestNestHabitatsListREP`.
 
 <a id="finding-21"></a>
 
@@ -214,13 +214,128 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 
 ### 24. Coordinates ending in .5 lie exactly on a patch border
 
-- **Code:** `[LAYR-10]` (`foodsources-here`), `NestSitesSearchingProc` and `CreateBadgersProc` (`pxcor`, `pycor`, not yet annotated)
-- **Finding:** 13 of the 73 flower patches of `_SYSTEM_Example_Farm_Foodsources.txt` have an x or y coordinate ending in .5, e.g. patch 2 (Hedgerow, 132 / 170.5) and patch 20 (Scrub, 202 / 121.5). Such a point lies exactly on the border between two NetLogo patch cells. NetLogo's rounding rule for .5 decides the cell. Colonies and badgers are placed at the patch centre (`pxcor`, `pycor`) of their foodsource, and Hedgerow and Scrub are nest habitats. With the other rounding direction, a colony would sit one patch (10 m with the example scaling) further away, which changes all its flight distances slightly. For `layersInPatchList` the rule makes no difference with the example farm: under every rule all 73 patches lie in different cells.
+- **Code:** `[LAYR-10]` (`foodsources-here`), `CreateBadgersProc` (`pxcor`, `pycor`, not yet annotated)
+- **Finding:** 13 of the 73 flower patches of `_SYSTEM_Example_Farm_Foodsources.txt` have an x or y coordinate ending in .5, e.g. patch 2 (Hedgerow, 132 / 170.5) and patch 20 (Scrub, 202 / 121.5). Such a point lies exactly on the border between two NetLogo patch cells. NetLogo's rounding rule for .5 decides the cell. Badgers are placed at the patch centre (`pxcor`, `pycor`) of their foodsource. For `layersInPatchList` the rule makes no difference with the example farm: under every rule all 73 patches lie in different cells.
+- **Correction (2026-10-24, annotating step 3, PP):** an earlier version said that colonies are placed at the patch centre of their foodsource too, so that the rounding moves colonies. That is wrong. `NestSitesSearchingProc` places a colony at the centre of a RANDOM patch whose centre lies within the circle of the foodsource (`[NEST-03]`, finding 25). No rounding of the foodsource position is involved, so the rule does not affect colonies.
 - **Verified in NetLogo 5.3.1 (2026-10-23, PP):** after `Setup`, `ask foodsources with [ ycor = 121.5 ] [ show (list xcor ycor pxcor pycor) ]` (flower patch 20, Scrub) gave `[202 121.5 202 122]` for all 6 layers. NetLogo rounds .5 UP. (The hedge at y = 170.5 no longer exists after `Setup`, it was merged.) The x direction was not checked separately, NetLogo uses the same rule for both.
 - **Side result:** the 6 layers have the `who` numbers 360, 363, 366, 367, 368 and 373. The gaps are layers of the same flower patch that were removed as empty, which confirms finding 18.
 - **Consequence for gobees:** patch cell of a point = `math.Floor(v + 0.5)` (round half up; all coordinates of the world are >= 0). Test with the 13 border coordinates of the example farm, e.g. 121.5 → 122 and 210.5 → 211.
 - **Second Check**: 23.10.2026, PP
 - **Implemented:** `util.Pcor`. Test: `TestPcor` with the 13 border coordinates of the example farm.
+
+## Findings from step 3 (queens and colony foundation)
+
+<a id="finding-25"></a>
+
+### 25. A colony is placed in a random patch within the nest-site circle
+
+- **Code:** `[NEST-03]`
+- **Finding:** `NestSitesSearchingProc` does not place the colony at the chosen foodsource. It takes `one-of patches with [ distance myself < radius_m * Scaling_NLpatches/m ]`, i.e. a random patch whose CENTRE lies within the circle of the foodsource, and moves the queen to that patch centre. The colony is created there. Large flower patches therefore spread their colonies over many cells.
+- **Edge case:** if no patch centre lies within the circle (a very small foodsource whose centre is far from every patch centre), `one-of` reports `nobody` and `ask nobody` stops NetLogo with a runtime error.
+- **Checked from the input file (2026-10-24):** in the example farm every possible nest site of B. terrestris (Grassland, Hedgerow, Scrub, Woodland) has at least one patch centre in its circle. 15 small hedges and woods (100 to 300 m², radius 0.56 to 0.98 patches) have exactly one. The error does not occur.
+- **Consequence for gobees:** reproduce the random choice among the patch centres within the circle (strict `<`, distance in patch units). Translate the runtime error as an error. This also corrects finding 24.
+- **Second Check**: 24.10.2026, PP
+- **Implemented:** `NestSitesSearchingProc` in `sys/emergence_new_queens.go` with `util.PatchCentresWithin` (strict `<`). No patch centre: panic. Tests: `TestNestSearchFoundsColonies` (colonies at patch centres, the 100 m2 hedge only at (50, 50)), `TestPatchCentresWithin`.
+
+<a id="finding-26"></a>
+
+### 26. Queens searching a nest die with about 19 % per day
+
+- **Code:** `[NEST-04]`
+- **Finding:** a queen without a nest finds one with probability `chanceFindNest` (0.2 in the species file). If she finds none, she dies with probability `1 - (1 - MortalityForager_per_s) ^ (NestSearchTime_h * 3600)`. With the default values (`"high"`: 1e-5 per s, 6 h): `1 - 0.99999 ^ 21600 = 0.194`. Per day 20 % of the searching queens found a nest and 0.8 × 0.194 = 15.5 % die. In the long run 0.2 / (0.2 + 0.155) = 56 % of the emerged queens found a colony, 44 % die during the search.
+- **Consequence for gobees:** nothing special, but a strong lever of the dynamics and worth knowing for the validation. With an unknown `ForagingMortalityModel` no queen dies here (finding 5).
+- **Second Check**: 24.10.2026, PP
+- **Implemented:** `NestSitesSearchingProc` and `searchMortality` in `sys/emergence_new_queens.go`. Test: `TestNestSearchMortality` (2000 queens, about 19.4 % die).
+
+<a id="finding-27"></a>
+
+### 27. The area-weighted nest-site choice can run past the end of the list
+
+- **Code:** `[NSFS-01]`
+- **Finding:** `NestSiteFoodSourceREP` draws `p = random-float 1` and walks through the nest sites, summing `area_sqm / nestSiteArea`, until the sum exceeds `p`. In floating point the full sum can end slightly below 1. If `p` lies between this sum and 1, the loop reads past the end of the list and NetLogo stops with a runtime error.
+- **Consequence for gobees:** reproduce the loop. Running past the end is an error, as in NetLogo.
+- **Second Check**: 24.10.2026, PP 
+- **Implemented:** `NestSiteFoodSourceREP` in `sys/emergence_new_queens.go`: running past the end of the list panics.
+
+<a id="finding-28"></a>
+
+### 28. `die` ends the agent's code at once
+
+- **Code:** `[DIE]`, e.g. `[EMER-03]`
+- **Finding:** `DieProc` calls `die`. In NetLogo, `die` ends the execution of the dying agent immediately: commands after `DieProc` in the same `ask` block are not run for this agent. Example: a queen that dies over winter in `EmergenceNewQueensProc` never gets `activity "resting"` and `colonyID -1`.
+- **Consequence for gobees:** after the Go equivalent of `DieProc` the calling code must stop working on this agent (`return` or `continue`). This is a rule for every translated procedure, not a quirk.
+- **Second Check**: 24.10.2026, PP
+- **Implemented:** `beeDeath.DieProc` in `sys/die.go`; the callers `continue` or `return` after it. Test: `TestDieRemovesFromActiveBees`.
+
+<a id="finding-29"></a>
+
+### 29. `allPatchesInRangeList` is in random order
+
+- **Code:** `[PRNG-01]`
+- **Finding:** `PatchesInRangeProc` builds the list of foodsources within the foraging range with `fput` inside `ask foodsources with [...]`. Since `ask` visits the agents in random order, the list is in random order. `FoodsourcesInFlowerAndRangeProc` keeps this order for the nectar and pollen lists, also for the lists of masterpatches.
+- **Consequence for gobees:** shuffle the foodsources, then build the list in this order. Whether the order matters for the foragers is decided in step 6 (`Foraging_searchingProc`).
+- **Second Check**: 24.10.2026, PP
+- **Implemented:** `PatchesInRangeProc` in `sys/create_colonies.go`: shuffle, then append. Test: `TestPatchesInRangeAndFlowerLists`.
+
+<a id="finding-30"></a>
+
+### 30. `COLONIES_IBM` counts living colonies only
+
+- **Code:** `[CCOL-05]`
+- **Finding:** a new colony is individual-based while `count Colonies with [ cohortBased? = false ] < COLONIES_IBM`. Dead colonies are `deadCols` (finding 9) and are no longer counted, so after an individual-based colony dies the next new colony becomes individual-based again. The default is `COLONIES_IBM = 0`: all colonies are cohort-based.
+- **Consequence for gobees:** count only living individual-based colonies.
+- **Second Check**: 24.10.2026, PP
+- **Implemented:** `countIBMColonies` in `sys/create_colonies.go` counts living colonies. Test: `TestColoniesIBM`.
+
+<a id="finding-31"></a>
+
+### 31. The initial queens' `personalTime_s` does not match its comment
+
+- **Code:** `[IQUE-06]`
+- **Finding:** `set personalTime_s random (2 * 3600) + (GetUpTime_s - 3600)` with the comment "between 7:00 and 9:00 am". With `GetUpTime_s = 1` [PAR-03] the result is -3599 to 3600 s. The comment probably dates from a time when `GetUpTime_s` was 8 h. No effect: `UpdateMorning_Proc` sets a new `personalTime_s` for every active bee each morning, and hibernating queens are not active.
+- **Consequence for gobees:** translate as it is, or leave out (SIMPLIFY). It has no effect on the dynamics.
+- **Second Check**: 24.10.2026, PP
+- **Implemented:** `CreateInitialQueens` in `sys/create_initial_queens.go` keeps the formula. Test: `TestCreateInitialQueensExampleFarm` (whole seconds from -3599 to 3600).
+
+<a id="finding-32"></a>
+
+### 32. Queens emerging from a cohort are identical copies
+
+- **Code:** `[EMER-01]`
+- **Finding:** a queen agent with `number = n` (a cohort from a cohort-based colony) is split at emergence: `hatch (n - 1)` creates copies with all her values, i.e. the same weight, alleles, spermatheca and emergence date. The initial queens are created with `number 1` and are not affected. The copies then draw winter survival and nest search independently, but with the same weight and therefore the same survival probability.
+- **Consequence for gobees:** create `n - 1` copies of the queen entity with all components, `Number = 1` for all.
+- **Second Check**: 24.10.2026, PP
+- **Implemented:** `copyBee` in `sys/emergence_new_queens.go` (lists are copied, not shared). Test: `TestEmergenceSplitsCohort`.
+
+<a id="finding-33"></a>
+
+### 33. One winter survival curve for all species, at most 64 %
+
+- **Code:** `[WMOR]`
+- **Finding:** `WintermortalityProbREP` reports the probability to SURVIVE the winter (despite its name): `0.64 / (1 + e^(-22 * (relative weight - 0.32)))`, with the weight relative to the minimum and maximum queen weight of the species. The curve was fitted to B. terrestris (Beekman et al. 1998) and is used for all species. Even the heaviest queens survive with at most 64 %.
+- **Consequence for gobees:** Keep the NetLogo name.
+- **Second Check**: 24.10.2026, PP
+- **Implemented:** `WintermortalityProbREP` in `sys/bee_traits.go`. Tests: `TestWintermortalityProbREP`, `TestEmergenceWinterMortality` (2000 queens at relative weight 0.32, about 32 % survive).
+
+<a id="finding-34"></a>
+
+### 34. One proboscis line from the lightest worker to the heaviest queen
+
+- **Code:** `[PROB]`
+- **Finding:** `ProboscisLengthREP` interpolates linearly between `proboscis_min_mm` at the minimum WORKER weight (`devWeightPupationMin_mg`) and `proboscis_max_mm` at the maximum QUEEN weight (`devWeight_Q_PupationMax_mg`). Workers, males and queens are on the same line. A weight outside this range is an assertion.
+- **Consequence for gobees:** translate as it is, incl. the assertion.
+- **Second Check**: 24.10.2026, PP
+- **Implemented:** `ProboscisLengthREP` in `sys/bee_traits.go`. Test: `TestProboscisLength`.
+
+<a id="finding-35"></a>
+
+### 35. A cuckoo bee takes any colony as host
+
+- **Code:** `[PSI-02]`
+- **Finding:** `PsithyrusNestSearchProc` chooses the host with `one-of colonies`: a colony of any species, also one that another cuckoo bee has already taken. The probabilities (find one nest 0.05, get access 0.25, be killed 0.25, kill the host queen 0.5) are marked as arbitrary in the code. Not part of the default runs.
+- **Consequence for gobees:** translate as it is.
+- **Second Check**: 24.10.2026, PP
+- **Implemented:** `PsithyrusNestSearchProc` in `sys/emergence_new_queens.go`. Not tested yet (not part of the default runs).
 
 ## Findings from the model map and from `Go`
 
@@ -251,7 +366,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Finding:** The code calls the value from `flowerSpeciesList` "relative abundance". It is, however, multiplied by the area and by pollen or nectar *per flower*: `pollenMax_g = area_sqm × AbundanceBoost × value × pollen_g/flower` and `nectarMax_myl = area_sqm × AbundanceBoost × value × nectar_ml/flower × 1000`. Its unit is therefore flowers per m².
 - **Status:** confirmed when annotating `CreateLayersProc` on 2026-10-23. The name has no effect on the dynamics. Only the interpretation of the input data is affected.
 - **Second Check**: 23.10.2026, PP
-- **Implemented:** `createLayers` in `sys/create_foodsources.go` (`RelativeAbundance` stores the value without `AbundanceBoost`). Test: `TestCreateLayers` (100 m2 x 2 x 0.01 g = 2 g pollen).
+- **Implemented:** `CreateLayersProc` in `sys/create_foodsources.go` (`RelativeAbundance` stores the value without `AbundanceBoost`). Test: `TestCreateLayers` (100 m2 x 2 x 0.01 g = 2 g pollen).
 
 <a id="finding-11"></a>
 

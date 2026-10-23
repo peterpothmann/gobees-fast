@@ -28,6 +28,8 @@ func main() {
 
 	ticks := ecs.GetResource[globals.Ticks](a.World)
 	derived := ecs.GetResource[globals.Derived](a.World)
+	counters := ecs.GetResource[globals.Counters](a.World)
 	fmt.Printf("species: %v\n", derived.BeeSpeciesInitialQueensList)
+	fmt.Printf("colonies founded: %v, bees died: %v\n", counters.TotalColoniesEverProduced, counters.TotalBeesEverDied)
 	fmt.Printf("finished after %d days\n", ticks.Ticks)
 }

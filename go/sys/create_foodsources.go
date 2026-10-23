@@ -58,7 +58,7 @@ func (s *CreateFoodsources) Initialize(w *ecs.World) {
 
 	// [FSRC-10] Merge small hedges into the nearest non-hedge flower patch of at least 6500 m2, and merge all hedges linked to the same patch into the largest of them [HEDG], finding 14 (see trans/netlogo-findings.md#finding-14).
 	if file.MergeHedges {
-		mergeHedges(kept, rng)
+		MergeHedgesProc(kept, rng)
 	}
 
 	// [FSRC-12]
@@ -70,7 +70,7 @@ func (s *CreateFoodsources) Initialize(w *ecs.World) {
 		}
 		flowers = &t
 	}
-	if err := createLayers(w, kept, flowers, file, derived.CSS_OptionsList, who, rng); err != nil {
+	if err := CreateLayersProc(w, kept, flowers, file, derived.CSS_OptionsList, who, rng); err != nil {
 		panic(err)
 	}
 
@@ -150,11 +150,9 @@ func insideMapArea(area string, x, y float64, world *params.World) bool {
 	return true // "complete" and any other value
 }
 
-// mergeHedges links every hedge to its nearest non-hedge flower patch of at least 6500 m2 and merges
+// MergeHedgesProc links every hedge to its nearest non-hedge flower patch of at least 6500 m2 and merges
 // all hedges linked to the same patch into the largest of them [HEDG], finding 14 (see trans/netlogo-findings.md#finding-14).
-//
-// NetLogo: MergeHedgesProc.
-func mergeHedges(patches []*flowerPatch, rng *rand.Rand) {
+func MergeHedgesProc(patches []*flowerPatch, rng *rand.Rand) {
 	const areaTH_sqm = 6500 // [HEDG-01]
 
 	hedges := []*flowerPatch{}
@@ -240,10 +238,8 @@ func removeDuplicates[T comparable](list []T) []T {
 	return out
 }
 
-// createLayers splits every flower patch into one foodsource per flower species [LAYR].
-//
-// NetLogo: CreateLayersProc.
-func createLayers(w *ecs.World, patches []*flowerPatch, flowers *flowerSpeciesTable, file *params.ParameterFile,
+// CreateLayersProc splits every flower patch into one foodsource per flower species [LAYR].
+func CreateLayersProc(w *ecs.World, patches []*flowerPatch, flowers *flowerSpeciesTable, file *params.ParameterFile,
 	cssOptions []string, who *globals.WhoCounter, rng *rand.Rand) error {
 
 	mapper := ecs.NewMap5[comp.Who, comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](w)

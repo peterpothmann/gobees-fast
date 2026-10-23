@@ -66,7 +66,7 @@ func TestParseCSOListExample(t *testing.T) {
 
 func TestAllCSOListMissingFile(t *testing.T) {
 	// NetLogo shows a message and continues with an empty list. gobees stops with an error.
-	if _, err := allCSOList(filepath.Join(t.TempDir(), "missing.csv")); err == nil {
+	if _, err := AllCSOlistREP(filepath.Join(t.TempDir(), "missing.csv")); err == nil {
 		t.Error("expected an error for a missing HabitatsFile")
 	}
 }
@@ -80,7 +80,7 @@ func TestMortalityForagerUnknownModel(t *testing.T) {
 	}
 }
 
-func TestQueensInitial(t *testing.T) {
+func TestQueensInitialProc(t *testing.T) {
 	cases := []struct {
 		input   string
 		queens  []globals.SpeciesQueens
@@ -93,15 +93,15 @@ func TestQueensInitial(t *testing.T) {
 		{"", []globals.SpeciesQueens{}, []string{}},                                  // [""] gives no species
 	}
 	for _, c := range cases {
-		q, s, err := queensInitial(c.input)
+		q, s, err := QueensInitialProc(c.input)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if !reflect.DeepEqual(q, c.queens) || !reflect.DeepEqual(s, c.species) {
-			t.Errorf("queensInitial(%q) = %v, %v; want %v, %v", c.input, q, s, c.queens, c.species)
+			t.Errorf("QueensInitialProc(%q) = %v, %v; want %v, %v", c.input, q, s, c.queens, c.species)
 		}
 	}
-	if _, _, err := queensInitial("B_terrestris many"); err == nil {
+	if _, _, err := QueensInitialProc("B_terrestris many"); err == nil {
 		t.Error("expected an error for a non-numeric number of queens")
 	}
 }

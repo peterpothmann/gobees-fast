@@ -46,13 +46,13 @@ func TestInsideMapArea(t *testing.T) {
 	}
 }
 
-func TestMergeHedges(t *testing.T) {
+func TestMergeHedgesProc(t *testing.T) {
 	field := &flowerPatch{PatchType: "Grassland", X: 0, Y: 0, Area_sqm: 10000}
 	small := &flowerPatch{PatchType: "Grassland", X: 1, Y: 0, Area_sqm: 1000} // below 6500 m2, never linked
 	big := &flowerPatch{PatchType: "Hedgerow", X: 100, Y: 0, Area_sqm: 500}
 	h1 := &flowerPatch{PatchType: "Hedgerow", X: 2, Y: 0, Area_sqm: 300}
 	h2 := &flowerPatch{PatchType: "Hedgerow", X: 3, Y: 0, Area_sqm: 200}
-	mergeHedges([]*flowerPatch{field, small, h1, h2, big}, rand.New(rand.NewPCG(1, 2)))
+	MergeHedgesProc([]*flowerPatch{field, small, h1, h2, big}, rand.New(rand.NewPCG(1, 2)))
 
 	// [HEDG-04] the largest hedge is the master hedge, it keeps its position and gets the area of the others.
 	if big.Area_sqm != 1000 || h1.Area_sqm != 0 || h2.Area_sqm != 0 {
@@ -74,7 +74,7 @@ func TestMergeHedgesEqualAreaIsRandom(t *testing.T) {
 		field := &flowerPatch{PatchType: "Woodland", X: 0, Y: 0, Area_sqm: 7000}
 		a := &flowerPatch{PatchType: "Hedgerow", X: 1, Y: 0, Area_sqm: 100}
 		b := &flowerPatch{PatchType: "Hedgerow", X: 2, Y: 0, Area_sqm: 100}
-		mergeHedges([]*flowerPatch{field, a, b}, rand.New(rand.NewPCG(seed, 7)))
+		MergeHedgesProc([]*flowerPatch{field, a, b}, rand.New(rand.NewPCG(seed, 7)))
 		switch {
 		case a.Area_sqm == 200 && b.Area_sqm == 0:
 			masters["a"]++
@@ -97,7 +97,7 @@ func TestMergeHedgesEquallyNearFieldIsRandom(t *testing.T) {
 		right := &flowerPatch{PatchType: "Woodland", X: 5, Y: 0, Area_sqm: 7000}
 		h1 := &flowerPatch{PatchType: "Hedgerow", X: 0, Y: 0, Area_sqm: 300}
 		h2 := &flowerPatch{PatchType: "Hedgerow", X: -4, Y: 0, Area_sqm: 100} // always linked to left
-		mergeHedges([]*flowerPatch{left, right, h1, h2}, rand.New(rand.NewPCG(seed, 3)))
+		MergeHedgesProc([]*flowerPatch{left, right, h1, h2}, rand.New(rand.NewPCG(seed, 3)))
 		if h2.Area_sqm == 0 {
 			linked["left"]++ // h1 and h2 share the field, h1 (larger) got the area
 		} else {
@@ -109,7 +109,7 @@ func TestMergeHedgesEquallyNearFieldIsRandom(t *testing.T) {
 	}
 }
 
-func TestCreateLayers(t *testing.T) {
+func TestCreateLayersProc(t *testing.T) {
 	w := ecs.NewWorld()
 	who := &globals.WhoCounter{}
 	flowers := &flowerSpeciesTable{
@@ -128,7 +128,7 @@ func TestCreateLayers(t *testing.T) {
 		FlowerSpeciesList: []flowerEntry{{"B", 1, true}}}
 	p3 := &flowerPatch{who: who.Next(), PatchType: "Scrub", X: 50, Y: 50, Area_sqm: 400}
 
-	if err := createLayers(w, []*flowerPatch{p1, p2, p3}, flowers, file, []string{"Margin", "Plot"}, who, rand.New(rand.NewPCG(1, 1))); err != nil {
+	if err := CreateLayersProc(w, []*flowerPatch{p1, p2, p3}, flowers, file, []string{"Margin", "Plot"}, who, rand.New(rand.NewPCG(1, 1))); err != nil {
 		t.Fatal(err)
 	}
 
@@ -193,7 +193,7 @@ func TestCreateLayers(t *testing.T) {
 	}
 }
 
-// testLayer is a foodsource as read back in TestCreateLayers.
+// testLayer is a foodsource as read back in TestCreateLayersProc.
 type testLayer struct {
 	e   ecs.Entity
 	who int64
@@ -211,8 +211,22 @@ func byWho(m map[string]testLayer, e ecs.Entity) int64 {
 }
 
 // newExampleFarmSetup writes the example input files to a temporary directory and runs the initialisation
-// systems of steps 1 and 2 with the given seed.
-func newExampleFarmSetup(t *testing.T, seed float64) *app.App {
+// systems of steps 1 and 2 with the given seed, followed by the extra systems.
+func newExampleFarmSetup(t *testing.T, seed float64, extra ...app.System) *app.App {
+	t.Helper()
+	return newExampleFarmSetupWith(t, seed, func(p *params.Params) {}, extra...)
+}
+
+// newExampleFarmSetupWithModifier runs the setup incl. CreateInitialQueens with the given
+// InitialQueensModifierBehaviorSpace.
+func newExampleFarmSetupWithModifier(t *testing.T, modifier float64) *app.App {
+	t.Helper()
+	return newExampleFarmSetupWith(t, 1, func(p *params.Params) { p.File.InitialQueensModifierBehaviorSpace = modifier },
+		&CreateInitialQueens{})
+}
+
+// newExampleFarmSetupWith is newExampleFarmSetup with a function that changes the parameters before the setup.
+func newExampleFarmSetupWith(t *testing.T, seed float64, change func(p *params.Params), extra ...app.System) *app.App {
 	t.Helper()
 	dir := t.TempDir()
 	files := map[string]string{
@@ -234,13 +248,19 @@ func newExampleFarmSetup(t *testing.T, seed float64) *app.App {
 	p.WorkingDirectory.Path = dir
 	p.File = file
 	p.Interface.RAND_SEED = seed
+	change(&p)
 
 	a := app.New()
 	p.Apply(a.World)
 	ecs.AddResource(a.World, &globals.WhoCounter{})
+	ecs.AddResource(a.World, &globals.Counters{})
+	ecs.AddResource(a.World, &globals.ActiveBees{})
 	a.AddSystem(&Parameters{})
 	a.AddSystem(&CreateFoodsources{})
 	a.AddSystem(&CreateSpecies{})
+	for _, s := range extra {
+		a.AddSystem(s)
+	}
 	a.Initialize()
 	return a
 }

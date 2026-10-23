@@ -22,3 +22,20 @@ func TestDistance(t *testing.T) {
 		t.Errorf("Distance = %v, want 5", got)
 	}
 }
+
+func TestPatchCentresWithin(t *testing.T) {
+	// [NEST-03] strict "<": an assumed foodsource of 100 m2 (radius 0.564 patches with 10 m per patch) at the
+	// coordinates of flower patch 24 of the example farm (133.548, 112.5). The nearest patch centres (134, 112)
+	// and (134, 113) are at distance 0.674 > 0.564: none (finding 25, NetLogo: runtime error).
+	if got := PatchCentresWithin(133.548, 112.5, 0.564, 0, 300, 0, 210); len(got) != 0 {
+		t.Errorf("got %v, want no patch centre", got)
+	}
+	// (132, 170.5) with radius 0.564: (132, 170) and (132, 171) at distance 0.5
+	if got := PatchCentresWithin(132, 170.5, 0.564, 0, 300, 0, 210); len(got) != 2 {
+		t.Errorf("got %v, want 2 patch centres", got)
+	}
+	// distance exactly r is not inside; world borders cut the circle
+	if got := PatchCentresWithin(0, 0, 1, 0, 300, 0, 210); len(got) != 1 || got[0] != [2]int{0, 0} {
+		t.Errorf("got %v, want only (0, 0)", got)
+	}
+}
