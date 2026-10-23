@@ -1,0 +1,33 @@
+// Package examplefiles holds the NetLogo example input files, or their beginning, copied verbatim.
+//
+// Import tests parse these strings and check every value, so they do not depend on the files in netlogo/,
+// which .gitignore excludes. Do not edit the strings by hand: copy them again from the files.
+//
+// The CSV files have Windows line endings (CRLF). Go raw strings drop the carriage return, so the copies
+// use LF line endings.
+// The tests also parse each copy with CRLF line endings.
+package examplefiles
+
+// SystemParameters is netlogo/_SYSTEM_Parameters.csv, complete (2 lines).
+const SystemParameters = `AbundanceBoost,BeeSpeciesInitialQueensListAsString,Backgroundcolour,BackgroundImage,Black_th,COLONIES_IBM,CropRotationListAsString,CumulVisitsOnlyLastYear?,FlowerspeciesFile ,FoodSourceLimit,ForagingMortalityFactor,ForagingMortalityModel,Gridsize,HabitatsFile,InitialQueensModifierBehaviorSpace,KeepDeadColonies?,Lambda_detectProb,MapAreaIncluded,MasterSizeFactor,MaxForagingRange_m,MaxHibernatingQueens,MaxPatchRadius_m,MergeHedges?,MinSizeFoodSources?,MyFarmlandPatches,N_Badgers,RemoveEmptyFoodSources?,SatelliteFile,SetColour,SexLocus?,ShowCohorts?,ShowDeadCols?,ShowFoodsources?,ShowGrid?,ShowInspectedColony?,ShowMasterpatchesOnly?,ShowNests?,ShowPlots?,ShowQueens?,ShowSearchingQueens?,ShowWeather?,BeespeciesFile,StopExtinct?,UnlimitedMales?,Weather,White_th,WinterMortality?
+1,"""B_terrestris 500""",5,"""none""",1,0,"""""",FALSE,"""_SYSTEM_Flowerspecies.csv""",25,1,"""high""",500,"""_SYSTEM_Habitats.csv""",1,TRUE,-0.005,"""complete""",1,10000,10000,500,TRUE,TRUE,"""""",0,TRUE,"""No satellite image""","""Yellow""",FALSE,TRUE,FALSE,TRUE,FALSE,FALSE,FALSE,TRUE,TRUE,TRUE,TRUE,TRUE,"""_SYSTEM_BumbleSpecies_UK_01.csv""",TRUE,TRUE,"""Constant 8 hrs""",9,TRUE
+`
+
+// ExampleFarmParameters is netlogo/_SYSTEM_Example_Farm_Parameters.csv, complete (2 lines).
+// With the default interface settings NetLogo reads this file (finding 13).
+const ExampleFarmParameters = `AbundanceBoost,BeeSpeciesInitialQueensListAsString,Backgroundcolour,BackgroundImage,Black_th,COLONIES_IBM,CropRotationListAsString,CumulVisitsOnlyLastYear?,"FlowerspeciesFile ",FoodSourceLimit,ForagingMortalityFactor,ForagingMortalityModel,Gridsize,HabitatsFile,InitialQueensModifierBehaviorSpace,KeepDeadColonies?,Lambda_detectProb,MapAreaIncluded,MasterSizeFactor,MaxForagingRange_m,MaxHibernatingQueens,MaxPatchRadius_m,MergeHedges?,MinSizeFoodSources?,MyFarmlandPatches,N_Badgers,RemoveEmptyFoodSources?,SatelliteFile,SetColour,SexLocus?,ShowCohorts?,ShowDeadCols?,ShowFoodsources?,ShowGrid?,ShowInspectedColony?,ShowMasterpatchesOnly?,ShowNests?,ShowPlots?,ShowQueens?,ShowSearchingQueens?,ShowWeather?,BeespeciesFile,StopExtinct?,UnlimitedMales?,Weather,White_th,WinterMortality?
+1,"""B_terrestris 500""",5,"""none""",1,0,"""""",false,"""_SYSTEM_Flowerspecies.csv""",25,1,"""high""",500,"""_SYSTEM_Habitats.csv""",1,true,-0.005,"""complete""",1,10000,10000,500,true,true,"""""",0,true,"""No satellite image""","""Magenta""",false,true,false,true,false,false,false,true,true,true,true,true,"""_SYSTEM_BumbleSpecies_UK_01.csv""",true,true,"""Constant 8 hrs""",9,true
+`
+
+// Habitats contains lines of netlogo/_SYSTEM_Habitats.csv: the header, the first 2 data lines (lines 2-3 of the
+// file) and the 6 stewardship option lines at the end of the file (lines 27-32, habitatColourID "FlowerSpeciesList_...").
+const Habitats = `habitatColourID,colourName_forUserInfoOnly,colourRangeMin,colourRangeMax,habitatType,habitatSwitchedOn?,ONLY FLOWER DATA BEYOND THIS COLUMN!,Alsike_clover,American_willowherb,Average_Willow,Bell_heather,Birdsfoot_trefoil,Blackthorn,Bramble,Buckwheat,Bugle,Burdock,Buttercup,Charlock,Chicory,Comfrey,Common_bluebell,Common_cats_ear,Common_field_speedwell,Common_fumitory,Common_knapweed,Common_mouse_ear,Common_vetch,Creeping_buttercup,Crop_Apple,Crop_Cereals,Crop_Field_beans,Crop_Maize,Crop_Oilseed_rape,Cross_leaved_heath,Daisy,Dandelion,Dog_rose,Field_pansy,Field_scabious,Field_woundwort,Foxglove,Germander_speedwell,Giant_bindweed,Gorse,Greater_birdsfoot_trefoil,Greater_knapweed,Ground_ivy,Hawthorn,Heath_speedwell,Hedge_bindweed,Hedge_woundwort,Ling,Marsh_thistle,Meadow_buttercup,Meadowsweet,Oilseed_rape,Ox-eye_daisy,Phacelia,Prickly_sow_thistle,Ragwort,Red_campion,Red_clover,Red_dead_nettle,Redshank,Ribwort_plantain,Rosebay_willowherb,Salad_burnet,Scarlet_pimpernel,Selfheal,Silverweed,Smooth_hawksbeard,Spear_thistle,St_Johns_wort,Sunflower,Tormentil,Tufted_vetch,Vipers_bugloss,White_clover,White_dead_nettle,White_mustard,Wild_carrot,Wild_radish,Wild_teasel,Yarrow,Yellow_rattle
+12,darkred,12,12,Grass_margin,TRUE,n/a,0.0175,0,0,0,0.376666667,0,0,0,0,0,1.528333333,0,0.026666667,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.003333333,0,0.01,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.129333333,0,0,0,0,0,0.14,0,0,0.046666667,0.02,0,0,0,0,0,0.276,0,0,0.203333333,0.098333333,0,0,0
+15,red,13,17,Crop_Field_beans,TRUE,n/a,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,107.5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+FlowerSpeciesList_Legume,,-1,-1,Legume,FALSE,n/a,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,17.02,0,0,0,0,0,0,0,0.1077,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1.123,0,0,0,0,0,0,0,0,0,0,0,0,16.13077,0,0,0,0,0,0,0
+FlowerSpeciesList_Margin,,-1,-1,Margin,FALSE,n/a,0,0,0,0,0.236666667,0,0,0,0,0,0,0,6.154444444,0,0,0.011666667,0,0.333333333,0.103333333,0,0.016666667,0,0,0,0,0,0,0,0,0,0,0.102222222,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3.186666667,0.024444444,0.082222222,0.041111111,2.615333333,0,0,0,0,0,0.12,0,0,0,0.003333333,0,0,0,0,0,1.9,0,0,0.568333333,1.823333333,0,0,0
+FlowerSpeciesList_newCSO_Legume,,-1,-1,newCSO_Legume,FALSE,n/a,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,17.02,0,0,0,0,0,0,0,0.1077,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1.123,0,0,0,0,0,0,0,0,0,0,0,0,16.13077,0,0,0,0,0,0,0
+FlowerSpeciesList_newCSO_Margin,,-1,-1,BirdBumble_Margin,FALSE,n/a,0.49,0.42,0,0,0.01,0,0,1.53,0,0,0,0,0,0,0,0,0.21,0.23,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.21,0,0,0,0,0,0.15,0,1.86,0,0,0,0.02,0,0,0,0.01,0,0.02,0,0,0.07,0.73,0,0.01,0,0,0,0,0,1.84,0,0,0,0.01,0
+FlowerSpeciesList_newCSO_Plot,,-1,-1,GameCover_Plot,FALSE,n/a,0,0,0,0,0,0,0,6.276666667,0,0,0,0,0,0,0,0,4.79,0,0,0,0.16,0,0,0,0,0,0,0,0,0,0,0,0,0.7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4.47,0.19,0,0,0,0.16,0,0,0,0,1.185,0,0,0,0,0,2.2,0,0,0,0,0,0.82,0,17.37333333,0,0,0
+FlowerSpeciesList_Plot,,-1,-1,Plot,FALSE,n/a,0,0,0,0,5.68,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1.058333333,0,30.805,0,0,0,0,0,0,0,1.67E-02,0,0,0,0,0,0.16875,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7.855,0.033,0,0,0,0,0,0.01875,0,0.10625,0,0,0,0,0,0,1.725,0,0,0,0,0,0,0
+`

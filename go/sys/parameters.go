@@ -3,6 +3,7 @@ package sys
 import (
 	"encoding/csv"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -112,18 +113,30 @@ func allCSOList(path string) ([]string, error) {
 		return nil, fmt.Errorf("HabitatsFile: %w", err)
 	}
 	defer f.Close()
-	reader := csv.NewReader(f)
+	result, err := parseCSOList(f)
+	if err != nil {
+		return nil, fmt.Errorf("HabitatsFile %s: %w", path, err)
+	}
+	return result, nil
+}
+
+// parseCSOList reads the stewardship option names from the content of a HabitatsFile [CSO].
+func parseCSOList(r io.Reader) ([]string, error) {
+	reader := csv.NewReader(r)
 	reader.FieldsPerRecord = -1
 	rows, err := reader.ReadAll()
 	if err != nil {
-		return nil, fmt.Errorf("HabitatsFile %s: %w", path, err)
+		return nil, err
+	}
+	if len(rows) == 0 {
+		return nil, fmt.Errorf("empty file")
 	}
 	header := rows[0]
 	header[0] = strings.TrimPrefix(header[0], "\ufeff")
 	colID := slices.Index(header, "habitatColourID")
 	colType := slices.Index(header, "habitatType")
 	if colID < 0 || colType < 0 {
-		return nil, fmt.Errorf("HabitatsFile %s: columns habitatColourID and habitatType required", path)
+		return nil, fmt.Errorf("columns habitatColourID and habitatType required")
 	}
 
 	// [CSO-02] numeric IDs never contain the text, so no special case is needed for them.
