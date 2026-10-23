@@ -562,11 +562,25 @@ globals
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [PAR] ParametersProc
+; Called by: SetupWithoutClearingProc [INIT-05]
+; Context:   observer
+; Purpose:   sets all global parameters that are NOT in the parameter file. Runs AFTER ReadAllParametersProc.
+; Translate: yes (constants as default parameters), except display-only values and the check loop [PAR-09]
+; ===============================================================================
 to ParametersProc
   ; this procedure sets the GLOBAL parameters of the model
+  ; [PAR-01] list of simulated bee species and their initial number of queens, from BeeSpeciesInitialQueensListAsString
   QueensInitialProc
 
+  ; [PAR-02] reset the assertion flag (see [GO-01])
   set AssertionViolated false
+  ; [PAR-03] hard-coded constants. They cannot be changed via files.
+  ;          Display only, not translated: CohortSymbolSize, ColonySymbolsize, ColorIBM, FoodsourceSymbolSizeFactor,
+  ;          MinFoodSourceSymbolSize, QueenSymbolSize, StepWidth (and BackgroundColor in [PAR-05])
+  ;          NOTE: ForagingRangeMax_m (758 m) is the foraging range used by the model. MaxForagingRange_m from the
+  ;          parameter file is never read.
   set CallItaDay_s 24 * 3600 ; [s]
   set CohortSymbolSize 0.75 * MasterSizeFactor
   set ColonySymbolsize 9 * MasterSizeFactor
@@ -588,10 +602,13 @@ to ParametersProc
   set MaxLifespanMales 30  ; 30d of aldult age; Duchateau & Marien 1995 Ins. Soc. 42:255-266 (1995): 30.48+-10.23; however: bees were kept in flight-cages hence most likely overestimating life span
   set MetabolicRateFlight_W/kg 488.6 ; Wolf et al. 1999 (Tab. 1, Open air: 488.6+-226.7 W/kg)
   set MinFoodSourceSymbolSize 2.5 * MasterSizeFactor
+  ; [PAR-04] foraging mortality per second, chosen by ForagingMortalityModel (parameter file).
+  ;          Any other value leaves MortalityForager_per_s at 0 (value after clear-all).
   if ForagingMortalityModel = "high" [ set MortalityForager_per_s 1.0E-05 ] ;  (BEEHAVE VALUE: 0.00001, from Visscher&Dukas 1997 (Mort 0.036 per hour foraging)
   if ForagingMortalityModel = "intermediate" [ set MortalityForager_per_s 2.14E-06 ] ;  (Schmid-Hempel & Heeb 1991: mortality (B. lucorum) 30-40% per week (=>35%), survival rate per week: 0.65
      ; assuming 8hrs foraging per day: 7 * 8 * 3600 = 201600 seconds, survival rate/s = 0.65^(1/201600) => mortality rate/s 2.14E-06
   if ForagingMortalityModel = "low" [ set MortalityForager_per_s 2.75E-07 ] ;  Stelzer et al. 2010 (B. terrestris) (doi:10.1111/j.1469-7998.2010.00709.x), Tab. 1 (from mean of loss rate %/h)
+  ; [PAR-03] continued: hard-coded constants
   set MortalityAdultsBackground_daily 0 ; Plowright & Jay 1968: negligible adult mortality in captive colonies (B. ternarius)
   set N_ForeignAlleles 24 ; (24) "The number of sex alleles in this population is estimated to be at least 24" Duchateau et al. 1994 Entomol. exp. appl. 71: 263-269, 1994.
   set NestSearchTime_h 6
@@ -604,16 +621,22 @@ to ParametersProc
   set Sunrise_s 8 * 3600  ; 8 * 3600 = 8:00 a.m.
 
   ;; NEW FOR Bee-Steward:
+  ; [PAR-05] name of the foodsources input file, derived from the map name: "X.png" -> "X_Foodsources.txt"
   set FoodsourcesFile (word remove ".png" MyMap "_Foodsources.txt")
   set BackgroundColor 5
   set SelectedFieldsList []
+  ; [PAR-06] stewardship option names (e.g. "Margin", "Plot", "Legume") from the HabitatsFile, needed by CreateLayersProc
   set CSS_OptionsList AllCSOListREP                  ; *MB RC*
 
+  ; [PAR-07] crop rotation: map names separated by blanks. The default "" gives [""] (length 1), i.e. no crop rotation
   set CropRotationList ListFromStringREP CropRotationListAsString
 
+  ; [PAR-08] output variables
   set PopulationSizeDay365List [] ; for output, list is populated on each 1st Jan (starting at ticks = 1) in UpdateSeasonalEventsProc
   set Survived? 1
   ;clear-output
+  ; [PAR-09] check only, not translated: evaluates every parameter name from the parameter file once.
+  ;          A name that is not a global variable causes a runtime error here.
   foreach AllParametersList
   [
     let command (word "set GenericRunCommandValue " ?)
@@ -623,6 +646,14 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [QINI] QueensInitialProc
+; Called by: ParametersProc [PAR-01]
+; Context:   observer
+; Purpose:   parses BeeSpeciesInitialQueensListAsString (e.g. "B_terrestris 500") into
+;            BeeSpeciesInitialQueensList [["B_terrestris" 500]] and SpeciesList ["B_terrestris"]
+; Translate: yes
+; ===============================================================================
 to QueensInitialProc
   ; Bees species (e.g. B_terrestris) are no longer global variables defined by GUI Input. Instead, the initial number of queens for
   ; each species is defined in the variable BeeSpeciesInitialQueensListAsString, read in from the parameter file
@@ -631,7 +662,10 @@ to QueensInitialProc
 
   set SpeciesList []
   set BeeSpeciesInitialQueensList []
+  ; [QINI-01] split the string at blanks (see ListFromStringREP)
   let beeSpeciesInitialQueensList_preliminary ListFromStringREP BeeSpeciesInitialQueensListAsString  ; format of prelim. list e.g. ["B_hortorum" "100" "B_terrestris" "500"]  - whereas the format in the end should look like [["B_hortorum" 100] ["B_terrestris" 500]]
+  ; [QINI-02] items alternate: species name, number of queens. Pairs are built in order.
+  ;           The number is parsed with read-from-string. A trailing name without number is dropped.
   let newSpecies true ; keeps track whether the next item is a species name or a number
   let nextEntry []
   foreach beeSpeciesInitialQueensList_preliminary ;; e.g. e.g. ["B_hortorum" "100" "B_terrestris" "500"]
@@ -648,6 +682,7 @@ to QueensInitialProc
        set nextEntry []
      ]
   ]
+  ; [QINI-03] SpeciesList: species names only, same order. CreateSpeciesProc compares them case-sensitively.
   foreach BeeSpeciesInitialQueensList  ; e.g. [["B_hortorum" 100] ["B_terrestris" 500]]
     [ set SpeciesList lput item 0 ? SpeciesList ]
 end
@@ -1308,6 +1343,13 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [CLEAR] ClearProc
+; Called by: Setup, "Default" interface button
+; Context:   observer
+; Purpose:   removes all agents, resets all globals to 0 and ticks to 0
+; Translate: no (a new ark World is empty)
+; ===============================================================================
 to ClearProc
   clear-all
   stop-inspecting-dead-agents
@@ -1316,6 +1358,13 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [SETUP] Setup
+; Called by: interface button "SETUP", SetupBehaviorSpace
+; Context:   observer
+; Purpose:   clears the world and initialises the model. The actual work is done in SetupWithoutClearingProc [INIT].
+; Translate: yes, as the initialisation systems in model/default.go
+; ===============================================================================
 to Setup
   ClearProc
   SetupWithoutClearingProc
@@ -1410,12 +1459,26 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [INIT] SetupWithoutClearingProc
+; Called by: Setup, "Default" interface button
+; Context:   observer, ticks = 0
+; Purpose:   the scheduler of the initialisation: parameters, landscape, species, badgers, initial queens,
+;            then one morning routine and the first output. The order matters: species need the foodsources
+;            (nest sites), queens need the species.
+; Translate: yes, as the order of the initialisation systems in model/default.go
+; ===============================================================================
 to SetupWithoutClearingProc
+  ; [INIT-01] random seed, only if RAND_SEED != 0. NetLogo's random number sequence cannot be reproduced in Go,
+  ;           so single runs will never be identical, only distributions.
   ;if behaviorspace-run-number > 0 [ set RAND_SEED behaviorspace-run-number ]; *MB RC* i.e. only if BehaviorSpace is used;
      ;in this case: don't vary RAND_SEED but have it as output, set "Repetitions" (in BehaviorSpace when defining an "Experiment" to the number of replicates
   if RAND_SEED != 0 [ random-seed RAND_SEED ]
   ;; OR ALTERNATIVELY: if RAND_SEED != 0 [ random-seed RAND_SEED + 10000 * behaviorspace-run-number ] ; not recommended!
 
+  ; [INIT-02] choose the parameter file. With ProjectsOwnParameterFile? the name is derived from the map:
+  ;           "X.png" -> "X_Parameters.csv" ("_SYSTEM_" removed). The default map always uses MyParametersFile.
+  ;           In Go: the parameter file is given directly, no GUI logic needed.
   if (MyMap = "_SYSTEM_Example_Farm.png" and MyParametersFile = "_SYSTEM_Example_Farm_Parameters.csv")
     [ set ProjectsOwnParameterFile? false ] ; to make sure that under default setting, the default (System) parameter file is used
   if ProjectsOwnParameterFile? = true
@@ -1425,29 +1488,51 @@ to SetupWithoutClearingProc
     set MyParametersFile (word MyParametersFile "_Parameters.csv") ; identifier for parameter file and correct extension
   ]
 
+  ; [INIT-03] GUI ONLY, not translated
   PanelSettingProc
+  ; [INIT-04] read the parameter file into global variables
   ReadAllParametersProc
+  ; [INIT-05] hard-coded parameters (overwrites nothing from the file, the names do not overlap)
   ParametersProc
+  ; [INIT-06] map background, foodsources from the Foodsources file, split into one layer per flower species
   CreateFoodsourcesProc
+  ; [INIT-07] one oneSpecies agent per simulated species, incl. its nest-site foodsources
   CreateSpeciesProc
+  ; [INIT-08] up to N_Badgers badgers, each on a random "Scrub" masterpatch at least 300 m from other badgers
   CreateBadgersProc
+  ; [INIT-09] hibernating queens with emergence dates
   CreateInitialQueensProc
+  ; [INIT-10] morning routine at ticks = 0, i.e. Day = 0. Foraging_periodREP is skipped for Day = 0,
+  ;           so DailyForagingPeriod_s stays 0 until day 1.
   UpdateMorning_Proc
+  ; [INIT-11] GUI ONLY, not translated
   CreateSignsProc
+  ; [INIT-12] first daily totals (see [GO-18])
   OutputDailyProc
+  ; [INIT-13] GUI ONLY, not translated: grid lines on the map
   if ShowGrid? = true
   [
     ask patches with [ remainder pxcor round (Gridsize * Scaling_NLpatches/m) = 0 ] [ set pcolor black ]
     ask patches with [ remainder pycor round (Gridsize * Scaling_NLpatches/m) = 0 ] [ set pcolor black ]
     ask patch 290 5 [ set  plabel-color black set plabel word Gridsize " m" ]
   ]
+  ; [INIT-14] GUI ONLY, not translated: restore ProjectsOwnParameterFile? for the default map (see [INIT-02])
   if (MyMap = "_SYSTEM_Example_Farm.png" and MyParametersFile = "_SYSTEM_Example_Farm_Parameters.csv")
     [ set ProjectsOwnParameterFile? true ] ; to make sure that under default setting, the default (System) parameter file is used
+  ; [INIT-15] assertion: every foodsource must have a habitat type
   if count foodsources with [patchtype = "undefined"] > 0 [ AssertionProc "Undefined habitat patch!" ]
 end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [RPAR] ReadAllParametersProc
+; Called by: SetupWithoutClearingProc [INIT-04], SetupBehaviorSpace, SaveLoadSettingsProc
+; Context:   observer
+; Purpose:   reads the parameter file (header row = global variable names, second row = values)
+;            and sets each global with "run (word "set " name " " value)"
+; Translate: yes, as reading a CSV file into the parameter structs. Only rows 1 and 2 are used.
+; ===============================================================================
 to ReadAllParametersProc
 
 ;;  if ProjectsOwnParameterFile? = true:
@@ -1459,6 +1544,9 @@ to ReadAllParametersProc
 ;;  B) otherwise, MyParametersFile is set to "_SYSTEM_Parameters.csv" (and loaded, without being saved under a new name)
 ;;
 
+ ; [RPAR-01] load MyParametersFile. If it does not exist, load "_SYSTEM_Parameters.csv" instead
+ ;           (and remember to save a copy under the project's name if ProjectsOwnParameterFile?, see [RPAR-04]).
+ ;           csv:from-file already converts numbers to numbers and TRUE/FALSE to booleans.
  let newParameterfileNeedsToBeCreated? false
  let parametersDataCSV  [] ; csv:from-file MyParametersFile ; a csv input file is loaded and saved
  ifelse file-exists? MyParametersFile
@@ -1477,10 +1565,15 @@ to ReadAllParametersProc
        user-message "Can't find input file '_SYSTEM_Parameters.csv'"
      ]
    ]
+ ; [RPAR-02] row 1: parameter names (= names of global variables), row 2: values. Further rows are ignored.
  let header item 0 parametersDataCSV  ; first line of the input file is the header
  set AllParametersList header
  let parameterDataList item 1 parametersDataCSV
 
+ ; [RPAR-03] for each column: turn the value into NetLogo source text and run "set <name> <value>".
+ ;           Strings are stored in the file as """text""" and arrive as "text" incl. quotes, so "set" gets a string literal.
+ ;           Values containing doubled quotes "" are reduced to one pair of quotes (exception: MyFarmlandPatches).
+ ;           position finds the FIRST column with that name, so a duplicated column name would use the first value.
  foreach header
  [
    let nextCommand ""
@@ -1493,6 +1586,7 @@ to ReadAllParametersProc
    set nextCommand (word "set " ? " " newEntry)
    run nextCommand
  ]
+ ; [RPAR-04] not translated: save the parameters as the project's own parameter file
  if newParameterfileNeedsToBeCreated? = true [ SaveLoadSettingsProc "Save!" ""]
 end
 
@@ -4053,6 +4147,14 @@ end
 
 ; ********************************************************************************************************************************************************************************
 
+; ===============================================================================
+; [DATE] DateREP
+; Called by: UpdateMorning_Proc
+; Context:   observer
+; Purpose:   date string for the interface, e.g. "1  January 1". Every year has 365 days.
+;            The global Date is only shown in the interface, no model procedure reads it.
+; Translate: no (display only). Note: Day is computed separately in UpdateMorning_Proc.
+; ===============================================================================
 to-report DateREP
   let month-names (list "January" "February" "March" "April" "May" "June" "July" "August" "September" "October" "November" "December")
   let days-in-months (list 31 28 31 30 31 30 31 31 30 31 30 31)
@@ -4077,15 +4179,31 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [FPER] Foraging_periodREP
+; Called by: UpdateMorning_Proc, only if Day > 0
+; Context:   observer
+; Purpose:   length of today's foraging period [s], from the parameter Weather. Result goes to DailyForagingPeriod_s.
+;            Foraging is possible from Sunrise_s (8:00) to Sunrise_s + DailyForagingPeriod_s (see StimForaging...REP).
+; Translate: yes
+; ===============================================================================
 to-report Foraging_periodREP
+  ; [FPER-01] default -1 if Weather matches none of the options below
   let foragingPeriod_s -1
   let foragingHoursList [ ]
+  ; [FPER-02] Weather = "foragingHoursExample": daily foraging hours for one year, item (Day - 1).
+  ;           NOTE: the list has 366 items, not 365. Item 42 is ".5" right after a "0" (probably meant as "0.5"),
+  ;           Compared to the probably intended list, day 42 gets 0 instead of 0.5 and from day 43 on each day
+  ;           gets the value intended for the previous day. Item 366 is never read.
+  ;           Keep the list exactly as it is for an identical model.
   let foragingHoursExample [ 0  3.1  0  0  0  1.5  0  0.1  0  0  1.7  1.6  0  0  0  0  0  0  0  0  1.5  5  0  3.2  0  0  0  0.2  0  0  0  0.1  0.9  5.9  3.5  6.9  1.3  7.7  2.3  4.6  2.2  0 .5 9.2  0  8  3.2 4.1  0  9  9.1  7.3  5.7  4.9  0  12.1  6.5  7.9  7.9  11.1  2.8  0  2.8  6  5.7  0  4  10.1  2.9  10.1  0  11.4  6.3  9.9  4.4  7.5  8  12.3  8.7  10.3  3.7  11.3  13.2  14  4.2  7.7  8.2  7.2  9.2  5  13.1  10.5  3.5  11.1  13.6  6.2  8.4  7.8  8.5  9.8  6.5  4.1  10.8  12.5  15.1  10.1  4.3  7  9.4  8.9  7.5  7.8  6.6  11.4  12.1  12.4  11.9  10.1  14.7  7.8  13.1  3.3  16.6  14.8  17.9  5.7  0.2  2.9  10  14.7  16.2  15.8  5.3  5.8  2.5  6  15.2  1.3  13.1  11.2  2  12.9  9.7  2.1  17.3  5.7  8.5  13.1  18.5  1.7  6.7  13.8  0.5  0.8  15.7  4.9  11.4  11.9  3.8  11.7  7.1  21.2  17.7  1.8  12.3  15.7  16.9  16.8  9.9  3.6  20.4  13  5.1  0.6  11.7  2.1  4.7  13.9  13.8  1.4  0.3  18.4  14.8  12.8  3.7  13.5  4.7  0.3  5.5  4  17.5  1.7  0.3  14.9  12.4  11.6  8.5  4.5  11.1  16  13.2  13.8  0.7  7.1  14.3  3.4  2.2  5.6  10.6  3.4  15.5  15.6  12.8  15  14  5.9  15.5  9.1  2  1  3.2  9.3  3  3.1  14  10.2  1  9.7  8.8  3.8  1.9  11.9  9.3  6.5  6.6  8.4  4.3  7.2  1.5  11.4  10.4  13.5  1.2  6  4.4  13.5  12.4  8  9.3  5.9  0.9  6.8  5.9  9.1  10.5  6  7.9  2.3  0.8  0  7.9  11  1.3  8.7  6.5  6.6  7.6  0  0  9.4  7.1  6.4  4  6.6  0  2.7  0  0  7.8  0  8.7  0.3  2  4.8  1.8  0.9  0  0  7.2  5.8  6.5  0  1.1  0  0  0.7  6.3  1.3  0  5.5  1.4  2.8  0  0  0  4  0  1.4  5.1  0  0  2.1  0  0.5  0  1  0  0  2.3  0  0  0  1.4  0.6  0  0  0  0  0.8  0  0  1  0.9  0  0  0  0  0  0  2.3  0  0  1.9  1.4  0  0  0  1.5  0  0  0  1  1.9  0  0  3.4  0  0  1  0  0  0  0  0  0  1.6 ]
   if Weather = "foragingHoursExample"
     [
       set foragingHoursList foragingHoursExample
       set foragingPeriod_s (item (day - 1) foragingHoursList) * 3600
     ]
+  ; [FPER-03] Weather = "Constant N hrs": N hours every day. Allowed N: 24, 20, 16, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1.
+  ;           Default in _SYSTEM_Parameters.csv: "Constant 8 hrs"
   if Weather = "Constant 24 hrs" [ set foragingPeriod_s 24 * 3600 ]
   if Weather = "Constant 20 hrs" [ set foragingPeriod_s 20 * 3600 ]
   if Weather = "Constant 16 hrs" [ set foragingPeriod_s 16 * 3600 ]
@@ -4724,12 +4842,25 @@ end
 
 ;;; *******************************************************************************
 
+; ===============================================================================
+; [CSO] AllCSOlistREP
+; Called by: ParametersProc [PAR-06]
+; Context:   observer
+; Purpose:   names of the stewardship options (CSO). These are the habitatType values of all rows in the
+;            HabitatsFile whose habitatColourID contains "FlowerSpeciesList_".
+;            For _SYSTEM_Habitats.csv: ["Legume" "Margin" "newCSO_Legume" "BirdBumble_Margin" "GameCover_Plot" "Plot"].
+;            CreateLayersProc uses the list to recognise entries like ["Margin"] in a flowerSpeciesList.
+; Translate: yes. The HabitatsFile is therefore needed for a simulation run, not only for map processing.
+; ===============================================================================
 to-report AllCSOlistREP  ; *MB RC* NEW Reporter-procedure!
  let resultList []
+ ; [CSO-01] read the whole HabitatsFile (also stored in the global HabitatDataCSV)
  ifelse file-exists? HabitatsFile ; _SYSTEM_Habitats.csv (defined in Parameter.csv)
  [
   set HabitatDataCSV csv:from-file HabitatsFile   ; read file & save data; the csv file contains information about which habitat types are represented by which colour and the relative abundance of flower species
   let headerList item 0 HabitatDataCSV   ; the header of the csv table is saved in headerList:  ["habitatColourID" "colourRangeMin" "colourRangeMax" "habitatSwitchedOn?" "habitatType" "ONLY FLOWER DATA BEYOND THIS COLUMN!" "Alsike_clover" "Bugle" ...]
+  ; [CSO-02] keep rows whose habitatColourID is a string containing "FlowerSpeciesList_", in file order.
+  ;          Numeric IDs make member? fail, "carefully" skips these rows silently.
   foreach but-first HabitatDataCSV ; goes through all 'lines' (except of header) in ordered way
   [
     let colID item (position  "habitatColourID" headerList) ?
@@ -6340,6 +6471,15 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [LIST] ListFromStringREP
+; Called by: ParametersProc [PAR-07], QueensInitialProc [QINI-01], CropRotationSelectFilesProc
+; Context:   any
+; Purpose:   splits a string at blanks into a list of strings. Multiple and leading blanks are skipped.
+;            Edge cases that must be kept: ""  -> [""] (one empty item), "a b " -> ["a" "b" ""] (trailing blank
+;            gives an empty last item). Unlike strings.Fields in Go.
+; Translate: yes
+; ===============================================================================
 to-report ListFromStringREP [ inputList ]; returns a string into a list (with blanks as separator)
  let resultList []
  let remainingInputString inputList
