@@ -1545,14 +1545,23 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [GO] Go
+; Called by: interface buttons "Run" and "Run for period"
+; Context:   observer
+; Purpose:   simulates one day (1 tick). Morning updates, then an event-driven
+;            loop over all active adult bees, then end-of-day processes.
+; Translate: yes, as the system order in model/default.go
+; ===============================================================================
 to Go
+  ; [GO-01] stop the run if an assertion failed in a previous step
   if AssertionViolated = true
      [
        ask patches [ set pcolor red ]
        user-message "Assertion violated!"
        stop
       ]
-  ; make sure, InspectTurtle refers to a colony:
+  ; [GO-02] GUI ONLY, not translated: keep InspectTurtle pointing to a living colony
   if (count bees with [ colonyID = InspectTurtle ] = 0 and count Colonies > 0)
    [ set InspectTurtle [ who ] of one-of colonies ]
 
@@ -1562,44 +1571,75 @@ to Go
     [ set InspectTurtle [ who ] of one-of colonies ]
   ]
 
+  ; continueWorking becomes false only in [GO-08], i.e. when the bee with the smallest personalTime_s is beyond CallItaDay_s
   let continueWorking true
+  ; [GO-03] advance the day counter (1 tick = 1 day)
   tick
+  ; [GO-04] morning routine: Day/Date, daily foraging period, flowering state of foodsources, seasonal events,
+  ;         queens emerging from hibernation and founding colonies, wake-up times of all active bees
+  ;         (sorted into ActiveBeesSortedList), crop rotation (day 365), colony updates (UpdateColoniesProc)
   UpdateMorning_Proc
-  NeedNectarPollenLarvaeTodayProc ; this calculates how much nectar and pollen is required for the brood
+  ; [GO-05] nectar and pollen the LARVAE of each colony need today (used by the foraging stimuli)
+  NeedNectarPollenLarvaeTodayProc
+  ; [GO-06] event loop. It runs while ALL three conditions hold:
+  ;         (1) continueWorking (see [GO-08]), (2) at least one active adult worker or queen exists, (3) at least one colony exists
   while [ continueWorking = true ; still some time left today to do some work..
           and count bees with [ (caste = "worker" or caste = "queen") and (activity != "hibernate") and stage = "adult" ] > 0 ; there are actually (active) bees, that can work
           and count colonies > 0 ]
    [
+     ; [GO-07] select the bee with the SMALLEST personalTime_s (first entry of ActiveBeesSortedList).
+     ;         Not random: randomness enters only via the wake-up times set in UpdateMorning_Proc [GO-04].
+     ;         NextActiveBeeREP first re-sorts the previously active bee, whose personalTime_s has increased.
      set ActiveBee NextActiveBeeREP   ;  runs faster than using "ask min-one-of bees with [ (caste = "worker" or caste = "queen") and (activity != "hibernate") and stage = "adult" ][ personalTime_s ]"
      ask bee ActiveBee
      [
+       ; [GO-08] end of the day: the selected bee has the smallest personalTime_s of all active bees.
+       ;         If it is beyond CallItaDay_s (24 h), ALL bees are done and the loop ends for everybody.
        ifelse personalTime_s > CallItaDay_s
          [ set continueWorking false ]
          [
+           ; [GO-09] the bee performs exactly ONE activity (ActivityProc), which increases its personalTime_s
+           ;         (resting +0.5 h, egg laying +24 h, foraging + trip duration). Afterwards it goes back into the queue.
            set Daytime_s personalTime_s ; day time based on personal time of current bee
+           ; activityList is only a log for the GUI (time stamp hh:mm, minutes < 10 padded with "0"); not translated
            ifelse (floor (remainder personalTime_s 3600) / 60) >= 10 ; adds current personal time to activityList (hh:mm)
              [ set activityList lput ( word floor (personalTime_s / 3600) ":" floor ((remainder personalTime_s 3600) / 60)) activityList ]
              [ set activityList lput ( word floor (personalTime_s / 3600) ":0" floor ((remainder personalTime_s 3600) / 60)) activityList ]
            ActivityProc
          ]
+       ; [GO-10] a queen without a colony (colonyID = -1) is inactive for the rest of the day
        if colonyID = -1 [ set personalTime_s CallItaDay_s + 1 ]  ; if queen hasn't founded a colony yet, it won't be active for the rest of the day
      ]
    ]
-
+  ; [GO-11] ALL adult, non-hibernating females (not only the ones still active) are set to "resting"
   ask bees with [ stage = "adult" and activity != "hibernate" and caste != "male" ]
   [
     set activity "resting"
     set activityList lput "End" activityList
   ]
+  ; end-of-day processes, in this order:
+  ; [GO-12] young queens leave the nest, mate and start hibernation
   QueensLeavingNestProc ; young queens leave the nest to mate & hibernate
+  ; [GO-13] larvae are fed from the colony stores, larval weight gain, stores are reduced
   FeedLarvaeProc
+  ; [GO-14] sets queenProduction? = true and back-calculates queenProductionDate (day the first queen-destined eggs
+  ;         were laid) once (ticks - 10 d) >= switchPointDate - 5 d and larvaWorkerRatio < 3. From then on female
+  ;         larvae can develop into queens. No queen is created here. Data only for B. terrestris.
   QueenProductionDateProc
+  ; [GO-15] all bees age by 1 day, eggs -> larvae -> pupae -> adults (incl. caste of larvae), adult mortality
+  ;         (Development_Mortality_AdultsProc)
   DevelopmentProc
+  ; [GO-16] brood that exceeded its maximum development age dies (eggs, larvae: cause weight or incubation deficit,
+  ;         pupae), all eggs die after the competition point. Food shortage acts only indirectly via larval weight.
   MortalityBroodProc
+  ; [GO-17] per badger: each colony within 735 m is dug up with p = 0.19 * 0.1 per day (stores set to 0, all bees die).
+  ;         No time of day involved.
   BadgersOnTheProwlProc
+  ; [GO-18] daily totals (Total... globals, some are read by model procedures, e.g. TotalHibernatingQueens) and plots
   OutputDailyProc
+  ; [GO-19] GUI ONLY, not translated: draw colony cohorts
   if ShowCohorts? = true [ DrawCohortsProc ]
-    ; POPULATION EXTINCT? => END OF RUN
+  ; [GO-20] POPULATION EXTINCT? => END OF RUN (record TimeToExtinction, stop if StopExtinct?)
   if count Colonies + count Bees = 0
   [
     if TimeToExtinction <= 0 [ set TimeToExtinction ticks ]
