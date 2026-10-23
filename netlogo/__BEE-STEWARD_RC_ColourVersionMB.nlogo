@@ -826,8 +826,7 @@ to CreateSpeciesProc
         set devIncubation_Q_PupationTH_kJ devQuotaIncubationToday_kJ * devAge_Q_PupationMin_d
         set devIncubation_Q_EmergingTH_kJ devQuotaIncubationToday_kJ * devAge_Q_EmergingMin_d ; * Incubation_Q_Factor
 
-       ; [SPEC-06] nest sites: all MASTERPATCHES whose patchType is in nestHabitatsList (exact match, case-sensitive).
-       ;           nestsiteFoodsourceList is an agentset: fixed after setup, NetLogo drops dead agents from it.
+       ; [SPEC-06] nest sites: all MASTERPATCHES whose patchType is in nestHabitatsList (exact match, case-sensitive).       ;           nestsiteFoodsourceList is an agentset: fixed after setup, NetLogo drops dead agents from it.
        ;           nestSiteArea: sum of their areas (a masterpatch has the area of the whole flower patch).
        ;           ORDER: irrelevant, agentset and sum.
        ;Create list of foodSources as nest sites and calculate their total area    ; CAUTION: Netlogo 'member?'-command is CASE SENSITIVE!!!
@@ -847,8 +846,25 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [NSFS] NestSiteFoodSourceREP
+; Called by: NestSitesSearchingProc [NEST-02]
+; Context:   bee (a queen)
+; Purpose:   chooses one nest-site foodsource of the queen's species at random, weighted by its area:
+;            probability = area_sqm / nestSiteArea [SPEC-06].
+;            Candidates: all nest sites of the whole landscape. The position of the queen plays no role.
+;            The circle of the foodsource only decides where within it the nest is placed [NEST-03].
+; Translate: yes
+; ===============================================================================
 ; Reporter to find foodSource for queens that have found a nest site.
 to-report NestSiteFoodSourceREP [ memoSpecies ]
+  ; [NSFS-01] the nest sites in random order (sort by who, then shuffle; the sort has no effect).
+  ;           Then the first foodsource at which the summed area proportions exceed p = random-float 1.
+  ;           ORDER: irrelevant for the distribution, the choice is area-weighted in any order.
+  ;           NOTE: floating point sums may stay slightly below 1. If p is larger than the full sum, the loop runs
+  ;           past the end of the list and NetLogo stops with a runtime error (finding 27, see
+  ;           trans/netlogo-findings.md#finding-27). Should be extremely rare, though.
+  ;           SIMPLIFY: sort and shuffle are not needed for an area-weighted choice.
   let chosenFoodSource  nobody
   let foodSourceList    shuffle sort [nestsiteFoodsourceList] of memoSpecies  ; Randomise order of species-suitable foodSources (actually not necessary!)
   let foodSourceArea    [nestSiteArea] of memoSpecies                 ; total area of species-suitable foodSources
@@ -873,6 +889,14 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [NEST] NestSitesSearchingProc
+; Called by: EmergenceNewQueensProc [EMER-04], for queens of social species without a colony
+; Context:   bee (a queen)
+; Purpose:   once per day, a queen finds a nest site with probability chanceFindNest (default 0.2). Otherwise she
+;            may die during the search.
+; Translate: yes
+; ===============================================================================
 to NestSitesSearchingProc
   let memoX 0
   let memoY 0
@@ -880,11 +904,19 @@ to NestSitesSearchingProc
   let nestSiteFound  false
   let memoFoodSource nobody
   let dailyChance    [chanceFindNest] of memoSpecies  ; chance is species-own variable
+  ; [NEST-01] nest site found today if random-float 1 <= chanceFindNest
   ; Decide if queen finds a nest today
   if random-float 1 <= dailyChance
   [
+    ; [NEST-02] area-weighted choice of a nest-site foodsource [NSFS]
     ; Find FoodSource for colony
     set memoFoodSource NestSiteFoodSourceREP memoSpecies
+    ; [NEST-03] the nest is placed at the CENTRE of a random patch whose centre lies within the circle of the
+    ;           foodsource (distance < radius_m * Scaling_NLpatches/m), not at the foodsource itself. So the
+    ;           rounding of .5 coordinates plays no role here (correction of finding 24).
+    ;           NOTE: if no patch centre lies within the circle (a very small foodsource far from a patch centre),
+    ;           one-of reports nobody and NetLogo stops with a runtime error (finding 25, see
+    ;           trans/netlogo-findings.md#finding-25). Not the case for the example farm.
     ; Find patch for colony
     ask memoFoodSource
     [
@@ -897,6 +929,11 @@ to NestSitesSearchingProc
     set nestSiteFound true
   ]
 
+  ; [NEST-04] found nest site: the queen moves to the nest site, activity "nestConstruction" (colony is built in [EMER-05]).
+  ;           Not found nest site: she dies with probability 1 - (1 - MortalityForager_per_s) ^ (NestSearchTime_h * 3600).
+  ;           Default ("high", 6 h): 1 - (1 - 1e-5) ^ 21600 = 0.194 per day (finding 26, see
+  ;           trans/netlogo-findings.md#finding-26). With an unknown ForagingMortalityModel: 0 (finding 5, see
+  ;           trans/netlogo-findings.md#finding-5).
   ifelse nestSiteFound = true
   [
     setxy memoX memoY
@@ -917,9 +954,21 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [PRNG] PatchesInRangeProc
+; Called by: CreateColoniesProc [CCOL-06], CropRotationProc
+; Context:   colony
+; Purpose:   allPatchesInRangeList: all foodsources (every layer) whose centre is within ForagingRangeMax_m
+;            (758 m) of the colony. Set once when the colony is created (and after a crop rotation).
+; Translate: yes, except masterpatchesInRangeList (never read, finding 23, see trans/netlogo-findings.md#finding-23)
+; ===============================================================================
 to PatchesInRangeProc
   ; called by a colony; creates 2 lists, containing the who of all foodsources and masterpatch-foodsources within the foraging range of the colony
 
+ ; [PRNG-01] distance <= ForagingRangeMax_m * Scaling_NLpatches/m, in NetLogo patch units, no wrapping.
+ ;           ORDER: MATTERS for the list order. fput in the random order of ask gives a list in random order
+ ;           (finding 29, see trans/netlogo-findings.md#finding-29). Whether the order matters for the foragers
+ ;           is decided in step 6 (Foraging_searchingProc). In Go: shuffle, then build the list in this order.
  let allPatches []
  let allMasterPatches []
  let xcol xcor
@@ -937,9 +986,25 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [FRNG] FoodsourcesInFlowerAndRangeProc
+; Called by: CreateColoniesProc [CCOL-06], UpdateColoniesProc (only on days when a foodsource starts or stops
+;            flowering, FoodsourcesInFlowerUpdate?)
+; Context:   colony
+; Purpose:   from allPatchesInRangeList [PRNG], the lists of foodsources and masterpatches that offer pollen or
+;            nectar NOW (pollen_g > 0, nectar_myl > 0).
+; Translate: yes
+; ===============================================================================
 to FoodsourcesInFlowerAndRangeProc
   ; called by a colony; creates 5 lists, containing the who of foodsources or masterpatches offering nectar, offering pollen or offering either nectar or pollen within the foraging range
 
+ ; [FRNG-01] in the order of allPatchesInRangeList: a foodsource with pollen_g > 0 goes to pollenInFlowerAndRangeList,
+ ;           its masterpatch to masterpatchesWithPollenlayersInFlowerAndRangeList. The same for nectar.
+ ;           The masterpatch lists keep the first occurrence of each masterpatch (remove-duplicates).
+ ;           allSourcesInFlowerAndRangeList: pollen list, then nectar list, without duplicates.
+ ;           NOTE: uses the CURRENT amounts. Called in the morning after UpdateFoodsourcesProc, when every
+ ;           foodsource in flower is full. The lists are not updated during the day when a foodsource is emptied.
+ ;           ORDER: irrelevant, foreach over a list (the list order comes from [PRNG-01]).
  set pollenInFlowerAndRangeList []
  set nectarInFlowerAndRangeList []
  set allSourcesInFlowerAndRangeList []
@@ -975,6 +1040,14 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [CCOL] CreateColoniesProc
+; Called by: EmergenceNewQueensProc [EMER-05]
+; Context:   observer
+; Purpose:   creates one colony per queen in "nestConstruction", at the queen's position, and the lists of
+;            foodsources within the foraging range.
+; Translate: yes, except the store bars (GUI)
+; ===============================================================================
 to CreateColoniesProc
 ; Purpose: creates and sets up initial values of a newly founded colony
 
@@ -986,6 +1059,8 @@ to CreateColoniesProc
  let speciesShape "bumblebeenest" ; will be replaced by species specific bumblebee symbol
  let nNewColonies count bees with [ activity = "nestConstruction" ]
 
+ ; [CCOL-01] GUI ONLY, not translated: 2 store bars per new colony. NOTE: they are created BEFORE the colonies and
+ ;           use up who numbers. This changes only the absolute who numbers of the colonies, not their order.
  ; each colony needs 2 storebars to display on the interface the relative amount of nectar and pollen stored:
  create-storebars 2 * nNewColonies
  [
@@ -996,11 +1071,16 @@ to CreateColoniesProc
    set storeColonyID whoColony
  ]
 
+ ; [CCOL-02] one colony per queen in "nestConstruction". The colonies run this block one at a time in random order,
+ ;           each takes ONE-OF the remaining queens. ORDER: irrelevant for the state, the pairing of colony who
+ ;           numbers and queens is random either way.
  ; now the COLONIES are created:
  create-Colonies nNewColonies
  [
    set whoColony who ; the ID of the colony
    set colonyFoundationDay ticks
+   ; [CCOL-03] the queen joins the colony (colonyID, activity "resting"). The colony takes her position (the patch
+   ;           centre from [NEST-03]) and her species. show-turtle, shape: GUI only.
    ask one-of bees with [ activity = "nestConstruction" ]
    [
      set xcol xcor  ;  x and y coordinates of the queen are saved, so that the nest can be located where the queen is
@@ -1012,6 +1092,11 @@ to CreateColoniesProc
      set speciesShape speciesName  ; saves the species of the queen so that the colony can be displayed in the according shape
      if ShowQueens? = true [show-turtle]
    ]
+   ; [CCOL-04] start values: no queen production, switch point (timing of drone production(haploid eggs)), competition point, eusocial phase and queen
+   ;           production date not set (NotSetHigh), queenright? true, colonysize 1 (the queen),
+   ;           energyStore_kJ = 100 * EnergySucrose_kJ/mymol * 1.5 = 0.873 kJ (100 microlitres of 1.5 M nectar).
+   ;           All other colony variables start at 0 (NetLogo default), e.g. pollenStore_g.
+   ;           color, size, heading, shape, hide-turtle: GUI only.
    set queenProduction? false   ; no production of queens yet
    set switchPointDate NotSetHigh ; queen won't lay haploid eggs until switchPointDate is re-set
    set competitionPointDate NotSetHigh
@@ -1031,6 +1116,10 @@ to CreateColoniesProc
    set size ColonySymbolsize; 14 (14)
    set energyStore_kJ 100 * EnergySucrose_kJ/mymol * 1.5  ; i.e. 0.873kJ (= 100 microliter of 1.5M nectar (i.e. ca. 1 crop))
    set colonysize 1  ; i.e. the queen
+   ; [CCOL-05] individual-based (IBM) instead of cohort-based while fewer than COLONIES_IBM LIVING colonies are IBM.
+   ;           Dead colonies are deadCols and no longer count, so a new colony can replace a dead IBM colony
+   ;           (finding 30, see trans/netlogo-findings.md#finding-30). Default COLONIES_IBM = 0: all cohort-based.
+   ;           InspectTurtle, color: GUI only.
    set cohortBased? true
    if count Colonies with [ cohortBased? = false ] < COLONIES_IBM
    [
@@ -1039,9 +1128,11 @@ to CreateColoniesProc
      set InspectTurtle Who
    ]
 
+   ; [CCOL-06] foodsources within the foraging range [PRNG], and those of them in flower today [FRNG]
    PatchesInRangeProc
    FoodsourcesInFlowerAndRangeProc
 
+   ; [CCOL-07] GUI ONLY, not translated: assign and place the 2 store bars
    let barX 3.5
    let barY 5
    ; a nectar and a pollen storebar is now assigned to the new colony
@@ -1065,6 +1156,7 @@ to CreateColoniesProc
      set store "Pollen"
      set color orange - 0.5
    ]
+   ; [CCOL-08] counter for output and for the colony check in CheckNumbersProc
    set TotalColoniesEverProduced  TotalColoniesEverProduced + 1
  ]
  ask storebars [ if ShowNests? = false [ hide-turtle ] ] ; *MB RC*
@@ -1901,6 +1993,15 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [THR] ThresholdLevelREP
+; Called by: CreateInitialQueensProc, EmergenceNewQueensProc, QueensLeavingNestProc, PsithyrusNestSearchProc,
+;            EggsParameterSettingProc, Development_PupaeProc, Development_Mortality_AdultsProc
+; Context:   any
+; Purpose:   table of task thresholds by task type and situation. A bee does a task if the colony's stimulus is
+;            above her threshold (ActivityProc). NotSetHigh means: never.
+; Translate: yes, as a lookup table. An unknown type or situation is an assertion.
+; ===============================================================================
 to-report ThresholdLevelREP [ thType situation ]
   ;TYPES: eggLaying pollenForaging nectarForaging nursing
   ;SITUATIONS: egg worker youngQueen QueenInitiationPhase QueenSocialPhase Psith
@@ -1987,9 +2088,20 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [IQUE] CreateInitialQueensProc
+; Called by: SetupWithoutClearingProc [INIT-09]
+; Context:   observer
+; Purpose:   creates the hibernating, mated queens of the first year, one bee agent per queen (number = 1),
+;            for each species of BeeSpeciesInitialQueensList, with a random emergence day and a random weight.
+; Translate: yes
+; ===============================================================================
 to CreateInitialQueensProc
   let newQueens 0
   let counter 0
+  ; [IQUE-01] species in the order of BeeSpeciesInitialQueensList [QINI-02].
+  ;           A modifier of 0 (missing in the parameter file) is set to 1. NOTE: this changes the global.
+  ;           Number of queens = round (number * modifier), round: .5 up.
   foreach BeeSpeciesInitialQueensList   ; e.g. [["B_hortorum" 100] ["B_terrestris" 500]]
   [
    let modelledSpecies item 0 ?
@@ -1997,11 +2109,17 @@ to CreateInitialQueensProc
    if InitialQueensModifierBehaviorSpace = 0 [ set InitialQueensModifierBehaviorSpace 1 ] ; i.e. if not defined via parameter file, this is to modify initial queens when using BehaviorSpace
    set newQueens round (item 1 ? * InitialQueensModifierBehaviorSpace)
 
+   ; [IQUE-02] create the queens. The new turtles get consecutive who numbers and then run this block one at a
+   ;           time in random order. ORDER: irrelevant, each queen only sets her own values from her own random draws.
    create-bees newQueens  ; newQueens = number of new queens created here
    [
+     ; shape, size, color, show/hide: GUI only
      set shape "circle"
      if ShowQueens? = false [ hide-turtle ]
      set size QueenSymbolSize
+     ; [IQUE-03] state of a hibernated, mated adult queen. Genetics: mtDNA, two alleles and one allele of the
+     ;           male in the spermatheca, each random-float 139.9 (a NetLogo colour, used for display and as allele).
+     ;           colonyID -1: no colony yet.
      set adultAge 180  ; queens have hibernated (exact age doesn't matter)
      set broodAge 36  ; (exact age doesn't matter)
      set color red
@@ -2015,6 +2133,8 @@ to CreateInitialQueensProc
      set spermathecaList [] ;list (allele)
      set spermathecaList fput (random-float 139.9) spermathecaList
      set colonyID -1 ; i.e. does not belong to any colony yet
+     ; [IQUE-04] species of the queen: one-of the species agents with this name. If the species does not exist
+     ;           (missing in the BeespeciesFile, see [SPEC-02]), speciesID stays -1 and the next line using it fails.
      let speciesIDmemo -1
      let speciesNameMemo "noName"
      ask one-of Species with [ name = modelledSpecies ]
@@ -2025,19 +2145,28 @@ to CreateInitialQueensProc
      set speciesID speciesIDmemo
      set speciesName speciesNameMemo
      set stage "adult"
+     ; [IQUE-05] task thresholds of a queen before her first workers: egg laying 0.1, nectar and pollen foraging 0.7,
+     ;           nursing 0.5 [THR]
      set thEgglaying ThresholdLevelREP "eggLaying" "QueenInitiationPhase"
      set thForagingNectar ThresholdLevelREP "nectarForaging" "QueenInitiationPhase"
      set thForagingPollen ThresholdLevelREP "pollenForaging" "QueenInitiationPhase"
      set thNursing ThresholdLevelREP "nursing" "QueenInitiationPhase"
      set activity "hibernate"
      set activityList [ ]
+     ; [IQUE-06] NOTE: with GetUpTime_s = 1 this gives -3599 to 3600 s, not "7:00 to 9:00" as the comment says
+     ;           (finding 31, see trans/netlogo-findings.md#finding-31). No effect: UpdateMorning_Proc sets a new
+     ;           personalTime_s for every active bee each morning, and hibernating queens are not active.
      set personalTime_s random (2 * 3600) + (GetUpTime_s - 3600) ; = Start_time_s +- 1hr (i.e. between 7:00 and 9:00 am)
+     ; [IQUE-07] emergence day: round (random-normal emergingDay_mean emergingDay_sd), drawn again until it is
+     ;           > 0 and < seasonStop. emergingDate starts at 0, so it is drawn at least once. It is compared with
+     ;           ticks in EmergenceNewQueensProc [EMER-01], i.e. the initial queens emerge in year 1.
      let yearEndSeason [seasonStop] of OneSpecies speciesID ; prevent bees from setting emergingDate past the end of season
      while [ emergingDate <= 0 OR emergingDate >= yearEndSeason]
        [ set emergingDate  round random-normal [ emergingDay_mean ]
     of OneSpecies speciesID [emergingDay_sd] of OneSpecies speciesID ]
     ; emerging from hibernation next year on day "emergingDay_mean" (+- s.d.)
 
+     ; [IQUE-08] no foodsource known yet
      set currentFoodsource -1
      set nectarsourceToGoTo -1
      set pollensourceToGoTo -1
@@ -2045,6 +2174,11 @@ to CreateInitialQueensProc
      set knownMasterpatchesNectarList [ ]
      set knownMasterpatchesPollenList [ ]
 
+     ; [IQUE-09] weight: random-normal with mean (min + max) / 2 and sd (max - min) / 4 of the queen weights of the
+     ;           species, cut to [min, max]. Worked example, computed from _SYSTEM_BumbleSpecies_UK_01.csv (the
+     ;           default BeespeciesFile), row B_terrestris: devWeight_Q_PupationMin_mg = 590 and
+     ;           devWeight_Q_PupationMax_mg = 980, so mean (590 + 980) / 2 = 785 mg and sd (980 - 590) / 4 = 97.5 mg.
+     ;           Then proboscis length [PROB], crop volume and pollen load [LOAD] from the weight.
      ; determination of the queen's weight:
      let minWeight_mg [ devWeight_Q_PupationMin_mg ] of oneSpecies speciesID
      let maxWeight_mg [ devWeight_Q_PupationMax_mg ] of oneSpecies speciesID
@@ -2063,6 +2197,20 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [LOAD] CropAndPelletSizeREP
+; Called by: CreateInitialQueensProc [IQUE-09], Development_PupaeProc
+; Context:   bee
+; Purpose:   crop volume [microlitres] ("nectar") or pollen load [g] ("pollen") of a bee from her weight:
+;            nectar = min (specMax_cropVolume_myl, weight_mg * 0.402),
+;            pollen = min (specMax_pollenPellets_g, weight_mg * 0.402 * 0.015 / 50).
+;            Worked example, not from the code: a B. terrestris queen of the mean weight 785 mg [IQUE-09] gets
+;            min (173, 785 * 0.402) = 173 microlitres and min (0.15, 785 * 0.402 * 0.015 / 50) = 0.0947 g.
+;            173 and 0.15 are from _SYSTEM_BumbleSpecies_UK_01.csv (the default BeespeciesFile), row B_terrestris,
+;            columns specMax_cropVolume_myl and specMax_pollenPellets_g.
+;            A result of 0 is an assertion.
+; Translate: yes
+; ===============================================================================
 to-report CropAndPelletSizeREP [ forage ]
  ; bee crop and pollen capacity based on weight using (1) linear formula
  ; (2) pollen:crop ratio from HBs in BEEHAVE, with both
@@ -2149,8 +2297,18 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [PSI] PsithyrusNestSearchProc
+; Called by: EmergenceNewQueensProc [EMER-04], for Psithyrus (cuckoo bumblebee) queens without a colony
+; Context:   bee (a Psithyrus female)
+; Purpose:   the cuckoo bee may find and enter a host colony, where she may kill the host queen.
+;            Not part of the default runs (only B_terrestris in the default parameter files).
+; Translate: yes
+; ===============================================================================
 to PsithyrusNestSearchProc
   ;  determines if a cuckoo bee finds a suitable host colony and can enter it successfully
+  ; [PSI-01] arbitrary probabilities (comments in the code): find one nest 0.05, get access 0.25, be killed 0.25,
+  ;          kill the host queen 0.5. Probability to find any nest: 1 - 0.95 ^ (number of colonies).
   let memoColID -1
   let findSingleNestProb 0.05     ;    arbitrary value
   let getAccessProb 0.25          ;    arbitrary value
@@ -2160,6 +2318,10 @@ to PsithyrusNestSearchProc
   let myWho who
   let findAnyNestProb 1 - ((1 - findSingleNestProb) ^ count colonies)
 
+  ; [PSI-02] finds a nest, gets access, and is either killed by the host queen or enters the colony.
+  ;          The host is ONE-OF ALL colonies: any species, also colonies already taken by another cuckoo bee
+  ;          (finding 35, see trans/netlogo-findings.md#finding-35). Thresholds as "Psith" [THR]: only egg laying.
+  ;          color, size, shape: GUI only.
   if random-float 1 < findAnyNestProb
   [
     if random-float 1 < getAccessProb
@@ -2181,6 +2343,9 @@ to PsithyrusNestSearchProc
       ]
     ]
   ]
+  ; [PSI-03] in the colony: every other mated queen of the colony dies with probability 0.5.
+  ;          ORDER: irrelevant, each queen draws independently.
+  ; [PSI-04] no nest found (and not killed): death with the same search mortality as in [NEST-04].
   ifelse succesful = true
   [
     if count bees with [colonyID = memoColID and caste = "queen" and mated? = true] > 0
@@ -2545,7 +2710,17 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [DIE] DieProc
+; Called by: many procedures, always by the dying agent itself
+; Context:   bee, colony or badger
+; Purpose:   removes an agent. causeOfDeath is only printed for badgers, it is not counted.
+;            NOTE: die ends the agent's execution at once. Commands after DieProc in the calling block are not run
+;            for this agent. In Go: return from the calling code (finding 28, see trans/netlogo-findings.md#finding-28).
+; Translate: yes
+; ===============================================================================
 to DieProc [ causeOfDeath ] ; calls the actual "die" command for all biologically relevant agents and keeps track of all their deaths
+ ; [DIE-01] bee: TotalBeesEverDied + number, remove from ActiveBeesSortedList (the daily activity queue), die
  if breed = bees
   [
     set TotalBeesEverDied TotalBeesEverDied + number
@@ -2555,6 +2730,9 @@ to DieProc [ causeOfDeath ] ; calls the actual "die" command for all biologicall
        set ActiveBeesSortedList filter [? != who] ActiveBeesSortedList ]
        die
      ]
+ ; [DIE-02] colony: becomes a deadCol, colonyDeathDay = ticks. The store bars die (GUI). size, label, color,
+ ;           shape, ht: GUI only. In Go: record the colony's data and delete it (decision E in trans/data-model.md,
+ ;           finding 9, see trans/netlogo-findings.md#finding-9).
  if breed = colonies
   [
     ; instead of removing colony, change breed to deadCol
@@ -2569,6 +2747,8 @@ to DieProc [ causeOfDeath ] ; calls the actual "die" command for all biologicall
     if not showDeadCols? [ ht ]
  ]
 
+ ; [DIE-03] badger: print the cause, die
+ ; [DIE-04] assertion: only a dead colony reaches this line (bees and badgers have died above)
  if breed = badgers
   [
     output-show causeOfDeath
@@ -3130,6 +3310,16 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [WMOR] WintermortalityProbREP
+; Called by: EmergenceNewQueensProc [EMER-03]
+; Context:   bee (a queen emerging from hibernation)
+; Purpose:   probability to SURVIVE the winter (despite the name): 0.64 / (1 + e^(-22 * (relative weight - 0.32))),
+;            relative weight = (weight - min) / (max - min) of the queen weights of the species. At most 0.64.
+;            The curve was fitted to B. terrestris and is used for all species (finding 33, see
+;            trans/netlogo-findings.md#finding-33). A relative weight outside [0, 1] is an assertion.
+; Translate: yes
+; ===============================================================================
 to-report WintermortalityProbREP
   ; Winter survival (survivalProb) is calculated from Beekman et al 1998 (Entomologia Experimentalis et Applicata 89: 207–214, 1998)
   ; Fig. 1B: survival prob. is calculated from proportion of survivors to survivors + non-survivors. Using the relative weight rather than the absolute weight, we fitted a sigmoid curve (survivalProb) to the left site only,
@@ -3148,6 +3338,15 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [EMER] EmergenceNewQueensProc
+; Called by: UpdateMorning_Proc, every morning (also at ticks = 0 in Setup, where no queen emerges)
+; Context:   observer
+; Purpose:   queens whose emergence day is today leave hibernation (a cohort is split into single queens),
+;            may die over winter, and every queen without a colony searches a nest site. Queens that found one
+;            today build a colony (CreateColoniesProc).
+; Translate: yes
+; ===============================================================================
 to EmergenceNewQueensProc
   ; new queens emerge from hibernation and found new colonies (note: most queens will still be represented as cohorts here!)
   ; Winter survival (survivalProb) is calculated from Beekman et al 1998 (Entomologia Experimentalis et Applicata 89: 207–214, 1998)
@@ -3158,6 +3357,12 @@ to EmergenceNewQueensProc
   ; with a length of 6 or 8 months died, the initial weight distribution of dead queens exceeds that of the surviving queens."
 
   ;cohorts split into individuals before being challenged for over-winter survival
+  ; [EMER-01] emergence: all bees with emergingDate = ticks (ticks, not Day: the date is absolute).
+  ;           activity "emerging", thresholds as before the first workers [THR].
+  ;           A cohort of number n is split: number 1, and hatch creates n - 1 copies. The copies are IDENTICAL
+  ;           (weight, alleles, spermatheca, emergingDate, ...) and also have number 1 (finding 32, see
+  ;           trans/netlogo-findings.md#finding-32). The copies are not part of this ask, the agentset is fixed.
+  ;           ORDER: irrelevant for the state. Only the who numbers of the copies follow the random order of ask.
   ask bees with [emergingDate = ticks]
   [
     ; EMERGING:
@@ -3175,10 +3380,14 @@ to EmergenceNewQueensProc
     set number 1        ; new queens are individuals now (not cohorts)
     hatch hatchlings    ; the "clones" of the originally cohort-based queenagent are created
   ]
+  ; [EMER-02] all emerging queens incl. the copies. ORDER: irrelevant, each queen only changes herself.
   ask bees with [activity = "emerging"]
   [
     if caste != "queen" [ show "WARNING! Something else than a queen emerged from hibernation! (2)" ]
 
+    ; [EMER-03] if WinterMortality?: the queen dies if random-float 1 > survival probability [WMOR].
+    ;           DieProc ends this queen's block (die, finding 28, see trans/netlogo-findings.md#finding-28).
+    ;           Survivors: activity "resting", colonyID -1. show/hide-turtle: GUI only.
     ; WINTER MORTALITY:
     ; Queen has a risk of dying over winter:
     if WinterMortality? = true and random-float 1 > WintermortalityProbREP
@@ -3192,6 +3401,13 @@ to EmergenceNewQueensProc
       [hide-turtle]
   ]
   ; create new colonies for freshly emerged queens:
+  ; [EMER-04] every queen without a colony that is not hibernating searches a nest site: the queens emerged today
+  ;           and those that have not found one on earlier days.
+  ;           Social species: NestSitesSearchingProc [NEST]. Psithyrus: PsithyrusNestSearchProc [PSI].
+  ;           A species without any nest site: the queen dies.
+  ;           ORDER: irrelevant for social species, the queens choose nest sites independently (no check whether a
+  ;           site is taken). For Psithyrus the order decides which cuckoo bee may kill a host queen first [PSI-03].
+  ;           hide-turtle: GUI only.
   if count bees with [ caste = "queen" and colonyID = -1 and activity != "hibernate" ] > 0 ; i.e. (relatively) newly emerged queens (though might have emerged a few days ago)
   [
     ; queens without a colony search for nest sites
@@ -3208,6 +3424,8 @@ to EmergenceNewQueensProc
         DieProc (word "no suitable foodsources for nesting exist for " speciesname) ; kill off bees with no chance of finding a nest site
       ]
     ]
+    ; [EMER-05] queens that found a nest site today (activity "nestConstruction") build colonies [CCOL].
+    ;           Afterwards no queen may still be in "nestConstruction" (message only).
     ; if successful, they build a new nest:
     if count bees with [ activity = "nestConstruction" ] > 0
      [ CreateColoniesProc ]
@@ -3516,6 +3734,16 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [PROB] ProboscisLengthREP
+; Called by: CreateInitialQueensProc [IQUE-09], Development_PupaeProc
+; Context:   bee
+; Purpose:   proboscis (glossa) length, linear in the bee's weight between proboscis_min_mm at the minimum WORKER
+;            weight (devWeightPupationMin_mg) and proboscis_max_mm at the maximum QUEEN weight
+;            (devWeight_Q_PupationMax_mg). One line for all castes (finding 34, see
+;            trans/netlogo-findings.md#finding-34). A weight outside this range is an assertion.
+; Translate: yes
+; ===============================================================================
 to-report ProboscisLengthREP
   let minWeight_mg [ devWeightPupationMin_mg ] of oneSpecies speciesID
   let maxWeight_mg [ devWeight_Q_PupationMax_mg ] of oneSpecies speciesID
