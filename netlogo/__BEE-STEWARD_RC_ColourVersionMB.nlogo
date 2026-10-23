@@ -1216,7 +1216,7 @@ to MergeHedgesProc
   let fieldsWithHedgesList [] ; contains who of all non-hedge patches that are closest to at least one hedge patch
 
   ; [HEDG-02] hedges sorted by area, largest first. The order decides which hedge keeps the merged area [HEDG-04].
-  ;           ORDER: MATTERS. sort-on breaks ties RANDOMLY (verified in NetLogo 5.3.1, finding 14). Hedges with equal
+  ;           ORDER: MATTERS. sort-on breaks ties RANDOMLY (verified in NetLogo 5.3.1, finding 14, see trans/netlogo-findings.md#finding-14). Hedges with equal
   ;           area are common (example farm: 30 of 44 hedges). In Go: shuffle, then stable sort by area.
   ; [HEDG-03] for each hedge: nearest non-hedge foodsource with area >= 6500 m2 (distance between centres in
   ;           NetLogo patches, no wrapping). min-one-of picks a random one among equally near foodsources.
@@ -1360,7 +1360,7 @@ to CreateLayersProc
            ;             pollenMax_g   = area_sqm * relative abundance * pollen_g/flower
            ;             nectarMax_myl = area_sqm * relative abundance * nectar_ml/flower * 1000
            ;           NOTE: the value is multiplied by area and by amounts PER FLOWER, so it acts as flowers per m2
-           ;           (finding 10), although it is called relative abundance.
+           ;           (finding 10, see trans/netlogo-findings.md#finding-10), although it is called relative abundance.
            ;           A flower species missing in the FlowerspeciesFile gives a message and then a runtime error.
            hatch 1
            [
