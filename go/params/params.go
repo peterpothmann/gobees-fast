@@ -25,6 +25,14 @@ type Interface struct {
 	RAND_SEED float64 // Random seed. 0 means no seeding [INIT-01].
 }
 
+// World is the size of the NetLogo world (interface: graphics window). It does not wrap.
+type World struct {
+	MinPxcor float64
+	MaxPxcor float64
+	MinPycor float64
+	MaxPycor float64
+}
+
 // Termination criteria.
 //
 // NetLogo has no maximum run length inside Go; it is set by the "Run for period" button or BehaviorSpace.
@@ -36,6 +44,7 @@ type Termination struct {
 type Params struct {
 	WorkingDirectory WorkingDirectory
 	Interface        Interface
+	World            World
 	File             ParameterFile // Read with ReadParameterFile [INIT-04].
 	Constants        Constants
 	Termination      Termination
@@ -52,6 +61,7 @@ func Default() Params {
 			MyMap:     "_SYSTEM_Example_Farm.png",
 			RAND_SEED: 0,
 		},
+		World:     World{MinPxcor: 0, MaxPxcor: 300, MinPycor: 0, MaxPycor: 210},
 		Constants: DefaultConstants(),
 		Termination: Termination{
 			MaxTicks: 365,
@@ -72,6 +82,7 @@ func (p *Params) Apply(w *ecs.World) {
 	pCopy := *p
 	ecs.AddResource(w, &pCopy.WorkingDirectory)
 	ecs.AddResource(w, &pCopy.Interface)
+	ecs.AddResource(w, &pCopy.World)
 	ecs.AddResource(w, &pCopy.File)
 	ecs.AddResource(w, &pCopy.Constants)
 	ecs.AddResource(w, &pCopy.Termination)

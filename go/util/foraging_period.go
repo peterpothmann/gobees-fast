@@ -41,7 +41,7 @@ var constantForagingHours = map[string]float64{
 // foragingHoursExample are the daily foraging hours for Weather = "foragingHoursExample" [FPER-02].
 //
 // Copied token by token from the NetLogo code. The list has 366 items: item 42 is ".5" after a "0",
-// probably meant as "0.5". Kept as it is, see finding 1 in trans/netlogo-findings.md.
+// probably meant as "0.5". Kept as it is, see finding 1 in trans/netlogo-findings.md#finding-1.
 var foragingHoursExample = []float64{
 	0, 3.1, 0, 0, 0, 1.5, 0, 0.1, 0, 0, 1.7, 1.6, 0, 0, 0, 0, 0, 0, 0, 0,
 	1.5, 5, 0, 3.2, 0, 0, 0, 0.2, 0, 0, 0, 0.1, 0.9, 5.9, 3.5, 6.9, 1.3, 7.7, 2.3, 4.6,

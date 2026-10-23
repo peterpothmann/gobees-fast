@@ -60,7 +60,7 @@ func (s *Parameters) Update(w *ecs.World) {}
 func (s *Parameters) Finalize(w *ecs.World) {}
 
 // mortalityForager returns the foraging mortality per second [PAR-04].
-// Any other model name gives 0, the value after clear-all (finding 5).
+// Any other model name gives 0, the value after clear-all (finding 5, see trans/netlogo-findings.md#finding-5).
 // NetLogo gives no message. The warning here does not change the dynamics.
 func mortalityForager(model string) float64 {
 	switch model {

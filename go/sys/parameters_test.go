@@ -44,7 +44,7 @@ func TestParametersExampleFarm(t *testing.T) {
 		MortalityForager_per_s:      1.0e-05,
 		FoodsourcesFile:             "_SYSTEM_Example_Farm_Foodsources.txt",
 		CSS_OptionsList:             wantCSOList,
-		CropRotationList:            []string{""}, // finding 3: length 1, no crop rotation
+		CropRotationList:            []string{""}, // finding 3 (see trans/netlogo-findings.md#finding-3): length 1, no crop rotation
 	}
 	if !reflect.DeepEqual(*d, want) {
 		t.Errorf("got  %+v\nwant %+v", *d, want)
@@ -72,7 +72,7 @@ func TestAllCSOListMissingFile(t *testing.T) {
 }
 
 func TestMortalityForagerUnknownModel(t *testing.T) {
-	// Finding 5: case-sensitive, any other value gives 0.
+	// Finding 5 (see trans/netlogo-findings.md#finding-5): case-sensitive, any other value gives 0.
 	for _, m := range []string{"High", "medium", ""} {
 		if got := mortalityForager(m); got != 0 {
 			t.Errorf("mortalityForager(%q) = %v, want 0", m, got)

@@ -21,7 +21,7 @@ func TestForagingPeriodUnknownWeather(t *testing.T) {
 }
 
 func TestForagingPeriodExample(t *testing.T) {
-	// Finding 1: the list has 366 items, ".5" is item 42 (0-based).
+	// Finding 1 (see trans/netlogo-findings.md#finding-1): the list has 366 items, ".5" is item 42 (0-based).
 	if len(foragingHoursExample) != 366 {
 		t.Fatalf("len = %d, want 366 as in NetLogo", len(foragingHoursExample))
 	}

@@ -1,10 +1,12 @@
 package model
 
 import (
+	"gobees/globals"
 	"gobees/params"
 	"gobees/sys"
 
 	"github.com/mlange-42/ark-tools/app"
+	"github.com/mlange-42/ark/ecs"
 )
 
 // Default sets up the default gobees model.
@@ -23,8 +25,10 @@ func Default(p params.Params, a *app.App) *app.App {
 	}
 
 	// ---- Setup (NetLogo: Setup, SetupWithoutClearingProc). Runs in the systems' Initialize, in this order.
-	// [CLEAR] clear-all: not needed, a new world is empty.
+	// [CLEAR] clear-all: not needed, a new world is empty. clear-all also resets the who counter.
 	p.Apply(a.World) // [INIT-01] random seed, parameters as resources
+	who := globals.WhoCounter{}
+	ecs.AddResource(a.World, &who)
 	// [INIT-02] choice of the parameter file: GUI logic, the caller passes the file.
 	// [INIT-03] PanelSettingProc: GUI only, not translated.
 	// [INIT-04] ReadAllParametersProc: params.ReadParameterFile, before calling Default.
@@ -37,7 +41,7 @@ func Default(p params.Params, a *app.App) *app.App {
 	// [INIT-11] CreateSignsProc: GUI only, not translated.
 	// [INIT-12] OutputDailyProc: will run once in OutputDaily.Initialize.
 	// [INIT-13], [INIT-14]: GUI only, not translated.
-	// [INIT-15] assertion on undefined habitat types: will be part of CreateFoodsources.
+	// [INIT-15] assertion on undefined habitat types: part of CreateFoodsources.
 
 	// ---- Go, one tick = one day.
 	// [GO-01] Assertions are not a system. Violations will panic where they occur (NetLogo: AssertionProc).
