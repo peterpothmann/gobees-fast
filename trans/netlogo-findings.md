@@ -357,7 +357,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Code:** `[UCOL-02]`, `[UCOL-06]`
 - **Finding:** `UpdateColoniesProc` checks `allEggs + allLarvae + allPupae = 0` before it recomputes these counts in the same block. The check therefore uses the values of the previous morning. Brood that emerged or died since then is still counted, so the workers and queens die one day later than with current counts. Only workers and queens with `adultAge > 10` die. Younger adults stay and die on a later morning, once they are older than 10 days.
 - **Consequence for gobees:** keep the order: deaths first, then the statistics. Do not compute the counts on demand.
-- **Second Check**:
+- **Second Check**: 24.10.2026, PP
 - **Implemented:** `UpdateColonies.updateColony` in `sys/update_colonies.go`, deaths before statistics. Test: `TestUpdateColoniesDeathAfterCP` (the adults survive one more day because of the pupae counted on the previous morning).
 
 <a id="finding-38"></a>
@@ -370,7 +370,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
   - A colony with only males left stays alive until the last male dies: after `MaxLifespanMales` (30 days), at the end of the season, or when `UpdateSeasonalEventsProc` kills all males. It counts as a living colony, i.e. for `COLONIES_IBM` (finding 30, see trans/netlogo-findings.md#finding-30) and for the loop condition `count colonies > 0` (`[GO-06]`).
   - Brood whose only adults are males is not killed for "no adults left" (`[UCOL-04]`). This needs brood without any worker or queen, which is probably rare.
 - **Consequence for gobees:** keep the `ColonyID` of males. A colony entity is deleted only when no bee refers to it. So a bee never refers to a deleted colony, and the `ecs.Entity` references stay valid (decision B in `trans/data-model.md`).
-- **Second Check**:
+- **Second Check**: 24.10.2026, PP
 - **Implemented:** `sys/update_colonies.go` keeps males in `[UCOL-02]` and counts them as adults in `[UCOL-04]`. A colony is deleted only in `[UCOL-11]`, when no bee refers to it. Tests: `TestUpdateColoniesDeathAfterCP` (a male alone keeps the colony alive), `TestUpdateColoniesNoAdults` (a male keeps the brood alive).
 
 <a id="finding-39"></a>
@@ -381,7 +381,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Finding:** besides its assertions, `CheckNumbersProc` sets `TotalEggs`, `TotalLarvae`, `TotalPupae`, `TotalAdultWorkers`, `TotalAdultQueens`, `TotalAdultMales` and `TotalAdults`, and resets `TotalForagingTripsToday` to 0. `UpdateSeasonalEventsProc` reads `TotalEggs + TotalLarvae + TotalPupae` on the next morning, because it runs before `CheckNumbersProc`. It kills all males if, among other things, this sum is 0.
 - **Affects:** a translation that drops `CheckNumbersProc` as "only checks" changes when the males die, and the outputs. The BehaviorSpace metrics of these totals are morning values.
 - **Consequence for gobees:** a system `CheckNumbers` that sets the totals and panics where NetLogo asserts.
-- **Second Check**:
+- **Second Check**: 24.10.2026, PP
 - **Implemented:** system `CheckNumbers` in `sys/check_numbers.go`, totals in `globals.Totals`. Test: `TestCheckNumbersTotals` (all totals, `TotalForagingTripsToday` reset to 0). The colony check on day 364 is switched off in `model/default.go` (`SkipColonyCheck`) until step 7 translates the end of season.
 
 ## Findings from the model map and from `Go`
