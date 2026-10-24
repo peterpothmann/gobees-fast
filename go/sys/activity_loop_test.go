@@ -13,8 +13,8 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// activityWorld extends broodWorld (step 4b) with the systems of step 5. The foraging period is 8 h
-// (Weather = "Constant 8 hrs" in netlogo/_SYSTEM_Example_Farm_Parameters.csv).
+// activityWorld extends broodWorld (step 4b) with the systems of steps 5 and 6. The foraging period is 8 h
+// (Weather = "Constant 8 hrs" in netlogo/_SYSTEM_Example_Farm_Parameters.csv), the foraging mortality "high".
 type activityWorld struct {
 	*broodWorld
 	wake    *WakeUpBees
@@ -29,6 +29,8 @@ func newActivityWorld(t *testing.T, seed uint64) *activityWorld {
 	aw := &activityWorld{broodWorld: newBroodWorld(t, seed), wake: &WakeUpBees{},
 		loop: &ActivityLoop{CheckActiveCount: true}, eod: &EndOfDayResting{}}
 	aw.cal.DailyForagingPeriod_s = 8 * 3600
+	ecs.AddResource(aw.w, &globals.Totals{})
+	ecs.AddResource(aw.w, &globals.Derived{MortalityForager_per_s: 1e-05}) // ForagingMortalityModel "high" [PAR-04]
 	aw.wake.Initialize(aw.w)
 	aw.loop.Initialize(aw.w)
 	aw.eod.Initialize(aw.w)
@@ -231,14 +233,26 @@ func TestActivityProcChoice(t *testing.T) {
 		b.PersonalTime_s = tc.daytime
 		aw.daytime.Daytime_s = tc.daytime
 		aw.loop.ActivityProc(aw.w, e)
-		if b, _, _, _, _ := aw.bee(e); b.Activity != tc.want {
-			t.Errorf("%s: %v, want %v", tc.name, b.Activity, tc.want)
+		if !aw.w.Alive(e) {
+			continue // died on a search flight [COST-01]
+		}
+		// a forager ends her trip in another activity: without known patches she returns empty [SRCH-03]
+		b, _, _, fo, _ := aw.bee(e)
+		got := b.Activity
+		if got == activity.ReturningEmpty {
+			got = activity.NectarForaging
+			if fo.PollenForager {
+				got = activity.PollenForaging
+			}
+		}
+		if got != tc.want {
+			t.Errorf("%s: %v, want %v", tc.name, got, tc.want)
 		}
 	}
 }
 
 func TestActivityProcTime(t *testing.T) {
-	// [ACT-05] resting 1800 s, nursing 2880 s, egg laying 24 h, foraging (TEMPORARY stub) 1800 s
+	// [ACT-05] resting 1800 s, nursing 2880 s, egg laying 24 h, a failed search 2500 m / 5 m/s [COST-01]
 	for _, tc := range []struct {
 		name      string
 		situation string
@@ -249,7 +263,7 @@ func TestActivityProcTime(t *testing.T) {
 		{"resting", sitYoungQueen, 3600, true, 3600 + 1800},
 		{"nursing", sitQueenSocialPhase, 3600, true, 3600 + 2880},
 		{"egg laying", sitQueenSocialPhase, 3600, false, 3600 + 86400},
-		{"foraging stub", sitQueenInitiationPhase, 36000, true, 36000 + 1800},
+		{"foraging without known patch: failed search", sitQueenInitiationPhase, 36000, true, 36000 + 2500/5},
 	} {
 		aw := newActivityWorld(t, 1)
 		col := aw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) {
@@ -362,7 +376,7 @@ func TestActivityLoopQueenWithoutColony(t *testing.T) {
 }
 
 func TestActivityLoopExampleFarm(t *testing.T) {
-	// the full schedule of steps 0 to 5 on the example farm for 200 days. CheckActiveCount compares the length of
+	// the full schedule of steps 0 to 6 on the example farm for 200 days. CheckActiveCount compares the length of
 	// the queue with NetLogo's count in every turn [GO-06].
 	if testing.Short() {
 		t.Skip("200 days of the example farm")
@@ -381,7 +395,10 @@ func TestActivityLoopExampleFarm(t *testing.T) {
 	if maxQueue == 0 {
 		t.Error("no bee was ever active")
 	}
-	t.Logf("largest activity queue: %d bees", maxQueue)
+	totals := ecs.GetResource[globals.Totals](a.World)
+	t.Logf("largest activity queue: %d bees. Day 200: %v adult workers, %v adult queens, %v adult males, brood %v/%v/%v",
+		maxQueue, totals.TotalAdultWorkers, totals.TotalAdultQueens, totals.TotalAdultMales,
+		totals.TotalEggs, totals.TotalLarvae, totals.TotalPupae)
 }
 
 func TestNextActiveBeeREPAfterDeath(t *testing.T) {

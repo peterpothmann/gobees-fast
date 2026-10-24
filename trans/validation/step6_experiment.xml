@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<!DOCTYPE experiments SYSTEM "behaviorspace.dtd">
+<!--
+  Validation of steps 4b to 6 (brood, daily activity queue, foraging) against NetLogo (see trans/validation/README.md).
+  Colony dynamics of year 1, compared per day: colonies, brood, adults, stores, foraging trips, switch point, queen
+  production, and the nectar and pollen left in the landscape after foraging.
+
+  The go commands are NetLogo's Go with UpdateMorning_Proc inlined, line by line as in the model (comments
+  removed, generated from the .nlogo), WITHOUT two procedures of step 7 that gobees does not have yet:
+  QueensLeavingNestProc [GO-12] (young queens leave the nest, mate and hibernate) and UpdateSeasonalEventsProc
+  [MORN-06] (end of the season on day seasonStop, death of the males, limit of hibernating queens on 1 January).
+  With them, NetLogo and gobees would drift apart from the first young queen on for reasons outside steps 4b to 6.
+  OutputDailyProc only sets output values, which in year 1 only UpdateSeasonalEventsProc reads, so it stays.
+  364 days: on day 364 CheckNumbersProc asserts that all colonies produced have died ([CHK-04]), which needs the end
+  of the season. Without it the assertion stops the run before day 365 (the same reason why gobees switches the
+  colony check off until step 7, model/default.go). Young queens do not hibernate in this schedule anyway.
+  Kept outside the .nlogo, so that the model file stays unchanged. Metric names in aggregate_netlogo.py (step6).
+-->
+<experiments>
+  <experiment name="step6_year1" repetitions="100" runMetricsEveryStep="true">
+    <setup>Setup</setup>
+    <go>  if AssertionViolated = true
+     [
+       ask patches [ set pcolor red ]
+       user-message "Assertion violated!"
+       stop
+      ]
+  if (count bees with [ colonyID = InspectTurtle ] = 0 and count Colonies &gt; 0)
+   [ set InspectTurtle [ who ] of one-of colonies ]
+  if any? turtles with [ who = InspectTurtle ] and count Colonies &gt; 0
+  [
+    if ([ breed ] of turtle InspectTurtle != Colonies)
+    [ set InspectTurtle [ who ] of one-of colonies ]
+  ]
+  let continueWorking true
+  tick
+  ; UpdateMorning_Proc without UpdateSeasonalEventsProc [MORN-06] (step 7)
+  if AssertionViolated [ ask patches [ set pcolor red ] user-message "Assertion violated!" ]
+  set Day round (ticks mod 365.00000001)
+  if ticks &gt; 0 and (Day &lt; 1 or Day &gt; 365) [ AssertionProc "Error in calculation of Day! (Updates_Proc)" ]
+  set Date DateREP
+  if Day &gt; 0 [ set DailyForagingPeriod_s Foraging_PeriodREP ]
+  UpdateFoodsourcesProc
+  ; UpdateSeasonalEventsProc: step 7, not run
+  EmergenceNewQueensProc
+  let randomTimeToGetUp_s 1800
+  set ActiveBeesSortedList []
+  ask bees with [ (caste = "worker" or caste = "queen") and (activity != "hibernate") and stage = "adult" ]
+  [
+  set personalTime_s GetUpTime_s + random randomTimeToGetUp_s
+  set activityList [ ]
+  set ActiveBeesSortedList fput who ActiveBeesSortedList
+  ]
+  set ActiveBeesSortedList sort-by [[personalTime_s] of bee ?1 &lt; [personalTime_s] of bee ?2] ActiveBeesSortedList
+  if Day = 365 and length CropRotationList &gt; 1 [ CropRotationProc ]
+  UpdateColoniesProc
+  UpdateColonyStoreBarsProc
+  CheckNumbersProc
+  NeedNectarPollenLarvaeTodayProc
+  while [ continueWorking = true
+          and count bees with [ (caste = "worker" or caste = "queen") and (activity != "hibernate") and stage = "adult" ] &gt; 0
+          and count colonies &gt; 0 ]
+   [
+     set ActiveBee NextActiveBeeREP
+     ask bee ActiveBee
+     [
+       ifelse personalTime_s &gt; CallItaDay_s
+         [ set continueWorking false ]
+         [
+           set Daytime_s personalTime_s
+           ifelse (floor (remainder personalTime_s 3600) / 60) &gt;= 10
+             [ set activityList lput ( word floor (personalTime_s / 3600) ":" floor ((remainder personalTime_s 3600) / 60)) activityList ]
+             [ set activityList lput ( word floor (personalTime_s / 3600) ":0" floor ((remainder personalTime_s 3600) / 60)) activityList ]
+           ActivityProc
+         ]
+       if colonyID = -1 [ set personalTime_s CallItaDay_s + 1 ]
+     ]
+   ]
+  ask bees with [ stage = "adult" and activity != "hibernate" and caste != "male" ]
+  [
+    set activity "resting"
+    set activityList lput "End" activityList
+  ]
+  ; QueensLeavingNestProc [GO-12]: step 7, not run
+  FeedLarvaeProc
+  QueenProductionDateProc
+  DevelopmentProc
+  MortalityBroodProc
+  BadgersOnTheProwlProc
+  OutputDailyProc
+  if ShowCohorts? = true [ DrawCohortsProc ]
+  if count Colonies + count Bees = 0
+  [
+    if TimeToExtinction &lt;= 0 [ set TimeToExtinction ticks ]
+    set Survived? 0
+    if StopExtinct? = true [ stop ]
+  ]</go>
+    <timeLimit steps="364"/>
+    <metric>count colonies</metric>
+    <metric>count deadCols</metric>
+    <metric>sum [ number ] of bees with [ stage = "egg" ]</metric>
+    <metric>sum [ number ] of bees with [ stage = "larva" ]</metric>
+    <metric>sum [ number ] of bees with [ stage = "pupa" ]</metric>
+    <metric>sum [ number ] of bees with [ stage = "adult" and caste = "worker" ]</metric>
+    <metric>sum [ number ] of bees with [ stage = "adult" and caste = "male" ]</metric>
+    <metric>sum [ number ] of bees with [ stage = "adult" and caste = "queen" and mated? = false ]</metric>
+    <metric>sum [ energyStore_kJ ] of colonies</metric>
+    <metric>sum [ pollenStore_g ] of colonies</metric>
+    <metric>TotalForagingTripsToday</metric>
+    <metric>count colonies with [ switchPointDate &lt; NotSetHigh ]</metric>
+    <metric>count colonies with [ queenProduction? ]</metric>
+    <metric>sum [ nectar_myl ] of foodsources / 1000000</metric>
+    <metric>sum [ pollen_g ] of foodsources / 1000</metric>
+  </experiment>
+</experiments>

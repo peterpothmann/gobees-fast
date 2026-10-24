@@ -16,9 +16,18 @@ func RandomFloat(rng *rand.Rand, x float64) float64 {
 	return rng.Float64() * x
 }
 
-// RandomInt returns a random integer between [0, n) for n > 0. NetLogo: random n (n is truncated to an integer).
+// RandomInt returns a random integer between [0, n). NetLogo: random n (n is truncated to an integer).
+// As in NetLogo, a truncated n of 0 gives 0 (rand.IntN would panic), and a negative n gives a number in (n, 0]
+// ([PCH-05] uses random 0).
 func RandomInt(rng *rand.Rand, n float64) float64 {
-	return float64(rng.IntN(int(n)))
+	k := int(n)
+	if k == 0 {
+		return 0
+	}
+	if k < 0 {
+		return -float64(rng.IntN(-k))
+	}
+	return float64(rng.IntN(k))
 }
 
 // RandomNormal returns a normally distributed random number. NetLogo: random-normal mean sd.

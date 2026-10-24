@@ -21,7 +21,7 @@ import (
 // [NEXT], lets it perform exactly one activity [ACT] and re-inserts it, until the smallest personalTime_s
 // exceeds CallItaDay_s, no active adult worker or queen is left, or no colony is left.
 //
-// Foraging is not translated yet (step 6): see ForagingProc.
+// Foraging: sys/foraging.go [FOR].
 //
 // NetLogo: while loop in Go, NextActiveBeeREP, ActivityProc, BroodIncubationProc.
 type ActivityLoop struct {
@@ -35,6 +35,7 @@ type ActivityLoop struct {
 	active    *globals.ActiveBees
 	daytime   *globals.Daytime
 	eggs      eggLayer
+	foraging  forager
 
 	beeFilter    *ecs.Filter1[comp.Bee]
 	colonyFilter *ecs.Filter1[comp.Colony]
@@ -55,6 +56,7 @@ func (s *ActivityLoop) Initialize(w *ecs.World) {
 	s.active = ecs.GetResource[globals.ActiveBees](w)
 	s.daytime = ecs.GetResource[globals.Daytime](w)
 	s.eggs = newEggLayer(w, s.rng)
+	s.foraging = newForager(w, s.rng)
 
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
 	s.colonyFilter = ecs.NewFilter1[comp.Colony](w)
@@ -213,7 +215,7 @@ func (s *ActivityLoop) ActivityProc(w *ecs.World, e ecs.Entity) {
 	case activity.Nursing:
 		s.BroodIncubationProc(w, e)
 	case activity.PollenForaging, activity.NectarForaging:
-		s.ForagingProc(w, e)
+		s.foraging.ForagingProc(w, e)
 	}
 }
 
@@ -245,14 +247,4 @@ func (s *ActivityLoop) BroodIncubationProc(w *ecs.World, e ecs.Entity) {
 	stores.EnergyStore_kJ = stores.EnergyStore_kJ - heatProvided_kJ
 	// [INC-03]
 	b.PersonalTime_s = b.PersonalTime_s + heatingPeriod_s
-}
-
-// ForagingProc is TEMPORARY until step 6 translates the foraging. The bee spends 30 min (like resting) and
-// collects nothing, so the colony stores do not grow. Without any increase of personalTime_s the loop would not
-// end.
-//
-// NetLogo: ForagingProc (step 6).
-func (s *ActivityLoop) ForagingProc(w *ecs.World, e ecs.Entity) {
-	_, _, b, _, _, _, _ := s.beeMap.Get(e)
-	b.PersonalTime_s = b.PersonalTime_s + 0.5*3600
 }

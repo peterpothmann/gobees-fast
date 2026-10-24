@@ -134,7 +134,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Checked from the input file (2026-10-23, PP):** the 73 flower patches of `_SYSTEM_Example_Farm_Foodsources.txt` lie in 73 different patch cells, with every rounding rule for coordinates ending in .5 (finding 24). The case does not occur for the example farm.
 - **Consequence for gobees:** compute the list by patch cell exactly as NetLogo does (rounded coordinates, see the patch cells in `trans/data-model.md`), not by masterpatch. Translate the assertion, so that gobees stops in the same situation.
 - **Second Check**: 23.10.2026, PP
-- **Implemented:** `setLayersInPatchList` in `sys/create_foodsources.go`, grouped by `util.Pcor`. Test: `TestCreateLayers` (two flower patches in cell (10, 20) share one list). The assertion in `Foraging_PatchChoiceProc` comes with step 6.
+- **Implemented:** `setLayersInPatchList` in `sys/create_foodsources.go`, grouped by `util.Pcor`. Test: `TestCreateLayers` (two flower patches in cell (10, 20) share one list). The assertion in `Foraging_PatchChoiceProc` comes with step 6. Step 6: the assertion in `forager.Foraging_PatchChoiceProc` (`sys/foraging.go`, `[PCH-03]`) panics. `Foraging_bestLayerREP` reads `LayersInPatchList`.
 
 <a id="finding-16"></a>
 
@@ -465,6 +465,19 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Consequence for gobees:** nothing to change, the effect follows from the order of the checks. A test with `ActivityProc` checks that eggs laid by a queen get no heat on their first day.
 - **Second Check**: 24.10.2026
 - **Implemented:** follows from `ActivityLoop.ActivityProc` and `BroodIncubationProc` in `sys/activity_loop.go`. Test: `TestActivityLoopDay` (one day of a colony with 12 eggs, a queen and 20 workers: the old eggs get at least the quota, the new batch gets 0 kJ).
+
+## Findings from step 6 (foraging)
+
+<a id="finding-47"></a>
+
+### 47. The handling time of a trip is computed after the forager has taken her load
+
+- **Code:** `[COST-02]`, `[COLL]`, `[HAND]`
+- **Finding:** `Foraging_collectNectarPollenProc` first removes the load from the foodsource. Then `Foraging_costs&choiceProc` computes the handling time of the trip with `HandlingTime_s_REP`, which divides by the filling level of the foodsource, i.e. by its state AFTER the load was removed. If the load emptied the foodsource (a cohort takes `number` loads at once, `[COLL-01]`, `[COLL-02]`), the filling level is 0 and the handling time is the maximum of 3600 s.
+- **Affects:** a forager that takes the last nectar or pollen of a foodsource has a trip of more than one hour and pays the flight costs of 3600 s of handling (`[COST-02]`). Her mortality risk for the trip rises accordingly (worked example of `[COST-02]`, foodsource 300 m away: 0.0041 for 412 s, 0.0365 for 3720 s with the handling time 3600 s). In `Foraging_PatchChoiceProc` the long trip makes her unhappy and raises her expectation. In all other trips the handling time is slightly longer than at the filling level she found, because her own load is already missing. `Foraging_bestLayerREP` computes handling times before the collection, so the choice of the layer is not affected.
+- **Consequence for gobees:** translate as it is, in the same order. A test checks that a forager that empties a foodsource gets the handling time 3600 s.
+- **Second Check**: 24.10.2026, PP
+- **Implemented:** `forager.Foraging_costsAndChoiceProc` in `sys/foraging.go`, handling time after `Foraging_collectNectarPollenProc`. Test: `TestForagingEmptiesFoodsource` (a cohort of 3 takes the last 100 microlitres: trip 120 s + 3600 s).
 
 ## Findings from the model map and from `Go`
 
