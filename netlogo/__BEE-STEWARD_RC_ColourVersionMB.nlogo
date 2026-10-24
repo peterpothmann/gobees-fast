@@ -2378,13 +2378,33 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [QPD] QueenProductionDateProc
+; Called by: Go [GO-14], every evening after FeedLarvaeProc and before DevelopmentProc
+; Context:   observer
+; Purpose:   starts the queen production of a colony: queenProduction? becomes true, and queenProductionDate is
+;            back-calculated as the day on which the eggs of the larvae now at the caste determination age were
+;            laid. From then on female larvae become queens at larval day 3 [CAST]. queenProductionDate also sets
+;            the competition point [CPD]. No queen is created here.
+; Translate: yes
+; ===============================================================================
 to QueenProductionDateProc
   ; for B. terrestris, based on Duchateau & Velthuis 1988 - no data for other species!
   ; queenProductionDate: the (theoretical) date (time step) when the first queen-destined eggs were laid, back calculated on the day when "queenProduction?" is set true (in QueenProductionDateProc).
   ; Does not require that any eggs were actually laid on that day.
+  ; ORDER: irrelevant, each colony only reads its own larvae and changes itself.
   ask colonies
   [
     let memoColony who
+    ; [QPD-01] time from egg laying to the caste determination age: 7 d (assumed egg phase) + 3 d
+    ;          (dev_larvalAge_QueenDetermination_d [SPEC-05]) = 10 d. If larvae of this colony are at larval day 3
+    ;          (cumulTimeLarva_d = 3), their largest broodAge replaces the 10 d.
+    ;          NOTE: this procedure runs BEFORE DevelopmentProc. The larvae with cumulTimeLarva_d = 3 reached it in
+    ;          the previous evening and had their caste determined then, while queenProduction? was still false.
+    ;          The first queen larvae are those that reach larval day 3 tonight [DEVL-02]. queenProductionDate is
+    ;          therefore the laying day of the last worker larvae (finding 42, see
+    ;          trans/netlogo-findings.md#finding-42).
+    ;          speciesIDcolony and speciesID are the same species here.
     let averageCumulTimeEgg_d 7 ; average (realised) duration of egg phase in the model is about 6.4; set to 7 as this results in better sex ratio than 6 (min hatching age 5, max hatching age 10)
     let timeEggToLarvalAgeAtQueenDetermination averageCumulTimeEgg_d + [ dev_larvalAge_QueenDetermination_d ] of OneSpecies speciesIDcolony  ;  i.e. 7+3=10d for B. terrestris
    ; (only) if larvae of the right age are present, timeEggToLarvalAgeAtQueenDetermination can be directly determined from their brood age (in this case, the previous value is overwritten)
@@ -2392,6 +2412,14 @@ to QueenProductionDateProc
       [ set timeEggToLarvalAgeAtQueenDetermination max[ broodAge ] of bees with [ stage = "larva" and colonyID = memoColony and cumulTimeLarva_d = [ dev_larvalAge_QueenDetermination_d ] of OneSpecies speciesID ] ]
        ; asking for "max" in case there are 2 larval cohorts of dev_larvalAge_QueenDetermination_d age but different broodAges (because younger cohort has developed quicker as eggs).
        ; This should not happen in the current version, but might be the case in a future version.
+    ; [QPD-02] set once: when the larvae at the determination age were laid at most QueenDestinedEggsBeforeSP_d
+    ;          (5 d, [PAR-03]) before the switch point, and larvaWorkerRatio (this morning, [UCOL-06]) is below
+    ;          LarvaWorkerRatioTH (3). Without switch point (NotSetHigh) the condition is false.
+    ;          Worked example (dates chosen by hand): switch point on day 100, no larvae at larval day 3:
+    ;          ticks - 10 >= 95 from day 105 on. With larvae at larval day 3 of broodAge 8 (hatched after 5 d, the
+    ;          minimum devAgeHatchingMin_d in netlogo/_SYSTEM_BumbleSpecies_UK_01.csv, row B_terrestris):
+    ;          ticks - 8 >= 95 from day 103 on.
+    ;          queenProductionDate >= switchPointDate - 5 (used in [CPD-01]).
     if queenProduction? = false  ; is set true ca. 5 - 16 days after SW was determined
        and ticks - timeEggToLarvalAgeAtQueenDetermination  ; this is the date when the larvae which are today at the queen determination stage were laid as eggs
            >= switchPointDate - QueenDestinedEggsBeforeSP_d  ; "queen eggs" are laid QueenDestinedEggsBeforeSP_d (5d) before switchpoint at earliest
@@ -2405,7 +2433,25 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [WGAIN] MaxWeightGainToday_mg_REP
+; Called by: NeedNectarPollenLarvaeTodayProc [NEED-01], FeedLarvaeProc [FEED-02], always by the larva itself
+;            (myID = who)
+; Context:   bee (a larva). speciesID in the first lines is the caller's, i.e. the larva's own.
+; Purpose:   the largest weight gain of a larva in one day: weight * (growthFactor - 1), but not beyond the
+;            maximum pupation weight of its caste.
+; Translate: yes, as a function of the larva
+; ===============================================================================
 to-report MaxWeightGainToday_mg_REP [ myID ] ; calculates a larva's maximal weight gain during 24 hrs
+ ; [WGAIN-01] gain = weight * growthFactor - weight. Caps: queens devWeight_Q_PupationMax_mg, all other castes
+ ;            (worker, male, undefined) devWeightPupationMax_mg.
+ ;            Worked example from netlogo/_SYSTEM_BumbleSpecies_UK_01.csv, row B_terrestris:
+ ;            growthFactor = 1.88, devWeightEgg_mg = 1.5, devWeightPupationMax_mg = 249.5,
+ ;            devWeight_Q_PupationMax_mg = 980.
+ ;            With full food, weight before applying the caste-specific cap is 1.5 * 1.88^k mg
+ ;            after k feedings: 1.5, 2.82, 5.30, 9.97, 18.74, 35.23, 66.23, 124.51,
+ ;            234.07, 440.06, 827.31, 1555.35. Worker weight is capped at 249.5 mg
+ ;            on the ninth feeding; queen weight is capped at 980 mg on the eleventh feeding.
  let maxWeightGain_mg 0
  let memoQPupationMax [ devWeight_Q_PupationMax_mg ] of OneSpecies speciesID ; max. weight a queen pupa of this species can have
  let memoWPupationMax [ devWeightPupationMax_mg ] of OneSpecies speciesID  ; max. weight a worker pupa of this species can have
@@ -2429,7 +2475,24 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [NEED] NeedNectarPollenLarvaeTodayProc
+; Called by: Go [GO-05], every morning after UpdateMorning_Proc
+; Context:   observer
+; Purpose:   per colony, the pollen its larvae need today for the largest possible growth [WGAIN], and the energy
+;            to assimilate it. Read by the foraging stimuli (StimForagingPollenREP, StimForagingNectarREP, step 5),
+;            which set the ideal stores, and these limit the feeding in the evening [FEED-01].
+; Translate: yes
+; ===============================================================================
 to NeedNectarPollenLarvaeTodayProc ; calculates how much nectar and pollen is approximately required today to feed the larvae
+ ; [NEED-01] pollenNeedLarvaeToday_g = sum over the larvae of number * gain / pollenToBodymassFactor / 1000.
+ ;           energyNeedToday_kJ = pollen need * EnergyRequiredForPollenAssimilation_kJ_per_g (6.2, [PAR-03]).
+ ;           NOTE: despite the name, energyNeedToday_kJ is only the energy for the larvae's pollen. Incubation
+ ;           and flights take energy from the store elsewhere (BroodIncubationProc, foraging, steps 5 and 6).
+ ;           Worked example (cohort chosen by hand): 12 larvae of 10 mg each, pollenToBodymassFactor = 1
+ ;           (netlogo/_SYSTEM_BumbleSpecies_UK_01.csv, row B_terrestris): gain 8.8 mg each, pollen need
+ ;           12 * 8.8 / 1000 = 0.1056 g, energy need 0.1056 * 6.2 = 0.655 kJ.
+ ;           ORDER: irrelevant, sums.
  ask colonies
  [
   let myColony who
@@ -2447,10 +2510,26 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [DEV] DevelopmentProc
+; Called by: Go [GO-15], every evening after QueenProductionDateProc
+; Context:   observer
+; Purpose:   all bees age by one day. Adults: adult mortality and queen thresholds [MORA]. Brood: development to
+;            the next stage [DEVP], [DEVL], [DEVE].
+; Translate: yes
+; ===============================================================================
 to DevelopmentProc
+ ; [DEV-01] ALL bees, also hibernating queens and queens without colony.
+ ;          ORDER: irrelevant for the state. Each bee changes itself, the counters of its colony and global
+ ;          counters (sums). Random numbers: only the emergence date of new queens [DEVP-03]. The order of
+ ;          QueensProducingColoniesList depends on it, but this list is never read.
  ask bees
  [
    let whoCol colonyID
+   ; [DEV-02] adults: adultAge + 1, then [MORA]. Assertions: no adult older than 700 d (two hibernations), no
+   ;          adult with brood? = true.
+   ;          A pupa that emerges tonight is still in the brood branch, so its adultAge stays 0 until tomorrow
+   ;          (see the comment in EggsParameterSettingProc [EGGP-03]).
    ifelse stage = "adult"
     [
       set adultAge adultAge + 1
@@ -2459,12 +2538,20 @@ to DevelopmentProc
       Development_Mortality_AdultsProc
     ]
     [
+      ; [DEV-03] brood: broodAge + 1 (days since the egg was laid, over all stages), then the development of its
+      ;          stage. An egg gets its first + 1 in the evening of the day it was laid, so on the evening k days
+      ;          after laying broodAge = k + 1.
+      ;          ORDER of the checks: MATTERS. Pupa, then larva, then egg: a bee that changes its stage tonight is
+      ;          not checked again for the new stage, so each bee advances at most one stage per day. In Go: a
+      ;          switch on the stage at the start.
       set broodAge broodAge + 1
       if brood? = false  [ AssertionProc "Assertion violated: brood with brood? = false (DevelopmentProc)" ]
       if stage =  "pupa" [ Development_PupaeProc ]
       if stage = "larva" [ Development_LarvaeProc whoCol ]
       if stage =  "egg"  [ Development_EggsProc ]
     ]
+  ; [DEV-04] GUI ONLY, not translated: move unmated bees to the right. Bee positions are never read by model
+  ;          procedures: all distances in the foraging code are measured from the colony.
   if xcor + StepWidth < max-pxcor and mated? = false  ; move graphic representation of bees on GUI
        [ set xcor xcor + StepWidth ]
  ]
@@ -2472,7 +2559,21 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [MORA] Development_Mortality_AdultsProc
+; Called by: DevelopmentProc [DEV-02], for every adult bee after adultAge + 1
+; Context:   bee (adult)
+; Purpose:   maximum life span of workers and males, social-phase thresholds of the colony queen, background
+;            mortality.
+; Translate: yes
+; ===============================================================================
 to Development_Mortality_AdultsProc
+ ; [MORA-01] workers die when adultAge > maxLifespanWorkers, males when adultAge > MaxLifespanMales.
+ ;           Worked example: netlogo/_SYSTEM_BumbleSpecies_UK_01.csv, row B_terrestris, column
+ ;           maxLifespanWorkers = 60: a worker dies on the evening when adultAge becomes 61. Males: MaxLifespanMales
+ ;           = 30 ([PAR-03]), death at adultAge 31.
+ ;           DieProc ends the bee's code (finding 28, see trans/netlogo-findings.md#finding-28). In Go: return.
+ ;           Queens have no maximum life span.
  if caste = "worker" ; behavioural development workers
  [
    if adultAge > [ maxLifespanWorkers ] of OneSpecies speciesID [ DieProc "Worker: adultAge > maxLifespanWorkers" ]
@@ -2483,6 +2584,14 @@ to Development_Mortality_AdultsProc
    if adultAge > MaxLifespanMales [ DieProc "Male: adultAge > MaxLifespanMales" ]
  ]
 
+ ; [MORA-02] a mated queen in a colony with adult workers (allAdultWorkers of this morning, [UCOL-06]) gets the
+ ;           thresholds "QueenSocialPhase" [THR]: she lays eggs and incubates, but no longer forages.
+ ;           Set every evening, never set back: if all workers die later, the queen still does not forage.
+ ;           Also a Psithyrus queen in a host colony with workers gets these thresholds instead of "Psith"
+ ;           (finding 44, see trans/netlogo-findings.md#finding-44). Her nursing threshold drops from NotSetHigh to
+ ;           0.9. In ActivityProc nursing then overwrites egg laying whenever the host brood still needs incubation
+ ;           today, and the Psithyrus rule turns nursing into resting. So she lays eggs only once the host brood is
+ ;           incubated enough that day. The egg-laying thresholds 0.2 and 0 select the same days (stimulus 0 or 1).
  if caste = "queen" and mated? = true and colonyID >= 0 and [ allAdultWorkers ] of colony colonyID > 0 ; i.e. if colony is in the social phase
  [
     set thForagingNectar ThresholdLevelREP "nectarForaging" "QueenSocialPhase"
@@ -2491,14 +2600,36 @@ to Development_Mortality_AdultsProc
     set thEgglaying ThresholdLevelREP "eggLaying" "QueenSocialPhase"
  ]
 
+ ; [MORA-03] background mortality with the inverted condition (finding 22, see trans/netlogo-findings.md#finding-22).
+ ;           MortalityAdultsBackground_daily = 0 ([PAR-03]): "and" stops after the first part, so no random number
+ ;           is drawn and nobody dies.
  if MortalityAdultsBackground_daily > 0 and random-float 1 > MortalityAdultsBackground_daily ; MortalityAdultsBackground_daily = 0 so no effect!
    [ DieProc "Adult bee: mortality in colony" ]
 end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [DEVP] Development_PupaeProc
+; Called by: DevelopmentProc [DEV-03]
+; Context:   bee (pupa)
+; Purpose:   a pupa becomes an adult once it is old enough (broodAge) and has received enough incubation
+;            (cumulIncubationReceived_kJ, summed over all brood stages). Pupae are not fed.
+; Translate: yes
+; ===============================================================================
 to Development_PupaeProc ; procedure checks if pupae develop into adults
+  ; [DEVP-01] cumulTimePupa_d: output only, never read. SIMPLIFY: not needed.
+  ;           Workers and males: broodAge >= devAgeEmergingMin_d and incubation >= devIncubationEmergingTH_kJ.
+  ;           Queens: devAge_Q_EmergingMin_d and devIncubation_Q_EmergingTH_kJ.
+  ;           Worked example from netlogo/_SYSTEM_BumbleSpecies_UK_01.csv, row B_terrestris, 
+  ;           with values from [SPEC-05] (incubation quota 10 / (1.5 * batchsize 12) = 0.556 kJ per day):
+  ;           workers and males broodAge >= 23.8, i.e. 24, and >= 13.2 kJ. Queens broodAge >= 32 and >= 17.8 kJ.
+  ;           The incubation thresholds are the quota times the minimum age, so a brood that receives the quota
+  ;           every day reaches both on the same day.
   set cumulTimePupa_d cumulTimePupa_d + 1 ; potential ouput (time spent as pupa)
+  ; [DEVP-02] worker emerges: adult, crop and pollen load capacity [LOAD], worker thresholds [THR], proboscis
+  ;           [PROB]. Counters: TotalAdultsEverProduced (output), colony totalAdultsProduced (egg accounting
+  ;           [CHK-04]) and totalWorkersProduced (never read). color: GUI only.
   if caste = "worker"
   [
     ; Development factors pupae: age & incubation:
@@ -2529,6 +2660,9 @@ to Development_PupaeProc ; procedure checks if pupae develop into adults
 
   ; NOTE: in bumblebees (B. terrestris) diploid males develop into (sterile) adults (Duchateau et al. 1994)
   ; (dipl. males can also mate but these queens are not able to establish a colony (Duchateau & Marien 1995) and are removed (in QueensLeavingNestProc)
+  ; [DEVP-03] male emerges (haploid or diploid): adult, counters (TotalAdultMalesEverProduced: output only).
+  ;           Males get no crop, pollen load, thresholds or proboscis. They keep the egg values (0, NotSetHigh), and
+  ;           they are not in the daily activity queue [MORN-08], so they never work.
   if caste = "male" ; MALE PUPAE - might develop into adult males
   [
      if cumulIncubationReceived_kJ >= [ devIncubationEmergingTH_kJ ] of OneSpecies speciesID
@@ -2547,6 +2681,18 @@ to Development_PupaeProc ; procedure checks if pupae develop into adults
              ]
           ]
    ]
+  ; [DEVP-04] queen emerges: emergingDate for next year, drawn until it lies in (yearStart, yearStart + seasonStop]
+  ;           with yearStart = 365 * ceiling (ticks / 365), the first tick of the next year.
+  ;           emergingDate = yearStart + round random-normal emergingDay_mean emergingDay_sd. Each new draw uses
+  ;           new random numbers. emergingDate is NotSetLow from the egg [EGGP-03], so there is at least one draw.
+  ;           Worked example: netlogo/_SYSTEM_BumbleSpecies_UK_01.csv, row B_terrestris, columns emergingDay_mean =
+  ;           91, emergingDay_sd = 28, seasonStop = 305. A queen emerging at ticks 200 (year 1): yearStart = 365,
+  ;           emergingDate from 366 to 670, on average 456 (Day 91 of year 2). A draw of Day <= 0 (3.25 sd below the
+  ;           mean, about 0.06 %) is repeated.
+  ;           Then adult, counters (TotalAdultQueensEverProduced: output only), the colony enters
+  ;           QueensProducingColoniesList (never read, SIMPLIFY: not needed), crop and pollen load [LOAD],
+  ;           thresholds "youngQueen" [THR], proboscis [PROB]. The young queen stays in the colony until she leaves
+  ;           the nest (QueensLeavingNestProc [GO-12], step 7).
   if caste = "queen" ; QUEEN PUPAE - might develop into adult queens
   [
      if cumulIncubationReceived_kJ >= [ devIncubation_Q_EmergingTH_kJ ] of OneSpecies speciesID
@@ -2580,12 +2726,25 @@ to Development_PupaeProc ; procedure checks if pupae develop into adults
             set glossaLength_mm ProboscisLengthREP
           ]
    ]
+   ; [DEVP-05] assertion: a pupa with caste "undefined" (larvae get their caste at larval day 3 [DEVL-02])
    if caste = "undefined" [ AssertionProc "Assertion violated: undefined caste! (Development_PupaeProc)" ]
 end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [CAST] DetermineCaste_REP
+; Called by: Development_LarvaeProc [DEVL-02], for a female larva at larval day 3
+; Context:   bee (larva). whoCol is its own colonyID.
+; Purpose:   caste of a female larva: queen if she is heavy enough AND her colony produces queens, else worker.
+; Translate: yes
+; ===============================================================================
 to-report DetermineCaste_REP [ whoCol ]
+  ; [CAST-01] queen if weight_mg >= dev_Q_DeterminationWeight_mg and queenProduction? of the colony [QPD].
+  ;           NOTE: dev_Q_DeterminationWeight_mg is 0 for all species in netlogo/_SYSTEM_BumbleSpecies_UK_01.csv
+  ;           (column dev_Q_DeterminationWeight_mg), so the weight criterion has no effect: once the colony
+  ;           produces queens, EVERY female larva becomes a queen larva (finding 40, see
+  ;           trans/netlogo-findings.md#finding-40).
   let mycaste "worker" ; bee will develop into a worker, unless it becomes a queen
   ; it will be a queen if individual weight and colony conditions for becoming a queen are both fulfilled:
   if (weight_mg >= [ dev_Q_DeterminationWeight_mg ] of OneSpecies speciesID ; individual criterion
@@ -2596,9 +2755,24 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [DEVL] Development_LarvaeProc
+; Called by: DevelopmentProc [DEV-03]
+; Context:   bee (larva). whoCol is its own colonyID.
+; Purpose:   caste determination of female larvae at larval day 3, and pupation once the larva is old enough,
+;            incubated enough and heavy enough.
+; Translate: yes
+; ===============================================================================
 to Development_LarvaeProc [ whoCol ] ; procedure checks if larvae develop into pupa
   ; Development factors larva: age, incubation and weight - option to develop into queen!
+  ; [DEVL-01] cumulTimeLarva_d: days as larva, read by [DEVL-02] and [QPD-01].
   set cumulTimeLarva_d cumulTimeLarva_d + 1
+  ; [DEVL-02] a female larva (caste "undefined") gets her caste [CAST] on the evening when cumulTimeLarva_d becomes
+  ;           dev_larvalAge_QueenDetermination_d (3, [SPEC-05]), independent of how long she was an egg. Males have
+  ;           their caste from the egg [EGGP-01]. color: GUI only. A pupation check follows in the same evening.
+  ;           Worked example (egg hatched at the minimum broodAge 5, devAgeHatchingMin_d in
+  ;           netlogo/_SYSTEM_BumbleSpecies_UK_01.csv, row B_terrestris): laid on day L, larva in the evening of
+  ;           day L + 4, larval day 3 and caste in the evening of day L + 7 (broodAge 8).
   if caste = "undefined" and cumulTimeLarva_d = [ dev_larvalAge_QueenDetermination_d ] of OneSpecies speciesID ; age of determination is independent of of time spent as egg
   [
     set caste DetermineCaste_REP whoCol ; this reporter-procedure determines the caste
@@ -2606,6 +2780,18 @@ to Development_LarvaeProc [ whoCol ] ; procedure checks if larvae develop into p
     if caste = "undefined" [ AssertionProc "Assertion violated: undefined caste! (Development_LarvaeProc)" ]
   ]
 
+  ; [DEVL-03] pupation of workers and males: incubation >= devIncubationPupationTH_kJ, broodAge >= devAgePupationMin_d,
+  ;           weight >= devWeightPupationMin_mg. Queens: the _Q_ values. A larva with caste "undefined" cannot pupate.
+  ;           NOTE: the condition mixes "or" and "and" without brackets. NetLogo gives "and" and "or" the same
+  ;           precedence and evaluates from left to right, so it means (worker or male) and incubation and age and
+  ;           weight, as intended. In Go "&&" binds tighter than "||": the brackets around (worker || male) are
+  ;           required (finding 41, see trans/netlogo-findings.md#finding-41). The only such condition in the model.
+  ;           Counter: colony totalPupaeProduced (never read). color: GUI only.
+  ;           Worked example from netlogo/_SYSTEM_BumbleSpecies_UK_01.csv, row B_terrestris, with [SPEC-05] and full
+  ;           food and incubation, egg laid on day L: workers broodAge >= 12.9, i.e. 13 (evening L + 12), weight
+  ;           >= 62.4 mg (reached after 6 feedings, [WGAIN-01]; the larva is fed from the evening L + 5 on [FEED],
+  ;           so by L + 12 it has 8 feedings and 234 mg), incubation >= 7.17 kJ. Queens broodAge >= 17
+  ;           (evening L + 16), >= 590 mg (after 10 feedings), >= 9.44 kJ.
   if caste = "worker" or caste = "male"  ; larvae develop into pupae as soon as they  1) received enough incubation, and 2) they are old enough and 3.) heavy enough
      and cumulIncubationReceived_kJ >= [ devIncubationPupationTH_kJ ] of OneSpecies speciesID
      and broodAge >= [ devAgePupationMin_d ] of OneSpecies speciesID
@@ -2632,7 +2818,20 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [DEVE] Development_EggsProc
+; Called by: DevelopmentProc [DEV-03]
+; Context:   bee (egg)
+; Purpose:   an egg hatches into a larva once it is old enough and has received enough incubation. Eggs are not fed,
+;            they keep devWeightEgg_mg.
+; Translate: yes
+; ===============================================================================
 to Development_EggsProc  ; ; procedure checks if eggs develop into larvae
+ ; [DEVE-01] broodAge >= devAgeHatchingMin_d and incubation >= devIncubationHatchingTH_kJ. cumulTimeEgg_d: output only,
+ ;           never read (SIMPLIFY: not needed). Counter: colony totalLarvaeProduced (never read). color: GUI only.
+ ;           Worked example from netlogo/_SYSTEM_BumbleSpecies_UK_01.csv, row B_terrestris, column
+ ;           devAgeHatchingMin_d = 5, with [SPEC-05]: broodAge >= 5 and >= 2.78 kJ. An egg laid on day L hatches at
+ ;           the earliest in the evening of day L + 4.
  set cumulTimeEgg_d cumulTimeEgg_d + 1
  if cumulIncubationReceived_kJ >= [ devIncubationHatchingTH_kJ ] of OneSpecies speciesID
     and broodAge >= [ devAgeHatchingMin_d ] of OneSpecies speciesID
@@ -2648,20 +2847,44 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [MORB] MortalityBroodProc
+; Called by: Go [GO-16], every evening after DevelopmentProc
+; Context:   observer
+; Purpose:   brood that is older than the maximum age of its stage dies, and after the competition point all eggs
+;            die. Each death is counted in one brood death counter of the colony (egg accounting [CHK-04]).
+;            Food shortage kills only indirectly: a larva that stays too light cannot pupate and dies of age.
+; Translate: yes
+; ===============================================================================
 to MortalityBroodProc
   ; Duchateau & Velthuis 1988: "At the end of the colony development the third important phase sets in with the start of worker oviposition and of mutual
   ;                             overt aggression between the workers and between the workers and their queen. In this ultimate phase of the colony development most of the eggs
   ;                             and larvae from queen and workers will not survive to adulthood due to the aggressive interactions and to reciprocal oophagy (SLADEN, 1912;
   ;                             RICHARDS, 1977; VAN DOORN & HERINGA, 1986; own observations)."
 
+ ; [MORB-01] to [MORB-04] in this order for each bee. DieProc ends the bee's code (finding 28, see
+ ;           trans/netlogo-findings.md#finding-28), so a bee is counted only once. In Go: return after the death.
+ ;           ORDER of the bees: irrelevant. Each bee changes only itself and the counters of its colony (sums).
+ ;           Worked example of the maximum ages from netlogo/_SYSTEM_BumbleSpecies_UK_01.csv, row B_terrestris,
+ ;           with minToMaxFactor = 2 ([SPEC-05]): eggs devAgeHatchingMax_d = 5 * 2 = 10, larvae devAgePupationMax_d
+ ;           = 12.9 * 2 - 5 = 20.8, pupae devAgeEmergingMax_d = 23.8 * 2 - 12.9 = 34.7. Queen larvae 17 * 2 - 5 = 29,
+ ;           queen pupae 32 * 2 - 17 = 47. All compared with broodAge, i.e. the age since the egg was laid.
  ask bees
  [
    let memoNumber number ; (either 1 or cohort size)
+   ; [MORB-01] egg older than devAgeHatchingMax_d (it has not received enough incubation to hatch [DEVE-01]):
+   ;           counted as eggDeathsIncubation.
    if stage = "egg" and broodAge > [ devAgeHatchingMax_d ] of OneSpecies speciesID
    [
      ask colony colonyID [ set eggDeathsIncubation  eggDeathsIncubation + memoNumber]
      DieProc "Egg: broodAge > devAgeHatchingMax_d"
    ]
+   ; [MORB-02] larva older than the maximum pupation age of its caste (queens: devAge_Q_PupationMax_d, all others:
+   ;           devAgePupationMax_d). The cause is the smaller of relative weight and relative incubation (relative to
+   ;           the pupation thresholds): larvaDeathsWeight or larvaDeathsIncubation.
+   ;           NOTE: if both are equal and < 1, NEITHER counter is increased, and the egg accounting of the colony
+   ;           fails at its death [CHK-04]. Both are ratios of continuous values, so this is practically impossible.
+   ;           Assertion: both >= 1 (the larva would have pupated in DevelopmentProc this evening [DEVL-03]).
    if stage = "larva"
      [
       if ((caste = "worker" or caste = "male" or caste = "undefined") and  broodAge > [ devAgePupationMax_d] of OneSpecies speciesID )
@@ -2686,6 +2909,8 @@ to MortalityBroodProc
          DieProc "Larva: broodAge > max. pupation age"
        ]
      ]
+   ; [MORB-03] pupa older than the maximum emerging age of its caste: pupaDeathsIncubation (pupae are not fed, so
+   ;           only the incubation can be missing). Assertion: a pupa with caste "undefined".
    if stage = "pupa"
      [
        if caste = "undefined" [ AssertionProc "Pupa with undefined caste (MortalityProc)!" ]
@@ -2697,6 +2922,10 @@ to MortalityBroodProc
          DieProc "Pupa: broodAge > max. emerging age"
        ]
      ]
+   ; [MORB-04] after the competition point (ticks > competitionPointDate [CPD]) every egg of the colony dies, also
+   ;           the eggs laid today: broodDeathsCP. An egg that died in [MORB-01] is already gone.
+   ;           colonyID >= 0: adults without colony (hibernating or searching queens) are skipped, brood always has
+   ;           a colony.
    if colonyID >= 0 and ticks > [ competitionPointDate ] of Colony colonyID   ; development of eggs into larvae only possible before CP! (Duchateau & Velthuis 1988)
    [
       if stage = "egg"
@@ -2950,7 +3179,27 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [EGG] EgglayingProc
+; Called by: ActivityProc (step 5), when the bee's activity is "egglaying"
+; Context:   bee (the mother, a queen of a colony or a Psithyrus queen in a host colony)
+; Purpose:   lays one batch of eggs if the colony stores cover its cost, and takes 24 h of the mother's time.
+; Translate: yes, as a function of the mother. Until step 5 it is only called by tests.
+; ===============================================================================
 to EgglayingProc
+  ; [EGG-01] cohort-based colony: 1 cohort of batchsize eggs. Individual-based colony (cohortBased? false,
+  ;          [CCOL-05]): batchsize cohorts of 1 egg.
+  ;          Cost: pollen = beesInCohort * devWeightEgg_mg * pollenToBodymassFactor / 1000 g, energy = pollen *
+  ;          EnergyRequiredForPollenAssimilation_kJ_per_g (6.2, [PAR-03]).
+  ;          NOTE: the cost uses beesInCohort, which is 1 in an individual-based colony. Such a colony pays for one
+  ;          egg and gets batchsize eggs (finding 43, see trans/netlogo-findings.md#finding-43). COLONIES_IBM is 0 in
+  ;          netlogo/_SYSTEM_Parameters.csv and netlogo/_SYSTEM_Example_Farm_Parameters.csv, so by default all
+  ;          colonies are cohort-based and this has no effect.
+  ;          Worked example from netlogo/_SYSTEM_BumbleSpecies_UK_01.csv, row B_terrestris, columns batchsize = 12,
+  ;          devWeightEgg_mg = 1.5, pollenToBodymassFactor = 1: 12 * 1.5 * 1 / 1000 = 0.018 g pollen and
+  ;          0.018 * 6.2 = 0.1116 kJ for a batch of 12 eggs.
+  ;          "mother" is the caste of the egg-laying bee. Workers never lay eggs: their egg-laying threshold is
+  ;          NotSetHigh [THR], above the stimulus (0 or 1). So the worker branch in [EGG-02] is never run.
   let mother caste  ; to distinguish queen and worker laid eggs
   let newCohorts 1  ; this will later be changed for IBM colonies
   let beesInCohort [ batchsize ] of OneSpecies speciesID               ; this will later be changed for IBM colonies
@@ -2968,6 +3217,13 @@ to EgglayingProc
   let pollenCost_g   beesInCohort * eggWeight * pollenToMass / 1000
   let energyCost_kJ  pollenCost_g * EnergyRequiredForPollenAssimilation_kJ_per_g
 
+  ; [EGG-02] only if both stores are larger than the cost (strict >). hatch: the new eggs are copies of the mother
+  ;          (species, colonyID, mtDNA, alleles, spermatheca, position, ...) with new who numbers.
+  ;          Ploidy: a queen lays haploid (male) eggs only AFTER the switch point (ticks > switchPointDate, so on the
+  ;          day of the switch point still diploid ones), before it diploid eggs. Then [EGGP] sets the egg values.
+  ;          ORDER: irrelevant, the new eggs run the block in random order, but each egg only sets itself (one-of
+  ;          for the alleles draws independent random numbers). Only the who numbers follow the order.
+  ;          Then the colony pays the cost.
   if [ pollenStore_g ] of colony colonyID > pollenCost_g  and [ energyStore_kJ ] of colony colonyID > energyCost_kJ
   [  ; eggs can only be laid, if enough energy and pollen is present!
     hatch newCohorts ; "hatch" command, as "create" is not possible in a turtle context
@@ -2991,14 +3247,31 @@ to EgglayingProc
      set energyStore_kJ energyStore_kJ - energyCost_kJ
     ]
   ]
+  ; [EGG-03] egg laying takes the rest of the day: personalTime_s + 24 h, ALSO if no eggs were laid because the
+  ;          stores were too small. The bee is beyond CallItaDay_s (24 h) and does nothing else today ([GO-08]).
   set personalTime_s personalTime_s + 24 * 3600  ; will be reset on next morning!
 end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [EGGP] EggsParameterSettingProc
+; Called by: EgglayingProc [EGG-02], by each new egg (cohort) right after hatch
+; Context:   bee (the new egg, still with all values of its mother)
+; Purpose:   alleles and caste of the egg, and start values of all other bee variables.
+; Translate: yes
+; ===============================================================================
 to EggsParameterSettingProc [ beesInCohort ]
   ; sets parameter values for new eggs
   ; alleles of the egg:
+  ; [EGGP-01] alleles: one random allele of the mother (one-of allelesList, the mother's list after hatch).
+  ;           Haploid egg (ploidy 1): caste "male". Diploid egg (ploidy 2): an allele from the spermatheca is put
+  ;           IN FRONT (item 0 = father, item 1 = mother). Caste "undefined" (determined at larval day 3 [DEVL-02]),
+  ;           or "male" (diploid male) if SexLocus? and both alleles are equal. SexLocus? is FALSE in
+  ;           netlogo/_SYSTEM_Parameters.csv and netlogo/_SYSTEM_Example_Farm_Parameters.csv (column SexLocus?), so
+  ;           by default there are no diploid males.
+  ;           A cohort is one egg agent with number = beesInCohort: all eggs of the cohort have the same alleles.
+  ;           Assertion: ploidy 1 or 2. color: GUI only.
   let shiftDrawnCohorts 1  ; (1) to show cohorts above the colony
   let myAllelesList []
   set myAllelesList fput one-of allelesList myAllelesList   ; egg gets (only) one allele from its mother
@@ -3017,6 +3290,15 @@ to EggsParameterSettingProc [ beesInCohort ]
           and item 0 allelesList = item 1 allelesList  ; .. and bee is homozygous..
         [ set caste "male" ]   ; .. it becomes a diploid male!
     ]
+  ; [EGGP-02] number = beesInCohort, TotalBeesEverProduced + number (read by [CHK-01]).
+  ; [EGGP-03] start values of an egg: stage "egg", brood? true, ages and times 0 (adultAge 0, so that it does not
+  ;           grow on the evening of emergence, see [DEV-02]), weight devWeightEgg_mg, incubation 0, emergingDate
+  ;           NotSetLow, thresholds "egg" (all NotSetHigh [THR]), foraging values 0, -1 or [ ], not mated, empty
+  ;           spermatheca, activity "resting", personalTime_s 0.
+  ;           NOT reset, kept from the mother: colonyID, speciesID, speciesName, mtDNA. Every other bee variable
+  ;           is set here (checked against bees-own). activityList: GUI log, not translated.
+  ;           size, shape, line thickness, heading, position (xcor, ycor), hide/show: GUI only.
+  ;           Then the colony's totalEggsProduced + beesInCohort (egg accounting [CHK-04]).
   set spermathecaList [] ; eggs haven't mated yet..
   set size CohortSymbolSize
   set shape "halfline"
@@ -3654,14 +3936,33 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [FEED] FeedLarvaeProc
+; Called by: Go [GO-13], every evening after QueensLeavingNestProc and before QueenProductionDateProc
+; Context:   observer
+; Purpose:   per colony, the larvae grow by a share of their largest possible gain [WGAIN]. The share is set by
+;            the store (pollen or energy) that is emptier relative to its ideal size (Liebig's law of the minimum).
+;            The colony pays the pollen and the energy to assimilate it.
+; Translate: yes
+; ===============================================================================
 to FeedLarvaeProc  ; determines how much nectar and pollen is fed to larvae in each colony,
     ; calculates the resulting weight gain of the larvae and updates the colony stores
 
+; ORDER of the colonies: irrelevant, each colony only feeds its own larvae from its own stores.
 ask colonies
  [
 
   let myColony who
 
+  ; [FEED-01] relative stores: pollenStore_g / idealPollenStore_g and energyStore_kJ / idealEnergyStore_kJ, each
+  ;           limited to 0 to 1 (median of 0, 1 and the value). Both 0 if an ideal store is 0: no feeding.
+  ;           The ideal stores are set by the foraging stimuli whenever a bee of the colony chooses a task
+  ;           (StimForagingPollenREP, StimForagingNectarREP, step 5), from today's need [NEED-01]. A new colony has
+  ;           ideal stores 0 until a bee decides to forage [CCOL-04].
+  ;           growthLimitingFactor = the smaller of the two.
+  ;           Worked example (stores chosen by hand): a pollen store of 0.3 g relative to an ideal store of 0.6 g gives 
+  ;           0.5, while an energy store of 20 kJ relative to an ideal store of 10 kJ gives 2, which is capped at 1. 
+  ;           The growth-limiting factor is therefore 0.5, because pollen is the limiting resource.
   ; RELATIVE AMOUNTS TO BE FED:
   ; Calculate amount of NP to be fed to larvae relative to the amount they require for maximum growth
   let relativePollenToBeFed 0 ; may be updated below
@@ -3688,6 +3989,13 @@ ask colonies
     [ set growthLimitingFactor relativeEnergyToBeFed ]
 
 
+  ; [FEED-02] per larva (cohort): pollen = factor * gain [WGAIN] / pollenToBodymassFactor (mg, for ONE larva),
+  ;           weight + pollen * pollenToBodymassFactor. The colony pays number * pollen.
+  ;           The cap compares the pollen of one larva with the whole store, and the store is only reduced after
+  ;           the loop. With today's ideal store (at least 5 times today's need, StimForagingPollenREP) a colony feeds
+  ;           at most a fifth of its pollen store, so the cap does not bind.
+  ;           ORDER: irrelevant, the store does not change within the loop, each larva changes only itself.
+  ;           Assertions: the weight must not become negative or decrease.
   ; ACTUAL FEEDING OF EACH INDIVIDUAL LARVA:
   let totalPollenFedToday_g 0  ; sums up the total amount of pollen a colony feeds to the larvae
   ask bees with [ stage = "larva" and colonyID = myColony ]
@@ -3710,6 +4018,11 @@ ask colonies
     set totalPollenFedToday_g totalPollenFedToday_g + (number * pollenReceivedToday_mg / 1000)      ; multiplied by "number" here as it refers to the total costs for the colony
   ]
 
+  ; [FEED-03] the colony pays: pollen store - total pollen, energy store - total pollen * 6.2 kJ/g ([PAR-03]).
+  ;           A negative pollen store gives only a message. A negative energy store kills the colony the next
+  ;           morning [UCOL-03].
+  ;           NOTE: larvae are fed AFTER the day's foraging and before DevelopmentProc. A larva that hatches tonight
+  ;           [DEVE-01] is fed for the first time tomorrow evening.
   ; Update the total energy required to assimilate the pollen consumed
   let totalEnergyFedToday_kJ totalPollenFedToday_g * EnergyRequiredForPollenAssimilation_kJ_per_g
 
