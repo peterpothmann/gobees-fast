@@ -49,8 +49,8 @@ func newEggLayer(w *ecs.World, rng *rand.Rand) eggLayer {
 }
 
 // EgglayingProc lets the bee e (the mother) lay one batch of eggs if the colony stores cover the cost, and takes
-// 24 h of her time [EGG].
-func (l *eggLayer) EgglayingProc(e ecs.Entity) {
+// 24 h of her time [EGG]. It returns the new egg cohorts (none if the stores were too small).
+func (l *eggLayer) EgglayingProc(e ecs.Entity) []ecs.Entity {
 	_, _, mother, _, _, _, _ := l.beeMap.Get(e)
 	sp := l.speciesMap.Get(mother.SpeciesID)
 	colonyID := mother.ColonyID
@@ -70,8 +70,9 @@ func (l *eggLayer) EgglayingProc(e ecs.Entity) {
 	energyCost_kJ := pollenCost_g * l.constants.EnergyRequiredForPollenAssimilation_kJ_per_g
 
 	// [EGG-02]
+	var eggs []ecs.Entity
 	if stores.PollenStore_g > pollenCost_g && stores.EnergyStore_kJ > energyCost_kJ {
-		eggs := l.hatch(e, int(newCohorts))
+		eggs = l.hatch(e, int(newCohorts))
 		// ORDER: irrelevant, each egg only sets itself. Shuffled (decision C).
 		util.Shuffle(l.rng, eggs)
 		ticks := float64(l.ticks.Ticks)
@@ -97,6 +98,7 @@ func (l *eggLayer) EgglayingProc(e ecs.Entity) {
 	// [EGG-03] also if no eggs were laid
 	_, _, mother, _, _, _, _ = l.beeMap.Get(e)
 	mother.PersonalTime_s = mother.PersonalTime_s + 24*3600
+	return eggs
 }
 
 // hatch creates n copies of the bee e with all its values and a new who number each, and returns them in the

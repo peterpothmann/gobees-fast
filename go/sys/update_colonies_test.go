@@ -55,6 +55,7 @@ func newColonyWorld(t *testing.T, seed uint64) *colonyWorld {
 	cw.counters = &globals.Counters{}
 	ecs.AddResource(w, cw.counters)
 	ecs.AddResource(w, &globals.ActiveBees{})
+	ecs.AddResource(w, &globals.Daytime{})
 
 	sp := *terrestris(t) // seasonStop 305
 	cw.species = ecs.NewMap2[comp.Who, comp.Species](w).NewEntity(&comp.Who{Who: cw.who.Next()}, &sp)

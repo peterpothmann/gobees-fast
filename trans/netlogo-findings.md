@@ -439,7 +439,32 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Affects:** in `ActivityProc` the last matching task wins (finding 11, see trans/netlogo-findings.md#finding-11). While the host brood still needs incubation today (`StimNursingREP` = 1), nursing overwrites egg laying, and the Psithyrus rule in `ActivityProc` turns nursing into resting. The Psithyrus queen then rests for 30 minutes instead of laying eggs. She lays her batch only once the host brood has received today's incubation, and on a day on which it never does, she lays none. With the `"Psith"` thresholds she would lay eggs at the first opportunity. The change of the egg-laying threshold (0.2 to 0) has no effect, because the stimulus is 0 or 1.
 - **Consequence for gobees:** translate as it is, without a species check. A test checks that a Psithyrus queen in a host colony with workers gets the social-phase thresholds. The effect on egg laying is tested with `ActivityProc` in step 5.
 - **Second Check**: 24.10.2026
-- **Implemented:** `Development_Mortality_AdultsProc` in `sys/development.go`, without species check. Test: `TestDevelopmentSocialPhaseThresholds` (host queen and Psithyrus queen get the social-phase thresholds, a queen without workers keeps hers). The effect on egg laying follows with `ActivityProc` in step 5.
+- **Implemented:** `Development_Mortality_AdultsProc` in `sys/development.go`, without species check. Test: `TestDevelopmentSocialPhaseThresholds` (host queen and Psithyrus queen get the social-phase thresholds, a queen without workers keeps hers). The effect on egg laying follows with `ActivityProc` in step 5. Step 5: `TestActivityProcChoice` (a Psithyrus queen with the social-phase thresholds rests while the host brood needs heat, and lays eggs once it is warm).
+
+## Findings from step 5 (daily activity queue)
+
+<a id="finding-45"></a>
+
+### 45. The egg-laying stimulus counts all adults, not workers
+
+- **Code:** `[STEG-01]`
+- **Finding:** `StimEgglayingREP` is 1 if `(pollenStore_g > minPollenStore_g and allEggs + allLarvae = 0) or allAdults > 1`. The comment says `allAdults > 1` means "at least 1 worker is present". `allAdults` (`[UCOL-06]`) counts every adult with this `colonyID`: the queen herself, workers, males, young queens and a Psithyrus queen.
+- **Affects:** colonies with adults other than the queen but no workers. (1) A colony with a Psithyrus queen: the host queen, still in the founding phase, has the egg-laying stimulus 1 every day and lays a batch on every day with enough stores and no brood that needs heat, instead of waiting until her brood has pupated. (2) Late in the season, when all workers have died but males or young queens are still in the nest: the queen keeps laying (after the switch point male eggs, after the competition point the eggs die in `[MORB-04]`).
+- **Consequence for gobees:** translate as it is, with `allAdults > 1`. A test checks that a colony with the queen and one male has the stimulus 1.
+- **Second Check**: 24.10.2026
+- **Implemented:** `StimEgglayingREP` in `sys/stimuli.go`. Test: `TestStimuli` (queen and one male: stimulus 1).
+
+<a id="finding-46"></a>
+
+### 46. Eggs get no heat on the day they are laid
+
+- **Code:** `[ACT-03]`, `[STNU-01]`, `[INC-02]`
+- **Finding:** in `ActivityProc` nursing comes after egg laying and wins (finding 11, see trans/netlogo-findings.md#finding-11). The nursing thresholds of queens are 0.5 and 0.9, so a queen chooses egg laying only when the nursing stimulus of her colony is 0. The stimulus then stays 0 for the rest of the day: the need is computed from this morning's brood counts and is fixed for the day, the summed heat only grows. Nobody nurses after the egg laying, so the new eggs get no heat on that day. From the next day on they are in the counts and get their share.
+- **Exception:** a Psithyrus queen with the `"Psith"` thresholds (nursing never) lays eggs also while the host brood still needs heat. Bees that nurse afterwards share their heat by this morning's brood count, but every brood agent, also the new eggs, adds the share. The colony then distributes more heat than it pays for.
+- **Affects:** an egg reaches the hatching threshold `devIncubationHatchingTH_kJ` = quota × `devAgeHatchingMin_d` (`[SPEC-05]`, `[DEVE-01]`) one day after the minimum age if it gets exactly the quota every day. It hatches at the minimum age only if the daily surplus (`[INC-01]`, up to the heat of one turn) adds up to one quota. This fits the comment in `[QPD-01]`: the realised egg phase is about 6.4 days, with a minimum of 5. The worked examples in `[DEVE-01]`, `[DEVL-02]` and `[DEVL-03]` start with heat on the laying day, so they show the earliest possible days.
+- **Consequence for gobees:** nothing to change, the effect follows from the order of the checks. A test with `ActivityProc` checks that eggs laid by a queen get no heat on their first day.
+- **Second Check**: 24.10.2026
+- **Implemented:** follows from `ActivityLoop.ActivityProc` and `BroodIncubationProc` in `sys/activity_loop.go`. Test: `TestActivityLoopDay` (one day of a colony with 12 eggs, a queen and 20 workers: the old eggs get at least the quota, the new batch gets 0 kJ).
 
 ## Findings from the model map and from `Go`
 
@@ -476,10 +501,11 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 
 ### 11. In `ActivityProc` the last matching task wins
 
-- **Code:** not yet annotated (`ActivityProc`)
+- **Code:** `[ACT-03]`
 - **Finding:** The four comparisons of stimulus and threshold are separate consecutive `if` statements. Each matching condition overwrites `activity`. If several match, the order of precedence is therefore: nectar foraging before pollen foraging before nursing before egg laying. The comment in the code ("ordered by their importance") does not say whether the first or the last check takes precedence.
 - **Consequence for gobees:** keep the exact order of the checks, do not write them as `if … else if`.
 - **Second Check**: 23.10.2026, PP
+- **Implemented:** `ActivityLoop.ActivityProc` in `sys/activity_loop.go`, four separate `if`. Test: `TestActivityProcChoice` (a founding queen with all stimuli 1 forages nectar).
 
 <a id="finding-12"></a>
 

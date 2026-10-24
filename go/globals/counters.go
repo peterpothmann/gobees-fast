@@ -29,6 +29,12 @@ type ActiveBees struct {
 	List []ecs.Entity
 }
 
+// Daytime is the time of day of the event loop: the personalTime_s of the bee whose turn it is [GO-09].
+// Read by the foraging stimuli [STNE-03], [STPO-03].
+type Daytime struct {
+	Daytime_s float64
+}
+
 // DeadColony is the record of a dead colony: the colony's data at death, as NetLogo keeps it in deadCols-own,
 // plus colonyDeathDay [DIE-02]. Unlike deadCols it keeps SpeciesNameColony (finding 9, see
 // trans/netlogo-findings.md#finding-9).

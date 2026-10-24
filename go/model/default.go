@@ -33,6 +33,8 @@ func Default(p params.Params, a *app.App) *app.App {
 	ecs.AddResource(a.World, &counters)
 	activeBees := globals.ActiveBees{}
 	ecs.AddResource(a.World, &activeBees)
+	daytime := globals.Daytime{}
+	ecs.AddResource(a.World, &daytime)
 	// [INIT-02] choice of the parameter file: GUI logic, the caller passes the file.
 	// [INIT-03] PanelSettingProc: GUI only, not translated.
 	// [INIT-04] ReadAllParametersProc: params.ReadParameterFile, before calling Default.
@@ -57,7 +59,7 @@ func Default(p params.Params, a *app.App) *app.App {
 	a.AddSystem(&sys.UpdateFoodsources{}) // [MORN-05] UpdateFoodsourcesProc [UFS]
 	// [MORN-06] UpdateSeasonalEventsProc: step 7.
 	a.AddSystem(&sys.EmergenceNewQueens{}) // [MORN-07] EmergenceNewQueensProc [EMER]
-	// [MORN-08] wake-up times and ActiveBeesSortedList: step 5.
+	a.AddSystem(&sys.WakeUpBees{})         // [MORN-08] wake-up times and ActiveBeesSortedList
 	// [MORN-09] CropRotationProc: step 7.
 	a.AddSystem(&sys.UpdateColonies{}) // [MORN-10] UpdateColoniesProc [UCOL]
 	// [MORN-11] UpdateColonyStoreBarsProc: GUI only, not translated.
@@ -65,7 +67,7 @@ func Default(p params.Params, a *app.App) *app.App {
 	// end of season, without which no colony dies.
 	a.AddSystem(&sys.CheckNumbers{SkipColonyCheck: true})
 	a.AddSystem(&sys.NeedNectarPollenLarvaeToday{}) // [GO-05] NeedNectarPollenLarvaeTodayProc
-	a.AddSystem(&sys.ActivityLoop{})                // [GO-06] to [GO-10] event loop, NextActiveBeeREP, ActivityProc
+	a.AddSystem(&sys.ActivityLoop{})                // [GO-06] to [GO-10] event loop [NEXT], [ACT]. Foraging: step 6
 	a.AddSystem(&sys.EndOfDayResting{})             // [GO-11] all adult females resting
 	a.AddSystem(&sys.QueensLeavingNest{})           // [GO-12] QueensLeavingNestProc
 	a.AddSystem(&sys.FeedLarvae{})                  // [GO-13] FeedLarvaeProc
