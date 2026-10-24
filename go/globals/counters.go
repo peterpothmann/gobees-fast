@@ -9,10 +9,17 @@ import (
 // Counters holds global counters of the run (NetLogo globals).
 type Counters struct {
 	TotalBeesEverDied         float64 // [DIE-01]
-	TotalBeesEverProduced     float64 // EggsParameterSettingProc (step 4b), read by [CHK-01]
+	TotalBeesEverProduced     float64 // [EGGP-02], read by [CHK-01]
 	TotalColoniesEverProduced float64 // [CCOL-08]
 	ColonyDeathsEndSeason     float64 // [UCOL-11], read by [CHK-04]
 	ColonyDeathsNoBees        float64 // [UCOL-11], read by [CHK-04]
+
+	TotalAdultsEverProduced      float64 // [DEVP-02] to [DEVP-04], output only (BehaviorSpace)
+	TotalAdultMalesEverProduced  float64 // [DEVP-03], output only (BehaviorSpace)
+	TotalAdultQueensEverProduced float64 // [DEVP-04], output only (BehaviorSpace)
+	// QueensProducingColoniesList holds every colony in which a queen emerged, in the order of the first
+	// emergence [DEVP-04]. Never read. SIMPLIFY: not needed.
+	QueensProducingColoniesList []ecs.Entity
 }
 
 // ActiveBees is the daily activity queue: the active bees sorted by personalTime_s.

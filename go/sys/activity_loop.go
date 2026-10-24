@@ -9,6 +9,7 @@ import "github.com/mlange-42/ark/ecs"
 // exceeds CallItaDay_s, no active adult worker or queen is left, or no colony is left.
 //
 // NetLogo: while loop in Go, NextActiveBeeREP, ActivityProc.
+// The activity "egglaying" calls eggLayer.EgglayingProc [EGG] (sys/egglaying.go, step 4b).
 type ActivityLoop struct{}
 
 func (s *ActivityLoop) Initialize(w *ecs.World) {}

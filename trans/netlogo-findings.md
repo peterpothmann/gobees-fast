@@ -384,6 +384,63 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Second Check**: 24.10.2026, PP
 - **Implemented:** system `CheckNumbers` in `sys/check_numbers.go`, totals in `globals.Totals`. Test: `TestCheckNumbersTotals` (all totals, `TotalForagingTripsToday` reset to 0). The colony check on day 364 is switched off in `model/default.go` (`SkipColonyCheck`) until step 7 translates the end of season.
 
+## Findings from step 4b (brood)
+
+<a id="finding-40"></a>
+
+### 40. Once a colony produces queens, every female larva becomes a queen larva
+
+- **Code:** `[CAST-01]`, `[QPD-02]`
+- **Finding:** `DetermineCaste_REP` makes a female larva at larval day 3 a queen if `weight_mg >= dev_Q_DeterminationWeight_mg` and her colony has `queenProduction? = true`. `dev_Q_DeterminationWeight_mg` is 0 for all seven species in `_SYSTEM_BumbleSpecies_UK_01.csv`, so the weight criterion has no effect. From the evening on which `queenProduction?` becomes true, every female larva that reaches larval day 3 becomes a queen larva, however well she was fed.
+- **Affects:** whether a queen larva becomes an adult queen depends only on her food and incubation afterwards. B. terrestris needs 590 mg by `broodAge` 29, otherwise she dies (`larvaDeathsWeight`, `[MORB-02]`). After the switch point the queen lays only male eggs (`[EGG-02]`), so the young queens come from the last female eggs laid before the switch point.
+- **Consequence for gobees:** translate as it is, with the weight comparison.
+- **Second Check**: 24.10.2026
+- **Implemented:** `DetermineCaste_REP` in `sys/development.go`, with the weight comparison. Test: `TestDetermineCaste_REP` (every weight gives a queen with queen production, the weight criterion works with a value above 0).
+
+<a id="finding-41"></a>
+
+### 41. NetLogo evaluates `and` and `or` from left to right, Go does not
+
+- **Code:** `[DEVL-03]`
+- **Finding:** in NetLogo 5.3.1 `and`, `or` and `xor` have the same precedence and are evaluated from left to right. Checked headless on 2026-10-24: `true or false and false` gives `false`, `true or true and false and false` gives `false`. In Go `&&` binds tighter than `||`. The pupation condition `caste = "worker" or caste = "male" and <incubation> and <age> and <weight>` means `(worker or male) and ...` in NetLogo. Written the same way in Go, it would mean `worker || (male && ...)`, and every worker larva would pupate on the first evening.
+- **Search of the whole code (2026-10-24):** a script listed all statements that mix `and` and `or` at the same bracket level. This is the only one. The Go code of steps 1 to 4a brackets every mix of `&&` and `||`.
+- **Consequence for gobees:** brackets in Go: `(worker || male) && ...`. A test checks that a worker larva that is too light does not pupate.
+- **Second Check**: 24.10.2026
+- **Implemented:** `Development_LarvaeProc` in `sys/development.go`, `(worker || male) && ...`. Test: `TestDevelopmentLarvaePrecedence` (worker and male larvae that are too light, too young or too cold stay larvae).
+
+<a id="finding-42"></a>
+
+### 42. `queenProductionDate` is the laying day of the last worker larvae
+
+- **Code:** `[QPD-01]`
+- **Finding:** `QueenProductionDateProc` runs in the evening before `DevelopmentProc`. The larvae it uses (`cumulTimeLarva_d = 3`) reached larval day 3 on the previous evening and got their caste then, while `queenProduction?` was still false, so they became workers. `queenProductionDate = ticks - broodAge` is their laying day. The first queen larvae are those that reach larval day 3 tonight, in `DevelopmentProc` after this procedure. With eggs laid every day, they were laid one day later.
+- **Affects:** `queenProductionDate` is about one day earlier than the laying day of the first queen-destined eggs, contrary to the comment in the code ("these larvae were laid as eggs on that day"). The competition point (`[CPD-01]`) then comes about 0.7 days earlier (y = 0.7 x + 15.5, rounded). The comment calls the date "theoretical", so the effect may be accepted.
+- **Consequence for gobees:** translate as it is, in the same order of the systems (QueenProductionDate before Development).
+- **Second Check**: 24.10.2026
+- **Implemented:** `QueenProductionDate` runs before `Development` in `model/default.go`. Test: `TestQueenProductionDateBeforeDevelopment` (date 102 = laying day of the worker larva, the larva laid on day 103 becomes a queen).
+
+<a id="finding-43"></a>
+
+### 43. Individual-based colonies pay for one egg per batch
+
+- **Code:** `[EGG-01]`
+- **Finding:** `EgglayingProc` computes the cost as `beesInCohort * devWeightEgg_mg * pollenToBodymassFactor / 1000`. A cohort-based colony lays 1 cohort of `batchsize` eggs (`beesInCohort = batchsize`). An individual-based colony lays `batchsize` cohorts of 1 egg (`beesInCohort = 1`) and therefore pays the cost of one egg for all `batchsize` eggs. The check whether the stores cover the cost uses the same lower value.
+- **Affects:** only colonies with `cohortBased? = false`, i.e. runs with `COLONIES_IBM > 0`. `COLONIES_IBM` is 0 in `_SYSTEM_Parameters.csv` and `_SYSTEM_Example_Farm_Parameters.csv`, so the default runs are not affected.
+- **Consequence for gobees:** translate as it is. A test with an individual-based colony checks the cost of one egg.
+- **Second Check**: 24.10.2026
+- **Implemented:** `eggLayer.EgglayingProc` in `sys/egglaying.go`. Test: `TestEgglayingIndividualBased` (12 cohorts of 1 egg, stores reduced by 0.0015 g and 0.0093 kJ).
+
+<a id="finding-44"></a>
+
+### 44. A Psithyrus queen gets the thresholds of a social-phase host queen
+
+- **Code:** `[MORA-02]`
+- **Finding:** every evening, `Development_Mortality_AdultsProc` gives every mated queen in a colony with adult workers the thresholds `"QueenSocialPhase"`. The condition does not check the species, so a Psithyrus queen in a host colony with workers loses her `"Psith"` thresholds. Her egg-laying threshold drops from 0.2 to 0, and her nursing threshold from `NotSetHigh` to 0.9. The foraging thresholds stay `NotSetHigh`. A bee does not store which situation its thresholds came from, so only these values change. She stays recognisable as Psithyrus by `speciesName`.
+- **Affects:** in `ActivityProc` the last matching task wins (finding 11, see trans/netlogo-findings.md#finding-11). While the host brood still needs incubation today (`StimNursingREP` = 1), nursing overwrites egg laying, and the Psithyrus rule in `ActivityProc` turns nursing into resting. The Psithyrus queen then rests for 30 minutes instead of laying eggs. She lays her batch only once the host brood has received today's incubation, and on a day on which it never does, she lays none. With the `"Psith"` thresholds she would lay eggs at the first opportunity. The change of the egg-laying threshold (0.2 to 0) has no effect, because the stimulus is 0 or 1.
+- **Consequence for gobees:** translate as it is, without a species check. A test checks that a Psithyrus queen in a host colony with workers gets the social-phase thresholds. The effect on egg laying is tested with `ActivityProc` in step 5.
+- **Second Check**: 24.10.2026
+- **Implemented:** `Development_Mortality_AdultsProc` in `sys/development.go`, without species check. Test: `TestDevelopmentSocialPhaseThresholds` (host queen and Psithyrus queen get the social-phase thresholds, a queen without workers keeps hers). The effect on egg laying follows with `ActivityProc` in step 5.
+
 ## Findings from the model map and from `Go`
 
 <a id="finding-8"></a>
@@ -437,8 +494,9 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 
 ### 22. Background mortality of adults has an inverted condition
 
-- **Code:** not yet annotated (`Development_Mortality_AdultsProc`)
+- **Code:** `[MORA-03]`
 - **Finding:** The condition is `MortalityAdultsBackground_daily > 0 and random-float 1 > MortalityAdultsBackground_daily`. A bee therefore dies with probability `1 - MortalityAdultsBackground_daily`, not with `MortalityAdultsBackground_daily`. `ParametersProc` sets the value to 0, so the first part of the condition is false and nobody dies from it.
 - **Affects:** nothing with the hard-coded value 0. A value of e.g. 0.01 would kill 99 % of all adults (workers, males and all adult queens, including hibernating ones) every day.
 - **Consequence for gobees:** translate the condition exactly as it is. A test with value 0 checks that no bee dies.
 - **Second Check**: 23.10.2026, PP
+- **Implemented:** `Development_Mortality_AdultsProc` in `sys/development.go`, condition as in NetLogo. Test: `TestDevelopmentBackgroundMortality` (0: nobody dies; 0.01: about 99 % die).
