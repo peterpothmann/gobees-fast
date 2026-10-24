@@ -1842,9 +1842,26 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [NEXT] NextActiveBeeREP
+; Called by: Go [GO-07], once per turn of the event loop
+; Context:   observer
+; Purpose:   puts the first bee of ActiveBeesSortedList (normally the bee that has just been active, whose
+;            personalTime_s has increased) back at its sorted position, and reports the new first bee, i.e. the bee
+;            with the smallest personalTime_s.
+; Translate: yes, line by line including the tie rule (trans/data-model.md, "Daily activity queue")
+; ===============================================================================
 to-report NextActiveBeeREP
   ; determines which is the next bee to become active
 
+ ; [NEXT-01] ActiveBee = the first bee of the list, persTime_activeBee = its personalTime_s.
+ ;           The rest of the list stays sorted during the day: no procedure changes the personalTime_s of another
+ ;           bee (checked: every "set personalTime_s" is run by the bee itself, in ActivityProc, EgglayingProc,
+ ;           BroodIncubationProc, the Foraging procedures and [GO-10]), and DieProc only removes bees [DIE-01].
+ ;           The first bee has not been active yet on the first turn of the day, and when the previous bee has
+ ;           died. Re-inserting it can then only move it behind bees with the same personalTime_s.
+ ;           The list is never empty here: [GO-06] requires an active adult worker or queen, all of them were put
+ ;           into the list in [MORN-08], no bee becomes one during the day, and dying bees leave the list.
  set ActiveBee first ActiveBeesSortedList ; this refers to a bee that in most cases JUST HAD BEEN active! (but not e.g.if the previously active bee just had died!)
  let persTime_activeBee [ personalTime_s ] of bee ActiveBee
  ; the actual position is somewhere between the minimal and the maximal position:
@@ -1852,6 +1869,10 @@ to-report NextActiveBeeREP
  let maxPosition length ActiveBeesSortedList - 1  ; -1, as counting of items in list start with 0
  let currentPosition round (maxPosition / 2) ; don't know where the final position will be so currentPosition is set to right into the middle
 
+ ; [NEXT-02] binary search. currentPosition is always round ((minPosition + maxPosition) / 2) with .5 rounded up,
+ ;           so it ends at maxPosition, which is at least 1 if the list holds 2 or more bees. The search moves right
+ ;           when personalTime_s <= persTime_activeBee (also over the bee itself at position 0) and never compares
+ ;           the last bee of the list.
  ; now the correct position is determined:
  while [ maxPosition - minPosition > 1 ]
   [
@@ -1869,6 +1890,7 @@ to-report NextActiveBeeREP
   let beginningList sublist ActiveBeesSortedList 0 currentPosition ; beginning to (excluding) currentPosition
   let endList sublist ActiveBeesSortedList currentPosition length ActiveBeesSortedList  ; from (including) currentPosition to end
 
+  ; [NEXT-03] the bee is removed from position 0: from beginningList, or from endList if the list holds 1 bee.
   ; the activeBee is now removed from its original position..
   ;(if the number of bees in ActiveBeesSortedList is greater than 1, the first bee from the beginningList is removed, as this is the activeBee duplicated
                  ; if number of bees in list is 0, the first bee from the endList is removed, as this is the activeBee duplicated)
@@ -1876,6 +1898,15 @@ to-report NextActiveBeeREP
    [ set beginningList but-first beginningList ]  ; first item of beginningList is removed
    [ set endlist but-first endlist ]               ; first item of endList is removed
 
+  ; [NEXT-04] the bee is inserted before currentPosition. Exception: if endList holds only the last bee and
+  ;           persTime_activeBee is larger than its personalTime_s, the bee goes to the end.
+  ;           Tie rule that results: the bee goes behind all bees with the same personalTime_s, except the last bee
+  ;           of the list, which it goes in front of.
+  ;           Worked example (times chosen by hand): list A B C D, A has just been active. A 1810, B 900, C 1200,
+  ;           D 2000 gives B C A D. With A 2500: B C D A. With A 2000: B C A D (in front of D with the same time).
+  ;           List A B C with A 10, B 10, C 10 gives B A C.
+  ;           SIMPLIFY: a priority queue (container/heap in Go) would be faster, but changes the order of bees with
+  ;           the same personalTime_s (trans/data-model.md).
   ;.. and then the activeBee is placed at its correct position
   ifelse (length endList = 1
           and persTime_activeBee > [ personalTime_s ] of bee item 0 endList )
@@ -1926,6 +1957,9 @@ to Go
   NeedNectarPollenLarvaeTodayProc
   ; [GO-06] event loop. It runs while ALL three conditions hold:
   ;         (1) continueWorking (see [GO-08]), (2) at least one active adult worker or queen exists, (3) at least one colony exists
+  ;         The loop ends: every turn increases the personalTime_s of the active bee (see [ACT-05], [GO-10]).
+  ;         SIMPLIFY: condition (2) counts all bees in every turn. The number changes during the day only when such
+  ;         a bee dies, so a counter would do.
   while [ continueWorking = true ; still some time left today to do some work..
           and count bees with [ (caste = "worker" or caste = "queen") and (activity != "hibernate") and stage = "adult" ] > 0 ; there are actually (active) bees, that can work
           and count colonies > 0 ]
@@ -1951,10 +1985,14 @@ to Go
            ActivityProc
          ]
        ; [GO-10] a queen without a colony (colonyID = -1) is inactive for the rest of the day
+       ;         Her nest search happens in the morning [EMER-04], so her only turn is one rest [ACT-01].
+       ;         SIMPLIFY: queens without colony could stay out of ActiveBeesSortedList. Not fully without effect: being
+       ;         in the list can change the order of bees with the same personalTime_s ([NEXT-04]).
        if colonyID = -1 [ set personalTime_s CallItaDay_s + 1 ]  ; if queen hasn't founded a colony yet, it won't be active for the rest of the day
      ]
    ]
   ; [GO-11] ALL adult, non-hibernating females (not only the ones still active) are set to "resting"
+  ;         ORDER: irrelevant, each bee only sets itself. activityList: GUI log, not translated.
   ask bees with [ stage = "adult" and activity != "hibernate" and caste != "male" ]
   [
     set activity "resting"
@@ -3074,8 +3112,26 @@ end
 
 ;;;; *******************************************************************************
 
+; ===============================================================================
+; [STEG] StimEgglayingREP
+; Called by: ActivityProc [ACT-02]
+; Context:   colony
+; Purpose:   egg-laying stimulus of the colony, 0 or 1.
+; Translate: yes
+; ===============================================================================
 to-report StimEgglayingREP
   ; calculates the stimulus for egg laying within a colony
+  ; [STEG-01] 1 if (pollenStore_g > minPollenStore_g and no eggs and no larvae) or allAdults > 1.
+  ;           allEggs, allLarvae and allAdults are this morning's counts [UCOL-06]: eggs laid today do not count.
+  ;           First part, the founding phase: the queen lays her next batch only when the previous brood has
+  ;           pupated and the pollen store is above its minimum [SPEC-07].
+  ;           Worked example from netlogo/_SYSTEM_BumbleSpecies_UK_01.csv, row B_terrestris, columns
+  ;           devWeightPupationMin_mg = 62.4, batchsize = 12, pollenToBodymassFactor = 1:
+  ;           minPollenStore_g = 0.5 * 0.001 * 62.4 * 12 / 1 = 0.3744 g.
+  ;           Second part: the comment says "at least 1 worker", but allAdults counts every adult of the colony: the
+  ;           queen herself, males, young queens and a Psithyrus queen (finding 45, see
+  ;           trans/netlogo-findings.md#finding-45).
+  ;           The energy store is not checked here. EgglayingProc checks both stores against the cost [EGG-02].
   let egglayingStim 0
   if ((pollenStore_g > [ minPollenStore_g ] of oneSpecies speciesIDcolony
        and (allEggs + allLarvae) = 0))
@@ -3086,7 +3142,23 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [STNU] StimNursingREP
+; Called by: ActivityProc [ACT-02]
+; Context:   colony
+; Purpose:   nursing (incubation) stimulus of the colony, 0 or 1: 1 while the brood has received less heat today
+;            than it needs.
+; Translate: yes
+; ===============================================================================
 to-report StimNursingREP      ; asked by colony
+  ; [STNU-01] need = devQuotaIncubationToday_kJ [SPEC-05] * (allEggs + allLarvae + allPupae), this morning's counts
+  ;           [UCOL-06]. 1 if the need is larger than summedIncubationToday_kJ, which is reset every morning
+  ;           [UCOL-05] and increased by BroodIncubationProc [INC-02].
+  ;           Once 0, the stimulus stays 0 for the rest of the day: the need is fixed for the day, the summed heat
+  ;           only grows. A colony without brood this morning has the stimulus 0 all day.
+  ;           Worked example from netlogo/_SYSTEM_BumbleSpecies_UK_01.csv, row B_terrestris, column batchsize = 12:
+  ;           quota 10 / (1.5 * 12) = 0.556 kJ per brood and day. 12 eggs need 6.67 kJ today.
+  ;           SIMPLIFY: nursingStim is set to 0 twice.
   ; if the energy required for incubation today (devQuotaIncubationToday_kJ), which is the average energy required per day
   ; for an individual (devQuotaIncubationToday_kJ) times the individual brood (allEggs + allLarvae + allPupae) is smaller then
   ; the incubation actually received today (), then the stimulus to nurse (nursingStim) is set to 1 or otherwise to 0.
@@ -3100,7 +3172,26 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [STNE] StimForagingNectarREP
+; Called by: ActivityProc [ACT-02]
+; Context:   colony
+; Purpose:   nectar foraging stimulus of the colony, 0 or 1. Also SETS the colony's ideal energy store.
+; Translate: yes
+; ===============================================================================
 to-report StimForagingNectarREP ; asked by colony
+  ; [STNE-01] idealEnergyStore_kJ = 6 * energyNeedToday_kJ [NEED-01] * 5 d + 20 kJ, stored in the colony. Read by
+  ;           FeedLarvaeProc [FEED-01] and by the foraging (step 6). It is set at every turn of a bee of the colony,
+  ;           also at night, and energyNeedToday_kJ does not change during the day, so it holds today's value from
+  ;           the first turn on. At least 20 kJ, so there is no division by 0 and the assertion is never violated.
+  ;           Worked example with energyNeedToday_kJ = 0.65472 kJ from [NEED-01]: 6 * 0.65472 * 5 + 20 = 39.64 kJ.
+  ; [STNE-02] 1 if (ideal - energyStore_kJ) / ideal > 0.005, i.e. the store is below 99.5 % of the ideal store
+  ;           (worked example: below 39.44 kJ).
+  ; [STNE-03] 0 outside the foraging period: Daytime_s (the personalTime_s of the bee whose turn it is, [GO-09])
+  ;           before Sunrise_s (8:00, [PAR-03]) or after Sunrise_s + DailyForagingPeriod_s [MORN-04]. Both limits
+  ;           belong to the period.
+  ;           Worked example: Weather = "Constant 8 hrs" in netlogo/_SYSTEM_Example_Farm_Parameters.csv: foraging
+  ;           from 8:00 (28800 s) to 16:00 (57600 s).
   let storeSize_d 5
   let minNectarStore_kJ 20
   let nectarStimTH  0.005 ; heuristically determined
@@ -3118,7 +3209,21 @@ to-report StimForagingNectarREP ; asked by colony
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [STPO] StimForagingPollenREP
+; Called by: ActivityProc [ACT-02]
+; Context:   colony
+; Purpose:   pollen foraging stimulus of the colony, 0 or 1. Also SETS the colony's ideal pollen store.
+; Translate: yes
+; ===============================================================================
 to-report StimForagingPollenREP ; asked by colony
+  ; [STPO-01] idealPollenStore_g = pollenNeedLarvaeToday_g [NEED-01] * 5 d + minPollenStore_g [SPEC-07], stored in
+  ;           the colony, read as in [STNE-01]. minPollenStore_g > 0 for all species, so there is no division by 0.
+  ;           The assertion text says "kJ", the unit is g (text only).
+  ;           Worked example with pollenNeedLarvaeToday_g = 0.1056 g from [NEED-01] and minPollenStore_g = 0.3744 g
+  ;           [STEG-01]: 0.1056 * 5 + 0.3744 = 0.9024 g.
+  ; [STPO-02] 1 if the store is below 99.5 % of the ideal store (worked example: below 0.8979 g).
+  ; [STPO-03] 0 outside the foraging period, as [STNE-03].
   let storeSize_d 5
   let pollenStimTH  0.005 ; heuristically determined
   set idealPollenStore_g pollenNeedLarvaeToday_g * storeSize_d + [ minPollenStore_g ] of oneSpecies speciesIDcolony
@@ -3134,11 +3239,27 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [ACT] ActivityProc
+; Called by: Go [GO-09], once per turn of a bee in the event loop
+; Context:   bee (an active adult worker or queen from ActiveBeesSortedList)
+; Purpose:   the bee chooses ONE task by comparing the stimuli of her colony with her thresholds [THR], and does the task.
+;            Every task increases her personalTime_s.
+; Translate: yes
+; ===============================================================================
 to ActivityProc
+  ; [ACT-01] default: resting for 30 min. A queen without colony (searching a nest site) can only rest, and
+  ;          [GO-10] then ends her day.
   let break_s 0.5 * 3600 ; time a bee spents resting
   set activity "resting"
   if colonyID >= 0  ; only colony members can engage in tasks
   [
+   ; [ACT-02] the colony computes its four stimuli now, from the state at this moment: stores, today's summed
+   ;          incubation (egg heating), and Daytime_s = personalTime_s of this bee [GO-09]. They are computed again at every turn,
+   ;          because stores and incubation change during the day. Side effect: [STNE-01] and [STPO-01] set the
+   ;          colony's ideal stores.
+   ;          ORDER of the four: irrelevant, no reporter reads what another one sets.
+   ;          SIMPLIFY: the four colony variables stim... are read only here, local values would do.
    ask Colony colonyID  ; the stimuli in a bees' colony are determined
      [
        set stimEgglaying StimEgglayingREP
@@ -3147,6 +3268,24 @@ to ActivityProc
        set stimNursing StimNursingREP
      ]
 
+  ; [ACT-03] four separate "if" with strict ">": the LAST matching task wins (finding 11, see
+  ;          trans/netlogo-findings.md#finding-11). Precedence: nectar foraging, pollen foraging, nursing, egg
+  ;          laying. In Go: four separate ifs, no "else if".
+  ;          All stimuli are 0 or 1. A threshold below 1 therefore means "when the stimulus is 1", NotSetHigh means
+  ;          never. With the thresholds of [THR]:
+  ;          worker (nectar 0.9, pollen 0.9, nursing 0.9, egg laying never): forages while a store is low in the
+  ;            foraging period, otherwise nurses while the brood needs heat, otherwise rests.
+  ;          "QueenInitiationPhase" (0.7, 0.7, 0.5, 0.1): foraging before nursing before egg laying.
+  ;          "QueenSocialPhase" (never, never, 0.9, 0): nursing before egg laying.
+  ;          "youngQueen" (all never): rests in 30 min steps all day, until she leaves the nest in the evening
+  ;            [GO-12]. SIMPLIFY: her turns change only her personalTime_s.
+  ;          "Psith" (never, never, never, 0.2): only egg laying.
+  ;          NOTE: outside the foraging period both foraging stimuli are 0 [STNE-03]. Bees wake up between 0:00 and
+  ;          0:30 [MORN-08]. A queen with egg-laying stimulus 1 whose brood needs no more heat today lays her batch
+  ;          at one of her turns before 8:00, and egg laying takes 24 h [EGG-03]: she does nothing else that day.
+  ;          Because nursing comes after egg laying, a queen (nursing threshold 0.5 or 0.9) lays eggs only when the
+  ;          nursing stimulus is 0, and it stays 0 for the rest of the day [STNU-01]. Eggs therefore get no heat on
+  ;          the day they are laid (finding 46, see trans/netlogo-findings.md#finding-46).
   ; if a colony-specific stimulus exceeds the individual threshold, "activity" of the bee is set to this particular task,
   ; tasks are ordered by their importance:
   if [ stimEgglaying ] of Colony colonyID > thEgglaying [ set activity "egglaying" ]
@@ -3155,8 +3294,19 @@ to ActivityProc
   if [ stimNectarForaging ] of Colony colonyID > thForagingNectar [ set activity "nectarForaging" ]
  ]
 
+  ; [ACT-04] a Psithyrus queen (species "Psithyrus" in netlogo/_SYSTEM_BumbleSpecies_UK_01.csv) never nurses or
+  ;          forages: these tasks become resting. With the "Psith" thresholds only egg laying can be chosen anyway.
+  ;          The rule matters with the social-phase thresholds (finding 44, see trans/netlogo-findings.md#finding-44).
   if speciesName = "Psithyrus" and (activity = "nursing" or activity = "pollenForaging" or  activity = "nectarForaging")
     [ set activity "resting" ]
+
+  ; [ACT-05] the task. activityList: GUI log, not translated.
+  ;          The five "if" run one after the other, but at most one of them runs: EgglayingProc and
+  ;          BroodIncubationProc do not change activity, and ForagingProc sets it only to other values (searching,
+  ;          collect..., returning..., bringing..., expForaging..., checked against every "set activity" in the
+  ;          code), never to "nectarForaging". In Go: a switch.
+  ;          personalTime_s increases by: resting 1800 s, egg laying 24 h [EGG-03], nursing 2880 s [INC-03], foraging
+  ;          the trip duration (asserted > 0 in Foraging_costs&choiceProc, step 6).
 
   if activity = "resting" [ set activityList lput "REST" activityList
                             set personalTime_s personalTime_s + break_s
@@ -3352,7 +3502,34 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [INC] BroodIncubationProc
+; Called by: ActivityProc [ACT-05], when the activity is "nursing"
+; Context:   bee (the nurse: a worker or a queen, or a cohort of number workers)
+; Purpose:   the nurse heats the brood of her colony for 48 min. The heat is shared equally among the brood
+;            individuals counted this morning and is paid from the colony's energy store.
+;            "Incubation" in the model means this brood warming (bumblebees heat the brood with their flight
+;            muscles). "Nursing" means only incubation: the larvae are fed separately in FeedLarvaeProc [FEED].
+; Translate: yes
+; ===============================================================================
 to BroodIncubationProc
+  ; [INC-01] heat = 2880 s * 0.000000217013888 kJ per mg and s * weight_mg * number. The constant is 12.5 kJ per g
+  ;          and day (Silvola 1984, see the comments below) spread over 960 min.
+  ;          Worked example (weights chosen by hand): a worker of 100 mg gives about 0.0625 kJ, a queen of 800 mg
+  ;          about 0.5 kJ (exactly 0.499999998 kJ: the constant is truncated).
+  ;          A cohort of number workers heats number times as much in ONE turn, so the summed heat can exceed
+  ;          today's need by up to the heat of one turn [STNU-01].
+  ; [INC-02] heat per brood individual = heat / (allEggs + allLarvae + allPupae) (this morning's counts [UCOL-06]),
+  ;          0 if the colony had no brood this morning. Every brood agent of the colony adds this share to its
+  ;          cumulIncubationReceived_kJ (a value per individual, so a cohort adds it once).
+  ;          Brood laid today is not in the divisor. It gets a share only if somebody nurses after the egg laying
+  ;          (finding 46, see trans/netlogo-findings.md#finding-46).
+  ;          ORDER: irrelevant, each brood agent only changes itself.
+  ;          The colony: summedIncubationToday_kJ + heat, energyStore_kJ - heat. The energy store can become
+  ;          negative, then the colony dies the next morning [UCOL-03].
+  ;          Worked example: a queen of 800 mg and 12 eggs (need 6.67 kJ, [STNU-01]): 0.5 / 12 = 0.0417 kJ per egg
+  ;          and turn. The need is met after 14 turns (7 kJ), i.e. 14 * 48 min = 11.2 h.
+  ; [INC-03] nursing takes 2880 s (48 min).
   ; Heinrich p. 70, Fig. 5.2: 144 tempertature recordings in 24hrs (every 10 minutes) of which ca. 48 are below optimal (20 heating periods)
   ; hence: 96 * 10 min = 960 mins heating in 20 periods = 2880s heating
   ; Silvola 1984: Queen (B. terrestris) spends ca. 10kJ/day for incubation
