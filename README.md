@@ -10,12 +10,14 @@
 
 </div>
 
-gobees is a port of [BEE-STEWARD](https://beehave-model.net/bee-steward-is-published/) (Twiston-Davies et al. 2021) from NetLogo to Go, built on the [Ark](https://github.com/mlange-42/ark) entity component system. BEE-STEWARD is a research and decision support tool for land management that promotes bumblebee populations. It combines the bumblebee population model Bumble-BEEHAVE (Becher et al. 2018) with the landscape module BEESCOUT (Becher et al. 2016). It simulates colonies of six *Bombus* species and the cuckoo bumblebee *Psithyrus*, from queen emergence through foraging and brood rearing to hibernation, over several years. The bees forage in a nectar and pollen landscape built from maps, with the flowering period of each plant species. Agri-environment schemes, such as flower strips, and crop rotations can be applied to selected fields.
+gobees is a port of [BEE-STEWARD](https://beehave-model.net/bee-steward-is-published/) ([Twiston-Davies et al. 2021](#ref-twiston-davies2021)) from NetLogo to Go, built on the [Ark](https://github.com/mlange-42/ark) entity component system. BEE-STEWARD is a research and decision support tool for land management that promotes bumblebee populations. It combines the bumblebee population model [Bumble-BEEHAVE](https://beehave-model.net/category/bumblebeehave/) ([Becher et al. 2018](#ref-becher2018)) with the landscape module [BEESCOUT](https://beehave-model.net/category/beescout/) ([Becher et al. 2016](#ref-becher2016)). It simulates colonies of six *Bombus* species and the cuckoo bumblebee *Psithyrus*, from queen emergence through foraging and brood rearing to hibernation, over several years. The bees forage in a nectar and pollen landscape built from maps, with the flowering period of each plant species. Agri-environment schemes, such as flower strips, and crop rotations can be applied to selected fields.
 
 The goal is a faithful translation: gobees reproduces the NetLogo code, including its quirks, and does not change the model dynamics. Quirks are documented, not fixed.
 
 > [!NOTE]
 > gobees is work in progress. The model is translated step by step and does not yet run the full bumblebee life cycle. The steps and their status are listed in [trans/validation/README.md](trans/validation/README.md#steps-and-their-validation).
+
+A graphical interface for gobees is available in [gobees-ui](https://github.com/peterpothmann/gobees-ui). It shows the landscape, the flowering calendar and the queens of a running simulation, and explains how the model works in a schematic animation.
 
 ## Two versions
 
@@ -39,17 +41,18 @@ The reference is written in NetLogo 5.3.1.
 
 ## Repository layout
 
-| Folder | Content |
-| --- | --- |
-| `go/model` | system order of setup and one simulated day |
-| `go/sys` | systems, one per NetLogo procedure |
-| `go/comp` | components of the entities (bees, colonies, foodsources, ...) |
-| `go/globals` | global state of the model |
-| `go/params` | parameters and the reader for NetLogo parameter files |
-| `go/util` | functions that mirror NetLogo reporters |
-| `go/enum` | castes, stages and activities as Go constants |
-| `netlogo` | the annotated NetLogo model and its input files |
-| `trans` | findings on the NetLogo code and the validation against NetLogo |
+
+| Folder       | Content                                                         |
+| ------------ | --------------------------------------------------------------- |
+| `go/model`   | system order of setup and one simulated day                     |
+| `go/sys`     | systems, one per NetLogo procedure                              |
+| `go/comp`    | components of the entities (bees, colonies, foodsources, ...)   |
+| `go/globals` | global state of the model                                       |
+| `go/params`  | parameters and the reader for NetLogo parameter files           |
+| `go/util`    | functions that mirror NetLogo reporters                         |
+| `go/enum`    | castes, stages and activities as Go constants                   |
+| `netlogo`    | the annotated NetLogo model and its input files                 |
+| `trans`      | findings on the NetLogo code and the validation against NetLogo |
 
 The layout follows [beecs](https://github.com/mlange-42/beecs).
 
@@ -80,12 +83,12 @@ The CI runs all tests on every push. The summary of each run shows the test resu
 
 ## References
 
-- Twiston-Davies G, Becher MA, Osborne JL (2021) BEE-STEWARD: A research and decision-support software for effective land management to promote bumblebee populations. *Methods in Ecology and Evolution* 12: 1809–1815. [doi:10.1111/2041-210X.13673](https://doi.org/10.1111/2041-210X.13673)
-- Becher MA, Grimm V, Knapp J, Horn J, Twiston-Davies G, Osborne JL (2016) BEESCOUT: A model of bee scouting behaviour and a software tool for characterizing nectar/pollen landscapes for BEEHAVE. *Ecological Modelling* 340: 126–133.
-- Becher MA, Twiston-Davies G, Penny T, Goulson D, Rotheray EL, Osborne JL (2018) Bumble-BEEHAVE: a systems model for exploring multifactorial causes of bumblebee decline at individual, colony, population and community level. *Journal of Applied Ecology* 55: 2790–2801.
+- <a id="ref-becher2014"></a>Becher MA, Grimm V, Thorbek P, Horn J, Kennedy PJ, Osborne JL (2014) BEEHAVE: a systems model of honeybee colony dynamics and foraging to explore multifactorial causes of colony failure. *Journal of Applied Ecology* 51: 470–482. [doi:10.1111/1365-2664.12222](https://doi.org/10.1111/1365-2664.12222)
+- <a id="ref-becher2016"></a>Becher MA, Grimm V, Knapp J, Horn J, Twiston-Davies G, Osborne JL (2016) BEESCOUT: A model of bee scouting behaviour and a software tool for characterizing nectar/pollen landscapes for BEEHAVE. *Ecological Modelling* 340: 126–133. [doi:10.1016/j.ecolmodel.2016.09.013](https://doi.org/10.1016/j.ecolmodel.2016.09.013)
+- <a id="ref-becher2018"></a>Becher MA, Twiston-Davies G, Penny TD, Goulson D, Rotheray EL, Osborne JL (2018) Bumble-BEEHAVE: a systems model for exploring multifactorial causes of bumblebee decline at individual, colony, population and community level. *Journal of Applied Ecology* 55: 2790–2801. [doi:10.1111/1365-2664.13165](https://doi.org/10.1111/1365-2664.13165)
+- <a id="ref-twiston-davies2021"></a>Twiston-Davies G, Becher MA, Osborne JL (2021) BEE-STEWARD: A research and decision-support software for effective land management to promote bumblebee populations. *Methods in Ecology and Evolution* 12: 1809–1815. [doi:10.1111/2041-210X.13673](https://doi.org/10.1111/2041-210X.13673)
 
 ## Related projects
 
 - [BEE-STEWARD](https://beehave-model.net/bee-steward-is-published/): the original NetLogo model.
-- [beecs](https://github.com/mlange-42/beecs): the honeybee model [BEEHAVE](https://beehave-model.net/) translated to Go with Ark. gobees took its layout and several ideas from it. Worth a look.
-- [gobees-ui](https://github.com/peterpothmann/gobees-ui): a graphical interface for gobees.
+- [beecs](https://github.com/mlange-42/beecs): the honeybee model [BEEHAVE](https://beehave-model.net/) ([Becher et al. 2014](#ref-becher2014)) translated to Go with Ark. gobees took its layout and several ideas from it. Worth a look.
