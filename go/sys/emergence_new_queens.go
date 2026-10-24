@@ -20,10 +20,8 @@ import (
 // EmergenceNewQueens lets queens emerge from hibernation, applies winter mortality, lets every queen without
 // a colony search a nest site and founds colonies [EMER].
 //
-// Part of the morning routine: in NetLogo, UpdateMorning_Proc calls it after UpdateFoodsourcesProc and
-// UpdateSeasonalEventsProc. Until UpdateMorning_Proc is translated (step 4), this system runs on its own at the
-// position of UpdateMorning in model/default.go. At ticks = 0 (Setup, [INIT-10]) no queen emerges, so it does
-// not run in Initialize.
+// Part of the morning routine [MORN-07], after UpdateFoodsources and UpdateSeasonalEvents (step 7).
+// At ticks = 0 (Setup, [INIT-10]) no queen emerges, so it does not run in Initialize.
 //
 // NetLogo: EmergenceNewQueensProc, NestSitesSearchingProc, NestSiteFoodSourceREP, PsithyrusNestSearchProc,
 // CreateColoniesProc.

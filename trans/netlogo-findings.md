@@ -337,6 +337,53 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Second Check**: 24.10.2026, PP
 - **Implemented:** `PsithyrusNestSearchProc` in `sys/emergence_new_queens.go`. Not tested yet (not part of the default runs).
 
+## Findings from step 4a (morning routine)
+
+<a id="finding-36"></a>
+
+### 36. The day of the year uses the divisor 365.00000001
+
+- **Code:** `[MORN-02]`
+- **Finding:** `Day = round (ticks mod 365.00000001)`. With `ticks mod 365`, the last day of each year would be 0. With the slightly larger divisor, `ticks = 365` gives 365. From the second year on, the remainder lies a little below the intended integer (e.g. `ticks = 366` gives 0.99999999), and `round` corrects this. The error grows by 1e-8 per year and would only matter after about 50 million years.
+- **Result:** `Day = ((ticks - 1) mod 365) + 1` for `ticks > 0`, and `Day = 0` in Setup.
+- **Consequence for gobees:** compute `Day` with integers. A test compares the integer formula with the NetLogo formula for ticks 0, 1, 364, 365, 366, 730 and 731.
+- **Second Check**: 24.10.2026, PP
+- **Implemented:** `dayOfYear` in `sys/update_morning.go`. Test: `TestDayOfYear` (the worked examples, and the integer formula against the NetLogo formula for 100 years). The step 4a validation compares `Day` with NetLogo over 400 days.
+
+<a id="finding-37"></a>
+
+### 37. After the competition point, colony death reads the brood counts of the previous morning
+
+- **Code:** `[UCOL-02]`, `[UCOL-06]`
+- **Finding:** `UpdateColoniesProc` checks `allEggs + allLarvae + allPupae = 0` before it recomputes these counts in the same block. The check therefore uses the values of the previous morning. Brood that emerged or died since then is still counted, so the workers and queens die one day later than with current counts. Only workers and queens with `adultAge > 10` die. Younger adults stay and die on a later morning, once they are older than 10 days.
+- **Consequence for gobees:** keep the order: deaths first, then the statistics. Do not compute the counts on demand.
+- **Second Check**:
+- **Implemented:** `UpdateColonies.updateColony` in `sys/update_colonies.go`, deaths before statistics. Test: `TestUpdateColoniesDeathAfterCP` (the adults survive one more day because of the pupae counted on the previous morning).
+
+<a id="finding-38"></a>
+
+### 38. Males keep their colony alive
+
+- **Code:** `[UCOL-02]`, `[UCOL-04]`, `[UCOL-11]`, `[CHK-03]`
+- **Finding:** adult males keep their `colonyID`. Only young queens that leave the nest get `colonyID = -1` (`[GO-12]`). A colony dies only when no bee with its `colonyID` is left (`[UCOL-11]`). Males are not killed in `[UCOL-02]`, and in `[UCOL-04]` they count as adults.
+- **Affects:**
+  - A colony with only males left stays alive until the last male dies: after `MaxLifespanMales` (30 days), at the end of the season, or when `UpdateSeasonalEventsProc` kills all males. It counts as a living colony, i.e. for `COLONIES_IBM` (finding 30, see trans/netlogo-findings.md#finding-30) and for the loop condition `count colonies > 0` (`[GO-06]`).
+  - Brood whose only adults are males is not killed for "no adults left" (`[UCOL-04]`). This needs brood without any worker or queen, which is probably rare.
+- **Consequence for gobees:** keep the `ColonyID` of males. A colony entity is deleted only when no bee refers to it. So a bee never refers to a deleted colony, and the `ecs.Entity` references stay valid (decision B in `trans/data-model.md`).
+- **Second Check**:
+- **Implemented:** `sys/update_colonies.go` keeps males in `[UCOL-02]` and counts them as adults in `[UCOL-04]`. A colony is deleted only in `[UCOL-11]`, when no bee refers to it. Tests: `TestUpdateColoniesDeathAfterCP` (a male alone keeps the colony alive), `TestUpdateColoniesNoAdults` (a male keeps the brood alive).
+
+<a id="finding-39"></a>
+
+### 39. `CheckNumbersProc` is not only a check
+
+- **Code:** `[CHK-02]`, `[MORN-12]`
+- **Finding:** besides its assertions, `CheckNumbersProc` sets `TotalEggs`, `TotalLarvae`, `TotalPupae`, `TotalAdultWorkers`, `TotalAdultQueens`, `TotalAdultMales` and `TotalAdults`, and resets `TotalForagingTripsToday` to 0. `UpdateSeasonalEventsProc` reads `TotalEggs + TotalLarvae + TotalPupae` on the next morning, because it runs before `CheckNumbersProc`. It kills all males if, among other things, this sum is 0.
+- **Affects:** a translation that drops `CheckNumbersProc` as "only checks" changes when the males die, and the outputs. The BehaviorSpace metrics of these totals are morning values.
+- **Consequence for gobees:** a system `CheckNumbers` that sets the totals and panics where NetLogo asserts.
+- **Second Check**:
+- **Implemented:** system `CheckNumbers` in `sys/check_numbers.go`, totals in `globals.Totals`. Test: `TestCheckNumbersTotals` (all totals, `TotalForagingTripsToday` reset to 0). The colony check on day 364 is switched off in `model/default.go` (`SkipColonyCheck`) until step 7 translates the end of season.
+
 ## Findings from the model map and from `Go`
 
 <a id="finding-8"></a>

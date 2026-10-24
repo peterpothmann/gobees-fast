@@ -41,7 +41,7 @@ func Default(p params.Params, a *app.App) *app.App {
 	a.AddSystem(&sys.CreateSpecies{})       // [INIT-07] CreateSpeciesProc
 	a.AddSystem(&sys.CreateBadgers{})       // [INIT-08] CreateBadgersProc
 	a.AddSystem(&sys.CreateInitialQueens{}) // [INIT-09] CreateInitialQueensProc
-	// [INIT-10] UpdateMorning_Proc at ticks = 0: will run once in UpdateMorning.Initialize.
+	// [INIT-10] UpdateMorning_Proc at ticks = 0: runs in the Initialize of the morning systems below [GO-04].
 	// [INIT-11] CreateSignsProc: GUI only, not translated.
 	// [INIT-12] OutputDailyProc: will run once in OutputDaily.Initialize.
 	// [INIT-13], [INIT-14]: GUI only, not translated.
@@ -50,9 +50,20 @@ func Default(p params.Params, a *app.App) *app.App {
 	// ---- Go, one tick = one day.
 	// [GO-01] Assertions are not a system. Violations will panic where they occur (NetLogo: AssertionProc).
 	// [GO-02] InspectTurtle: GUI only, not translated.
-	a.AddSystem(&sys.Tick{})                        // [GO-03] tick
-	a.AddSystem(&sys.UpdateMorning{})               // [GO-04] UpdateMorning_Proc (not yet translated)
-	a.AddSystem(&sys.EmergenceNewQueens{})          // [GO-04] part of UpdateMorning_Proc: EmergenceNewQueensProc [EMER]
+	a.AddSystem(&sys.Tick{}) // [GO-03] tick
+	// [GO-04] UpdateMorning_Proc [MORN], as several systems in its order. Their Initialize runs the morning at
+	// ticks = 0 [INIT-10].
+	a.AddSystem(&sys.UpdateMorning{})     // [MORN-01] to [MORN-04] day of the year, foraging period
+	a.AddSystem(&sys.UpdateFoodsources{}) // [MORN-05] UpdateFoodsourcesProc [UFS]
+	// [MORN-06] UpdateSeasonalEventsProc: step 7.
+	a.AddSystem(&sys.EmergenceNewQueens{}) // [MORN-07] EmergenceNewQueensProc [EMER]
+	// [MORN-08] wake-up times and ActiveBeesSortedList: step 5.
+	// [MORN-09] CropRotationProc: step 7.
+	a.AddSystem(&sys.UpdateColonies{}) // [MORN-10] UpdateColoniesProc [UCOL]
+	// [MORN-11] UpdateColonyStoreBarsProc: GUI only, not translated.
+	// [MORN-12] CheckNumbersProc [CHK]. The colony check on day 364 is switched off until step 7 translates the
+	// end of season, without which no colony dies.
+	a.AddSystem(&sys.CheckNumbers{SkipColonyCheck: true})
 	a.AddSystem(&sys.NeedNectarPollenLarvaeToday{}) // [GO-05] NeedNectarPollenLarvaeTodayProc
 	a.AddSystem(&sys.ActivityLoop{})                // [GO-06] to [GO-10] event loop, NextActiveBeeREP, ActivityProc
 	a.AddSystem(&sys.EndOfDayResting{})             // [GO-11] all adult females resting

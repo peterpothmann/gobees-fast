@@ -16,6 +16,7 @@ import sys
 METRICS = {
     'step3': ['foodsources', 'masterpatches', 'nestsites', 'nestsite_area', 'colonies_founded',
               'queens_searching', 'queens_hibernating', 'mean_queen_weight', 'mean_emerging_date'],
+    'step4a': ['day', 'nectar_l', 'pollen_kg'],
 }
 
 

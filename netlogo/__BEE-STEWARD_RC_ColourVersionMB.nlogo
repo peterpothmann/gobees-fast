@@ -2760,8 +2760,23 @@ end
 
 ;;;; *******************************************************************************
 
+; ===============================================================================
+; [CHK] CheckNumbersProc
+; Called by: UpdateMorning_Proc [MORN-12], after UpdateColoniesProc
+; Context:   observer
+; Purpose:   assertions on the bee numbers, BUT ALSO sets the daily totals TotalEggs ... TotalAdults and resets
+;            TotalForagingTripsToday (finding 39, see trans/netlogo-findings.md#finding-39).
+; Translate: yes, the totals as model state, the checks as panics.
+; ===============================================================================
 to CheckNumbersProc
 
+  ; [CHK-01] assertion: initial queens + bees ever produced - bees ever died = bees alive (sums of number).
+  ;          Initial queens as in CreateInitialQueensProc: round (number * InitialQueensModifierBehaviorSpace).
+  ;          Worked example from netlogo/_SYSTEM_Example_Farm_Parameters.csv, columns
+  ;          BeeSpeciesInitialQueensListAsString = "B_terrestris 500" and InitialQueensModifierBehaviorSpace = 1:
+  ;          500 initial bees.
+  ;          TotalBeesEverProduced grows only by laid eggs (EggsParameterSettingProc). The copies of emerging
+  ;          queens [EMER-01] do not count, the sum of number does not change there.
   let totalInitalBees 0
   foreach BeeSpeciesInitialQueensList   ; e.g. [["B_hortorum" 100] ["B_terrestris" 500]]
     [ set totalInitalBees totalInitalBees + round (item 1 ? * InitialQueensModifierBehaviorSpace)]
@@ -2771,6 +2786,14 @@ to CheckNumbersProc
   if totalInitalBees + TotalBeesEverProduced - TotalBeesEverDied != totalBeesPresent
   [ AssertionProc "Error in number of bees ever produced/died! (CheckNumbersProc)" ]
 
+  ; [CHK-02] daily totals. TotalEggs, TotalLarvae, TotalPupae, TotalAdultWorkers, TotalAdultMales: sums of the
+  ;          colony statistics of this morning [UCOL-06]. TotalAdultQueens, TotalAdults: sums over all bees
+  ;          (also queens without colony and hibernating queens).
+  ;          Read by: UpdateSeasonalEventsProc of the NEXT morning (TotalEggs + TotalLarvae + TotalPupae = 0, it runs
+  ;          before this procedure [MORN-06]), plots and BehaviorSpace. A BehaviorSpace metric such as TotalEggs
+  ;          therefore shows the MORNING value of the day.
+  ;          TotalForagingTripsToday = 0: start of the daily count, incremented in ForagingProc (step 6) and
+  ;          plotted in OutputDailyProc in the evening.
   set TotalEggs sum [ allEggs ] of Colonies
   set TotalLarvae sum [ allLarvae ] of Colonies
   set TotalPupae sum [ allPupae ] of Colonies
@@ -2780,6 +2803,8 @@ to CheckNumbersProc
   set TotalAdults sum [ number ] of bees with [ stage = "adult" ]                          ; total adults, including queens (not necessarily member of a colony!)
   set TotalForagingTripsToday 0
 
+  ; [CHK-03] assertion: the colony sums equal the sums over all bees. Holds because every brood, adult worker and
+  ;          adult male has a living colony: a colony dies only when no bee with its colonyID is left [UCOL-11].
   if TotalEggs != sum [ number ] of bees with [ stage = "egg" ]
      or TotalLarvae != sum [ number ] of bees with [ stage = "larva" ]
      or TotalPupae != sum [ number ] of bees with [ stage = "pupa" ]
@@ -2787,6 +2812,15 @@ to CheckNumbersProc
      or TotalAdultMales != sum [ number ] of bees with [ stage = "adult" and caste = "male" ]
   [ AssertionProc "Error in total numbers of bees! (CheckNumbersProc)" ]
 
+  ; [CHK-04] on day 364 only:
+  ;          - colony check: every colony ever produced has died, counted in [UCOL-11]. Holds only if all colonies
+  ;            are dead by day 364. The end of season (seasonStop 305 for all species, [MORN-06]) kills all
+  ;            non-hibernating bees, and their colonies die in [UCOL-11] of the same morning. A species with
+  ;            seasonStop >= 364 would violate the assertion.
+  ;          - egg accounting per dead colony: every egg ever laid became an adult or is counted in one of the
+  ;            brood death counters. With KeepDeadColonies? TRUE also the dead colonies of earlier years are
+  ;            checked again. In Go: checked once at the death of each colony (decision E in trans/data-model.md).
+  ;          ORDER: irrelevant, only checks.
   if day = 364
   [
     let colCheck TotalColoniesEverProduced - (ColonyDeathsEndSeason + ColonyDeathsNoBees)
@@ -3066,15 +3100,48 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [MORN] UpdateMorning_Proc
+; Called by: Go [GO-04] every morning, once in Setup at ticks = 0 [INIT-10], and VersionTestProc (not translated)
+; Context:   observer (all callers are observer procedures, and CreateColoniesProc, called via [MORN-07], uses
+;            the observer-only commands create-storebars and create-Colonies)
+; Purpose:   everything that happens before the first bee becomes active: day of the year, foraging period,
+;            flowering, end of season, emergence and colony foundation, wake-up times, crop rotation, colony
+;            updates and the daily totals.
+; Translate: yes, as several systems in this order. Translated in step 4a: [MORN-02] to [MORN-05], [MORN-10],
+;            [MORN-12]. [MORN-07] was translated in step 3. [MORN-08] follows in step 5, [MORN-06] and
+;            [MORN-09] in step 7.
+; ===============================================================================
 to UpdateMorning_Proc
+  ; [MORN-01] stop sign for the GUI if an assertion failed. In Go assertions panic where they occur (see [GO-01]).
   if AssertionViolated [ ask patches [ set pcolor red ] user-message "Assertion violated!" ]
+  ; [MORN-02] day of the year, 1 to 365 (0 only in Setup). Every year has 365 days. Models gets Day from current tick. 
+  ;           Problem: show (365 mod 365) = 0 AND NOT 1, as wanted. 
+  ;           Solution: The divisor 365.00000001 makes day 365 come out as 365 instead of 0 (finding 36, see
+  ;           trans/netlogo-findings.md#finding-36).
+  ;           Worked example (ticks chosen by hand): ticks 365 -> 365 mod 365.00000001 = 365 -> Day 365.
+  ;           ticks 366 -> 0.99999999 -> Day 1. ticks 730 -> 364.99999999 -> Day 365.
+  ;           Same result as ((ticks - 1) mod 365) + 1 for ticks > 0.
   set Day round (ticks mod 365.00000001)
   if ticks > 0 and (Day < 1 or Day > 365) [ AssertionProc "Error in calculation of Day! (Updates_Proc)" ]
+  ; [MORN-03] date string for the interface [DATE]: not translated, no model procedure reads Date
   set Date DateREP
+  ; [MORN-04] foraging period of today [FPER]. Skipped in Setup (Day = 0), so it stays 0 until day 1 (finding 4,
+  ;           see trans/netlogo-findings.md#finding-4).
   if Day > 0 [ set DailyForagingPeriod_s Foraging_PeriodREP ]
+  ; [MORN-05] nectar and pollen of every foodsource for today, and whether any foodsource starts or stops
+  ;           flowering today [UFS]
   UpdateFoodsourcesProc
+  ; [MORN-06] end of the season, killing of males, 1 January: limit of hibernating queens (step 7, not yet annotated)
   UpdateSeasonalEventsProc
+  ; [MORN-07] queens emerge from hibernation, search nest sites and found colonies [EMER] (step 3)
   EmergenceNewQueensProc
+  ; [MORN-08] wake-up time of every active adult worker and queen (also queens without a colony): personalTime_s =
+  ;           GetUpTime_s + random 1800, i.e. an integer from 1 to 1800 s (GetUpTime_s = 1, [PAR-03]).
+  ;           ActiveBeesSortedList: the who numbers sorted by personalTime_s, the daily activity queue (step 5).
+  ;           activityList: GUI log, not translated.
+  ;           ORDER: MATTERS for ties. fput in the random order of ask, then sort-by, which is stable: bees with
+  ;           the same wake-up time stay in the random order of ask. In Go: shuffle, then a stable sort.
   let randomTimeToGetUp_s 1800 ; [s]
   set ActiveBeesSortedList []
   ask bees with [ (caste = "worker" or caste = "queen") and (activity != "hibernate") and stage = "adult" ]
@@ -3084,9 +3151,15 @@ to UpdateMorning_Proc
     set ActiveBeesSortedList fput who ActiveBeesSortedList
   ]
   set ActiveBeesSortedList sort-by [[personalTime_s] of bee ?1 < [personalTime_s] of bee ?2] ActiveBeesSortedList
+  ; [MORN-09] crop rotation on the last day of the year, only if CropRotationList has more than 1 item
+  ;           (finding 3, see trans/netlogo-findings.md#finding-3). Step 7.
   if Day = 365 and length CropRotationList > 1 [ CropRotationProc ]
+  ; [MORN-10] deaths of whole colonies, colony statistics, eusocial phase, switch point, competition point [UCOL]
   UpdateColoniesProc
+  ; [MORN-11] GUI ONLY, not translated: store bars of the colonies
   UpdateColonyStoreBarsProc
+  ; [MORN-12] checks the bee numbers, AND sets daily totals and resets TotalForagingTripsToday [CHK]
+  ;           (finding 39, see trans/netlogo-findings.md#finding-39)
   CheckNumbersProc
 end
 
@@ -3144,11 +3217,33 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [UFS] UpdateFoodsourcesProc
+; Called by: UpdateMorning_Proc [MORN-05]
+; Context:   observer
+; Purpose:   every foodsource in flower today is FILLED UP to its maximum nectar and pollen, every other foodsource
+;            is set to 0. Foragers deplete foodsources only within a day, nothing carries over to the next day.
+;            Also the landscape totals for the plots, and the flag FoodsourcesInFlowerUpdate? for [UCOL-01].
+; Translate: yes. The totals NectarAvailableTotalToday_l and PollenAvailableTotalToday_kg are only plotted, but they
+;            are the first quantity of step 4 that can be compared with NetLogo.
+; ===============================================================================
 to UpdateFoodsourcesProc
+  ; [UFS-01] reset the landscape totals and the flag
   ; updating FOODSOURCES (nectar & pollen):
   set PollenAvailableTotalToday_kg 0
   set NectarAvailableTotalToday_l 0
   set FoodsourcesInFlowerUpdate? false ; might be set true below (if true, colonies need to update their nectarInFlowerAndRangeList)
+  ; [UFS-02] per foodsource:
+  ;          - assertion: no flowering period across the turn of the year (startDay > stopDay).
+  ;          - the flag becomes true if any foodsource starts (startDay) or stops (stopDay) flowering today.
+  ;          - in flower if startDay <= Day < stopDay. stopDay is the first day AFTER flowering.
+  ;          Worked example from netlogo/_SYSTEM_Flowerspecies.csv: row "Dandelion", columns startDay = 1 and
+  ;          stopDay = 364: in flower on days 1 to 363, the flag is set on days 1 and 364. Row "Daisy", startDay = 1,
+  ;          stopDay = 365: in flower on days 1 to 364, never on day 365. Row "Crop_Cereals", startDay = stopDay = 0:
+  ;          never in flower, sets the flag only in Setup (Day = 0).
+  ;          - nectar_myl and pollen_g: maximum if in flower, otherwise 0. Totals in litres and kg.
+  ;          ORDER: irrelevant for the state, each foodsource only changes itself. The totals are float sums in
+  ;          random order, so their last digits can differ between runs (plots only).
   ask foodsources
   [
     if startDay > StopDay ; turn of the year must not occur during the flowering period of any food source!
@@ -3170,6 +3265,13 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [BARS] UpdateColonyStoreBarsProc
+; Called by: UpdateMorning_Proc [MORN-11]
+; Context:   observer
+; Purpose:   GUI ONLY. Bar sizes show the stores relative to the ideal stores. Store bars of dead colonies die here.
+; Translate: no
+; ===============================================================================
 to UpdateColonyStoreBarsProc
  ask storeBars
   [
@@ -3195,8 +3297,30 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [CPD] CompetitionPointDateREP
+; Called by: UpdateColoniesProc [UCOL-09], once per colony, as soon as eusocialPhaseDate and queenProductionDate
+;            are set
+; Context:   colony
+; Purpose:   day of the competition point (CP). Biologically, the CP is the day from which workers and queen
+;            compete for male production: workers become aggressive, lay their own (male) eggs and eat the eggs
+;            of others. The model does not simulate this behaviour, only its consequences: after the CP eggs no
+;            longer develop (MortalityBroodProc) and the colony ends once no brood is left [UCOL-02].
+;            The CP is linear in the delay between the first worker and the
+;            first queen-destined eggs (Duchateau & Velthuis 1988, Fig. 6).
+; Translate: yes
+; ===============================================================================
 to-report CompetitionPointDateREP
   ; determines the date of a colonies' competition point
+ ; [CPD-01] y = 0.7 * (queenProductionDate - eusocialPhaseDate) + 15.5, CP = round (eusocialPhaseDate + y),
+ ;          but at most eusocialPhaseDate + 45. round: .5 is rounded up.
+ ;          Range: queenProductionDate >= switchPointDate - 5 >= eusocialPhaseDate - 5 ([QPD], [UCOL-08]),
+ ;          so x >= -5 and the CP lies 12 to 45 days after the first worker.
+ ;          Worked example (dates chosen by hand): eusocialPhaseDate 120, queenProductionDate 130: x = 10,
+ ;          y = 22.5, CP = round 142.5 = 143. queenProductionDate 180: x = 60, y = 57.5, round 177.5 = 178,
+ ;          178 - 120 = 58 > 45, so CP = 165.
+ ;          Checked for Go: a fused multiply-add (Go may fuse 0.7 * x + 15.5 on arm64) gives the same CP for
+ ;          x = -5 to 59.
  let compDate NotSetHigh
  let x queenProductionDate - eusocialPhaseDate   ; range: ca; -5..40 i.e. y ca. 12 - 43.5
  let y 0.7 * x + 15.5   ; from Duchateau & Velthuis 1988, Fig. 6
@@ -3209,20 +3333,50 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [UCOL] UpdateColoniesProc
+; Called by: UpdateMorning_Proc [MORN-10], every morning after the emergence of queens [MORN-07]
+; Context:   observer
+; Purpose:   per colony: range lists, deaths of whole colonies (after the competition point, empty energy store,
+;            no adults left), statistics (allEggs ... larvaWorkerRatio), start of the eusocial phase, switch point,
+;            competition point, death of an empty colony. On 1 January dead colonies are removed.
+; Translate: yes. GUI parts (heading, label) and the patch counters nMalesProduced, nQueensProduced, nColonies
+;            (never read) are not translated.
+; ===============================================================================
 to UpdateColoniesProc
+  ; per colony, steps [UCOL-01] to [UCOL-11] in this order.
+  ; ORDER of the colonies: irrelevant for the state. A colony only reads and changes itself and the bees
+  ;   with its colonyID. Shared are only sums (TotalBeesEverDied, ColonyDeaths..., patch counters), the
+  ;   removal from ActiveBeesSortedList in DieProc [DIE-01], and the random numbers of [UCOL-08].
+  ; ORDER within a colony: MATTERS. The deaths [UCOL-02] to [UCOL-04] come before the statistics
+  ;   [UCOL-06], and [UCOL-02] therefore reads the brood counts of the PREVIOUS morning (finding 37, see
+  ;   trans/netlogo-findings.md#finding-37).
   ask colonies
   [
     let whoCol who
     let countBroodMort_NA 0 ;count number of brood dying through no adults left
     let countBroodMort_ES 0 ;count number of brood dying through energy stores being empty
+    ; [UCOL-01] rebuild the lists of foodsources in flower and in range [FRNG] if any foodsource started or stopped
+    ;           flowering today ([UFS-02]). On other days nothing in flower changes, so the lists stay valid.
     if FoodsourcesInFlowerUpdate? = true
       [ FoodsourcesInFlowerAndRangeProc ]   ; updated, if some foodsources started or stopped flowering today
+    ; [UCOL-02] after the competition point (ticks > competitionPointDate) and without brood: all workers and
+    ;           queens (mother queen, young queens still in the nest [GO-12], Psithyrus queen [PSI-03]) with this
+    ;           colonyID and adultAge > 10 die. Still younger workers and queens die on the first morning when reaching
+    ;           adultAge > 10. Males are never killed here (they keep the colony alive, finding 38, see
+    ;           trans/netlogo-findings.md#finding-38).
+    ;           allEggs, allLarvae, allPupae: the values of the PREVIOUS morning, they are recomputed only in
+    ;           [UCOL-06] (finding 37, see trans/netlogo-findings.md#finding-37).
+    ;           ORDER: irrelevant, each bee dies independently.
     if ticks > competitionPointDate ; death of colony after competition point
        and allEggs + allLarvae + allPupae = 0
        [
          ask bees with [ colonyID = whoCol and adultAge > 10 and (caste = "worker"  or caste = "queen")];  as males are outside the colony they are killed separately in UpdateSeasonalEventsProc
            [ DieProc "Colony death after CP!"]
        ]
+    ; [UCOL-03] energy store empty (<= 0): ALL bees with this colonyID die, also brood and males. The brood is
+    ;           counted for broodDeathsEnergyStores. The store becomes negative through feeding and incubation, or
+    ;           0 through a badger [GO-17]. The colony itself dies in [UCOL-11] of the same morning.
     if energyStore_kJ <= 0
       [
         ask bees with [ colonyID = whoCol ]
@@ -3231,6 +3385,9 @@ to UpdateColoniesProc
           DieProc "Colony's energy store depleted!"
         ]
       ]
+    ; [UCOL-04] no adult bee with this colonyID left (adult = brood? false, males included): all brood dies,
+    ;           counted for broodDeathsNoAdults. Adult males therefore keep the brood alive (finding 38, see
+    ;           trans/netlogo-findings.md#finding-38).
     if (sum [ number ] of bees with [ colonyID = whoCol and brood? = false ] = 0)
        [ ask bees with [ colonyID = whoCol ]
          [
@@ -3238,10 +3395,20 @@ to UpdateColoniesProc
            DieProc "No adult bees left!"
          ]
        ]
+    ; [UCOL-05] brood death counters (for the egg accounting check [CHK-04]). summedIncubationToday_kJ: incubation
+    ;           of the new day starts at 0 (read by StimNursingREP, step 5).
     set broodDeathsNoAdults       broodDeathsNoAdults + countBroodMort_NA
     set broodDeathsEnergyStores   broodDeathsEnergyStores + countBRoodMort_ES
     set summedIncubationToday_kJ  0
 
+    ; [UCOL-06] statistics over the bees with this colonyID, after the deaths above. All sums of number.
+    ;           allAdultQueens, allAdultActiveQueens, allAdultMales: brood? = false instead of stage = "adult",
+    ;           the same bees ([DEV]). larvaWorkerRatio = allLarvae / allAdultWorkers, NotSetHigh without workers.
+    ;           These values stay until the next morning. Procedures during the day (stimuli, incubation, egg
+    ;           laying) and at the end of the day ([QPD], [UCOL-02] of the next day) read them.
+    ;           Read by model procedures: allEggs, allLarvae, allPupae, allAdults, allAdultWorkers,
+    ;           larvaWorkerRatio. Only output: allAdultQueens, allAdultMales (summed in [CHK-02]), colonysize,
+    ;           colonyWeight_mg. SIMPLIFY: allAdultActiveQueens is never read.
     ; STATS:
     set allEggs sum [ number ] of bees with [ colonyID = whoCol and stage = "egg" ]
     set allLarvae sum [ number ] of bees with [ colonyID = whoCol and stage = "larva" ]
@@ -3257,10 +3424,16 @@ to UpdateColoniesProc
       [ set larvaWorkerRatio NotSetHigh ]
     set colonyWeight_mg sum [number * weight_mg] of bees with [ colonyID = whoCol ]
 
+    ; [UCOL-07] eusocial phase: starts on the first morning with an adult worker, set only once
     ; determine eusocial phase (starts with emergence of first worker):
     if eusocialPhaseDate = NotSetHigh and allAdultWorkers > 0
       [ set eusocialPhaseDate ticks ]
 
+    ; [UCOL-08] switch point (from then on the queen lays only haploid, i.e. male, eggs, EgglayingProc): in the
+    ;           eusocial phase and with larvaWorkerRatio < LarvaWorkerRatioTH (3), the colony switches with
+    ;           probability DailySwitchProbability (0.13) per day, set only once ([PAR-03]).
+    ;           One random-float per colony and day while the condition holds. <= instead of < has no effect.
+    ;           ORDER: irrelevant, one independent draw per colony.
     ; determine SWITCH POINT:
     if switchPointDate = NotSetHigh  ; i.e. the colony/queen hasn't switched to lay haploid eggs
     [
@@ -3272,6 +3445,9 @@ to UpdateColoniesProc
       ]
     ]
 
+    ; [UCOL-09] competition point [CPD], set once as soon as eusocialPhaseDate and queenProductionDate are set.
+    ;           queenProductionDate is set at the end of a day [QPD], so the CP is set the next morning.
+    ;           heading 180: GUI only.
     ; determine COMPETITION POINT and TERMINATE colony:
     if competitionPointDate = NotSetHigh
          and eusocialPhaseDate    < NotSetHigh
@@ -3279,11 +3455,21 @@ to UpdateColoniesProc
     [ set competitionPointDate CompetitionPointDateREP ]
     if ticks >= competitionPointDate [ set heading 180 ] ; colony symbol is turned on its head after CP
 
+    ; [UCOL-10] label: GUI only. queenright? becomes false when no mated queen with this colonyID is left, and
+    ;           never true again. SIMPLIFY: queenright? is never read by a model procedure.
     ; LABELS & SIGNS:
     set label colonysize
     if count bees with [ colonyID = whoCol and caste = "queen" and mated? = true ] = 0
       [ set queenright? false ]
 
+    ; [UCOL-11] no bee with this colonyID left (adults, brood and males): the colony dies [DIE-02].
+    ;           ColonyDeathsEndSeason (Day >= seasonStop of the species, 305 for all species in
+    ;           netlogo/_SYSTEM_BumbleSpecies_UK_01.csv, column seasonStop) or ColonyDeathsNoBees: for the colony
+    ;           check [CHK-04]. The patch counters nMalesProduced, nQueensProduced, nColonies are never read
+    ;           (not translated).
+    ;           Otherwise colonyAge + 1. SIMPLIFY: colonyAge is never read.
+    ;           A colony whose bees all died in [UCOL-03] or [UCOL-04] dies here on the same morning.
+    ;           A colony whose last bees die later in the day (e.g. [GO-17], [GO-15]) dies the next morning.
     ifelse count bees with [ colonyID = whoCol ] = 0
       [
         ; to diplay the production of reproductives on the map..
@@ -3305,6 +3491,11 @@ to UpdateColoniesProc
         set colonyAge colonyAge + 1
       ]
   ]
+  ; [UCOL-12] on 1 January the dead colonies are removed (not via DieProc), unless KeepDeadColonies?. It is TRUE
+  ;           in netlogo/_SYSTEM_Parameters.csv and netlogo/_SYSTEM_Example_Farm_Parameters.csv (column
+  ;           KeepDeadColonies?), so by default the dead colonies of all years are kept. Only the egg accounting
+  ;           check [CHK-04] reads dead colonies. In Go dead colonies are recorded at death (decision E in
+  ;           trans/data-model.md). The record list is cleared here, so it holds the same colonies as deadCols.
   if KeepDeadColonies? = false and Day = 1 [ ask DeadCols [ die ] ]  ; dead colonies can be removed from the simulation with the new year
 end
 

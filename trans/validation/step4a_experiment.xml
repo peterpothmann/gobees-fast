@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<!DOCTYPE experiments SYSTEM "behaviorspace.dtd">
+<!--
+  Validation of step 4a (morning routine) against NetLogo (see trans/validation/README.md).
+  Nectar and pollen available in the landscape per day (UpdateFoodsourcesProc [UFS]) and the day of the year
+  (UpdateMorning_Proc [MORN-02], finding 36). They depend only on the landscape and the flowering periods, not on
+  the bees, so they are comparable already now. 400 days include the turn of the year (ticks 365 and 366).
+  The colony statistics of UpdateColoniesProc need brood and foraging and are compared from step 4b on.
+  Kept outside the .nlogo, so that the model file stays unchanged.
+-->
+<experiments>
+  <experiment name="step4a_morning" repetitions="100" runMetricsEveryStep="true">
+    <setup>Setup</setup>
+    <go>Go</go>
+    <timeLimit steps="400"/>
+    <metric>Day</metric>
+    <metric>NectarAvailableTotalToday_l</metric>
+    <metric>PollenAvailableTotalToday_kg</metric>
+  </experiment>
+</experiments>
