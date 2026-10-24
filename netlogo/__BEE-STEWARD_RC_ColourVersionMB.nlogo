@@ -4212,7 +4212,26 @@ end
 
 ;;; *******************************************************************************
 
+; ===============================================================================
+; [DET] DetectionProbREP
+; Called by: Foraging_searchingProc [SRCH-02], once per masterpatch in the colony's list
+; Context:   bee (the searching forager). patchWho: a masterpatch, xcol ycol: her colony's position.
+; Purpose:   probability that a searching bee finds this flower patch on one search flight. It decreases
+;            exponentially with the distance from the colony to the edge of the flower patch (BEESCOUT, Becher et
+;            al. 2016).
+; Translate: yes
+; ===============================================================================
 to-report DetectionProbREP [ patchWho xcol ycol ]
+  ; [DET-01] relevant distance = distance colony - centre of the masterpatch [m] (util.Distance, no wrapping) -
+  ;          radius_m of the flower patch, at least 0. detProb = e ^ (Lambda_detectProb * relevant distance).
+  ;          A colony inside the flower patch finds it with probability 1.
+  ;          Worked example: Lambda_detectProb = -0.005 in netlogo/_SYSTEM_Example_Farm_Parameters.csv. Edge 100 m
+  ;          away: e ^ -0.5 = 0.607. Edge 758 m away: 0.0226.
+  ;          In Go: math.Pow(math.E, x) like NetLogo's "e ^ x", not math.Exp (the last digits can differ).
+  ; [DET-02] 0 if the edge is farther than ForagingRangeMax_m (758 m, [PAR-03]). Never the case for the patches in
+  ;          the colony's list: they have their CENTRE within the range [PRNG-01], so the edge is closer.
+  ;          SIMPLIFY: the check is not needed for these callers.
+  ; [DET-03] rounded to 10 decimals (precision, as in [FSRC-02]).
   let dist_m 0
   let patchRadius_m -999
   ; calculation of the distance between Foodsource and Colony:
@@ -4240,7 +4259,30 @@ end
 ; ===============================================================================     ===============================================================================     ===============================================================================
 
 
+; ===============================================================================
+; [FOR] ForagingProc
+; Called by: ActivityProc [ACT-05], when the activity is "pollenForaging" or "nectarForaging"
+; Context:   bee (a worker or a founding queen, or a cohort of number workers that forages as one "squadron")
+; Purpose:   one complete foraging trip: search a flower patch if the bee knows none, collect, pay the costs in
+;            time, energy and mortality, choose the patch for the next trip, unload.
+; Translate: yes
+; ===============================================================================
 to ForagingProc
+ ; [FOR-01] TotalForagingTripsToday + number: output only (reset every morning [CHK-02]). Also failed searches count.
+ ; [FOR-02] the bee becomes a pollen or a nectar forager for this trip, and takes the foodsource she chose for this
+ ;          forage at the end of her last trip of this type [PCH-05].
+ ; [FOR-03] activity: "searching" without a foodsource, otherwise "collectPollen" or "collectNectar".
+ ; [FOR-04] then the four parts, each acts only on the activities it is meant for:
+ ;          [SRCH] searching -> collect... or returningEmpty
+ ;          [COLL] collect... -> bringing... or returningEmpty
+ ;          [COST] returningEmpty, or bringing... -> expForaging...: time, energy, mortality, then [PCH]
+ ;                 (expForaging... may become returningUnhappy...)
+ ;          [UNLD] expForaging... or returningUnhappy... -> load into the colony stores
+ ;          A bee that dies in [COST] does not reach [PCH] and [UNLD] (finding 28, see
+ ;          trans/netlogo-findings.md#finding-28): her load is lost, but the flower patch has already lost it
+ ;          [COLL-01], [COLL-02], and the colony has paid the flight [COST-01], [COST-02].
+ ;          activityList: GUI log, not translated.
+ ; [FOR-05] assertion: no load left after unloading.
  set TotalForagingTripsToday TotalForagingTripsToday + number
  ifelse activity = "pollenForaging" ; if bee decided to collect pollen..
   [
@@ -4281,8 +4323,18 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [SORT] Foraging_SortKnownPatchesListREP
+; Called by: Foraging_searchingProc [SRCH-03], after a new masterpatch was put in front of the list
+; Context:   bee
+; Purpose:   the bee's list of known masterpatches without duplicates, sorted by distance to her colony.
+; Translate: yes
+; ===============================================================================
 to-report Foraging_SortKnownPatchesListREP [ knownPatchesList ]
 ; removes duplicates in list and sorts it  by distances of masterpatches and the bee's colony
+ ; [SORT-01] remove-duplicates keeps the first occurrence. sort-by is stable: of two masterpatches at the same
+ ;           distance, the one that comes first stays first (the newly found one, if it was put in front).
+ ;           Distances in NetLogo patch units, no wrapping (util.Distance). No random numbers.
  let newList []
  set knownPatchesList remove-duplicates knownPatchesList  ; duplicates are removed from the list
  ask Colony colonyID ; this is the colony of the scouting bee
@@ -4292,8 +4344,20 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [SRCH] Foraging_searchingProc
+; Called by: ForagingProc [FOR-04]
+; Context:   bee
+; Purpose:   a forager without a foodsource searches: she may detect flower patches of her colony's list, takes the
+;            best layer of the last one detected and remembers the patch.
+; Translate: yes
+; ===============================================================================
 to Foraging_searchingProc
  ; foragers with activity = "searching" may find a food source, other foragers (activity: collect nectar or pollen) don't do anything here
+  ; [SRCH-01] only for activity "searching". The candidates are the colony's masterpatches with at least one layer
+  ;           of this forage in flower, within the foraging range [FRNG] (updated on days on which flowering
+  ;           starts or stops, [UCOL-01]). Only masterpatches, so a flower patch with many flower species is not
+  ;           detected more often.
   if activity = "searching"
   [
     let chosenMasterpatch -1 ; bee hasn't found a food source yet
@@ -4312,12 +4376,22 @@ to Foraging_searchingProc
         [ set myMasterpatchesWithFoodList masterpatchesWithNectarlayersInFlowerAndRangeList ]
     ]
 
+    ; [SRCH-02] ONE random draw per candidate, in random order (shuffle), against its detection probability [DET].
+    ;           The LAST detected candidate is chosen. Given the set of detected patches, every one of them is chosen
+    ;           with the same probability. ORDER: matters only through the random numbers, gobees shuffles as well.
     foreach shuffle myMasterpatchesWithFoodList ; shuffled only once, not every time a new item is addressed!
     [
       if random-float 1 <  DetectionProbREP ? xcol ycol  ; all items in list are addressed, hence chosenMasterpatch may be set several times - only last patch detected is the patch chosen!
       [ set chosenMasterpatch ? ]            ; this is a masterpatch that has at least 1 layer currently providing the forage the bee is searching for
     ]
 
+    ; [SRCH-03] found: currentFoodsource = the best layer of the patch [BLYR]. If one exists, the masterpatch goes in
+    ;           front of the known list of this forage, the list is cleaned and sorted [SORT], and the bee collects.
+    ;           If no layer has forage left (emptied by other bees earlier today): returningEmpty.
+    ;           Not found: returningEmpty.
+    ;           NOTE: [BLYR] looks at all layers on the same NetLogo patch cell, which can belong to another flower
+    ;           patch (finding 15, see trans/netlogo-findings.md#finding-15).
+    ; [SRCH-04] assertion: the bee is no longer searching.
     ifelse chosenMasterpatch >= 0  ; if the bee has found a patch:
     [
       set currentFoodsource Foraging_bestLayerREP chosenMasterpatch  ; the bees new food source is then the best layer at that patch (based on handling time) (only sources actually providing the food the bee is after are considered)
@@ -4354,7 +4428,26 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [COLL] Foraging_collectNectarPollenProc
+; Called by: ForagingProc [FOR-04]
+; Context:   bee
+; Purpose:   the forager (cohort) takes a full load from her foodsource, or what is left of it.
+; Translate: yes
+; ===============================================================================
 to Foraging_collectNectarPollenProc
+; [COLL-01] pollen: load = min (pollenPellets_g * number, pollen_g of the foodsource), activity "bringingPollen", the
+;           foodsource loses the load, cumulPollenVisits + number. Foodsource without pollen: returningEmpty.
+; [COLL-02] nectar: removed = min (cropvolume_myl * number, nectar_myl of the foodsource), load = removed *
+;           EnergySucrose_kJ/mymol (0.00582, [PAR-03]) * nectarConcentration_mol/l [kJ], activity "bringingNectar",
+;           the foodsource loses the nectar, cumulNectarVisits + number. Without nectar: returningEmpty.
+;           Worked example (bee chosen by hand): a worker of 100 mg of B_terrestris (netlogo/_SYSTEM_BumbleSpecies_UK_01.csv)
+;           has cropvolume_myl = min (173, 100 * 0.402) = 40.2 [LOAD]. At American_willowherb (netlogo/_SYSTEM_Flowerspecies.csv,
+;           concentration_mol/l = 1.34): 40.2 * 0.00582 * 1.34 = 0.3135 kJ.
+;           A cohort takes number loads at once, so it can empty a foodsource in one trip.
+;           At most one of the two blocks runs: after the pollen block the activity is no longer collectNectar.
+;           SIMPLIFY: "expForagingP" and "expForagingN" are never the activity here, because ForagingProc sets
+;           "collect..." or "searching" before [FOR-03].
 ; foragers with activity = "collectPollen" or activity = "expForagingP" OR activity = "collectNectar" or activity = "expForagingN" can gather food from a food source. No other bees are addressed
   if activity = "collectPollen" or activity = "expForagingP"
   [
@@ -4438,7 +4531,31 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [HAND] HandlingTime_s_REP
+; Called by: Foraging_bestLayerREP [BLYR-02], [BLYR-03], Foraging_costs&choiceProc [COST-02]
+; Context:   bee (the forager; her weight, glossa and crop are those of ONE bee, not of the cohort)
+; Purpose:   time [s] to collect one full load at a foodsource (layer). Grows when the foodsource is depleted.
+;            At most 3600 s.
+; Translate: yes
+; ===============================================================================
 to-report HandlingTime_s_REP [ myPatch pollenPatch? ]; called by bee
+; [HAND-01] nectar (Harder 1983): fillingLevel = nectar_myl / nectarMax_myl (0 if nectarMax_myl = 0).
+;           Ta = 0.3 + 0.04 * corolla depth C, Ti = log10 (V + 1) / log10 (num / den + 1) with V = nectar per
+;           flower [microlitres], num = 0.3 * W^0.3333 * glossa G (W in g), den = base^-0.4 - 0.3 * Ta and base =
+;           1.41 - C / G, at least 0.001 (corolla much deeper than the glossa).
+;           Per flower: (interFlowerTime_s + Ta) / fillingLevel + Ti, or 3600 s if fillingLevel = 0.
+;           Flowers needed: cropvolume_myl / V if V < cropvolume_myl, else 1.
+;           Worked example (bee chosen by hand): worker of 100 mg of B_terrestris: glossa 7.072 mm [PROB],
+;           cropvolume_myl 40.2 [LOAD]. American_willowherb in netlogo/_SYSTEM_Flowerspecies.csv
+;           (nectar_ml/flower = 0.00035, i.e. V = 0.35, corollaDepth_mm = 3.5, intFlowerTime_s = 0.6): Ta = 0.44 s,
+;           Ti = 0.407 s, 114.9 flowers. Full foodsource: (0.6 + 0.44) / 1 + 0.407 = 1.447 s per flower, 166.2 s.
+;           Half full: 285.7 s. Alsike_clover (corolla 10 mm, deeper than 1.41 * 7.072): base = 0.001, 655.1 s.
+; [HAND-02] pollen: fillingLevel = pollen_g / pollenMax_g (0 if pollenMax_g = 0). interFlowerTime_s * 58 flowers /
+;           fillingLevel + 257.4 s (Raine & Chittka 2007), or 3600 s if fillingLevel = 0. Independent of the bee.
+;           Worked example: intFlowerTime_s = 0.6 (American_willowherb): full 0.6 * 58 / 1 + 257.4 = 292.2 s, half
+;           full 327 s.
+; [HAND-03] at most 3600 s (maxHandlingTime_s).
 ; calculates the time [s] to gather of full load of nectar or pollen
 ; for nectar: based on Harder 1983: Oecologia 57:274-280
 
@@ -4516,8 +4633,28 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [BLYR] Foraging_bestLayerREP
+; Called by: Foraging_searchingProc [SRCH-03], Foraging_PatchChoiceProc [PCH-04], [PCH-05]
+; Context:   bee
+; Purpose:   the best layer (flower species) among the foodsources on the same NetLogo patch cell as
+;            myCurrentFoodsource that still have the bee's forage. -1 if none has any.
+; Translate: yes
+; ===============================================================================
 to-report Foraging_bestLayerREP [ myCurrentFoodsource ]
 ; reports most profitable foodsource ("layer") within the currently used flower patch, based on minimal handling time
+; [BLYR-01] candidates: layersInPatchList of myCurrentFoodsource, in who order. It holds all foodsources on the same
+;           NetLogo patch cell, possibly of another flower patch (finding 15, see trans/netlogo-findings.md#finding-15).
+;           distance colony - myCurrentFoodsource [m], the same for all candidates.
+; [BLYR-02] pollen forager: among the layers with pollen_g > 0, the one with the shortest handling time [HAND].
+;           Strict "<": of equal times the first in the list wins.
+; [BLYR-03] nectar forager: among the layers with nectar_myl > 0, the one with the highest energetic efficiency
+;           eef = (gain - cost) / cost. cost = (2 * distance + handling time * flightVelocity * EnergyFactorOnFlower
+;           (0.3, [PAR-03])) * flightCosts_kJ/m/mg * weight_mg * number. gain = cropvolume_myl * EnergySucrose_kJ/mymol
+;           * concentration. Strict ">": of equal values the first wins.
+;           NOTE: the cost is for the whole cohort (number), the gain for ONE bee. The choice does not change: eef + 1 =
+;           gain / cost, and number divides all candidates alike.
+;           ORDER: the list order matters only for ties. No random numbers.
 
  let memoBestHandlingtime notSetHigh
  let memoBestEEF notSetLow
@@ -4585,7 +4722,39 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [PCH] Foraging_PatchChoiceProc
+; Called by: Foraging_costs&choiceProc [COST-03], at the end of every trip of a surviving forager
+; Context:   bee. currentTripDuration_s: duration of this trip without unloading [COST-03].
+; Purpose:   the forager decides where to go on her next trip of this forage: same foodsource, the best layer of
+;            the same patch, another known patch, or a new search (Wiegmann et al. 2003).
+; Translate: yes
+; ===============================================================================
 to Foraging_PatchChoiceProc [ currentTripDuration_s ]
+; [PCH-01] expectation and known list of this forage (nectar or pollen).
+; [PCH-02] returningEmpty: she always goes to another patch (gotoNewLayergroup? true), myCurrentPatchPosition
+;          stays -1, and her expectation does not change.
+; [PCH-03] successful trip: position of her masterpatch in the known list (assertion if it is not in the list,
+;          finding 15, see trans/netlogo-findings.md#finding-15; then -1).
+;          unhappyProb = (trip duration - expectation) / trip duration, at least 0. Unhappy if random-float 1 <
+;          0.1 + unhappyProb. New expectation = (expectation + trip duration) / 2.
+;          NOTE: a novice has the expectation 0, so unhappyProb = 1 and she is ALWAYS unhappy after her first
+;          successful trip of a forage (the comment in the code says "likely").
+;          Worked example (times chosen by hand): expectation 300 s, trip 400 s: unhappyProb 0.25, unhappy with
+;          probability 0.35, new expectation 350 s.
+; [PCH-04] unhappy: activity returningUnhappyP or returningUnhappyN (she still unloads [UNLD]). If her foodsource is
+;          already the best layer of the patch [BLYR], she goes to another patch. Otherwise she takes the best layer,
+;          which is -1 if no layer has forage left (then she searches next time).
+; [PCH-05] another patch: with probability 0.9 a random position from -1 to myCurrentPatchPosition - 1 (random
+;          (myCurrentPatchPosition + 1) - 1, i.e. a closer patch, or -1), otherwise myCurrentPatchPosition + 1 (the
+;          next farther one). A position outside the list means a new search (-1), otherwise the best layer of that
+;          patch [BLYR] (-1 if it has no forage left).
+;          After returningEmpty, myCurrentPatchPosition = -1 and "random 0" is 0 in NetLogo, so the position is -1
+;          and she searches; in the other 10 % the position is 0, the closest known patch (a new search if she
+;          knows none).
+;          In Go: NetLogo's "random 0" gives 0, rand.IntN(0) panics. util.RandomInt needs this case.
+;          Then pollensourceToGoTo or nectarsourceToGoTo = currentFoodsource, read at the start of the next trip of
+;          this forage [FOR-02].
 ; determines if bees are still happy with their current food source (based on the duration of the trip). If not, they will either switch to the best layer/flowerspecies at the
 ; current patch or - if they already forage at the best layer/flowerspecies, they will switch to another patch/'layergroup' they know or search for a new one
 ; (note: expectation_Nectar/PollenTrip_s is 0 for a novice forager, hence they are likely to search new patches until they get more experienced)
@@ -4663,7 +4832,37 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [COST] Foraging_costs&choiceProc
+; Called by: ForagingProc [FOR-04]
+; Context:   bee
+; Purpose:   costs of the trip in time, energy (paid by the colony) and mortality, then the choice of the next
+;            foodsource [PCH].
+; Translate: yes
+; ===============================================================================
 to Foraging_costs&choiceProc ; costs in time, energy and mortality
+; [COST-01] returningEmpty (search without success, or foodsource empty): the colony pays searchLength_m *
+;           flightCosts_kJ/m/mg * number * weight_mg, the trip takes searchLength_m / flightVelocity_m/s.
+;           Death with 1 - (1 - MortalityForager_per_s * ForagingMortalityFactor) ^ trip duration [PAR-04].
+;           DieProc ends her code (finding 28, see trans/netlogo-findings.md#finding-28).
+;           Worked example from netlogo/_SYSTEM_BumbleSpecies_UK_01.csv, row B_terrestris (searchLength_m = 2500,
+;           flightVelocity_m/s = 5), a worker of 100 mg, flightCosts_kJ/m/mg = 488.6 / 5 / 10^9 [SPEC-05],
+;           ForagingMortalityModel "high" (1e-05 per s) and ForagingMortalityFactor 1 in
+;           netlogo/_SYSTEM_Example_Farm_Parameters.csv: 0.0244 kJ, 500 s, death with probability 0.0050.
+;           Speed and search length come from the colony's species, the flight costs from the bee's species (the
+;           same species: Psithyrus does not forage, [ACT-04]).
+; [COST-02] bringingNectar or bringingPollen: activity expForagingN or expForagingP. Handling time [HAND] of her
+;           foodsource. The colony pays (2 * distance + handling time * flightVelocity * EnergyFactorOnFlower) *
+;           flightCosts_kJ/m/mg * weight_mg * number, the trip takes 2 * distance / flightVelocity + handling time.
+;           Death as in [COST-01].
+;           NOTE: the handling time is computed AFTER the bee has taken her load [COLL]. If her load emptied the
+;           foodsource, the filling level is 0 and the handling time is the maximum of 3600 s (finding 47, see
+;           trans/netlogo-findings.md#finding-47).
+;           Worked example (distance chosen by hand): worker of 100 mg, pollen foodsource 300 m away, handling time
+;           292.2 s [HAND-02]: trip 2 * 300 / 5 + 292.2 = 412.2 s, (600 + 292.2 * 5 * 0.3) * 488.6 / 5 / 10^9 * 100 =
+;           0.0101 kJ, death with probability 0.0041.
+; [COST-03] assertion: the trip took time. Then [PCH] with the trip duration (personalTime_s now minus before the
+;           trip, without unloading).
 ; first bees with activity = "returningEmpty" and then bees with  activity = "bringingNectar" or activity = "bringingPollen" are addressed to calculate time and energy spent on the trip;
 ; finally Foraging_PatchChoiceProc is called, as the future patch/flowerspecies choice is based on the time spent on the trip.
 
@@ -4741,7 +4940,18 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [UNLD] Foraging_unloadingProc
+; Called by: ForagingProc [FOR-04]
+; Context:   bee
+; Purpose:   a successful forager puts her load into the colony stores.
+; Translate: yes
+; ===============================================================================
 to Foraging_unloadingProc
+  ; [UNLD-01] expForaging... or returningUnhappy...: energyStore_kJ + nectar load, pollenStore_g + pollen load, loads 0,
+  ;           personalTime_s + timeUnloading of her species (165 s for B_terrestris in
+  ;           netlogo/_SYSTEM_BumbleSpecies_UK_01.csv). Unloading is not part of the trip duration in [PCH].
+  ;           Other activities (returningEmpty): assertion if she carries anything.
   ; successful foragers (irrespective whether they are happy or not) unload their nectar or pollen load
   ifelse activity = "expForagingN" or activity = "expForagingP" or activity = "returningUnhappyN" or activity = "returningUnhappyP"
   [
