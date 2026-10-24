@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="us-ascii"?>
 <!DOCTYPE experiments SYSTEM "behaviorspace.dtd">
 <!--
-  Validation of steps 1 to 3 against NetLogo (see trans/validation/README.md).
+  Validation of steps 1 to 3 against NetLogo (see go/validation/README.md).
   Year 1 only: colony foundation by the initial queens depends only on emergence, winter mortality and nest
   search, which are translated. Brood, foraging etc. do not influence these metrics in year 1.
   250 days: the initial queens emerge around day 91 (sd 28), so by day 250 all have emerged and finished searching.

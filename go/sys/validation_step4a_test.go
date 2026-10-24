@@ -6,13 +6,13 @@ import (
 	"testing"
 
 	"gobees/globals"
-	"gobees/internal/validation"
+	"gobees/validation"
 
 	"github.com/mlange-42/ark/ecs"
 )
 
 func TestValidationStep4aAgainstNetLogo(t *testing.T) {
-	// Experiment trans/validation/step4a_experiment.xml: Day, NectarAvailableTotalToday_l, PollenAvailableTotalToday_kg.
+	// Experiment go/validation/experiments/step4a.xml: Day, NectarAvailableTotalToday_l, PollenAvailableTotalToday_kg.
 	// The values depend only on the landscape, so all NetLogo runs agree up to the last digits of the float sums
 	// (random order of ask). The band is therefore widened by a relative tolerance of 1e-9.
 	if testing.Short() {
@@ -63,7 +63,7 @@ func TestValidationStep4aAgainstNetLogo(t *testing.T) {
 		gobees := validation.Median(values[m][steps])
 		t.Logf("%-10s step %3d: gobees median %10.6g | NetLogo median %10.6g", m, steps, gobees, final.Q50)
 		rows = append(rows, validation.ReportRow{Metric: m, Steps: steps + 1, Within: steps + 1 - len(outside),
-			LastStep: steps, Gobees: gobees, NetLogo: final})
+			Step: steps, Gobees: gobees, NetLogo: final})
 		if len(outside) > 0 {
 			failures = append(failures, fmt.Sprintf("%s: outside the NetLogo band at %d of %d steps, e.g. %s",
 				m, len(outside), steps+1, outside[0]))
@@ -71,7 +71,7 @@ func TestValidationStep4aAgainstNetLogo(t *testing.T) {
 	}
 
 	err = validation.WriteReport("Step 4a: morning routine",
-		"Experiment `trans/validation/step4a_experiment.xml`: example farm, 400 days. Day of the year, nectar and "+
+		"Experiment `go/validation/experiments/step4a.xml`: example farm, 400 days. Day of the year, nectar and "+
 			"pollen available in the landscape. These values depend only on the landscape, so the NetLogo band is "+
 			"widened by a relative tolerance of 1e-9 (float sums in random order).",
 		runs, rows)

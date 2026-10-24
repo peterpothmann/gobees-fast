@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="us-ascii"?>
 <!DOCTYPE experiments SYSTEM "behaviorspace.dtd">
 <!--
-  Validation of steps 4b to 6 (brood, daily activity queue, foraging) against NetLogo (see trans/validation/README.md).
+  Validation of steps 4b to 6 (brood, daily activity queue, foraging) against NetLogo (see go/validation/README.md).
   Colony dynamics of year 1, compared per day: colonies, brood, adults, stores, foraging trips, switch point, queen
   production, and the nectar and pollen left in the landscape after foraging.
 
@@ -14,7 +14,7 @@
   364 days: on day 364 CheckNumbersProc asserts that all colonies produced have died ([CHK-04]), which needs the end
   of the season. Without it the assertion stops the run before day 365 (the same reason why gobees switches the
   colony check off until step 7, model/default.go). Young queens do not hibernate in this schedule anyway.
-  Kept outside the .nlogo, so that the model file stays unchanged. Metric names in aggregate_netlogo.py (step6).
+  Kept outside the .nlogo, so that the model file stays unchanged. Metric names in scripts/aggregate_netlogo.py (step6).
 -->
 <experiments>
   <experiment name="step6_year1" repetitions="100" runMetricsEveryStep="true">

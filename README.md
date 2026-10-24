@@ -15,7 +15,7 @@ gobees is a port of [BEE-STEWARD](https://beehave-model.net/bee-steward-is-publi
 The goal is a faithful translation: gobees reproduces the NetLogo code, including its quirks, and does not change the model dynamics. Quirks are documented, not fixed.
 
 > [!NOTE]
-> gobees is work in progress. The model is translated step by step and does not yet run the full bumblebee life cycle. The steps and their status are listed in [trans/validation/README.md](trans/validation/README.md#steps-and-their-validation).
+> gobees is work in progress. The model is translated step by step and does not yet run the full bumblebee life cycle. The steps and their status are listed in [go/validation/README.md](go/validation/README.md#steps-and-their-validation).
 
 A graphical interface for gobees is available in [gobees-ui](https://github.com/peterpothmann/gobees-ui). It shows the landscape, the flowering calendar and the queens of a running simulation, and explains how the model works in a schematic animation.
 
@@ -79,7 +79,7 @@ go test -short ./...   # without the comparison with NetLogo
 
 Single runs of gobees and NetLogo cannot be compared, because NetLogo's random number sequence cannot be reproduced in Go. Instead, 100 NetLogo runs give quantiles per day for each compared quantity, and a Go test requires the median of 100 gobees runs to lie within the NetLogo 5–95 % band. The NetLogo results are embedded in the repository, so NetLogo does not have to be installed to run the tests.
 
-The CI runs all tests on every push. The summary of each run shows the test results and the comparison report. Details on the experiments: [trans/validation/README.md](trans/validation/README.md).
+The CI runs all tests on every push. The summary of each run shows the test results and the comparison report. Details on the experiments: [go/validation/README.md](go/validation/README.md).
 
 ## References
 

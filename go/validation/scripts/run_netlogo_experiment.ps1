@@ -1,7 +1,7 @@
 # Runs a BehaviorSpace experiment of BEE-STEWARD headless with NetLogo 5.3.1.
 #
 # Usage (PowerShell, from the repository root):
-#   .\trans\validation\run_netlogo_experiment.ps1 -Experiment trans\validation\step3_experiment.xml -Output step3_netlogo.csv
+#   .\go\validation\scripts\run_netlogo_experiment.ps1 -Experiment go\validation\experiments\step3.xml -Output step3_netlogo.csv
 #
 # NetLogo 5.3.1 ships without java.exe, so the Java on the PATH is used (tested with Java 21).
 # NetLogo finds its extensions (profiler, csv) only if the working directory is its app folder, so the script

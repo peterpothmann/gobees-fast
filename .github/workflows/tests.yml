@@ -1,6 +1,6 @@
 # Runs on every push and pull request: formatting, go vet and all Go tests, incl. the comparison with
 # NetLogo (go/sys/validation_*_test.go). NetLogo itself does not run here: its reference results are embedded
-# in go/internal/validation, see trans/validation/README.md.
+# in go/validation, see go/validation/README.md.
 #
 # The summary of each run shows all test results and the comparison report (gobees vs. NetLogo).
 # Both are also uploaded as artifact "reports".

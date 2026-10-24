@@ -8,12 +8,12 @@ import (
 	"gobees/enum/activity"
 	"gobees/enum/caste"
 	"gobees/globals"
-	"gobees/internal/validation"
+	"gobees/validation"
 
 	"github.com/mlange-42/ark/ecs"
 )
 
-// step3Metrics returns the metrics of trans/validation/step3_experiment.xml for the current state of the world,
+// step3Metrics returns the metrics of go/validation/experiments/step3.xml for the current state of the world,
 // with the same definitions as in NetLogo. Initial queens are the queens with 0 < emergingDate < 365.
 func step3Metrics(w *ecs.World) map[string]float64 {
 	m := map[string]float64{}
@@ -120,7 +120,7 @@ func TestValidationStep3AgainstNetLogo(t *testing.T) {
 		t.Logf("%-20s step %3d: gobees median %10.4g | NetLogo median %10.4g [%.4g, %.4g]",
 			c.metric, last, gobees, final.Q50, final.Q05, final.Q95)
 		rows = append(rows, validation.ReportRow{Metric: c.metric, Steps: last + 1, Within: last + 1 - len(outside),
-			LastStep: last, Gobees: gobees, NetLogo: final})
+			Step: last, Gobees: gobees, NetLogo: final})
 		if len(outside) > 0 {
 			failures = append(failures, fmt.Sprintf("%s: gobees median outside the NetLogo 5-95 %% band at %d of %d steps, e.g. %s",
 				c.metric, len(outside), last+1, outside[0]))
@@ -128,7 +128,7 @@ func TestValidationStep3AgainstNetLogo(t *testing.T) {
 	}
 
 	err = validation.WriteReport("Steps 1 to 3: colony foundation in year 1",
-		"Experiment `trans/validation/step3_experiment.xml`: example farm, 500 B. terrestris queens, 250 days. "+
+		"Experiment `go/validation/experiments/step3.xml`: example farm, 500 B. terrestris queens, 250 days. "+
 			"Setup values and queen traits are compared at step 0 only (later, NetLogo colonies die with their queen, "+
 			"which is not yet translated). Colony foundation and queen counts are compared at every step.",
 		runs, rows)

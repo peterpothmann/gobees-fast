@@ -9,18 +9,18 @@ import (
 	"gobees/enum/caste"
 	"gobees/enum/stage"
 	"gobees/globals"
-	"gobees/internal/validation"
 	"gobees/params"
+	"gobees/validation"
 
 	"github.com/mlange-42/ark/ecs"
 )
 
-// step6MetricNames are the metrics of trans/validation/step6_experiment.xml, in the order of aggregate_netlogo.py.
+// step6MetricNames are the metrics of go/validation/experiments/step6.xml, in the order of go/validation/scripts/aggregate_netlogo.py.
 var step6MetricNames = []string{"colonies", "dead_colonies", "eggs", "larvae", "pupae", "workers", "males",
 	"young_queens", "energy_kJ", "pollen_g", "trips", "switch_point", "queen_production", "nectar_left_l",
 	"pollen_left_kg"}
 
-// step6Metrics returns the metrics of trans/validation/step6_experiment.xml for the current state of the world,
+// step6Metrics returns the metrics of go/validation/experiments/step6.xml for the current state of the world,
 // with the same definitions as the NetLogo reporters in the experiment file.
 func step6Metrics(w *ecs.World) map[string]float64 {
 	m := map[string]float64{}
@@ -74,7 +74,7 @@ func step6Metrics(w *ecs.World) map[string]float64 {
 }
 
 func TestValidationStep6AgainstNetLogo(t *testing.T) {
-	// Experiment trans/validation/step6_experiment.xml: the colony dynamics of year 1 with brood, the daily activity
+	// Experiment go/validation/experiments/step6.xml: the colony dynamics of year 1 with brood, the daily activity
 	// queue and foraging (steps 4b to 6). NetLogo runs Go without QueensLeavingNestProc and UpdateSeasonalEventsProc
 	// (step 7), and so does gobees: the systems below are model/default.go without the step 7 stubs.
 	if testing.Short() {
@@ -85,6 +85,7 @@ func TestValidationStep6AgainstNetLogo(t *testing.T) {
 		t.Fatal(err)
 	}
 	const runs, steps = 100, 364
+	const shownStep = 150
 
 	values := map[string][][]float64{} // values[metric][step][run]
 	for _, name := range step6MetricNames {
@@ -127,18 +128,16 @@ func TestValidationStep6AgainstNetLogo(t *testing.T) {
 				outside = append(outside, fmt.Sprintf("step %d: gobees median %.6g, NetLogo 5-95 %% [%.6g, %.6g]", step, median, q.Q05, q.Q95))
 			}
 		}
-		final := reference[validation.Key{Step: steps, Metric: metric}]
-		gobees := validation.Median(values[metric][steps])
-		t.Logf("%-17s %3d of %3d steps within the band. Step %d: gobees median %10.5g | NetLogo median %10.5g [%.5g, %.5g]",
-			metric, steps+1-len(outside), steps+1, steps, gobees, final.Q50, final.Q05, final.Q95)
-		mid := reference[validation.Key{Step: 150, Metric: metric}]
-		t.Logf("%-17s day 150: gobees median %.5g, NetLogo median %.5g [%.5g, %.5g]",
-			metric, validation.Median(values[metric][150]), mid.Q50, mid.Q05, mid.Q95)
+		t.Logf("%-17s %3d of %3d steps within the band", metric, steps+1-len(outside), steps+1)
+		mid := reference[validation.Key{Step: shownStep, Metric: metric}]
+		t.Logf("%-17s day %d: gobees median %.5g, NetLogo median %.5g [%.5g, %.5g]",
+			metric, shownStep, validation.Median(values[metric][shownStep]), mid.Q50, mid.Q05, mid.Q95)
 		w := reference[validation.Key{Step: worstStep, Metric: metric}]
 		t.Logf("%-17s largest deviation on day %3d: gobees median %.5g, NetLogo median %.5g [%.5g, %.5g] (%.2f of the band width)",
 			metric, worstStep, worstGobees, w.Q50, w.Q05, w.Q95, worst)
+		// the report shows day 150, the middle of the colony season (at the end of the year nearly all values are 0)
 		rows = append(rows, validation.ReportRow{Metric: metric, Steps: steps + 1, Within: steps + 1 - len(outside),
-			LastStep: steps, Gobees: gobees, NetLogo: final})
+			Step: shownStep, Gobees: validation.Median(values[metric][shownStep]), NetLogo: mid})
 		if len(outside) > 0 {
 			failures = append(failures, fmt.Sprintf("%s: gobees median outside the NetLogo 5-95 %% band at %d of %d steps, e.g. %s",
 				metric, len(outside), steps+1, outside[0]))
@@ -146,10 +145,10 @@ func TestValidationStep6AgainstNetLogo(t *testing.T) {
 	}
 
 	err = validation.WriteReport("Steps 4b to 6: colony dynamics in year 1",
-		"Experiment `trans/validation/step6_experiment.xml`: example farm, 500 B. terrestris queens, 364 days, with "+
+		"Experiment `go/validation/experiments/step6.xml`: example farm, 500 B. terrestris queens, 364 days, with "+
 			"brood, the daily activity queue and foraging. Both models run without QueensLeavingNestProc and "+
 			"UpdateSeasonalEventsProc (step 7). Compared at every step: the gobees median must lie in the NetLogo "+
-			"5-95 % band.",
+			"5-95 % band. The table shows day 150, the middle of the colony season.",
 		runs, rows)
 	if err != nil {
 		t.Fatal(err)

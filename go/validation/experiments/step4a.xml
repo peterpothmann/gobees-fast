@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="us-ascii"?>
 <!DOCTYPE experiments SYSTEM "behaviorspace.dtd">
 <!--
-  Validation of step 4a (morning routine) against NetLogo (see trans/validation/README.md).
+  Validation of step 4a (morning routine) against NetLogo (see go/validation/README.md).
   Nectar and pollen available in the landscape per day (UpdateFoodsourcesProc [UFS]) and the day of the year
   (UpdateMorning_Proc [MORN-02], finding 36). They depend only on the landscape and the flowering periods, not on
   the bees, so they are comparable already now. 400 days include the turn of the year (ticks 365 and 366).
