@@ -24,3 +24,13 @@ var NetLogoStep6 string
 //
 //go:embed reference/netlogo_step7.csv
 var NetLogoStep7 string
+
+// NetLogoStep7Badgers is the reference of experiments/step7_badgers.xml.
+//
+//go:embed reference/netlogo_step7_badgers.csv
+var NetLogoStep7Badgers string
+
+// NetLogoStep7Crop is the reference of experiments/step7_crop.xml.
+//
+//go:embed reference/netlogo_step7_crop.csv
+var NetLogoStep7Crop string
