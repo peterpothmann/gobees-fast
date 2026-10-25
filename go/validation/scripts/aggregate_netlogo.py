@@ -23,6 +23,12 @@ METRICS = {
     'step7': ['colonies', 'dead_colonies', 'colonies_founded', 'eggs', 'larvae', 'pupae', 'workers', 'males',
               'young_queens', 'hibernating_queens', 'energy_kJ', 'pollen_g', 'trips', 'nectar_left_l',
               'pollen_left_kg'],
+    'step7_badgers': ['colonies', 'dead_colonies', 'colonies_founded', 'eggs', 'larvae', 'pupae', 'workers',
+                      'males', 'young_queens', 'hibernating_queens', 'energy_kJ', 'pollen_g', 'trips',
+                      'nectar_left_l', 'pollen_left_kg', 'badgers'],
+    'step7_crop': ['colonies', 'dead_colonies', 'colonies_founded', 'eggs', 'larvae', 'pupae', 'workers', 'males',
+                   'young_queens', 'hibernating_queens', 'energy_kJ', 'pollen_g', 'trips', 'nectar_left_l',
+                   'pollen_left_kg', 'foodsources'],
 }
 
 
@@ -37,8 +43,10 @@ def main():
     # 6 lines of BehaviorSpace header, then the column names, then the data
     header_index = next(i for i, r in enumerate(rows) if r and r[0] == '[run number]')
     header, data = rows[header_index], rows[header_index + 1:]
-    if len(header) != 2 + len(metrics):
-        sys.exit(f'expected {len(metrics)} metrics, the table has {len(header) - 2} columns')
+    # variables set by the experiment (enumeratedValueSet) come as extra columns between [run number] and [step]
+    step_col = header.index('[step]')
+    if len(header) != step_col + 1 + len(metrics):
+        sys.exit(f'expected {len(metrics)} metrics, the table has {len(header) - step_col - 1} columns')
 
     values = {}  # (step, metric) -> list of values over all runs
     runs = set()
@@ -46,8 +54,8 @@ def main():
         if not r:
             continue
         runs.add(r[0])
-        step = int(r[1])
-        for m, v in zip(metrics, r[2:]):
+        step = int(r[step_col])
+        for m, v in zip(metrics, r[step_col + 1:]):
             values.setdefault((step, m), []).append(float(v))
 
     lines = ['step,metric,n,q05,q25,q50,q75,q95']
