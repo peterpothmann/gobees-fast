@@ -479,6 +479,18 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Second Check**: 24.10.2026, PP
 - **Implemented:** `forager.Foraging_costsAndChoiceProc` in `sys/foraging.go`, handling time after `Foraging_collectNectarPollenProc`. Test: `TestForagingEmptiesFoodsource` (a cohort of 3 takes the last 100 microlitres: trip 120 s + 3600 s).
 
+## Findings from step 7 (year cycle)
+
+<a id="finding-48"></a>
+
+### 48. Badgers that are not placed yet block the Scrub patches near the origin
+
+- **Code:** `[BADC-01]`
+- **Finding:** `create-badgers N_Badgers [ ... ]` first creates all badgers at the origin (0, 0), then each runs the block in random order. A badger moves to a Scrub masterpatch, and the candidates for the next badgers are recomputed with `count badgers-here = 0 and count badgers in-radius distance_patches = 0`. The badgers that have not run the block yet still sit at the origin, the lower left corner of the world (`min-pxcor = 0`, `min-pycor = 0`). Every recomputed list therefore excludes the Scrub masterpatches within 300 m of the corner, as long as at least one badger has not moved yet, which is the case up to and including the list of the last badger. Only the first badger, which chooses from the list computed before the badgers were created, can be placed near the corner.
+- **Affects:** only runs with `N_Badgers > 1` and Scrub masterpatches within 300 m of the lower left corner. `N_Badgers` is 0 in `_SYSTEM_Parameters.csv` and `_SYSTEM_Example_Farm_Parameters.csv`, so the default runs have no badgers. To be checked in NetLogo: that `create-badgers` creates all badgers before the first one runs the block (`crt 3 [ show count turtles ]` shows 3 three times).
+- **Consequence for gobees:** create all badgers at (0, 0) first, then place them one by one in random order, as NetLogo does. A test with 2 badgers and a Scrub patch near the corner checks the exclusion.
+- **Second Check**:
+
 ## Findings from the model map and from `Go`
 
 <a id="finding-8"></a>

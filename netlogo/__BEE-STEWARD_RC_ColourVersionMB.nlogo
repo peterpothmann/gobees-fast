@@ -2094,8 +2094,32 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [QLN] QueensLeavingNestProc
+; Called by: Go [GO-12], every evening after the event loop and before FeedLarvaeProc
+; Context:   observer
+; Purpose:   every young (unmated) adult queen in a colony leaves it, mates and starts to hibernate.
+; Translate: yes
+; ===============================================================================
 to QueensLeavingNestProc
  ; young queens leave the colony, mate and hibernate:
+ ; [QLN-01] all adult, unmated queens with a colony. A queen emerges in DevelopmentProc [DEVP-04], which runs after
+ ;          this procedure, so she stays in the colony for one whole day (in the activity queue with the
+ ;          "youngQueen" thresholds she only rests, [ACT-03]) and leaves on the next evening.
+ ;          A young queen cohort (number > 1) leaves and hibernates as one agent; it is split when it emerges
+ ;          next year (finding 32, see trans/netlogo-findings.md#finding-32).
+ ;          ORDER: irrelevant. Each queen only changes herself, and mating does not use up the male.
+ ; [QLN-02] mating: if any adult male of her species exists ANYWHERE (any colony, not only her own), her
+ ;          spermathecaList becomes the allelesList of one random such male (1 allele, or 2 for a diploid male).
+ ;          Otherwise: with UnlimitedMales? = false she dies (DieProc ends her code, finding 28, see
+ ;          trans/netlogo-findings.md#finding-28). With UnlimitedMales? = true (netlogo/_SYSTEM_Example_Farm_Parameters.csv)
+ ;          she mates with a male from outside: one foreign allele -1 to -N_ForeignAlleles (24, [PAR-03]), put in
+ ;          front of her empty spermathecaList [EGGP-03]. Assertion: more than 1 allele.
+ ; [QLN-03] mated, egg-laying threshold "QueenInitiationPhase" (the other three thresholds stay "youngQueen" until
+ ;          she emerges next year and gets all four [EMER-01]), activity "hibernate", colonyID -1. Her
+ ;          emergingDate was set when she emerged from the pupa [DEVP-04]. size, shape, color: GUI only.
+ ; [QLN-04] a queen that mated with a diploid male (2 alleles) dies: she could not found a colony (Duchateau &
+ ;          Marien 1995). Diploid males need SexLocus? = true, which is false by default [EGGP-01].
   ask bees with [ stage = "adult" and caste = "queen" and mated? = false and colonyID != -1 ]  ; young, adult queens still in a colony..
   [
     let memoSpecies speciesID
@@ -2270,7 +2294,23 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [BADC] CreateBadgersProc
+; Called by: SetupWithoutClearingProc [INIT-08]
+; Context:   observer
+; Purpose:   creates N_Badgers badgers, each in the centre of the patch cell of a "Scrub" masterpatch, at least
+;            300 m from the badgers placed before. N_Badgers = 0 in netlogo/_SYSTEM_Example_Farm_Parameters.csv.
+; Translate: yes
+; ===============================================================================
 to CreateBadgersProc
+  ; [BADC-01] candidates: masterpatches of the habitat "Scrub". create-badgers creates ALL badgers first, at the
+  ;           origin (0, 0), then each runs the block in random order (as ask): one-of the candidates, the badger
+  ;           moves to the centre of its patch cell (pxcor, pycor), and the candidates are recomputed: no badger on
+  ;           the same patch cell and no badger within 300 m. The badgers that have not moved yet still sit at the
+  ;           origin, the lower left corner of the world, and exclude the Scrub patches within 300 m of it
+  ;           (finding 48, see trans/netlogo-findings.md#finding-48).
+  ;           No candidate left: the badger dies (DieProc prints "Badger: not enough habitat!").
+  ;           size, shape: GUI only. Badgers have who numbers like all turtles.
   ; suggestions for initial number of badgers: zero, intermediate (>0–3 setts km2) and high (>3 setts km2),
   ; Reilly & Courtenay 2007 (Preventive Veterinary Medicine 80 (2007) 129–142)
 
@@ -2305,7 +2345,23 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [BADG] BadgersOnTheProwlProc
+; Called by: Go [GO-17], every evening after MortalityBroodProc
+; Context:   observer
+; Purpose:   every badger digs up each colony closer than 735 m with probability 0.19 * 0.1 = 0.019 per day: the
+;            colony loses its stores and all its bees.
+; Translate: yes
+; ===============================================================================
 to BadgersOnTheProwlProc
+  ; [BADG-01] per badger, per colony with distance < 735 m (strict, NetLogo patch units * Scaling, no wrapping):
+  ;           one draw random-float 1 < 0.019. Dug up: energyStore_kJ 0, pollenStore_g 0, every bee with this
+  ;           colonyID dies (brood counted in broodDeathBadger). color: GUI only.
+  ;           The colony itself dies the next morning in [UCOL-11] (no bees left), counted as ColonyDeathsNoBees, or
+  ;           as ColonyDeathsEndSeason from Day seasonStop on.
+  ;           A colony within reach of two badgers gets two draws. Hibernating queens have colonyID -1 and are safe.
+  ;           ORDER: irrelevant for the state. A colony dug up twice in one evening has nothing left to lose.
+  ;           Within a colony each bee dies independently.
   let foragingRange_m 735 ; estimated from Kruuk & Parish, J. Zool., Lond. (1982) 196,31-39, Tab. 1: territory: ca. 170ha, hence radius ca. 735m
   let encounterProb  0.19 ; probablity to come across the nest; Kowalczyk et al 2006, Wildlife Biology 12(4):385-391. 2006 Tab1;  DR% daily range as % of total home range: 19% (19+-18%);
   let digUpProb 0.1 ; probability to perceive the nest and dig it up - ARBITRARY VALUE
@@ -3591,7 +3647,7 @@ to UpdateMorning_Proc
   ; [MORN-05] nectar and pollen of every foodsource for today, and whether any foodsource starts or stops
   ;           flowering today [UFS]
   UpdateFoodsourcesProc
-  ; [MORN-06] end of the season, killing of males, 1 January: limit of hibernating queens (step 7, not yet annotated)
+  ; [MORN-06] end of the season, killing of males, 1 January: limit of hibernating queens [SEAS]
   UpdateSeasonalEventsProc
   ; [MORN-07] queens emerge from hibernation, search nest sites and found colonies [EMER] (step 3)
   EmergenceNewQueensProc
@@ -3624,8 +3680,25 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [SEAS] UpdateSeasonalEventsProc
+; Called by: UpdateMorning_Proc [MORN-06], every morning (also in Setup at Day 0, where nothing happens)
+; Context:   observer
+; Purpose:   end of the season per species, death of the males once all queens hibernate, and on 1 January the
+;            limit of hibernating queens.
+; Translate: yes
+; ===============================================================================
 to UpdateSeasonalEventsProc
   ; addresses seasonal events such as the species specific end of the season
+  ; [SEAS-01] on Day = seasonStop of a species (305 for all 7 species in netlogo/_SYSTEM_BumbleSpecies_UK_01.csv)
+  ;           every bee of this species that does not hibernate dies: workers, males, all queens with or without
+  ;           colony (also young queens that have not left yet), and the brood (counted in broodDeathEndSeason).
+  ;           The colonies die later this morning in [UCOL-11] (no bees left), counted as ColonyDeathsEndSeason.
+  ;           ORDER: irrelevant, each bee dies independently, the colony counters are sums.
+  ;           NOTE: emergence [MORN-07] runs after this procedure. A queen whose emergingDate falls on Day
+  ;           seasonStop would survive it and could found a colony after the end of the season. Initial queens
+  ;           cannot ([IQUE-07]: emergingDate < seasonStop), young queens can ([DEVP-04]: up to yearStart +
+  ;           seasonStop), but only with a draw 7.6 standard deviations above the mean, i.e. practically never.
   ask Species
     [
       let whoSpec who
@@ -3640,10 +3713,30 @@ to UpdateSeasonalEventsProc
           ]
       ]
     ]
+  ; [SEAS-02] all males (of all species) die if every queen hibernates, there is no brood, and males exist.
+  ;           The totals come from two different times: TotalHibernatingQueens, TotalQueens and TotalMales from
+  ;           OutputDailyProc of the previous evening [OUT-01], TotalEggs, TotalLarvae and TotalPupae from
+  ;           CheckNumbersProc of the previous morning [CHK-02] (finding 39, see
+  ;           trans/netlogo-findings.md#finding-39). TotalQueens and TotalMales count all stages (queen and male
+  ;           brood too). Brood that emerged in the previous evening still counts as brood, so the males die at
+  ;           most one day later than with current numbers.
+  ;           ORDER: irrelevant.
   if TotalHibernatingQueens = TotalQueens and (TotalEggs + TotalLarvae + TotalPupae = 0) and TotalMales > 0;  i.e. kill males in autumn if all queens are in hibernation and no brood is left
     [
       ask bees with [ caste = "male" ][ DieProc "Males: all queens in hibernation!" ]
     ]
+  ; [SEAS-03] on Day = 1 (ticks 1, 366, 731, ...):
+  ;           PopulationSizeDay365List + the number of bees: output only (also on ticks 1, despite the name).
+  ;           GUI ONLY, not translated: hibernating queens are moved to (0, 0). with-local-randomness: no effect on
+  ;           the random numbers. Their position is never read (a queen gets a new one at her nest site [NEST-03]).
+  ;           Limit: queensToKill = TotalHibernatingQueens (previous evening, [OUT-01]) - MaxHibernatingQueens
+  ;           (10000 in netlogo/_SYSTEM_Example_Farm_Parameters.csv). While > 0, one random hibernating queen agent
+  ;           dies and queensToKill - number. A cohort can remove more queens than needed.
+  ;           TotalHibernatingQueensEverRemoved + queensToKill (the planned number, not the removed one): output
+  ;           only.
+  ;           CumulVisitsOnlyLastYear?: the visit counters of the foodsources are reset. They are read only by the
+  ;           GUI and output files.
+  ;           ORDER: the random choice of the queens matters only through the random numbers.
   if Day = 1
     [
       set PopulationSizeDay365List lput sum [number] of bees PopulationSizeDay365List
@@ -4978,7 +5071,16 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [AREA] TotalMapAreaREP
+; Called by: OutputDailyProc [OUT-02], once
+; Context:   observer
+; Purpose:   area [km2] of the box around all foodsources (centre +- radius), limited to the world. Output only.
+; Translate: yes (cheap), output only. SIMPLIFY: not needed for the model.
+; ===============================================================================
 to-report TotalMapAreaREP
+ ; [AREA-01] max-one-of / min-one-of choose randomly among ties, but inside the with-local-randomness of
+ ;           OutputDailyProc, and the coordinates of tied foodsources are equal anyway.
 
  let topSource max-one-of foodsources [ycor]
  let bottomSource min-one-of foodsources [ycor]
@@ -5001,7 +5103,22 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [OUT] OutputDailyProc
+; Called by: Go [GO-18] every evening, SetupWithoutClearingProc [INIT-12] once
+; Context:   observer
+; Purpose:   daily totals, plots and weather signs. with-local-randomness and random-seed ticks: nothing here
+;            changes the random numbers of the model.
+; Translate: partly: the totals; plots and signs are GUI only.
+; ===============================================================================
 to OutputDailyProc
+ ; [OUT-01] totals. Read by the model: TotalHibernatingQueens, TotalQueens and TotalMales (next morning in
+ ;          [SEAS-02], TotalHibernatingQueens also in [SEAS-03]). TotalQueens and TotalMales count all stages,
+ ;          TotalHibernatingQueens all bees with activity "hibernate" (only queens hibernate).
+ ;          Output only: TotalIBMColonies, TotalMatedQueens, TotalUnmatedQueens, TotalColonies, TotalBeeAgents,
+ ;          TotalActiveBees (length of the queue after the loop), the mean weights (0 without such bees).
+ ; [OUT-02] TotalMapArea_km2 once [AREA], then ColonyDensity_km2 every day: output only.
+ ; [OUT-03] GUI ONLY, not translated: plots (PlottingProc) and weather signs.
  with-local-randomness    ; allows changing/switching off plots without changing the sequence of random numbers
  [
   random-seed ticks       ; local random seed, only valid within this procedure
@@ -7706,7 +7823,28 @@ end
 
 ; *******************************************************************************
 
+; ===============================================================================
+; [CROP] CropRotationProc
+; Called by: UpdateMorning_Proc [MORN-09], on Day 365 if CropRotationList has more than 1 item (finding 3, see
+;            trans/netlogo-findings.md#finding-3). CropRotationListAsString is empty in
+;            netlogo/_SYSTEM_Example_Farm_Parameters.csv, so by default it never runs.
+; Context:   observer
+; Purpose:   replaces the whole landscape by the next foodsources file of the rotation.
+; Translate: yes
+; ===============================================================================
 to CropRotationProc
+ ; [CROP-01] file = item (ceiling (ticks / 365) mod length CropRotationList). Worked example (list chosen by hand):
+ ;           2 files, ticks 365: year 1, item 1 (the second file); ticks 730: item 0.
+ ; [CROP-02] all foodsources die. Every bee forgets her foodsources (known lists empty, ...ToGoTo and
+ ;           currentFoodsource -1). Every colony empties its masterpatch and in-flower lists, but NOT
+ ;           allPatchesInRangeList [PRNG] and allSourcesInFlowerAndRangeList, which then point to dead foodsources.
+ ;           [FRNG] would read them on the next flowering change. This needs a colony alive on Day 365: all
+ ;           colonies die on Day seasonStop [SEAS-01], 305 for all species of netlogo/_SYSTEM_BumbleSpecies_UK_01.csv,
+ ;           so with these species it cannot happen. A species file with seasonStop 365 would run into it.
+ ; [CROP-03] CreateFoodsourcesProc [FSRC] with the new file (new who numbers, random numbers for the hedges and
+ ;           layers), then per species the nest sites, their area and minPollenStore_g as in [SPEC-06], [SPEC-07].
+ ;           ORDER of the species: irrelevant, each species changes only itself.
+ ;           Report_name: output file of a GUI button, not translated.
  let year ceiling (ticks / 365)
  let nMaps length CropRotationList
  let mapToUse remainder year nMaps
