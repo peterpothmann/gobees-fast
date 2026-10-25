@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -22,6 +23,10 @@ type ReportRow struct {
 	Step    int       // step shown in the report (all Steps are compared)
 	Gobees  float64   // gobees median at Step
 	NetLogo Quantiles // NetLogo quantiles at Step
+	// Medians and Bands hold the gobees median and the NetLogo quantiles of every compared day, from day 0 on.
+	// They are drawn in the plot of the section. A row with fewer than 2 days gets no panel.
+	Medians []float64
+	Bands   []Quantiles
 }
 
 // Section is the comparison of one experiment in the report.
@@ -33,7 +38,10 @@ type Section struct {
 	// it, the report shows it once.
 	Step string
 	// Title is the heading of the experiment below the step heading. Empty if the step has only one experiment.
-	Title       string
+	Title string
+	// Experiment is the name of the experiment, e.g. "step7_badgers". The plot of the section is written to
+	// plots/<Experiment>.png next to the report. Empty: no plot.
+	Experiment  string
 	Description string
 	Runs        int
 	Rows        []ReportRow
@@ -68,7 +76,21 @@ func WriteReport(s Section) error {
 	} else if !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
-	sections[s.Order] = storedSection{order: s.Order, step: s.Step, body: renderSection(s)}
+	plotFile := ""
+	if s.Experiment != "" {
+		dir := filepath.Join(filepath.Dir(path), "plots")
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return err
+		}
+		ok, err := writePlot(filepath.Join(dir, s.Experiment+".png"), s.Rows)
+		if err != nil {
+			return err
+		}
+		if ok {
+			plotFile = "plots/" + s.Experiment + ".png" // relative to the report, as GitHub resolves it
+		}
+	}
+	sections[s.Order] = storedSection{order: s.Order, step: s.Step, body: renderSection(s, plotFile)}
 	return os.WriteFile(path, []byte(renderReport(sections)), 0o644)
 }
 
@@ -78,8 +100,8 @@ type storedSection struct {
 	order, step, body string
 }
 
-// renderSection returns the body of a section.
-func renderSection(s Section) string {
+// renderSection returns the body of a section. plotFile is the path of its plot relative to the report, or empty.
+func renderSection(s Section, plotFile string) string {
 	var b strings.Builder
 	if s.Title != "" {
 		fmt.Fprintf(&b, "### %s\n\n", s.Title)
@@ -96,6 +118,9 @@ func renderSection(s Section) string {
 			mark, r.Metric, r.Within, r.Steps, r.Step, r.Gobees, r.NetLogo.Q50, r.NetLogo.Q05, r.NetLogo.Q95)
 	}
 	b.WriteString("\n")
+	if plotFile != "" {
+		fmt.Fprintf(&b, "![Plots of the metrics over the days](%s)\n\n%s\n\n", plotFile, plotCaption)
+	}
 	return b.String()
 }
 

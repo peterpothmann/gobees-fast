@@ -18,6 +18,7 @@ type netLogoComparison struct {
 	order       string // sort key of the report section (validation.Section.Order), e.g. "07.1"
 	step        string // heading of the step in the report, shared by the experiments of the step
 	title       string // heading of the experiment below the step heading
+	experiment  string // name of the experiment, e.g. "step7_badgers": file name of the plot
 	description string // text of the report section
 	metrics     []string
 	steps       int                    // days per run
@@ -84,6 +85,7 @@ func compareWithNetLogo(t *testing.T, c netLogoComparison) {
 	for _, metric := range c.metrics {
 		outside := []string{}
 		worst, worstStep, worstGobees := 0.0, 0, 0.0 // largest |median difference| / width of the NetLogo band
+		medians, bands := []float64{}, []validation.Quantiles{}
 		for step := 0; step <= c.steps; step++ {
 			q, ok := reference[validation.Key{Step: step, Metric: metric}]
 			if !ok {
@@ -92,6 +94,7 @@ func compareWithNetLogo(t *testing.T, c netLogoComparison) {
 			// a relative tolerance of 1e-9 for the float sums (stores, landscape), whose last digits depend on the order
 			tol := 1e-9 * math.Max(1, math.Abs(q.Q50))
 			median := validation.Median(values[metric][step])
+			medians, bands = append(medians, median), append(bands, q)
 			if width := q.Q95 - q.Q05; width > tol && math.Abs(median-q.Q50)/width > worst {
 				worst, worstStep, worstGobees = math.Abs(median-q.Q50)/width, step, median
 			}
@@ -107,14 +110,15 @@ func compareWithNetLogo(t *testing.T, c netLogoComparison) {
 		t.Logf("%-18s largest deviation on day %4d: gobees median %.5g, NetLogo median %.5g [%.5g, %.5g] (%.2f of the band width)",
 			metric, worstStep, worstGobees, w.Q50, w.Q05, w.Q95, worst)
 		rows = append(rows, validation.ReportRow{Metric: metric, Steps: c.steps + 1, Within: c.steps + 1 - len(outside),
-			Step: c.shownStep, Gobees: validation.Median(values[metric][c.shownStep]), NetLogo: mid})
+			Step: c.shownStep, Gobees: validation.Median(values[metric][c.shownStep]), NetLogo: mid,
+			Medians: medians, Bands: bands})
 		if len(outside) > 0 {
 			failures = append(failures, fmt.Sprintf("%s: gobees median outside the NetLogo 5-95 %% band at %d of %d steps, e.g. %s",
 				metric, len(outside), c.steps+1, outside[0]))
 		}
 	}
 
-	if err := validation.WriteReport(validation.Section{Order: c.order, Step: c.step, Title: c.title,
+	if err := validation.WriteReport(validation.Section{Order: c.order, Step: c.step, Title: c.title, Experiment: c.experiment,
 		Description: c.description, Runs: runs, Rows: rows}); err != nil {
 		t.Fatal(err)
 	}

@@ -21,6 +21,10 @@ Experiment `go/validation/experiments/step3.xml`: example farm, 500 B. terrestri
 | ✅ | queens_searching | 251 of 251 days | 250 | 0 | 0 [0, 0] |
 | ✅ | queens_hibernating | 251 of 251 days | 250 | 0 | 0 [0, 0] |
 
+![Plots of the metrics over the days](plots/step3.png)
+
+Blue: NetLogo median and 5-95 % band, orange: gobees median, x axis: day.
+
 ## Step 4a: morning routine
 
 <!-- section 04a|Step 4a: morning routine -->
@@ -33,6 +37,10 @@ Experiment `go/validation/experiments/step4a.xml`: example farm, 400 days. Day o
 | ✅ | day | 401 of 401 days | 400 | 35 | 35 [35, 35] |
 | ✅ | nectar_l | 401 of 401 days | 400 | 0.0112685 | 0.0112685 [0.0112685, 0.0112685] |
 | ✅ | pollen_kg | 401 of 401 days | 400 | 0.0155049 | 0.0155049 [0.0155049, 0.0155049] |
+
+![Plots of the metrics over the days](plots/step4a.png)
+
+Blue: NetLogo median and 5-95 % band, orange: gobees median, x axis: day.
 
 ## Steps 4b to 6: colony dynamics in year 1
 
@@ -58,6 +66,10 @@ Experiment `go/validation/experiments/step6.xml`: example farm, 500 B. terrestri
 | ✅ | queen_production | 365 of 365 days | 150 | 16 | 15 [9, 21.05] |
 | ✅ | nectar_left_l | 365 of 365 days | 150 | 1.57155 | 1.57687 [1.42276, 1.65923] |
 | ✅ | pollen_left_kg | 365 of 365 days | 150 | 0.580268 | 0.581087 [0.559733, 0.590312] |
+
+![Plots of the metrics over the days](plots/step6.png)
+
+Blue: NetLogo median and 5-95 % band, orange: gobees median, x axis: day.
 
 ## Step 7: the year cycle
 
@@ -86,6 +98,10 @@ Experiment `go/validation/experiments/step7.xml`: example farm, 500 B. terrestri
 | ✅ | nectar_left_l | 1096 of 1096 days | 515 | 1.6026 | 1.61199 [1.45076, 1.68875] |
 | ✅ | pollen_left_kg | 1096 of 1096 days | 515 | 0.583593 | 0.584464 [0.560194, 0.593013] |
 
+![Plots of the metrics over the days](plots/step7.png)
+
+Blue: NetLogo median and 5-95 % band, orange: gobees median, x axis: day.
+
 <!-- section 07.2|Step 7: the year cycle -->
 ### Badgers
 
@@ -112,6 +128,10 @@ Experiment `go/validation/experiments/step7_badgers.xml`: as step 7 (example far
 | ✅ | pollen_left_kg | 1096 of 1096 days | 515 | 0.593385 | 0.59328 [0.577997, 0.593753] |
 | ✅ | badgers | 1096 of 1096 days | 515 | 2 | 2 [2, 2] |
 
+![Plots of the metrics over the days](plots/step7_badgers.png)
+
+Blue: NetLogo median and 5-95 % band, orange: gobees median, x axis: day.
+
 <!-- section 07.3|Step 7: the year cycle -->
 ### Crop rotation
 
@@ -137,6 +157,10 @@ Experiment `go/validation/experiments/step7_crop.xml`: as step 7 (example farm, 
 | ✅ | nectar_left_l | 1096 of 1096 days | 515 | 1.675 | 1.67678 [1.56002, 1.75994] |
 | ✅ | pollen_left_kg | 1096 of 1096 days | 515 | 0.722048 | 0.722484 [0.708479, 0.730963] |
 | ✅ | foodsources | 1096 of 1096 days | 515 | 205 | 205 [205, 205] |
+
+![Plots of the metrics over the days](plots/step7_crop.png)
+
+Blue: NetLogo median and 5-95 % band, orange: gobees median, x axis: day.
 
 ## Step 8: model branches the example farm does not use
 
@@ -167,6 +191,10 @@ Experiment `go/validation/experiments/step8_ibm.xml`: example farm, full model, 
 | ✅ | ibm_colonies | 731 of 731 days | 150 | 9 | 9 [6, 10] |
 | ✅ | bee_agents | 731 of 731 days | 150 | 654 | 605.5 [472.45, 957.55] |
 
+![Plots of the metrics over the days](plots/step8_ibm.png)
+
+Blue: NetLogo median and 5-95 % band, orange: gobees median, x axis: day.
+
 <!-- section 08.2|Step 8: model branches the example farm does not use -->
 ### Genetics
 
@@ -192,6 +220,10 @@ Experiment `go/validation/experiments/step8_genetics.xml`: example farm, full mo
 | ✅ | nectar_left_l | 731 of 731 days | 150 | 1.56207 | 1.59739 [1.41503, 1.67674] |
 | ✅ | pollen_left_kg | 731 of 731 days | 150 | 0.578132 | 0.58262 [0.568469, 0.591059] |
 | ✅ | diploid_males | 731 of 731 days | 150 | 0 | 0 [0, 0] |
+
+![Plots of the metrics over the days](plots/step8_genetics.png)
+
+Blue: NetLogo median and 5-95 % band, orange: gobees median, x axis: day.
 
 <!-- section 08.3|Step 8: model branches the example farm does not use -->
 ### Several species
@@ -225,6 +257,10 @@ Experiment `go/validation/experiments/step8_species.xml`: example farm, full mod
 | ✅ | colonies_B_hypnorum | 731 of 731 days | 150 | 13 | 13 [8.95, 19] |
 | ✅ | psithyrus | 731 of 731 days | 150 | 501.5 | 469.5 [220.45, 969.95] |
 
+![Plots of the metrics over the days](plots/step8_species.png)
+
+Blue: NetLogo median and 5-95 % band, orange: gobees median, x axis: day.
+
 <!-- section 08.4|Step 8: model branches the example farm does not use -->
 ### Weather and foraging mortality
 
@@ -250,6 +286,10 @@ Experiment `go/validation/experiments/step8_weather.xml`: example farm, full mod
 | ✅ | nectar_left_l | 731 of 731 days | 150 | 1.53946 | 1.55157 [1.44853, 1.62441] |
 | ✅ | pollen_left_kg | 731 of 731 days | 150 | 0.587876 | 0.588463 [0.580944, 0.592876] |
 | ✅ | foraging_period_s | 731 of 731 days | 150 | 6120 | 6120 [6120, 6120] |
+
+![Plots of the metrics over the days](plots/step8_weather.png)
+
+Blue: NetLogo median and 5-95 % band, orange: gobees median, x axis: day.
 
 <!-- section 08.5|Step 8: model branches the example farm does not use -->
 ### Other settings
@@ -277,4 +317,8 @@ Experiment `go/validation/experiments/step8_settings.xml`: example farm, full mo
 | ✅ | pollen_left_kg | 731 of 731 days | 150 | 0.671871 | 0.671832 [0.669282, 0.672199] |
 | ✅ | foodsources | 731 of 731 days | 150 | 1826 | 1826 [1826, 1826] |
 | ✅ | queens_removed | 731 of 731 days | 150 | 350 | 350 [350, 350] |
+
+![Plots of the metrics over the days](plots/step8_settings.png)
+
+Blue: NetLogo median and 5-95 % band, orange: gobees median, x axis: day.
 

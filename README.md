@@ -81,7 +81,7 @@ go test -short ./...         # without the comparison with NetLogo
 
 Single runs of gobees and NetLogo cannot be compared, because NetLogo's random number sequence cannot be reproduced in Go. Instead, 100 NetLogo runs give quantiles per day for each compared quantity, and a Go test requires the median of 100 gobees runs to lie within the NetLogo 5–95 % band. The NetLogo results are embedded in the repository, so NetLogo does not have to be installed to run the tests.
 
-The CI runs all tests on every pull request and on every push to `main`. In a pull request it commits the comparison report [go/validation/validation-report.md](go/validation/validation-report.md) to the branch. Details on the experiments: [go/validation/README.md](go/validation/README.md).
+The CI runs all tests on every pull request and on every push to `main`. In a pull request it commits the comparison report [go/validation/validation-report.md](go/validation/validation-report.md), with one plot per experiment, to the branch. Details on the experiments: [go/validation/README.md](go/validation/README.md).
 
 ## References
 
