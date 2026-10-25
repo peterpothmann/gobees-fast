@@ -1,5 +1,5 @@
 # Runs on every pull request and every push to main: formatting, go vet and all Go tests, incl. the comparison
-# with NetLogo (go/sys/validation_*_test.go, go/model/validation_step7_test.go). NetLogo itself does not run here:
+# with NetLogo (go/sys/validation_*_test.go, go/model/validation_step*_test.go). NetLogo itself does not run here:
 # its reference results are embedded in go/validation, see go/validation/README.md.
 #
 # The comparison tests write the report go/validation/validation-report.md. In a pull request, the workflow
@@ -104,6 +104,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "The report did not change."
           else
-            git commit -m "Update validation report" [skip ci]
+            git commit -m "Update validation report [skip ci]"
             git push origin HEAD:${{ github.head_ref }}
           fi

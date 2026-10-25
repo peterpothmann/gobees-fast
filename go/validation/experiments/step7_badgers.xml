@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<!DOCTYPE experiments SYSTEM "behaviorspace.dtd">
+<!--
+  Validation of the badgers (step 7) against NetLogo (see go/validation/README.md).
+  The full model over 3 years as in step7.xml, but with 2 badgers: CreateBadgersProc [BADC] places them on the two
+  Scrub masterpatches of the example farm (85, 123) and (202, 121.5), more than 300 m apart and far from the lower
+  left corner (finding 48 plays no role here). Every evening BadgersOnTheProwlProc [BADG] digs up each colony within
+  735 m with p = 0.019.
+
+  N_Badgers is read from the parameter file in Setup, so the experiment uses its own parameter file,
+  step7_badgers_Parameters.csv: netlogo/_SYSTEM_Example_Farm_Parameters.csv with N_Badgers = 2 instead of 0, all
+  other values unchanged. The path is relative to the folder of the .nlogo. ProjectsOwnParameterFile? = false, so
+  that NetLogo uses MyParametersFile [INIT-02]. gobees sets N_Badgers = 2 on the example farm parameters.
+  Setup sets StopExtinct? to false, as in step7.xml.
+  Kept outside the .nlogo, so that the model file stays unchanged. Metric names in scripts/aggregate_netlogo.py
+  (step7_badgers).
+-->
+<experiments>
+  <experiment name="step7_badgers" repetitions="100" runMetricsEveryStep="true">
+    <setup>Setup
+set StopExtinct? false</setup>
+    <go>Go</go>
+    <timeLimit steps="1095"/>
+    <metric>count colonies</metric>
+    <metric>count deadCols</metric>
+    <metric>TotalColoniesEverProduced</metric>
+    <metric>sum [ number ] of bees with [ stage = "egg" ]</metric>
+    <metric>sum [ number ] of bees with [ stage = "larva" ]</metric>
+    <metric>sum [ number ] of bees with [ stage = "pupa" ]</metric>
+    <metric>sum [ number ] of bees with [ stage = "adult" and caste = "worker" ]</metric>
+    <metric>sum [ number ] of bees with [ stage = "adult" and caste = "male" ]</metric>
+    <metric>sum [ number ] of bees with [ stage = "adult" and caste = "queen" and mated? = false ]</metric>
+    <metric>sum [ number ] of bees with [ activity = "hibernate" ]</metric>
+    <metric>sum [ energyStore_kJ ] of colonies</metric>
+    <metric>sum [ pollenStore_g ] of colonies</metric>
+    <metric>TotalForagingTripsToday</metric>
+    <metric>sum [ nectar_myl ] of foodsources / 1000000</metric>
+    <metric>sum [ pollen_g ] of foodsources / 1000</metric>
+    <metric>count badgers</metric>
+    <enumeratedValueSet variable="ProjectsOwnParameterFile?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="MyParametersFile">
+      <value value="&quot;../go/validation/experiments/step7_badgers_Parameters.csv&quot;"/>
+    </enumeratedValueSet>
+  </experiment>
+</experiments>
