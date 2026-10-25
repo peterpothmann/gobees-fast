@@ -70,11 +70,11 @@ func TestValidationStep4aAgainstNetLogo(t *testing.T) {
 		}
 	}
 
-	err = validation.WriteReport("Step 4a: morning routine",
-		"Experiment `go/validation/experiments/step4a.xml`: example farm, 400 days. Day of the year, nectar and "+
-			"pollen available in the landscape. These values depend only on the landscape, so the NetLogo band is "+
+	err = validation.WriteReport(validation.Section{Order: "04a", Step: "Step 4a: morning routine",
+		Description: "Experiment `go/validation/experiments/step4a.xml`: example farm, 400 days. Day of the year, nectar and " +
+			"pollen available in the landscape. These values depend only on the landscape, so the NetLogo band is " +
 			"widened by a relative tolerance of 1e-9 (float sums in random order).",
-		runs, rows)
+		Runs: runs, Rows: rows})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -154,9 +154,13 @@ What each experiment measures and why is described in the experiment file (e.g. 
 comparison test (e.g. `go/sys/validation_step3_test.go`).
 
 To create the comparison report locally (not needed, the CI does it), set `VALIDATION_REPORT` to an absolute path
-(`go test` runs the test in the package folder, e.g. `go/sys`, so a relative path would end up there). The tests
-append to the file, because several comparison tests write into one report, so the commands delete the old report
-first. A local report replaces the committed one; `git checkout validation/validation-report.md` restores it.
+(`go test` runs the test in the package folder, e.g. `go/sys`, so a relative path would end up there). Each test
+adds its section to the file or replaces its old section, and writes the report sorted by step
+(`validation.Section.Order`): the packages `go/sys` and `go/model` run at the same time and finish in any order. A
+lock file (`validation-report.md.lock`) keeps them from writing at the same time; a test that is killed while
+writing can leave it behind, then delete it. The commands delete the old report first, so that it holds only the
+sections of this run. A local report replaces the committed one; `git checkout validation/validation-report.md`
+restores it.
 
 PowerShell:
 

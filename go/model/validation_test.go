@@ -14,7 +14,9 @@ import (
 // netLogoComparison describes the comparison of the full model with a NetLogo experiment on the example farm.
 type netLogoComparison struct {
 	reference   string // the embedded NetLogo reference, e.g. validation.NetLogoStep7
-	title       string // title of the report section
+	order       string // sort key of the report section (validation.Section.Order), e.g. "07.1"
+	step        string // heading of the step in the report, shared by the experiments of the step
+	title       string // heading of the experiment below the step heading
 	description string // text of the report section
 	metrics     []string
 	steps       int                    // days per run
@@ -97,7 +99,8 @@ func compareWithNetLogo(t *testing.T, c netLogoComparison) {
 		}
 	}
 
-	if err := validation.WriteReport(c.title, c.description, runs, rows); err != nil {
+	if err := validation.WriteReport(validation.Section{Order: c.order, Step: c.step, Title: c.title,
+		Description: c.description, Runs: runs, Rows: rows}); err != nil {
 		t.Fatal(err)
 	}
 	for _, f := range failures {

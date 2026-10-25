@@ -75,7 +75,6 @@ jobs:
         working-directory: .
         run: |
           if [ -f go/validation/validation-report.md ]; then
-            echo "# Comparison with NetLogo" >> "$GITHUB_STEP_SUMMARY"
             cat go/validation/validation-report.md >> "$GITHUB_STEP_SUMMARY"
           else
             echo "No comparison report was written." >> "$GITHUB_STEP_SUMMARY"
