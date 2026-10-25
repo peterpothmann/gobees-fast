@@ -19,3 +19,8 @@ var NetLogoStep4a string
 //
 //go:embed reference/netlogo_step6.csv
 var NetLogoStep6 string
+
+// NetLogoStep7 is the reference of experiments/step7.xml.
+//
+//go:embed reference/netlogo_step7.csv
+var NetLogoStep7 string

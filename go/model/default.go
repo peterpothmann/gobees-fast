@@ -45,7 +45,7 @@ func Default(p params.Params, a *app.App) *app.App {
 	a.AddSystem(&sys.CreateInitialQueens{}) // [INIT-09] CreateInitialQueensProc
 	// [INIT-10] UpdateMorning_Proc at ticks = 0: runs in the Initialize of the morning systems below [GO-04].
 	// [INIT-11] CreateSignsProc: GUI only, not translated.
-	// [INIT-12] OutputDailyProc: will run once in OutputDaily.Initialize.
+	// [INIT-12] OutputDailyProc: runs once in OutputDaily.Initialize [GO-18].
 	// [INIT-13], [INIT-14]: GUI only, not translated.
 	// [INIT-15] assertion on undefined habitat types: part of CreateFoodsources.
 
@@ -55,17 +55,15 @@ func Default(p params.Params, a *app.App) *app.App {
 	a.AddSystem(&sys.Tick{}) // [GO-03] tick
 	// [GO-04] UpdateMorning_Proc [MORN], as several systems in its order. Their Initialize runs the morning at
 	// ticks = 0 [INIT-10].
-	a.AddSystem(&sys.UpdateMorning{})     // [MORN-01] to [MORN-04] day of the year, foraging period
-	a.AddSystem(&sys.UpdateFoodsources{}) // [MORN-05] UpdateFoodsourcesProc [UFS]
-	// [MORN-06] UpdateSeasonalEventsProc: step 7.
-	a.AddSystem(&sys.EmergenceNewQueens{}) // [MORN-07] EmergenceNewQueensProc [EMER]
-	a.AddSystem(&sys.WakeUpBees{})         // [MORN-08] wake-up times and ActiveBeesSortedList
-	// [MORN-09] CropRotationProc: step 7.
-	a.AddSystem(&sys.UpdateColonies{}) // [MORN-10] UpdateColoniesProc [UCOL]
+	a.AddSystem(&sys.UpdateMorning{})        // [MORN-01] to [MORN-04] day of the year, foraging period
+	a.AddSystem(&sys.UpdateFoodsources{})    // [MORN-05] UpdateFoodsourcesProc [UFS]
+	a.AddSystem(&sys.UpdateSeasonalEvents{}) // [MORN-06] UpdateSeasonalEventsProc [SEAS]
+	a.AddSystem(&sys.EmergenceNewQueens{})   // [MORN-07] EmergenceNewQueensProc [EMER]
+	a.AddSystem(&sys.WakeUpBees{})           // [MORN-08] wake-up times and ActiveBeesSortedList
+	a.AddSystem(&sys.CropRotation{})         // [MORN-09] CropRotationProc [CROP] on Day 365
+	a.AddSystem(&sys.UpdateColonies{})       // [MORN-10] UpdateColoniesProc [UCOL]
 	// [MORN-11] UpdateColonyStoreBarsProc: GUI only, not translated.
-	// [MORN-12] CheckNumbersProc [CHK]. The colony check on day 364 is switched off until step 7 translates the
-	// end of season, without which no colony dies.
-	a.AddSystem(&sys.CheckNumbers{SkipColonyCheck: true})
+	a.AddSystem(&sys.CheckNumbers{})                // [MORN-12] CheckNumbersProc [CHK]
 	a.AddSystem(&sys.NeedNectarPollenLarvaeToday{}) // [GO-05] NeedNectarPollenLarvaeTodayProc
 	a.AddSystem(&sys.ActivityLoop{})                // [GO-06] to [GO-10] event loop [NEXT], [ACT]. Foraging: step 6
 	a.AddSystem(&sys.EndOfDayResting{})             // [GO-11] all adult females resting

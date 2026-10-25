@@ -19,6 +19,10 @@ type Position struct {
 	Y float64
 }
 
+// Badger marks a badger entity. A badger has the components Who, Position and Badger.
+// NetLogo: breed badgers, without own variables. Created in CreateBadgersProc [BADC].
+type Badger struct{}
+
 // Foodsource holds the static data of a foodsource layer: one flower species on one flower patch.
 //
 // NetLogo: foodsources-own. Not translated: colorMemo (GUI), farmland? (never read, finding 17, see trans/netlogo-findings.md#finding-17),

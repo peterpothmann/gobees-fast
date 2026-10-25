@@ -21,9 +21,9 @@ import (
 //
 // NetLogo: CheckNumbersProc.
 type CheckNumbers struct {
-	// SkipColonyCheck switches off the colony check of [CHK-04]. TEMPORARY until step 7: the check needs all
-	// colonies to be dead on day 364, which requires the end of season (UpdateSeasonalEventsProc, not yet
-	// translated). model/default.go sets it.
+	// SkipColonyCheck switches off the colony check of [CHK-04]. The check needs all colonies to be dead on day 364,
+	// which requires the end of season (UpdateSeasonalEvents [SEAS-01]). Only for tests that run the model without
+	// it (the NetLogo comparisons of steps 4a and 6). model/default.go does not set it.
 	SkipColonyCheck bool
 
 	calendar *globals.Calendar

@@ -15,7 +15,7 @@ type FoodsourcesToday struct {
 
 // Totals are the daily totals that CheckNumbersProc sets in the morning [CHK-02] (finding 39, see
 // trans/netlogo-findings.md#finding-39). UpdateSeasonalEventsProc reads TotalEggs + TotalLarvae + TotalPupae on
-// the next morning (step 7). The others are output only.
+// the next morning [SEAS-02]. The others are output only.
 type Totals struct {
 	TotalEggs               float64
 	TotalLarvae             float64

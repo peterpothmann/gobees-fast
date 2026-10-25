@@ -20,7 +20,7 @@ import (
 // EmergenceNewQueens lets queens emerge from hibernation, applies winter mortality, lets every queen without
 // a colony search a nest site and founds colonies [EMER].
 //
-// Part of the morning routine [MORN-07], after UpdateFoodsources and UpdateSeasonalEvents (step 7).
+// Part of the morning routine [MORN-07], after UpdateFoodsources and UpdateSeasonalEvents.
 // At ticks = 0 (Setup, [INIT-10]) no queen emerges, so it does not run in Initialize.
 //
 // NetLogo: EmergenceNewQueensProc, NestSitesSearchingProc, NestSiteFoodSourceREP, PsithyrusNestSearchProc,

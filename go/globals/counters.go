@@ -20,6 +20,13 @@ type Counters struct {
 	// QueensProducingColoniesList holds every colony in which a queen emerged, in the order of the first
 	// emergence [DEVP-04]. Never read. SIMPLIFY: not needed.
 	QueensProducingColoniesList []ecs.Entity
+
+	// TotalHibernatingQueensEverRemoved adds up the planned number of queens to kill on 1 January [SEAS-03], not
+	// the removed number. Output only. SIMPLIFY: not needed.
+	TotalHibernatingQueensEverRemoved float64
+	// PopulationSizeDay365List gets the number of bees on every 1 January [SEAS-03] (also on ticks 1). Output only.
+	// SIMPLIFY: not needed.
+	PopulationSizeDay365List []float64
 }
 
 // ActiveBees is the daily activity queue: the active bees sorted by personalTime_s.

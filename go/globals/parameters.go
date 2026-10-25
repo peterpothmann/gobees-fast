@@ -7,7 +7,8 @@ type SpeciesQueens struct {
 }
 
 // Derived holds the globals that ParametersProc [PAR] derives from the parameters.
-// Derived get their values in Parameters.Initialize() and are read-only afterwards.
+// Derived get their values in Parameters.Initialize() and are read-only afterwards, except FoodsourcesFile, which
+// CropRotationProc changes [CROP-01].
 type Derived struct {
 	BeeSpeciesInitialQueensList []SpeciesQueens // [QINI-02]
 	SpeciesList                 []string        // [QINI-03] species names, same order

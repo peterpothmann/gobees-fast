@@ -2,6 +2,7 @@ package sys
 
 import (
 	"fmt"
+	"log"
 	"slices"
 
 	"gobees/comp"
@@ -16,7 +17,7 @@ import (
 // (finding 28, see trans/netlogo-findings.md#finding-28).
 // Must not be called while a query is open (Ark locks the world during a query).
 //
-// NetLogo: DieProc for breed bees. Colonies [DIE-02]: colonyDeath. Badgers [DIE-03] follow in step 7.
+// NetLogo: DieProc for breed bees. Colonies [DIE-02]: colonyDeath. Badgers [DIE-03]: badgerDeath.
 type beeDeath struct {
 	counters *globals.Counters
 	active   *globals.ActiveBees
@@ -89,4 +90,17 @@ func eggCheck(c *comp.ColonyCounts) float64 {
 		c.LarvaDeathsIncubation +
 		c.LarvaDeathsWeight +
 		c.PupaDeathsIncubation)
+}
+
+// badgerDeath removes badgers from the world [DIE-03].
+// Must not be called while a query is open.
+//
+// NetLogo: DieProc for breed badgers.
+type badgerDeath struct{}
+
+// DieProc prints the cause and removes the badger e (NetLogo: output-show causeOfDeath, die).
+func (badgerDeath) DieProc(w *ecs.World, e ecs.Entity, causeOfDeath string) {
+	// [DIE-03]
+	log.Print(causeOfDeath)
+	w.RemoveEntity(e)
 }

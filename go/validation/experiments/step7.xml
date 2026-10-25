@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<!DOCTYPE experiments SYSTEM "behaviorspace.dtd">
+<!--
+  Validation of step 7 (year cycle) against NetLogo (see go/validation/README.md).
+  The full model over 3 years: young queens leave the nest, mate and hibernate, the season ends on day seasonStop,
+  the males die, the queens emerge again in the next spring. Compared per day: colonies, brood, adults, hibernating
+  queens, stores, foraging trips, and the nectar and pollen left in the landscape after foraging.
+
+  The go command is NetLogo's Go, unchanged. Setup sets StopExtinct? to false after reading the parameter file:
+  gobees does not translate the extinction stop yet [GO-20], and a run that stops early would leave out its days
+  from the quantiles. An extinct run then simply records zeros, in both models.
+  Badgers (N_Badgers = 0) and the crop rotation (CropRotationListAsString empty) do not run with the example farm.
+  Kept outside the .nlogo, so that the model file stays unchanged. Metric names in scripts/aggregate_netlogo.py (step7).
+-->
+<experiments>
+  <experiment name="step7_years3" repetitions="100" runMetricsEveryStep="true">
+    <setup>Setup
+set StopExtinct? false</setup>
+    <go>Go</go>
+    <timeLimit steps="1095"/>
+    <metric>count colonies</metric>
+    <metric>count deadCols</metric>
+    <metric>TotalColoniesEverProduced</metric>
+    <metric>sum [ number ] of bees with [ stage = "egg" ]</metric>
+    <metric>sum [ number ] of bees with [ stage = "larva" ]</metric>
+    <metric>sum [ number ] of bees with [ stage = "pupa" ]</metric>
+    <metric>sum [ number ] of bees with [ stage = "adult" and caste = "worker" ]</metric>
+    <metric>sum [ number ] of bees with [ stage = "adult" and caste = "male" ]</metric>
+    <metric>sum [ number ] of bees with [ stage = "adult" and caste = "queen" and mated? = false ]</metric>
+    <metric>sum [ number ] of bees with [ activity = "hibernate" ]</metric>
+    <metric>sum [ energyStore_kJ ] of colonies</metric>
+    <metric>sum [ pollenStore_g ] of colonies</metric>
+    <metric>TotalForagingTripsToday</metric>
+    <metric>sum [ nectar_myl ] of foodsources / 1000000</metric>
+    <metric>sum [ pollen_g ] of foodsources / 1000</metric>
+  </experiment>
+</experiments>

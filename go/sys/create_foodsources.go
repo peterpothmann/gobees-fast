@@ -30,6 +30,31 @@ type CreateFoodsources struct {
 }
 
 func (s *CreateFoodsources) Initialize(w *ecs.World) {
+	derived := ecs.GetResource[globals.Derived](w)
+	CreateFoodsourcesProc(w, derived.FoodsourcesFile, &s.landscape)
+	ecs.AddResource(w, &s.landscape)
+
+	// [INIT-15] assertion: every foodsource must have a habitat type. Part of Setup, not of CreateFoodsourcesProc,
+	// so it does not run after a crop rotation.
+	query := ecs.NewFilter1[comp.Foodsource](w).Query()
+	undefined := false
+	for query.Next() {
+		if query.Get().PatchType == "undefined" {
+			undefined = true
+		}
+	}
+	if undefined {
+		panic("Undefined habitat patch!")
+	}
+}
+
+func (s *CreateFoodsources) Update(w *ecs.World) {}
+
+func (s *CreateFoodsources) Finalize(w *ecs.World) {}
+
+// CreateFoodsourcesProc creates the foodsources of the given foodsources file and sets the landscape globals
+// [FSRC]. Called in Setup [INIT-06] and by CropRotationProc [CROP-03].
+func CreateFoodsourcesProc(w *ecs.World, foodsourcesFile string, landscape *globals.Landscape) {
 	file := ecs.GetResource[params.ParameterFile](w)
 	dir := ecs.GetResource[params.WorkingDirectory](w)
 	world := ecs.GetResource[params.World](w)
@@ -38,11 +63,11 @@ func (s *CreateFoodsources) Initialize(w *ecs.World) {
 	rng := rand.New(ecs.GetResource[resource.Rand](w))
 
 	// [FSRC-02] to [FSRC-04]
-	metresPerPatch, patches, err := readFoodsourcesFile(filepath.Join(dir.Path, derived.FoodsourcesFile))
+	metresPerPatch, patches, err := readFoodsourcesFile(filepath.Join(dir.Path, foodsourcesFile))
 	if err != nil {
 		panic(err) // [FSRC-09] NetLogo: message and Setup continues without foodsources
 	}
-	s.landscape.Scaling_NLpatches_per_m = precision(1/metresPerPatch, 8)
+	landscape.Scaling_NLpatches_per_m = precision(1/metresPerPatch, 8)
 
 	// [FSRC-04] to [FSRC-08] every flower patch is created and gets a who number, also if it dies right after.
 	kept := make([]*flowerPatch, 0, len(patches))
@@ -75,24 +100,10 @@ func (s *CreateFoodsources) Initialize(w *ecs.World) {
 	}
 
 	// [FSRC-13] output only
-	// [INIT-15] assertion: every foodsource must have a habitat type
 	query := ecs.NewFilter1[comp.Foodsource](w).Query()
-	s.landscape.TotalFoodSources = query.Count()
-	undefined := false
-	for query.Next() {
-		if query.Get().PatchType == "undefined" {
-			undefined = true
-		}
-	}
-	if undefined {
-		panic("Undefined habitat patch!")
-	}
-	ecs.AddResource(w, &s.landscape)
+	landscape.TotalFoodSources = query.Count()
+	query.Close()
 }
-
-func (s *CreateFoodsources) Update(w *ecs.World) {}
-
-func (s *CreateFoodsources) Finalize(w *ecs.World) {}
 
 func readFoodsourcesFile(path string) (float64, []flowerPatch, error) {
 	f, err := os.Open(path)

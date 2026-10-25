@@ -13,7 +13,8 @@ import (
 // UpdateMorning sets the day of the year and today's foraging period [MORN-01] to [MORN-04].
 //
 // First part of UpdateMorning_Proc. The other parts are separate systems, in this order (see model/default.go):
-// UpdateFoodsources [MORN-05], EmergenceNewQueens [MORN-07], UpdateColonies [MORN-10], CheckNumbers [MORN-12].
+// UpdateFoodsources [MORN-05], UpdateSeasonalEvents [MORN-06], EmergenceNewQueens [MORN-07], WakeUpBees [MORN-08],
+// CropRotation [MORN-09], UpdateColonies [MORN-10], CheckNumbers [MORN-12].
 // Initialize runs the morning at ticks = 0, i.e. Day = 0 [INIT-10].
 // Not translated: the assertion stop sign [MORN-01] (assertions panic where they occur) and Date [MORN-03]
 // (display only).

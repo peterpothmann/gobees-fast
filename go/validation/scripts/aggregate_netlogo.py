@@ -20,6 +20,9 @@ METRICS = {
     'step6': ['colonies', 'dead_colonies', 'eggs', 'larvae', 'pupae', 'workers', 'males', 'young_queens',
               'energy_kJ', 'pollen_g', 'trips', 'switch_point', 'queen_production', 'nectar_left_l',
               'pollen_left_kg'],
+    'step7': ['colonies', 'dead_colonies', 'colonies_founded', 'eggs', 'larvae', 'pupae', 'workers', 'males',
+              'young_queens', 'hibernating_queens', 'energy_kJ', 'pollen_g', 'trips', 'nectar_left_l',
+              'pollen_left_kg'],
 }
 
 
