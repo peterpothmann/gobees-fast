@@ -30,6 +30,14 @@ METRICS = {
                    'young_queens', 'hibernating_queens', 'energy_kJ', 'pollen_g', 'trips', 'nectar_left_l',
                    'pollen_left_kg', 'foodsources'],
 }
+# step 8: the metrics of step 7 plus a few per experiment
+STEP7 = METRICS['step7']
+METRICS['step8_ibm'] = STEP7 + ['ibm_colonies', 'bee_agents']
+METRICS['step8_genetics'] = STEP7 + ['diploid_males']
+METRICS['step8_species'] = STEP7 + ['colonies_B_terrestris', 'colonies_B_pascuorum', 'colonies_B_lapidarius',
+                                    'colonies_B_hortorum', 'colonies_B_pratorum', 'colonies_B_hypnorum', 'psithyrus']
+METRICS['step8_weather'] = STEP7 + ['foraging_period_s']
+METRICS['step8_settings'] = STEP7 + ['foodsources', 'queens_removed']
 
 
 def main():

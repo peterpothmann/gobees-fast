@@ -62,7 +62,7 @@ jobs:
           VALIDATION_REPORT: ${{ github.workspace }}/go/validation/validation-report.md
         run: |
           rm -f "$VALIDATION_REPORT"
-          gotestsum --format testname --junitfile ${{ github.workspace }}/test-results.xml -- -count=1 ./...
+          gotestsum --format testname --junitfile ${{ github.workspace }}/test-results.xml -- -count=1 -timeout 30m ./...
 
       - name: Summary of all tests
         if: always()
