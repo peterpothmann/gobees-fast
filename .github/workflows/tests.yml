@@ -2,8 +2,9 @@
 # with NetLogo (go/sys/validation_*_test.go, go/model/validation_step*_test.go). NetLogo itself does not run here:
 # its reference results are embedded in go/validation, see go/validation/README.md.
 #
-# The comparison tests write the report go/validation/validation-report.md. In a pull request, the workflow
-# commits it to the branch of the pull request, so that a squash merge brings code and report to main together.
+# The comparison tests write the report go/validation/validation-report.md and one plot per experiment to
+# go/validation/plots/. In a pull request, the workflow commits both to the branch of the pull request, so that a
+# squash merge brings code, report and plots to main together.
 # On main it only runs the tests and never commits.
 # The summary of each run shows all test results and the comparison report. Both are also uploaded as artifact
 # "reports".
@@ -55,13 +56,14 @@ jobs:
       - name: Install gotestsum
         run: go install gotest.tools/gotestsum@v1.13.0
 
-      # The comparison tests append their results to VALIDATION_REPORT (Markdown). The report of the checkout is
-      # deleted first, otherwise the new results would be appended to the old ones.
+      # The comparison tests write their sections to VALIDATION_REPORT (Markdown) and their plots next to it. The
+      # report and the plots of the checkout are deleted first, so that they hold only the results of this run.
       - name: Test
         env:
           VALIDATION_REPORT: ${{ github.workspace }}/go/validation/validation-report.md
         run: |
           rm -f "$VALIDATION_REPORT"
+          rm -rf "$(dirname "$VALIDATION_REPORT")/plots"
           gotestsum --format testname --junitfile ${{ github.workspace }}/test-results.xml -- -count=1 -timeout 30m ./...
 
       - name: Summary of all tests
@@ -88,6 +90,7 @@ jobs:
           path: |
             test-results.xml
             go/validation/validation-report.md
+            go/validation/plots/
           if-no-files-found: ignore
 
       # Only in a pull request from this repository and only if all tests passed. A commit pushed with the
@@ -100,9 +103,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add go/validation/validation-report.md
+          git add -A go/validation/plots
           if git diff --cached --quiet; then
             echo "The report did not change."
           else
-            git commit -m "Update validation report [skip ci]"
+            git commit -m "Update validation report and plots [skip ci]"
             git push origin HEAD:${{ github.head_ref }}
           fi

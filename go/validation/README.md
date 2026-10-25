@@ -92,7 +92,7 @@ The translation proceeds in steps. Each step is annotated in the NetLogo code, r
 | 6    | foraging:`ForagingProc` and all `Foraging_...` procedures, `HandlingTime_s_REP`, `DetectionProbREP`                                                                                                                                                                                                                                                                                            | done    | `experiments/step6.xml`: colony dynamics of year 1 (364 days) for steps 4b to 6 together: colonies, brood, adults, stores, foraging trips, switch point, queen production, nectar and pollen left in the landscape. NetLogo runs `Go` without `QueensLeavingNestProc` and `UpdateSeasonalEventsProc` (step 7).                                                                                                                                                                                                              |
 | 7    | year cycle and population:`UpdateSeasonalEventsProc`, `QueensLeavingNestProc`, winter, badgers, Psithyrus, `DieProc` (colonies, badgers), `OutputDailyProc`, `CheckNumbersProc`, crop rotation                                                                                                                                                                                                 | done    | `experiments/step7.xml`: the full model (NetLogo `Go`, gobees `model.Default`) over 3 years (1095 days): colonies, dead and founded colonies, brood, adults, young and hibernating queens, stores, foraging trips, nectar and pollen left in the landscape. `experiments/step7_badgers.xml`: the same with 2 badgers. `experiments/step7_crop.xml`: the same with a crop rotation of two maps (badgers and crop rotation do not run on the example farm). All three: every metric within the NetLogo band on all 1096 days. |
 | 8 | model branches that the example farm does not use, each in its own experiment: individual-based colonies (`COLONIES_IBM`), diploid males (`SexLocus?`), queens without males (`UnlimitedMales?` = false), `WinterMortality?` = false, `MergeHedges?` = false, other `ForagingMortalityModel` values, the limit of hibernating queens (`MaxHibernatingQueens`), several species incl. Psithyrus | done | `experiments/step8_ibm.xml`, `step8_genetics.xml`, `step8_species.xml`, `step8_weather.xml`, `step8_settings.xml`: the full model over 2 years (730 days) with the metrics of step 7 plus a few per experiment (individual-based colonies and bee agents, diploid males, colonies per species and Psithyrus, foraging period, foodsources and removed queens). All five: every metric within the NetLogo band on all 731 days. |
-| 9    | plots: per metric the NetLogo band (5-95 %), the NetLogo median and the gobees median over the days, as images in`validation-report.md`                                                                                                                                                                                                                                                        | planned | –                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 9 | plots: per metric the NetLogo band (5-95 %), the NetLogo median and the gobees median over the days, as images in`validation-report.md` | done | one image per experiment below its table in `validation-report.md` (`plots/<experiment>.png`), drawn by the comparison tests with gonum/plot |
 | 10   | benchmarks: runtime of gobees (CI, benchstat) and of NetLogo against gobees, e.g. for different numbers of initial queens. Not part of the validation, see the README in the repository root                                                                                                                                                                                                   | planned | –                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
 ## Files
@@ -121,6 +121,9 @@ go/validation/
   reference/                  NetLogo reference: netlogo_<experiment>.csv (step, metric, n, q05, q25, q50, q75, q95)
   reference.go                embeds the reference files
   validation.go, report.go    reading the reference, median, report
+  plot.go                     the plots of the report (gonum/plot)
+  validation-report.md        the report, written by the CI
+  plots/                      one plot per experiment (<experiment>.png), written by the CI with the report
 ```
 
 The comparison tests of steps 3 to 6 are in `go/sys`, because they build a part of the model from its systems:
@@ -155,11 +158,14 @@ Notes on the NetLogo command line:
 The results are not written down by hand. The CI (workflow "Tests", `.github/workflows/tests.yml`) runs all tests
 on every pull request and on every push to `main`. The comparison tests write the report
 [validation-report.md](validation-report.md): for every metric, on how many days the gobees median lies within the
-NetLogo band (see "How every day is checked"), and the values of one example day.
+NetLogo band (see "How every day is checked"), and the values of one example day. Below each table is one image
+with a small plot per metric over all compared days: the NetLogo 5-95 % band and median (blue) and the gobees median
+(orange), from `go/validation/plots/<experiment>.png`. Metrics compared only on day 0 (part of step 3) have no plot.
 
-- In a pull request, the CI commits the report to the branch of the pull request ("Update validation report", made
-  by github-actions), but only if all tests passed and the report changed. Pull the branch before you push to it
-  again. With a squash merge, code and report reach `main` in one commit.
+- In a pull request, the CI commits the report and the plots to the branch of the pull request ("Update validation
+  report and plots", made by github-actions), but only if all tests passed and something changed. Pull the branch
+  before you push to it again. With a squash merge, code, report and plots reach `main` in one commit. The plots are
+  byte-identical for the same results, so they are committed only when the results change.
 - On `main`, the CI only runs the tests and never commits.
 - The summary of each run (Actions, then the run) shows all test results and the report, which are also attached to
   the run as artifact `reports`.
@@ -183,7 +189,7 @@ PowerShell:
 ```powershell
 cd go
 $env:VALIDATION_REPORT = "$PWD\validation\validation-report.md"
-Remove-Item $env:VALIDATION_REPORT -ErrorAction SilentlyContinue
+Remove-Item $env:VALIDATION_REPORT, validation\plots -Recurse -ErrorAction SilentlyContinue
 go test -count=1 -timeout 30m -run Validation ./sys ./model
 Remove-Item Env:VALIDATION_REPORT
 ```
@@ -192,6 +198,6 @@ Git Bash:
 
 ```bash
 cd go
-rm -f validation/validation-report.md
+rm -rf validation/validation-report.md validation/plots
 VALIDATION_REPORT="$PWD/validation/validation-report.md" go test -count=1 -timeout 30m -run Validation ./sys ./model
 ```

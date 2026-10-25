@@ -20,10 +20,11 @@ import (
 func step8Comparison(order, name, reference, title, description string, extra []string,
 	measure func(w *ecs.World, m map[string]float64)) netLogoComparison {
 	return netLogoComparison{
-		reference: reference,
-		order:     order,
-		step:      "Step 8: model branches the example farm does not use",
-		title:     title,
+		reference:  reference,
+		order:      order,
+		experiment: name,
+		step:       "Step 8: model branches the example farm does not use",
+		title:      title,
 		description: "Experiment `go/validation/experiments/" + name + ".xml`: example farm, full model, 730 days, " +
 			"with the parameter file `" + name + "_Parameters.csv`: " + description + " Both run with StopExtinct? " +
 			"= false. The table shows day 150.",

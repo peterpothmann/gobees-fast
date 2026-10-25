@@ -113,6 +113,7 @@ func TestValidationStep6AgainstNetLogo(t *testing.T) {
 	for _, metric := range step6MetricNames {
 		outside := []string{}
 		worst, worstStep, worstGobees := 0.0, 0, 0.0 // largest |median difference| / width of the NetLogo band
+		medians, bands := []float64{}, []validation.Quantiles{}
 		for step := 0; step <= steps; step++ {
 			q, ok := reference[validation.Key{Step: step, Metric: metric}]
 			if !ok {
@@ -121,6 +122,7 @@ func TestValidationStep6AgainstNetLogo(t *testing.T) {
 			// a relative tolerance of 1e-9 for the float sums (stores, landscape), whose last digits depend on the order
 			tol := 1e-9 * math.Max(1, math.Abs(q.Q50))
 			median := validation.Median(values[metric][step])
+			medians, bands = append(medians, median), append(bands, q)
 			if width := q.Q95 - q.Q05; width > tol && math.Abs(median-q.Q50)/width > worst {
 				worst, worstStep, worstGobees = math.Abs(median-q.Q50)/width, step, median
 			}
@@ -137,14 +139,15 @@ func TestValidationStep6AgainstNetLogo(t *testing.T) {
 			metric, worstStep, worstGobees, w.Q50, w.Q05, w.Q95, worst)
 		// the report shows day 150, the middle of the colony season (at the end of the year nearly all values are 0)
 		rows = append(rows, validation.ReportRow{Metric: metric, Steps: steps + 1, Within: steps + 1 - len(outside),
-			Step: shownStep, Gobees: validation.Median(values[metric][shownStep]), NetLogo: mid})
+			Step: shownStep, Gobees: validation.Median(values[metric][shownStep]), NetLogo: mid,
+			Medians: medians, Bands: bands})
 		if len(outside) > 0 {
 			failures = append(failures, fmt.Sprintf("%s: gobees median outside the NetLogo 5-95 %% band at %d of %d steps, e.g. %s",
 				metric, len(outside), steps+1, outside[0]))
 		}
 	}
 
-	err = validation.WriteReport(validation.Section{Order: "06", Step: "Steps 4b to 6: colony dynamics in year 1",
+	err = validation.WriteReport(validation.Section{Order: "06", Experiment: "step6", Step: "Steps 4b to 6: colony dynamics in year 1",
 		Description: "Experiment `go/validation/experiments/step6.xml`: example farm, 500 B. terrestris queens, 364 days, with " +
 			"brood, the daily activity queue and foraging. Both models run without QueensLeavingNestProc and " +
 			"UpdateSeasonalEventsProc (step 7). Compared at every step: the gobees median must lie in the NetLogo " +

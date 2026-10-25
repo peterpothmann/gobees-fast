@@ -48,6 +48,7 @@ func TestValidationStep4aAgainstNetLogo(t *testing.T) {
 	failures := []string{}
 	for _, m := range metrics {
 		outside := []string{}
+		medians, bands := []float64{}, []validation.Quantiles{}
 		for step := 0; step <= steps; step++ {
 			q, ok := reference[validation.Key{Step: step, Metric: m}]
 			if !ok {
@@ -55,6 +56,7 @@ func TestValidationStep4aAgainstNetLogo(t *testing.T) {
 			}
 			tol := 1e-9 * math.Max(1, math.Abs(q.Q50))
 			median := validation.Median(values[m][step])
+			medians, bands = append(medians, median), append(bands, q)
 			if median < q.Q05-tol || median > q.Q95+tol {
 				outside = append(outside, fmt.Sprintf("step %d: gobees median %.10g, NetLogo 5-95 %% [%.10g, %.10g]", step, median, q.Q05, q.Q95))
 			}
@@ -63,14 +65,15 @@ func TestValidationStep4aAgainstNetLogo(t *testing.T) {
 		gobees := validation.Median(values[m][steps])
 		t.Logf("%-10s step %3d: gobees median %10.6g | NetLogo median %10.6g", m, steps, gobees, final.Q50)
 		rows = append(rows, validation.ReportRow{Metric: m, Steps: steps + 1, Within: steps + 1 - len(outside),
-			Step: steps, Gobees: gobees, NetLogo: final})
+			Step: steps, Gobees: gobees, NetLogo: final,
+			Medians: medians, Bands: bands})
 		if len(outside) > 0 {
 			failures = append(failures, fmt.Sprintf("%s: outside the NetLogo band at %d of %d steps, e.g. %s",
 				m, len(outside), steps+1, outside[0]))
 		}
 	}
 
-	err = validation.WriteReport(validation.Section{Order: "04a", Step: "Step 4a: morning routine",
+	err = validation.WriteReport(validation.Section{Order: "04a", Experiment: "step4a", Step: "Step 4a: morning routine",
 		Description: "Experiment `go/validation/experiments/step4a.xml`: example farm, 400 days. Day of the year, nectar and " +
 			"pollen available in the landscape. These values depend only on the landscape, so the NetLogo band is " +
 			"widened by a relative tolerance of 1e-9 (float sums in random order).",

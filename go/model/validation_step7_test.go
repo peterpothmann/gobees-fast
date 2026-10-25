@@ -73,10 +73,11 @@ func TestValidationStep7AgainstNetLogo(t *testing.T) {
 	// Experiment go/validation/experiments/step7.xml: the full model (NetLogo Go, gobees model.Default) over 3 years
 	// on the example farm. Both run with StopExtinct? = false [GO-20].
 	compareWithNetLogo(t, netLogoComparison{
-		reference: validation.NetLogoStep7,
-		order:     "07.1",
-		step:      "Step 7: the year cycle",
-		title:     "Example farm, 3 years",
+		reference:  validation.NetLogoStep7,
+		order:      "07.1",
+		experiment: "step7",
+		step:       "Step 7: the year cycle",
+		title:      "Example farm, 3 years",
 		description: "Experiment `go/validation/experiments/step7.xml`: example farm, 500 B. terrestris queens, 1095 days, the " +
 			"full model (NetLogo `Go`, gobees `model.Default`) with the year cycle: young queens leave the nest and " +
 			"hibernate, the season ends, the queens emerge again. Both run with StopExtinct? = false. Compared " +

@@ -28,10 +28,11 @@ func TestValidationStep7BadgersAgainstNetLogo(t *testing.T) {
 	// Experiment go/validation/experiments/step7_badgers.xml: as step 7, with 2 badgers. NetLogo reads a parameter
 	// file with N_Badgers = 2 (otherwise the example farm file), gobees sets the value.
 	compareWithNetLogo(t, netLogoComparison{
-		reference: validation.NetLogoStep7Badgers,
-		order:     "07.2",
-		step:      "Step 7: the year cycle",
-		title:     "Badgers",
+		reference:  validation.NetLogoStep7Badgers,
+		order:      "07.2",
+		experiment: "step7_badgers",
+		step:       "Step 7: the year cycle",
+		title:      "Badgers",
 		description: "Experiment `go/validation/experiments/step7_badgers.xml`: as step 7 (example farm, 1095 days, " +
 			"full model), with 2 badgers (N_Badgers = 2). They live on the two Scrub patches of the example farm and dig " +
 			"up each colony within 735 m with p = 0.019 per day. Both run with StopExtinct? = false. Compared at " +
@@ -59,10 +60,11 @@ func TestValidationStep7CropRotationAgainstNetLogo(t *testing.T) {
 	// Experiment go/validation/experiments/step7_crop.xml: as step 7, with a crop rotation of two maps. NetLogo sets
 	// CropRotationList after Setup, gobees sets CropRotationListAsString, which gives the same list [PAR-07].
 	compareWithNetLogo(t, netLogoComparison{
-		reference: validation.NetLogoStep7Crop,
-		order:     "07.3",
-		step:      "Step 7: the year cycle",
-		title:     "Crop rotation",
+		reference:  validation.NetLogoStep7Crop,
+		order:      "07.3",
+		experiment: "step7_crop",
+		step:       "Step 7: the year cycle",
+		title:      "Crop rotation",
 		description: "Experiment `go/validation/experiments/step7_crop.xml`: as step 7 (example farm, 1095 days, full " +
 			"model), with a crop rotation of two maps. On Day 365 the landscape is replaced: year 2 runs on " +
 			"`Example_Farm_PlotTest_Foodsources.txt` (36 flower patches), year 3 on the example farm again. Both run " +
