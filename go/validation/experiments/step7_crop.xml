@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<!DOCTYPE experiments SYSTEM "behaviorspace.dtd">
+<!--
+  Validation of the crop rotation (step 7) against NetLogo (see go/validation/README.md).
+  The full model over 3 years as in step7.xml, but with a crop rotation of two maps: on Day 365 of each year
+  CropRotationProc [CROP] replaces all foodsources. Item = ceiling (ticks / 365) mod 2: ticks 365 -> item 1
+  (Example_Farm_PlotTest_Foodsources.txt, 36 flower patches, used in year 2), ticks 730 -> item 0 (the example farm
+  again, used in year 3).
+
+  CropRotationList is read only on Day 365, so Setup sets it directly after the parameters were read (the default
+  CropRotationListAsString is empty). gobees sets CropRotationListAsString to the same two files, which gives the
+  same list [PAR-07]. All species have seasonStop 305, so no colony is alive on Day 365, and the stale range lists of
+  [CROP-02] are never read.
+  Setup sets StopExtinct? to false, as in step7.xml.
+  Kept outside the .nlogo, so that the model file stays unchanged. Metric names in scripts/aggregate_netlogo.py
+  (step7_crop).
+-->
+<experiments>
+  <experiment name="step7_crop" repetitions="100" runMetricsEveryStep="true">
+    <setup>Setup
+set StopExtinct? false
+set CropRotationList [ "_SYSTEM_Example_Farm_Foodsources.txt" "Example_Farm_PlotTest_Foodsources.txt" ]</setup>
+    <go>Go</go>
+    <timeLimit steps="1095"/>
+    <metric>count colonies</metric>
+    <metric>count deadCols</metric>
+    <metric>TotalColoniesEverProduced</metric>
+    <metric>sum [ number ] of bees with [ stage = "egg" ]</metric>
+    <metric>sum [ number ] of bees with [ stage = "larva" ]</metric>
+    <metric>sum [ number ] of bees with [ stage = "pupa" ]</metric>
+    <metric>sum [ number ] of bees with [ stage = "adult" and caste = "worker" ]</metric>
+    <metric>sum [ number ] of bees with [ stage = "adult" and caste = "male" ]</metric>
+    <metric>sum [ number ] of bees with [ stage = "adult" and caste = "queen" and mated? = false ]</metric>
+    <metric>sum [ number ] of bees with [ activity = "hibernate" ]</metric>
+    <metric>sum [ energyStore_kJ ] of colonies</metric>
+    <metric>sum [ pollenStore_g ] of colonies</metric>
+    <metric>TotalForagingTripsToday</metric>
+    <metric>sum [ nectar_myl ] of foodsources / 1000000</metric>
+    <metric>sum [ pollen_g ] of foodsources / 1000</metric>
+    <metric>count foodsources</metric>
+  </experiment>
+</experiments>

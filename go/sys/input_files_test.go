@@ -12,6 +12,32 @@ import (
 
 // Tests of the readers for the step-2 input files, with the complete example files (examplefiles).
 
+func TestParseFoodsourcesFileExampleFarmPlotTest(t *testing.T) {
+	// the second map of the crop rotation experiment (go/validation/experiments/step7_crop.xml)
+	metres, patches, err := parseFoodsourcesFile(strings.NewReader(examplefiles.ExampleFarmPlotTestFoodsources))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// [FSRC-02] line 1: "10" metres per patch. [FSRC-03] line 2 "36" (<= 10 characters), so line 3 is skipped too.
+	if metres != 10 || len(patches) != 36 {
+		t.Fatalf("metres per patch %v, %d flower patches; want 10 and 36", metres, len(patches))
+	}
+	// Line 4: 73 "Crop_Cereals" 75 97.97 91.255 36500 [["Crop_Cereals" 1]] 940  "no info "
+	p := patches[0]
+	got := []any{p.Id_Beescout, p.PatchType, p.PatchColour, p.X, p.Y, p.Area_sqm, p.FlowerSpeciesList, p.Perimeter_m, p.PatchInfo}
+	want := []any{73.0, "Crop_Cereals", 75.0, 97.97, 91.255, 36500.0, []flowerEntry{{"Crop_Cereals", 1, true}}, 940.0, `  "no info " `}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("patch 0:\n got  %#v\n want %#v", got, want)
+	}
+	// Last line: 1767 "Hedgerow" 105 135 59.684 3400 [...] 190  "no info "
+	p = patches[35]
+	got = []any{p.Id_Beescout, p.PatchType, p.X, p.Y, p.Area_sqm, p.Perimeter_m, p.PatchInfo}
+	want = []any{1767.0, "Hedgerow", 135.0, 59.684, 3400.0, 190.0, `  "no info " `}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("patch 35:\n got  %#v\n want %#v", got, want)
+	}
+}
+
 func TestParseFoodsourcesFileExampleFarm(t *testing.T) {
 	metres, patches, err := parseFoodsourcesFile(strings.NewReader(examplefiles.ExampleFarmFoodsources))
 	if err != nil {

@@ -144,12 +144,12 @@ func TestValidationStep6AgainstNetLogo(t *testing.T) {
 		}
 	}
 
-	err = validation.WriteReport("Steps 4b to 6: colony dynamics in year 1",
-		"Experiment `go/validation/experiments/step6.xml`: example farm, 500 B. terrestris queens, 364 days, with "+
-			"brood, the daily activity queue and foraging. Both models run without QueensLeavingNestProc and "+
-			"UpdateSeasonalEventsProc (step 7). Compared at every step: the gobees median must lie in the NetLogo "+
+	err = validation.WriteReport(validation.Section{Order: "06", Step: "Steps 4b to 6: colony dynamics in year 1",
+		Description: "Experiment `go/validation/experiments/step6.xml`: example farm, 500 B. terrestris queens, 364 days, with " +
+			"brood, the daily activity queue and foraging. Both models run without QueensLeavingNestProc and " +
+			"UpdateSeasonalEventsProc (step 7). Compared at every step: the gobees median must lie in the NetLogo " +
 			"5-95 % band. The table shows day 150, the middle of the colony season.",
-		runs, rows)
+		Runs: runs, Rows: rows})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -6,3 +6,5 @@ Example_Farm_Parameters.csv
 # junit report of the tests (go/validation/validation-report.md is kept: the CI commits it in pull requests)
 test-results.xml
 data-model.md
+# lock file of the comparison report while a test writes it
+validation-report.md.lock
