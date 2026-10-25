@@ -1,6 +1,6 @@
 # Validation against NetLogo
 
-`gobees` is compared with the original NetLogo model as early as possible. Each experiment measures only quantities that depend on the parts already translated, so a deviation points to the steps that cause it.
+`gobees` is compared with the original NetLogo model as early as possible. The final report is [validation-report.md](validation-report.md) in this folder. The CI writes it in every pull request and commits it to the branch of the pull request, so it reaches `main` with the squash merge (details in [Results](#results)). Each experiment measures only quantities that depend on the parts already translated, so a deviation points to the steps that cause it.
 
 The comparison starts with step 3. Steps 0 to 2 produce no dynamics that could be compared over time: step 0 is the schedule, step 1 reads parameters, step 2 builds the landscape and the species. Their results are checked by unit tests against the input files, and the landscape and species values are also compared with NetLogo at step 0 of the step 3 experiment. So the first experiment covers steps 1 to 3 together. From step 3 on, every step gets its own experiment with the quantities that become comparable with it (see the overview below).
 
@@ -84,15 +84,27 @@ Notes on the NetLogo command line:
 
 ## Results
 
-The results are not written down here, they are generated on every push. The summary of each run of the workflow "Tests" on GitHub (Actions, then the run) shows
+The results are not written down by hand. The CI (workflow "Tests", `.github/workflows/tests.yml`) runs all tests
+on every pull request and on every push to `main`. The comparison tests write the report
+[validation-report.md](validation-report.md): for every metric, on how many days the gobees median lies within the
+NetLogo band (see "How every day is checked"), and the values of one example day.
 
-- all test results, and
-- the comparison report: for every metric, on how many days the gobees median lies within the NetLogo band (see
-  "How every day is checked"), and the values of one example day.
+- In a pull request, the CI commits the report to the branch of the pull request ("Update validation report", made
+  by github-actions), but only if all tests passed and the report changed. Pull the branch before you push to it
+  again. With a squash merge, code and report reach `main` in one commit.
+- On `main`, the CI only runs the tests and never commits.
+- The summary of each run (Actions, then the run) shows all test results and the report, which are also attached to
+  the run as artifact `reports`.
 
-Both are also attached to the run as artifact `reports`. What each experiment measures and why is described in the experiment file (e.g. `experiments/step3.xml`) and in the comparison test (e.g. `go/sys/validation_step3_test.go`).
+The gobees runs use fixed seeds (1 to 100), so the report changes only when the results change.
 
-To create the comparison report locally, set `VALIDATION_REPORT` to an absolute path (`go test` runs the test in the package folder `go/sys`, so a relative path would end up there).
+What each experiment measures and why is described in the experiment file (e.g. `experiments/step3.xml`) and in the
+comparison test (e.g. `go/sys/validation_step3_test.go`).
+
+To create the comparison report locally (not needed, the CI does it), set `VALIDATION_REPORT` to an absolute path
+(`go test` runs the test in the package folder, e.g. `go/sys`, so a relative path would end up there). The tests
+append to the file, because several comparison tests write into one report, so the commands delete the old report
+first. A local report replaces the committed one; `git checkout validation/validation-report.md` restores it.
 
 PowerShell:
 
@@ -100,7 +112,7 @@ PowerShell:
 cd go
 $env:VALIDATION_REPORT = "$PWD\validation\validation-report.md"
 Remove-Item $env:VALIDATION_REPORT -ErrorAction SilentlyContinue
-go test -count=1 -run Validation ./sys
+go test -count=1 -run Validation ./sys ./model
 Remove-Item Env:VALIDATION_REPORT
 ```
 
@@ -109,7 +121,5 @@ Git Bash:
 ```bash
 cd go
 rm -f validation/validation-report.md
-VALIDATION_REPORT="$PWD/validation/validation-report.md" go test -count=1 -run Validation ./sys
+VALIDATION_REPORT="$PWD/validation/validation-report.md" go test -count=1 -run Validation ./sys ./model
 ```
-
-The report is written to `go/validation/validation-report.md`, `.gitignore` excludes it. The tests append to the file, because several comparison tests write into one report, so the commands delete the old report first.

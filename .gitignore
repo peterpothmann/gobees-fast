@@ -3,7 +3,6 @@ netlogo/____ParameterFileTemporary_*.cs
 Example_Farm_Parameters.csv
 # BehaviorSpace tables of the validation runs (aggregated into go/validation/reference)
 *_netlogo.csv
-# Test reports written locally (in CI they go to the run summary)
-validation-report.md
+# junit report of the tests (go/validation/validation-report.md is kept: the CI commits it in pull requests)
 test-results.xml
 data-model.md
