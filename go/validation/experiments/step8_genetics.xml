@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<!DOCTYPE experiments SYSTEM "behaviorspace.dtd">
+<!--
+  Validation of step 8 (genetics) against NetLogo (see go/validation/README.md).
+  The full model over 2 years (730 days, so that the year cycle with winter and 1 January is included) with the
+  example farm parameters, except:
+  SexLocus? = true: a diploid egg with two equal sex alleles becomes a diploid male [EGG-02]. UnlimitedMales? =
+  false: a young queen without an adult male of her species dies [QLN-02], and a queen mated with a diploid male
+  dies [QLN-04].
+
+  These values are read from the parameter file in Setup, so the experiment uses its own parameter file,
+  step8_genetics_Parameters.csv, written by scripts/parameter_files.py from netlogo/_SYSTEM_Example_Farm_Parameters.csv. The
+  path is relative to the folder of the .nlogo. ProjectsOwnParameterFile? = false, so that NetLogo uses
+  MyParametersFile [INIT-02]. The gobees test parses the same file.
+  Setup sets StopExtinct? to false, as in step7.xml. The metrics are those of step7.xml plus the last ones.
+  Kept outside the .nlogo, so that the model file stays unchanged. Metric names in scripts/aggregate_netlogo.py
+  (step8_genetics).
+-->
+<experiments>
+  <experiment name="step8_genetics" repetitions="100" runMetricsEveryStep="true">
+    <setup>Setup
+set StopExtinct? false</setup>
+    <go>Go</go>
+    <timeLimit steps="730"/>
+    <metric>count colonies</metric>
+    <metric>count deadCols</metric>
+    <metric>TotalColoniesEverProduced</metric>
+    <metric>sum [ number ] of bees with [ stage = "egg" ]</metric>
+    <metric>sum [ number ] of bees with [ stage = "larva" ]</metric>
+    <metric>sum [ number ] of bees with [ stage = "pupa" ]</metric>
+    <metric>sum [ number ] of bees with [ stage = "adult" and caste = "worker" ]</metric>
+    <metric>sum [ number ] of bees with [ stage = "adult" and caste = "male" ]</metric>
+    <metric>sum [ number ] of bees with [ stage = "adult" and caste = "queen" and mated? = false ]</metric>
+    <metric>sum [ number ] of bees with [ activity = "hibernate" ]</metric>
+    <metric>sum [ energyStore_kJ ] of colonies</metric>
+    <metric>sum [ pollenStore_g ] of colonies</metric>
+    <metric>TotalForagingTripsToday</metric>
+    <metric>sum [ nectar_myl ] of foodsources / 1000000</metric>
+    <metric>sum [ pollen_g ] of foodsources / 1000</metric>
+    <metric>sum [ number ] of bees with [ caste = &quot;male&quot; and ploidy = 2 ]</metric>
+    <enumeratedValueSet variable="ProjectsOwnParameterFile?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="MyParametersFile">
+      <value value="&quot;../go/validation/experiments/step8_genetics_Parameters.csv&quot;"/>
+    </enumeratedValueSet>
+  </experiment>
+</experiments>
