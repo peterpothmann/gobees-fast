@@ -73,8 +73,8 @@ Tests:
 
 ```shell
 cd go
-go test ./...          # all tests, incl. the comparison with NetLogo
-go test -short ./...   # without the comparison with NetLogo
+go test -timeout 30m ./...   # all tests, incl. the comparison with NetLogo (about 10 minutes)
+go test -short ./...         # without the comparison with NetLogo
 ```
 
 ## Validation

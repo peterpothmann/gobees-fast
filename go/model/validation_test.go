@@ -3,6 +3,7 @@ package model
 import (
 	"fmt"
 	"math"
+	"strings"
 	"testing"
 
 	"gobees/params"
@@ -21,6 +22,7 @@ type netLogoComparison struct {
 	metrics     []string
 	steps       int                    // days per run
 	shownStep   int                    // example day of the report
+	parameters  string                 // parameter file in validation.ParameterFiles instead of the example farm one, may be empty
 	change      func(p *params.Params) // changes the example farm parameters as the experiment does, may be nil
 	measure     func(w *ecs.World) map[string]float64
 }
@@ -38,6 +40,16 @@ func compareWithNetLogo(t *testing.T, c netLogoComparison) {
 		t.Fatal(err)
 	}
 	const runs = 100
+	var file params.ParameterFile
+	if c.parameters != "" {
+		b, err := validation.ParameterFiles.ReadFile(c.parameters)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if file, err = params.ParseParameterFile(strings.NewReader(string(b))); err != nil {
+			t.Fatal(err)
+		}
+	}
 
 	values := map[string][][]float64{} // values[metric][step][run]
 	for _, name := range c.metrics {
@@ -50,6 +62,9 @@ func compareWithNetLogo(t *testing.T, c netLogoComparison) {
 	}
 	for run := 1; run <= runs; run++ {
 		p := exampleFarm(t, float64(run))
+		if c.parameters != "" {
+			p.File = file
+		}
 		p.Termination.MaxTicks = c.steps
 		p.File.StopExtinct = false // as the experiments [GO-20]
 		if c.change != nil {

@@ -58,8 +58,19 @@ The values of the parameter file that matter for the model dynamics (the others 
 | `StopExtinct?`                                                   | true, set to false by the experiments of step 7 | a run that dies out records zeros instead of stopping           |
 
 Deviations per experiment: `step7_badgers.xml` uses `experiments/step7_badgers_Parameters.csv`, the same file with
-`N_Badgers` = 2. `step7_crop.xml` sets the crop rotation `_SYSTEM_Example_Farm_Foodsources.txt Example_Farm_PlotTest_Foodsources.txt` after Setup. Step 8 will add experiments for the other values (see the table
-below).
+`N_Badgers` = 2. `step7_crop.xml` sets the crop rotation `_SYSTEM_Example_Farm_Foodsources.txt Example_Farm_PlotTest_Foodsources.txt` after Setup. The step 8 experiments use parameter files
+written by `scripts/parameter_files.py`, each the example farm file with a few values changed:
+
+| Experiment | Changed values | Days |
+| --- | --- | --- |
+| `step8_ibm.xml` | `COLONIES_IBM` = 10: the first 10 colonies are individual-based | 730 |
+| `step8_genetics.xml` | `SexLocus?` = true, `UnlimitedMales?` = false | 730 |
+| `step8_species.xml` | `BeeSpeciesInitialQueensListAsString` = all 7 species: 150 queens of each Bombus species, 100 Psithyrus | 730 |
+| `step8_weather.xml` | `Weather` = `"foragingHoursExample"`, `ForagingMortalityModel` = `"low"` | 730 |
+| `step8_settings.xml` | `WinterMortality?`, `MergeHedges?`, `MinSizeFoodSources?`, `RemoveEmptyFoodSources?`, `KeepDeadColonies?` = false, `MaxHibernatingQueens` = 150 (takes effect on every 1 January, also on the first day of the run) | 730 |
+
+NetLogo reads these files through `MyParametersFile` (set in the experiment, with `ProjectsOwnParameterFile?` =
+false), the gobees tests parse the same files (embedded by `go/validation/reference.go`).
 
 Random numbers: NetLogo runs without explicit seed (`RAND_SEED` = 0), gobees uses the seeds 1 to 100. The gobees tests read the
 same input files, copied into `go/internal/examplefiles`.
@@ -80,7 +91,7 @@ The translation proceeds in steps. Each step is annotated in the NetLogo code, r
 | 5    | daily activity queue:`NextActiveBeeREP`, `ActivityProc`, the stimulus reporters, `BroodIncubationProc`                                                                                                                                                                                                                                                                                         | done    | compared together with step 6 (`experiments/step6.xml`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | 6    | foraging:`ForagingProc` and all `Foraging_...` procedures, `HandlingTime_s_REP`, `DetectionProbREP`                                                                                                                                                                                                                                                                                            | done    | `experiments/step6.xml`: colony dynamics of year 1 (364 days) for steps 4b to 6 together: colonies, brood, adults, stores, foraging trips, switch point, queen production, nectar and pollen left in the landscape. NetLogo runs `Go` without `QueensLeavingNestProc` and `UpdateSeasonalEventsProc` (step 7).                                                                                                                                                                                                              |
 | 7    | year cycle and population:`UpdateSeasonalEventsProc`, `QueensLeavingNestProc`, winter, badgers, Psithyrus, `DieProc` (colonies, badgers), `OutputDailyProc`, `CheckNumbersProc`, crop rotation                                                                                                                                                                                                 | done    | `experiments/step7.xml`: the full model (NetLogo `Go`, gobees `model.Default`) over 3 years (1095 days): colonies, dead and founded colonies, brood, adults, young and hibernating queens, stores, foraging trips, nectar and pollen left in the landscape. `experiments/step7_badgers.xml`: the same with 2 badgers. `experiments/step7_crop.xml`: the same with a crop rotation of two maps (badgers and crop rotation do not run on the example farm). All three: every metric within the NetLogo band on all 1096 days. |
-| 8    | model branches that the example farm does not use, each in its own experiment: individual-based colonies (`COLONIES_IBM`), diploid males (`SexLocus?`), queens without males (`UnlimitedMales?` = false), `WinterMortality?` = false, `MergeHedges?` = false, other `ForagingMortalityModel` values, the limit of hibernating queens (`MaxHibernatingQueens`), several species incl. Psithyrus | planned | one experiment per group of branches, as in step 7                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 8 | model branches that the example farm does not use, each in its own experiment: individual-based colonies (`COLONIES_IBM`), diploid males (`SexLocus?`), queens without males (`UnlimitedMales?` = false), `WinterMortality?` = false, `MergeHedges?` = false, other `ForagingMortalityModel` values, the limit of hibernating queens (`MaxHibernatingQueens`), several species incl. Psithyrus | done | `experiments/step8_ibm.xml`, `step8_genetics.xml`, `step8_species.xml`, `step8_weather.xml`, `step8_settings.xml`: the full model over 2 years (730 days) with the metrics of step 7 plus a few per experiment (individual-based colonies and bee agents, diploid males, colonies per species and Psithyrus, foraging period, foodsources and removed queens). All five: every metric within the NetLogo band on all 731 days. |
 | 9    | plots: per metric the NetLogo band (5-95 %), the NetLogo median and the gobees median over the days, as images in`validation-report.md`                                                                                                                                                                                                                                                        | planned | –                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | 10   | benchmarks: runtime of gobees (CI, benchstat) and of NetLogo against gobees, e.g. for different numbers of initial queens. Not part of the validation, see the README in the repository root                                                                                                                                                                                                   | planned | –                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
@@ -101,9 +112,12 @@ go/validation/
     step7_badgers.xml         step 7: as step7.xml with 2 badgers
     step7_badgers_Parameters.csv  the parameter file of step7_badgers.xml: the example farm with N_Badgers = 2
     step7_crop.xml            step 7: as step7.xml with a crop rotation of two maps
+    step8_*.xml               step 8: model branches the example farm does not use (2 years each), with their
+    step8_*_Parameters.csv    parameter files, written by scripts/parameter_files.py
   scripts/
     run_netlogo_experiment.ps1  runs an experiment headless with NetLogo 5.3.1
     aggregate_netlogo.py        turns the BehaviorSpace table into the quantiles per day and metric
+    parameter_files.py          writes the parameter files of the step 8 experiments
   reference/                  NetLogo reference: netlogo_<experiment>.csv (step, metric, n, q05, q25, q50, q75, q95)
   reference.go                embeds the reference files
   validation.go, report.go    reading the reference, median, report
@@ -113,7 +127,9 @@ The comparison tests of steps 3 to 6 are in `go/sys`, because they build a part 
 `validation_step3_test.go` (about 2 s), `validation_step4a_test.go` (about 4 s), `validation_step6_test.go` (about
 50 s). The tests of step 7 compare the full model and are in `go/model`, because they use `model.Default`:
 `validation_step7_test.go` and `validation_step7_badgers_crop_test.go` (about 60 s per experiment), with the shared comparison in
-`validation_test.go`. They run with every `go test` and are skipped with `go test -short`.
+`validation_test.go`. The step 8 tests are in `go/model/validation_step8_test.go`. They run with every `go test`
+and are skipped with `go test -short`. The comparisons of `go/model` take about 10 minutes, more than the default
+limit of `go test` per package, so the commands below and the CI use `-timeout 30m`.
 
 ## Running an experiment
 
@@ -122,7 +138,7 @@ From the repository root, in PowerShell:
 ```powershell
 .\go\validation\scripts\run_netlogo_experiment.ps1 -Experiment go\validation\experiments\step3.xml -Output step3_netlogo.csv
 python go/validation/scripts/aggregate_netlogo.py step3_netlogo.csv step3
-cd go; go test -count=1 -run Validation -v ./sys ./model
+cd go; go test -count=1 -timeout 30m -run Validation -v ./sys ./model
 ```
 
 The NetLogo table (`step3_netlogo.csv`) is not needed afterwards and is excluded by `.gitignore`. Commit the generated `go/validation/reference/netlogo_step3.csv`.
@@ -168,7 +184,7 @@ PowerShell:
 cd go
 $env:VALIDATION_REPORT = "$PWD\validation\validation-report.md"
 Remove-Item $env:VALIDATION_REPORT -ErrorAction SilentlyContinue
-go test -count=1 -run Validation ./sys ./model
+go test -count=1 -timeout 30m -run Validation ./sys ./model
 Remove-Item Env:VALIDATION_REPORT
 ```
 
@@ -177,5 +193,5 @@ Git Bash:
 ```bash
 cd go
 rm -f validation/validation-report.md
-VALIDATION_REPORT="$PWD/validation/validation-report.md" go test -count=1 -run Validation ./sys ./model
+VALIDATION_REPORT="$PWD/validation/validation-report.md" go test -count=1 -timeout 30m -run Validation ./sys ./model
 ```

@@ -1,6 +1,6 @@
 package validation
 
-import _ "embed"
+import "embed"
 
 // The NetLogo reference data: quantiles of 100 NetLogo runs per step and metric, written by
 // scripts/aggregate_netlogo.py from the BehaviorSpace runs of the experiments in experiments/ (see README.md).
@@ -34,3 +34,35 @@ var NetLogoStep7Badgers string
 //
 //go:embed reference/netlogo_step7_crop.csv
 var NetLogoStep7Crop string
+
+// NetLogoStep8IBM is the reference of experiments/step8_ibm.xml.
+//
+//go:embed reference/netlogo_step8_ibm.csv
+var NetLogoStep8IBM string
+
+// NetLogoStep8Genetics is the reference of experiments/step8_genetics.xml.
+//
+//go:embed reference/netlogo_step8_genetics.csv
+var NetLogoStep8Genetics string
+
+// NetLogoStep8Species is the reference of experiments/step8_species.xml.
+//
+//go:embed reference/netlogo_step8_species.csv
+var NetLogoStep8Species string
+
+// NetLogoStep8Weather is the reference of experiments/step8_weather.xml.
+//
+//go:embed reference/netlogo_step8_weather.csv
+var NetLogoStep8Weather string
+
+// NetLogoStep8Settings is the reference of experiments/step8_settings.xml.
+//
+//go:embed reference/netlogo_step8_settings.csv
+var NetLogoStep8Settings string
+
+// ParameterFiles holds the parameter files of the experiments that change parameters, e.g.
+// experiments/step8_ibm_Parameters.csv (written by scripts/parameter_files.py). NetLogo reads them through
+// MyParametersFile, the comparison tests parse the same files.
+//
+//go:embed experiments/*_Parameters.csv
+var ParameterFiles embed.FS
