@@ -138,3 +138,143 @@ Experiment `go/validation/experiments/step7_crop.xml`: as step 7 (example farm, 
 | ✅ | pollen_left_kg | 1096 of 1096 days | 515 | 0.722048 | 0.722484 [0.708479, 0.730963] |
 | ✅ | foodsources | 1096 of 1096 days | 515 | 205 | 205 [205, 205] |
 
+## Step 8: model branches the example farm does not use
+
+<!-- section 08.1|Step 8: model branches the example farm does not use -->
+### Individual-based colonies
+
+Experiment `go/validation/experiments/step8_ibm.xml`: example farm, full model, 730 days, with the parameter file `step8_ibm_Parameters.csv`: COLONIES_IBM = 10, the first 10 colonies are individual-based [CCOL-05]. Both run with StopExtinct? = false. The table shows day 150.
+
+100 runs each.
+
+| | Metric | Days inside the band | Example day | gobees median | NetLogo median [5-95 %] |
+| --- | --- | --- | ---: | ---: | --- |
+| ✅ | colonies | 731 of 731 days | 150 | 34 | 34.5 [27, 44.05] |
+| ✅ | dead_colonies | 731 of 731 days | 150 | 98 | 99 [85.9, 113.1] |
+| ✅ | colonies_founded | 731 of 731 days | 150 | 130 | 135 [118, 149] |
+| ✅ | eggs | 731 of 731 days | 150 | 276 | 240 [131.4, 360.6] |
+| ✅ | larvae | 731 of 731 days | 150 | 432 | 444 [240, 721.8] |
+| ✅ | pupae | 731 of 731 days | 150 | 504 | 528 [288, 792] |
+| ✅ | workers | 731 of 731 days | 150 | 469 | 482 [226.55, 830.65] |
+| ✅ | males | 731 of 731 days | 150 | 222 | 228 [95.4, 348] |
+| ✅ | young_queens | 731 of 731 days | 150 | 0 | 0 [0, 24] |
+| ✅ | hibernating_queens | 731 of 731 days | 150 | 164.5 | 163 [67.9, 276.05] |
+| ✅ | energy_kJ | 731 of 731 days | 150 | 12867.1 | 13034.4 [8130.15, 17112.2] |
+| ✅ | pollen_g | 731 of 731 days | 150 | 225.504 | 227.409 [161.178, 296.443] |
+| ✅ | trips | 731 of 731 days | 150 | 2853.5 | 3142 [1204.5, 7868.8] |
+| ✅ | nectar_left_l | 731 of 731 days | 150 | 1.58382 | 1.57317 [1.37151, 1.66116] |
+| ✅ | pollen_left_kg | 731 of 731 days | 150 | 0.580337 | 0.580935 [0.553948, 0.591342] |
+| ✅ | ibm_colonies | 731 of 731 days | 150 | 9 | 9 [6, 10] |
+| ✅ | bee_agents | 731 of 731 days | 150 | 654 | 605.5 [472.45, 957.55] |
+
+<!-- section 08.2|Step 8: model branches the example farm does not use -->
+### Genetics
+
+Experiment `go/validation/experiments/step8_genetics.xml`: example farm, full model, 730 days, with the parameter file `step8_genetics_Parameters.csv`: SexLocus? = true (diploid males), UnlimitedMales? = false (a queen without a male dies). Both run with StopExtinct? = false. The table shows day 150.
+
+100 runs each.
+
+| | Metric | Days inside the band | Example day | gobees median | NetLogo median [5-95 %] |
+| --- | --- | --- | ---: | ---: | --- |
+| ✅ | colonies | 731 of 731 days | 150 | 33 | 34 [25, 42.05] |
+| ✅ | dead_colonies | 731 of 731 days | 150 | 98 | 100 [86, 115] |
+| ✅ | colonies_founded | 731 of 731 days | 150 | 132 | 133 [117.95, 150] |
+| ✅ | eggs | 731 of 731 days | 150 | 264 | 264 [107.4, 444.6] |
+| ✅ | larvae | 731 of 731 days | 150 | 480 | 444 [239.4, 648.6] |
+| ✅ | pupae | 731 of 731 days | 150 | 522 | 516 [323.4, 756] |
+| ✅ | workers | 731 of 731 days | 150 | 444 | 426 [215.4, 672] |
+| ✅ | males | 731 of 731 days | 150 | 168 | 180 [84, 324] |
+| ✅ | young_queens | 731 of 731 days | 150 | 0 | 0 [0, 24] |
+| ✅ | hibernating_queens | 731 of 731 days | 150 | 104 | 115 [41.65, 198] |
+| ✅ | energy_kJ | 731 of 731 days | 150 | 10604.7 | 10419.4 [6099.56, 15256.4] |
+| ✅ | pollen_g | 731 of 731 days | 150 | 181.039 | 189.35 [126.253, 258.814] |
+| ✅ | trips | 731 of 731 days | 150 | 3443.5 | 2550 [974.5, 5872.6] |
+| ✅ | nectar_left_l | 731 of 731 days | 150 | 1.56207 | 1.59739 [1.41503, 1.67674] |
+| ✅ | pollen_left_kg | 731 of 731 days | 150 | 0.578132 | 0.58262 [0.568469, 0.591059] |
+| ✅ | diploid_males | 731 of 731 days | 150 | 0 | 0 [0, 0] |
+
+<!-- section 08.3|Step 8: model branches the example farm does not use -->
+### Several species
+
+Experiment `go/validation/experiments/step8_species.xml`: example farm, full model, 730 days, with the parameter file `step8_species_Parameters.csv`: all 7 species, 150 queens of each Bombus species and 100 Psithyrus queens. Both run with StopExtinct? = false. The table shows day 150.
+
+100 runs each.
+
+| | Metric | Days inside the band | Example day | gobees median | NetLogo median [5-95 %] |
+| --- | --- | --- | ---: | ---: | --- |
+| ✅ | colonies | 731 of 731 days | 150 | 88 | 91 [72.95, 104.05] |
+| ✅ | dead_colonies | 731 of 731 days | 150 | 125 | 127 [109, 140.1] |
+| ✅ | colonies_founded | 731 of 731 days | 150 | 210.5 | 216 [192.95, 236.15] |
+| ✅ | eggs | 731 of 731 days | 150 | 955 | 975 [642.3, 1471.05] |
+| ✅ | larvae | 731 of 731 days | 150 | 733 | 747.5 [528.4, 1021.55] |
+| ✅ | pupae | 731 of 731 days | 150 | 500 | 530.5 [348.65, 722.2] |
+| ✅ | workers | 731 of 731 days | 150 | 387.5 | 380.5 [198.7, 653.15] |
+| ✅ | males | 731 of 731 days | 150 | 101 | 94 [11.4, 205.2] |
+| ✅ | young_queens | 731 of 731 days | 150 | 0 | 0 [0, 12] |
+| ✅ | hibernating_queens | 731 of 731 days | 150 | 125.5 | 136 [91, 207.3] |
+| ✅ | energy_kJ | 731 of 731 days | 150 | 9732.52 | 10540.3 [7696.77, 14080.6] |
+| ✅ | pollen_g | 731 of 731 days | 150 | 179.32 | 191.311 [140.504, 246.483] |
+| ✅ | trips | 731 of 731 days | 150 | 3592.5 | 3808.5 [1999.85, 6422.65] |
+| ✅ | nectar_left_l | 731 of 731 days | 150 | 1.49995 | 1.50294 [1.38031, 1.59056] |
+| ✅ | pollen_left_kg | 731 of 731 days | 150 | 0.575796 | 0.575968 [0.560609, 0.584244] |
+| ✅ | colonies_B_terrestris | 731 of 731 days | 150 | 11 | 12 [7, 17.05] |
+| ✅ | colonies_B_pascuorum | 731 of 731 days | 150 | 20 | 19 [12.95, 26.05] |
+| ✅ | colonies_B_lapidarius | 731 of 731 days | 150 | 14.5 | 15 [9, 21] |
+| ✅ | colonies_B_hortorum | 731 of 731 days | 150 | 16 | 18 [11.9, 24] |
+| ✅ | colonies_B_pratorum | 731 of 731 days | 150 | 13 | 12 [7, 18] |
+| ✅ | colonies_B_hypnorum | 731 of 731 days | 150 | 13 | 13 [8.95, 19] |
+| ✅ | psithyrus | 731 of 731 days | 150 | 501.5 | 469.5 [220.45, 969.95] |
+
+<!-- section 08.4|Step 8: model branches the example farm does not use -->
+### Weather and foraging mortality
+
+Experiment `go/validation/experiments/step8_weather.xml`: example farm, full model, 730 days, with the parameter file `step8_weather_Parameters.csv`: Weather = "foragingHoursExample" (foraging hours per day of the year), ForagingMortalityModel = "low". Both run with StopExtinct? = false. The table shows day 150.
+
+100 runs each.
+
+| | Metric | Days inside the band | Example day | gobees median | NetLogo median [5-95 %] |
+| --- | --- | --- | ---: | ---: | --- |
+| ✅ | colonies | 731 of 731 days | 150 | 70 | 71 [53, 86.15] |
+| ✅ | dead_colonies | 731 of 731 days | 150 | 157 | 161 [137, 180.1] |
+| ✅ | colonies_founded | 731 of 731 days | 150 | 229 | 229.5 [211, 249] |
+| ✅ | eggs | 731 of 731 days | 150 | 744 | 744 [528, 1104] |
+| ✅ | larvae | 731 of 731 days | 150 | 732 | 696 [383.4, 1092] |
+| ✅ | pupae | 731 of 731 days | 150 | 864 | 852 [455.4, 1213.8] |
+| ✅ | workers | 731 of 731 days | 150 | 816 | 792 [395.4, 1237.2] |
+| ✅ | males | 731 of 731 days | 150 | 312 | 300 [143.4, 492] |
+| ✅ | young_queens | 731 of 731 days | 150 | 0 | 12 [0, 36] |
+| ✅ | hibernating_queens | 731 of 731 days | 150 | 290.5 | 290.5 [175.8, 418.9] |
+| ✅ | energy_kJ | 731 of 731 days | 150 | 19279.8 | 18981.9 [11833.5, 27610.5] |
+| ✅ | pollen_g | 731 of 731 days | 150 | 371.955 | 367.896 [233.864, 500.635] |
+| ✅ | trips | 731 of 731 days | 150 | 4021 | 3654.5 [2088.2, 6027.55] |
+| ✅ | nectar_left_l | 731 of 731 days | 150 | 1.53946 | 1.55157 [1.44853, 1.62441] |
+| ✅ | pollen_left_kg | 731 of 731 days | 150 | 0.587876 | 0.588463 [0.580944, 0.592876] |
+| ✅ | foraging_period_s | 731 of 731 days | 150 | 6120 | 6120 [6120, 6120] |
+
+<!-- section 08.5|Step 8: model branches the example farm does not use -->
+### Other settings
+
+Experiment `go/validation/experiments/step8_settings.xml`: example farm, full model, 730 days, with the parameter file `step8_settings_Parameters.csv`: WinterMortality?, MergeHedges?, MinSizeFoodSources?, RemoveEmptyFoodSources?, KeepDeadColonies? = false, MaxHibernatingQueens = 150 (the limit takes effect on every 1 January, also on the first day). Both run with StopExtinct? = false. The table shows day 150.
+
+100 runs each.
+
+| | Metric | Days inside the band | Example day | gobees median | NetLogo median [5-95 %] |
+| --- | --- | --- | ---: | ---: | --- |
+| ✅ | colonies | 731 of 731 days | 150 | 6 | 7 [3, 10.05] |
+| ✅ | dead_colonies | 731 of 731 days | 150 | 76 | 77 [67, 86] |
+| ✅ | colonies_founded | 731 of 731 days | 150 | 83.5 | 84 [74.9, 92.1] |
+| ✅ | eggs | 731 of 731 days | 150 | 48 | 48 [12, 132] |
+| ✅ | larvae | 731 of 731 days | 150 | 48 | 48 [12, 132] |
+| ✅ | pupae | 731 of 731 days | 150 | 36 | 36 [0, 108] |
+| ✅ | workers | 731 of 731 days | 150 | 12 | 24 [0, 72.6] |
+| ✅ | males | 731 of 731 days | 150 | 0 | 0 [0, 24.6] |
+| ✅ | young_queens | 731 of 731 days | 150 | 0 | 0 [0, 0] |
+| ✅ | hibernating_queens | 731 of 731 days | 150 | 2 | 2 [0, 15] |
+| ✅ | energy_kJ | 731 of 731 days | 150 | 469.697 | 440.935 [111.035, 1403.53] |
+| ✅ | pollen_g | 731 of 731 days | 150 | 8.05129 | 8.90098 [2.37436, 19.4504] |
+| ✅ | trips | 731 of 731 days | 150 | 204 | 137.5 [8.95, 1045.25] |
+| ✅ | nectar_left_l | 731 of 731 days | 150 | 1.92943 | 1.93053 [1.90028, 1.93845] |
+| ✅ | pollen_left_kg | 731 of 731 days | 150 | 0.671871 | 0.671832 [0.669282, 0.672199] |
+| ✅ | foodsources | 731 of 731 days | 150 | 1826 | 1826 [1826, 1826] |
+| ✅ | queens_removed | 731 of 731 days | 150 | 350 | 350 [350, 350] |
+
