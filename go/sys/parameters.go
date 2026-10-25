@@ -20,8 +20,9 @@ import (
 
 // Parameters derives the globals of ParametersProc from the parameters [INIT-05].
 //
-// The hard-coded constants [PAR-03] are in params.Constants. Display-only values,
-// output variables [PAR-08] and the check loop [PAR-09] are not translated.
+// The hard-coded constants [PAR-03] are in params.Constants. The output variables [PAR-08] are set where they
+// live: PopulationSizeDay365List starts empty in globals.Counters, Survived? = 1 in Extinction.Initialize.
+// Display-only values and the check loop [PAR-09] are not translated.
 //
 // NetLogo: ParametersProc.
 type Parameters struct {

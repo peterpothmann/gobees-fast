@@ -73,7 +73,7 @@ func step7Metrics(w *ecs.World) map[string]float64 {
 
 func TestValidationStep7AgainstNetLogo(t *testing.T) {
 	// Experiment go/validation/experiments/step7.xml: the full model (NetLogo Go, gobees model.Default) over 3 years
-	// on the example farm. NetLogo runs with StopExtinct? = false, gobees has no extinction stop yet [GO-20].
+	// on the example farm. Both run with StopExtinct? = false [GO-20].
 	if testing.Short() {
 		t.Skip("100 runs of 1095 days")
 	}
@@ -96,6 +96,7 @@ func TestValidationStep7AgainstNetLogo(t *testing.T) {
 	for run := 1; run <= runs; run++ {
 		p := exampleFarm(t, float64(run))
 		p.Termination.MaxTicks = steps
+		p.File.StopExtinct = false // as the experiment [GO-20]
 		a := Default(p, nil)
 		a.Initialize()
 		record(0, step7Metrics(a.World))
@@ -143,7 +144,7 @@ func TestValidationStep7AgainstNetLogo(t *testing.T) {
 	err = validation.WriteReport("Step 7: the full model over 3 years",
 		"Experiment `go/validation/experiments/step7.xml`: example farm, 500 B. terrestris queens, 1095 days, the "+
 			"full model (NetLogo `Go`, gobees `model.Default`) with the year cycle: young queens leave the nest and "+
-			"hibernate, the season ends, the queens emerge again. NetLogo runs with StopExtinct? = false. Compared "+
+			"hibernate, the season ends, the queens emerge again. Both run with StopExtinct? = false. Compared "+
 			"at every step: the gobees median must lie in the NetLogo 5-95 % band. The table shows day 515 (day 150 "+
 			"of year 2).",
 		runs, rows)

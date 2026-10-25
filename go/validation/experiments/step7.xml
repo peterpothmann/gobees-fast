@@ -6,9 +6,9 @@
   the males die, the queens emerge again in the next spring. Compared per day: colonies, brood, adults, hibernating
   queens, stores, foraging trips, and the nectar and pollen left in the landscape after foraging.
 
-  The go command is NetLogo's Go, unchanged. Setup sets StopExtinct? to false after reading the parameter file:
-  gobees does not translate the extinction stop yet [GO-20], and a run that stops early would leave out its days
-  from the quantiles. An extinct run then simply records zeros, in both models.
+  The go command is NetLogo's Go, unchanged. Setup sets StopExtinct? to false after reading the parameter file, and
+  gobees does the same [GO-20]: a run that stops early would leave out its days from the quantiles. An extinct run
+  then simply records zeros, in both models.
   Badgers (N_Badgers = 0) and the crop rotation (CropRotationListAsString empty) do not run with the example farm.
   Kept outside the .nlogo, so that the model file stays unchanged. Metric names in scripts/aggregate_netlogo.py (step7).
 -->
