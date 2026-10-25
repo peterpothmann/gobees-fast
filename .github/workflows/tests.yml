@@ -104,6 +104,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "The report did not change."
           else
-            git commit -m "Update validation report"
+            git commit -m "Update validation report" [skip ci]
             git push origin HEAD:${{ github.head_ref }}
           fi
