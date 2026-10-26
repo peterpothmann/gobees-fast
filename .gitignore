@@ -8,3 +8,5 @@ test-results.xml
 data-model.md
 # lock file of the comparison report while a test writes it
 validation-report.md.lock
+# daily output of go run . -o
+go/daily_output.csv
