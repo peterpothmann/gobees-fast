@@ -10,3 +10,8 @@ data-model.md
 validation-report.md.lock
 # daily output of go run . -o
 go/daily_output.csv
+# local benchmark runs (go/benchmark/README.md; the table is covered by *_netlogo.csv)
+benchmark_netlogo_console.txt
+benchmark-report-local.md
+# daily output of go run . -o
+go/daily_output.csv

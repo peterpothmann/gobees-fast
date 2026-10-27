@@ -1,0 +1,123 @@
+# Run time of gobees and NetLogo on the example farm (go/benchmark/README.md). Runs only in pull requests with the
+# label "benchmark": when the label is added, and on every push to the pull request while it has the label.
+#
+# NetLogo 5.3.1 and gobees run one after the other on the same runner, with the same seeds, days and number of runs
+# at the same time. The workflow commits the report go/benchmark/benchmark-report.md to the branch of the pull
+# request, so that a squash merge brings it to main, and adds it to the summary of the run.
+name: Benchmark
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+
+concurrency:
+  group: benchmark-${{ github.head_ref }}
+  cancel-in-progress: true
+
+env:
+  NETLOGO_URL: https://downloads.netlogo.org/5.3.1/NetLogo-5.3.1-64.tgz
+  NETLOGO_SHA256: 07a626e486606f3d92fd39f7986641fb3f6bb8a00828f583b3b1804446a1c87c
+  # runs at the same time, in both models (a runner of a private repository has 2 cores)
+  BENCHMARK_THREADS: 2
+
+jobs:
+  benchmark:
+    # On "labeled" only when the added label is "benchmark", not when another label is added to such a pull request.
+    if: >-
+      contains(github.event.pull_request.labels.*.name, 'benchmark') &&
+      (github.event.action != 'labeled' || github.event.label.name == 'benchmark')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # to commit the report to the branch of the pull request
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go/go.mod
+          cache-dependency-path: go/go.sum
+
+      # The same Java as in the local validation runs (go/validation/README.md). Newer than the Java 8 shipped with
+      # NetLogo 5.3.1, which favours NetLogo, if anything.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Cache NetLogo
+        id: cache-netlogo
+        uses: actions/cache@v4
+        with:
+          path: ~/netlogo
+          key: netlogo-${{ env.NETLOGO_SHA256 }}
+
+      - name: Download NetLogo
+        if: steps.cache-netlogo.outputs.cache-hit != 'true'
+        run: |
+          curl -sSfL -o "$RUNNER_TEMP/netlogo.tgz" "$NETLOGO_URL"
+          echo "$NETLOGO_SHA256  $RUNNER_TEMP/netlogo.tgz" | sha256sum -c
+          mkdir -p ~/netlogo
+          tar xzf "$RUNNER_TEMP/netlogo.tgz" -C ~/netlogo
+
+      # Compiled before NetLogo runs, so that nothing else runs on the runner while NetLogo is timed.
+      - name: Build gobees
+        working-directory: go
+        run: go test -c -o "$RUNNER_TEMP/benchmark.test" ./benchmark
+
+      - name: Machine
+        run: lscpu
+
+      - name: Run NetLogo
+        run: bash go/benchmark/run_netlogo.sh ~/netlogo/netlogo-5.3.1-64 "$BENCHMARK_THREADS" "$RUNNER_TEMP/netlogo_table.csv" "$RUNNER_TEMP/netlogo_console.txt"
+
+      - name: Run gobees and write the report
+        working-directory: go/benchmark
+        env:
+          BENCHMARK_NETLOGO_TABLE: ${{ runner.temp }}/netlogo_table.csv
+          BENCHMARK_NETLOGO_CONSOLE: ${{ runner.temp }}/netlogo_console.txt
+          BENCHMARK_REPORT: ${{ github.workspace }}/go/benchmark/benchmark-report.md
+        run: |
+          export BENCHMARK_JAVA="$(java -version 2>&1 | head -n 1)"
+          "$RUNNER_TEMP/benchmark.test" -test.run '^TestCompareWithNetLogo$' -test.count 1 -test.v -test.timeout 20m
+
+      - name: Summary
+        if: always()
+        run: |
+          if [ -f go/benchmark/benchmark-report.md ]; then
+            cat go/benchmark/benchmark-report.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No benchmark report was written." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark
+          path: |
+            go/benchmark/benchmark-report.md
+            ${{ runner.temp }}/netlogo_table.csv
+            ${{ runner.temp }}/netlogo_console.txt
+          if-no-files-found: ignore
+
+      # Only in a pull request from this repository. A commit pushed with the GITHUB_TOKEN does not start a new
+      # workflow run. The Tests workflow may push its report to the same branch at the same time, so the push is
+      # retried on top of the newest state of the branch.
+      - name: Commit the report to the pull request
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add go/benchmark/benchmark-report.md
+          if git diff --cached --quiet; then
+            echo "The report did not change."
+            exit 0
+          fi
+          git commit -m "Update benchmark report [skip ci]"
+          for attempt in 1 2 3; do
+            git pull --rebase origin ${{ github.head_ref }} && git push origin HEAD:${{ github.head_ref }} && exit 0
+            sleep 10
+          done
+          exit 1

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<!DOCTYPE experiments SYSTEM "behaviorspace.dtd">
+<!--
+  Run time of NetLogo on the example farm, compared with gobees (see go/benchmark/README.md).
+  One run per seed, one year each. The setup commands time NetLogo's Setup and print the time with the run number;
+  the table records the time of the days (timer, reset after the setup) and the colonies founded, once at the end of
+  the run (runMetricsEveryStep false: no output during the run). StopExtinct? is false as in the validation, so that
+  every run simulates all days.
+  The GUI switches of the example farm are turned off after Setup (Setup reads them from the parameter file):
+  gobees has no GUI. Among them ShowCohorts? ([GO-19] DrawCohortsProc) and ShowPlots? ([OUT-03]) run every day.
+  Kept outside the .nlogo, so that the model file stays unchanged. Run with run_netlogo.sh.
+-->
+<experiments>
+  <experiment name="benchmark" repetitions="1" runMetricsEveryStep="false">
+    <setup>reset-timer
+Setup
+print (word "gobees-benchmark setup " behaviorspace-run-number " " timer)
+set StopExtinct? false
+set ShowCohorts? false
+set ShowDeadCols? false
+set ShowFoodsources? false
+set ShowGrid? false
+set ShowInspectedColony? false
+set ShowMasterpatchesOnly? false
+set ShowNests? false
+set ShowPlots? false
+set ShowQueens? false
+set ShowSearchingQueens? false
+set ShowWeather? false
+reset-timer</setup>
+    <go>Go</go>
+    <timeLimit steps="365"/>
+    <metric>timer</metric>
+    <metric>TotalColoniesEverProduced</metric>
+    <steppedValueSet variable="RAND_SEED" first="1" step="1" last="6"/>
+  </experiment>
+</experiments>
