@@ -3,6 +3,7 @@ module gobees
 go 1.26.5
 
 require (
+	github.com/alecthomas/kong v1.14.0
 	github.com/mlange-42/ark v0.8.3
 	github.com/mlange-42/ark-tools v0.3.1
 	gonum.org/v1/plot v0.16.0

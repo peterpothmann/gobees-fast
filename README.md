@@ -44,17 +44,19 @@ The reference is written in NetLogo 5.3.1.
 ## Repository layout
 
 
-| Folder       | Content                                                         |
-| ------------ | --------------------------------------------------------------- |
-| `go/model`   | system order of setup and one simulated day                     |
-| `go/sys`     | systems, one per NetLogo procedure                              |
-| `go/comp`    | components of the entities (bees, colonies, foodsources, ...)   |
-| `go/globals` | global state of the model                                       |
-| `go/params`  | parameters and the reader for NetLogo parameter files           |
-| `go/util`    | functions that mirror NetLogo reporters                         |
-| `go/enum`    | castes, stages and activities as Go constants                   |
-| `netlogo`    | the annotated NetLogo model and its input files                 |
-| `trans`      | findings on the NetLogo code and the validation against NetLogo |
+| Folder         | Content                                                         |
+| -------------- | --------------------------------------------------------------- |
+| `go/model`     | system order of setup and one simulated day                     |
+| `go/sys`       | systems, one per NetLogo procedure                              |
+| `go/comp`      | components of the entities (bees, colonies, foodsources, ...)   |
+| `go/globals`   | global state of the model                                       |
+| `go/params`    | parameters and the reader for NetLogo parameter files           |
+| `go/util`      | functions that mirror NetLogo reporters                         |
+| `go/obs`       | observers of the model output                              |
+| `go/benchmark` | run time of gobees and NetLogo                                  |
+| `go/enum`      | castes, stages and activities as Go constants                   |
+| `netlogo`      | the annotated NetLogo model and its input files                 |
+| `trans`        | findings on the NetLogo code and the validation against NetLogo |
 
 The layout follows [beecs](https://github.com/mlange-42/beecs).
 
@@ -69,6 +71,14 @@ go run .
 
 This runs the example farm (`netlogo/_SYSTEM_Example_Farm_Parameters.csv`) with the parts translated so far and prints a short summary. To use a custom parameter file, edit the paths in the Go source code.
 
+The daily totals of `OutputDailyProc` (colonies, queens, males, mean weights, ...) can be written to a tab-separated file. The CSV reporter of ark-tools adds one row at the end of every tick. Its first column `t` counts from 0, the column `ticks` holds the NetLogo ticks (1 on the first day). The other column names are the NetLogo names.
+
+```shell
+go run . -o                     # writes go/daily_output.csv
+go run . -f path/to/output.csv  # writes to any path, folders are created
+go run . --help                 # all flags
+```
+
 Tests:
 
 ```shell
@@ -82,6 +92,10 @@ go test -short ./...         # without the comparison with NetLogo
 Single runs of gobees and NetLogo cannot be compared, because NetLogo's random number sequence cannot be reproduced in Go. Instead, 100 NetLogo runs give quantiles per day for each compared quantity, and a Go test requires the median of 100 gobees runs to lie within the NetLogo 5–95 % band. The NetLogo results are embedded in the repository, so NetLogo does not have to be installed to run the tests.
 
 The CI runs all tests on every pull request and on every push to `main`. In a pull request it commits the comparison report [go/validation/validation-report.md](go/validation/validation-report.md), with one plot per experiment, to the branch. Details on the experiments: [go/validation/README.md](go/validation/README.md).
+
+## Benchmarks
+
+In pull requests with the label `benchmark`, the CI runs the example farm in NetLogo 5.3.1 and in gobees on the same runner, with the same seeds and days, and times the setup and the simulated days of each run. It commits the report [go/benchmark/benchmark-report.md](go/benchmark/benchmark-report.md) to the branch. How the comparison is kept fair: [go/benchmark/README.md](go/benchmark/README.md).
 
 ## References
 

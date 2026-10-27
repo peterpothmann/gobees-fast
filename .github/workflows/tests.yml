@@ -95,7 +95,8 @@ jobs:
 
       # Only in a pull request from this repository and only if all tests passed. A commit pushed with the
       # GITHUB_TOKEN does not start a new workflow run. The gobees runs use fixed seeds, so the report changes only
-      # when the results change, and only then a commit is made.
+      # when the results change, and only then a commit is made. The Benchmark workflow may push its report to the
+      # same branch at the same time, so the push is retried on top of the newest state of the branch.
       - name: Commit the report to the pull request
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         working-directory: .
@@ -106,7 +107,11 @@ jobs:
           git add -A go/validation/plots
           if git diff --cached --quiet; then
             echo "The report did not change."
-          else
-            git commit -m "Update validation report and plots [skip ci]"
-            git push origin HEAD:${{ github.head_ref }}
+            exit 0
           fi
+          git commit -m "Update validation report and plots [skip ci]"
+          for attempt in 1 2 3; do
+            git pull --rebase origin ${{ github.head_ref }} && git push origin HEAD:${{ github.head_ref }} && exit 0
+            sleep 10
+          done
+          exit 1
