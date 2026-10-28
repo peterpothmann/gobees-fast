@@ -69,7 +69,16 @@ cd go
 go run .
 ```
 
-This runs the example farm (`netlogo/_SYSTEM_Example_Farm_Parameters.csv`) with the parts translated so far and prints a short summary. To use a custom parameter file, edit the paths in the Go source code.
+This runs the example farm (`netlogo/_SYSTEM_Example_Farm_Parameters.csv`) for 365 days and prints a short summary.
+
+Other scenarios use the NetLogo input files. The parameter file names the species, flower species and habitat files. The map gives the name of the foodsources file (`X.png` → `X_Foodsources.txt`). As in NetLogo, these names are relative to one folder (`--dir`, default `../netlogo`, the folder of the `.nlogo`). The parameter file itself can lie anywhere.
+
+```shell
+go run . -p ../netlogo/_SYSTEM_Sussex1_Parameters.csv -m _SYSTEM_Sussex1.png   # Sussex instead of the example farm
+go run . -p my_Parameters.csv -d path/to/inputs -s 3 --days 730                # own files, seed 3, 2 years
+```
+
+Unlike NetLogo, a missing parameter file is an error. NetLogo loads `_SYSTEM_Parameters.csv` instead.
 
 The daily totals of `OutputDailyProc` (colonies, queens, males, mean weights, ...) can be written to a tab-separated file. The CSV reporter of ark-tools adds one row at the end of every tick. Its first column `t` counts from 0, the column `ticks` holds the NetLogo ticks (1 on the first day). The other column names are the NetLogo names.
 
