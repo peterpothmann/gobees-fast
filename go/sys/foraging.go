@@ -433,6 +433,7 @@ func (f *forager) Foraging_costsAndChoiceProc(w *ecs.World, e ecs.Entity) bool {
 		survivalChance := math.Pow(survivalPerSecond, tripDuration_s)
 		mortalityRisk := 1 - survivalChance
 		if f.rng.Float64() < mortalityRisk {
+			f.death.counters.TotalForagersEverDiedForaging += b.Number // output only, not in NetLogo
 			f.death.DieProc(w, e, "foraging: empty")
 			return false
 		}
@@ -462,6 +463,7 @@ func (f *forager) Foraging_costsAndChoiceProc(w *ecs.World, e ecs.Entity) bool {
 		survivalChance := math.Pow(survivalPerSecond, tripDuration_s)
 		mortalityRisk := 1 - survivalChance
 		if f.rng.Float64() < mortalityRisk {
+			f.death.counters.TotalForagersEverDiedForaging += b.Number // output only, not in NetLogo
 			f.death.DieProc(w, e, "foraging: N or P forager")
 			return false
 		}
