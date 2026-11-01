@@ -27,16 +27,13 @@ type Badger struct{}
 //
 // NetLogo: foodsources-own. Not translated: colorMemo (GUI), farmland? (never read, finding 17, see trans/netlogo-findings.md#finding-17),
 // stewardshipSpeciesList (GUI), perimeter_m (GUI), cso_area_m2 (never set), flowerSpeciesList (only needed to
-// create the layers). SIMPLIFY: Id_Beescout, PatchInfo and Occurrence are not read by model procedures.
+// create the layers), and the never read patchInfo, occurrence, flowerSpecies and relativeAbundance (removed in
+// step F3). Id_Beescout is read only by an error message.
 type Foodsource struct {
 	Id_Beescout                   float64 // column 1 of the foodsources file
 	PatchType                     string  // habitat type, e.g. "Hedgerow"
 	Area_sqm                      float64 // area of the whole flower patch [m2]
 	Radius_m                      float64 // radius of a circle with this area [m]
-	PatchInfo                     string  // raw rest of the line in the foodsources file
-	Occurrence                    string  // "Patch" or a stewardship option, e.g. "Margin" [LAYR-04]
-	FlowerSpecies                 string  // item 0 of flowerSpecies_relativeAbundanceList
-	RelativeAbundance             float64 // item 1 of flowerSpecies_relativeAbundanceList, without AbundanceBoost (finding 10, see trans/netlogo-findings.md#finding-10)
 	NectarMax_myl                 float64
 	PollenMax_g                   float64
 	NectarFlowerVolume_myl        float64
@@ -50,10 +47,8 @@ type Foodsource struct {
 
 // FoodsourceState holds the changing data of a foodsource layer.
 type FoodsourceState struct {
-	Nectar_myl        float64
-	Pollen_g          float64
-	CumulNectarVisits float64
-	CumulPollenVisits float64
+	Nectar_myl float64
+	Pollen_g   float64
 }
 
 // Layer links a foodsource to the other foodsources of its flower patch.

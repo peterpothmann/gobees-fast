@@ -33,7 +33,7 @@ func (s *Extinction) Initialize(w *ecs.World) {
 	s.termParams = ecs.GetResource[params.Termination](w)
 	s.file = ecs.GetResource[params.ParameterFile](w)
 	s.ticks = ecs.GetResource[globals.Ticks](w)
-	s.extinction = globals.Extinction{Survived: 1} // [PAR-08]
+	s.extinction = globals.Extinction{} // Survived? [PAR-08]: never read, removed in step F3
 	ecs.AddResource(w, &s.extinction)
 	s.colonyFilter = ecs.NewFilter1[comp.Colony](w)
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
@@ -51,7 +51,6 @@ func (s *Extinction) Update(w *ecs.World) {
 		if s.extinction.TimeToExtinction <= 0 {
 			s.extinction.TimeToExtinction = float64(s.ticks.Ticks)
 		}
-		s.extinction.Survived = 0
 		if s.file.StopExtinct {
 			s.termRes.Terminate = true
 		}

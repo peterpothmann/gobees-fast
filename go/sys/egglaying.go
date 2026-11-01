@@ -134,9 +134,7 @@ func (l *eggLayer) EggsParameterSettingProc(e ecs.Entity, beesInCohort float64) 
 	b.AdultAge = 0
 	b.Brood = true
 	b.BroodAge = 0
-	dev.CumulTimeEgg_d = 0
 	dev.CumulTimeLarva_d = 0
-	dev.CumulTimePupa_d = 0
 	f.Cropvolume_myl = 0
 	f.PollenPellets_g = 0
 	f.CurrentFoodsource = ecs.Entity{}

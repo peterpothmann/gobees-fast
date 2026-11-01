@@ -14,19 +14,11 @@ type Counters struct {
 	ColonyDeathsEndSeason     float64 // [UCOL-11], read by [CHK-04]
 	ColonyDeathsNoBees        float64 // [UCOL-11], read by [CHK-04]
 
-	TotalAdultsEverProduced      float64 // [DEVP-02] to [DEVP-04], output only (BehaviorSpace)
-	TotalAdultMalesEverProduced  float64 // [DEVP-03], output only (BehaviorSpace)
 	TotalAdultQueensEverProduced float64 // [DEVP-04], output only (BehaviorSpace)
-	// QueensProducingColoniesList holds every colony in which a queen emerged, in the order of the first
-	// emergence [DEVP-04]. Never read. SIMPLIFY: not needed.
-	QueensProducingColoniesList []ecs.Entity
 
 	// TotalHibernatingQueensEverRemoved adds up the planned number of queens to kill on 1 January [SEAS-03], not
-	// the removed number. Output only. SIMPLIFY: not needed.
+	// the removed number. Output only, read by the NetLogo validation (step8_settings).
 	TotalHibernatingQueensEverRemoved float64
-	// PopulationSizeDay365List gets the number of bees on every 1 January [SEAS-03] (also on ticks 1). Output only.
-	// SIMPLIFY: not needed.
-	PopulationSizeDay365List []float64
 
 	// TotalForagersEverDiedForaging adds up the bees that died on a foraging trip [COST-01], [COST-02]. Not in
 	// NetLogo: output of gobees-fast (obs.DailyOutputExtended), read by no system.
@@ -47,7 +39,7 @@ type Daytime struct {
 }
 
 // DeadColony is the record of a dead colony: the colony's data at death, as NetLogo keeps it in deadCols-own,
-// plus colonyDeathDay [DIE-02]. Unlike deadCols it keeps SpeciesNameColony (finding 9, see
+// plus colonyDeathDay [DIE-02]. Unlike deadCols it keeps the species, SpeciesIDcolony (finding 9, see
 // trans/netlogo-findings.md#finding-9).
 type DeadColony struct {
 	Who            int64

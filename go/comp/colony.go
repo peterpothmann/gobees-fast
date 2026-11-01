@@ -9,10 +9,6 @@ import "github.com/mlange-42/ark/ecs"
 // Colony holds identity, phenology and flags of a colony.
 type Colony struct {
 	SpeciesIDcolony      ecs.Entity
-	SpeciesNameColony    string
-	ColonyFoundationDay  float64 // ticks
-	ColonyAge            float64
-	Queenright           bool    // queenright?
 	QueenProduction      bool    // queenProduction?
 	QueenProductionDate  float64 // NotSetHigh until set
 	SwitchPointDate      float64 // NotSetHigh until set
@@ -41,16 +37,12 @@ type ColonyStimuli struct {
 
 // ColonyCounts holds the numbers of bees, deaths and production of a colony.
 type ColonyCounts struct {
-	Colonysize              float64
-	ColonyWeight_mg         float64
 	LarvaWorkerRatio        float64
 	AllEggs                 float64
 	AllLarvae               float64
 	AllPupae                float64
 	AllAdults               float64
 	AllAdultWorkers         float64
-	AllAdultQueens          float64
-	AllAdultActiveQueens    float64
 	AllAdultMales           float64
 	BroodDeathBadger        float64
 	BroodDeathEndSeason     float64
@@ -62,20 +54,12 @@ type ColonyCounts struct {
 	LarvaDeathsWeight       float64
 	PupaDeathsIncubation    float64
 	TotalEggsProduced       float64
-	TotalLarvaeProduced     float64
-	TotalPupaeProduced      float64
 	TotalAdultsProduced     float64
-	TotalWorkersProduced    float64
-	TotalQueensProduced     float64
-	TotalMalesProduced      float64
 }
 
 // ColonyRange holds the foodsources within the foraging range of a colony [PRNG], [FRNG].
 type ColonyRange struct {
 	AllPatchesInRangeList                             []ecs.Entity // all foodsources (layers) in range, random order (finding 29)
-	PollenInFlowerAndRangeList                        []ecs.Entity
-	NectarInFlowerAndRangeList                        []ecs.Entity
-	AllSourcesInFlowerAndRangeList                    []ecs.Entity
 	MasterpatchesWithPollenlayersInFlowerAndRangeList []ecs.Entity
 	MasterpatchesWithNectarlayersInFlowerAndRangeList []ecs.Entity
 }

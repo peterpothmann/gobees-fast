@@ -176,10 +176,8 @@ func (f *forager) DetectionProbREP(patchWho ecs.Entity, xcol, ycol float64) floa
 		relevantDistance_m = 0
 	}
 	detProb := math.Pow(math.E, f.file.Lambda_detectProb*relevantDistance_m) // NetLogo: e ^ x
-	// [DET-02] SIMPLIFY: never true for the patches in the colony's lists
-	if relevantDistance_m > f.constants.ForagingRangeMax_m {
-		detProb = 0
-	}
+	// [DET-02] NetLogo sets detProb to 0 beyond ForagingRangeMax_m. Never true here: the colony's lists hold only
+	// masterpatches in range [PRNG] (removed in step F3).
 	// [DET-03]
 	return precision(detProb, 10)
 }
@@ -187,30 +185,26 @@ func (f *forager) DetectionProbREP(patchWho ecs.Entity, xcol, ycol float64) floa
 // Foraging_collectNectarPollenProc lets the bee e take a load from her foodsource [COLL].
 func (f *forager) Foraging_collectNectarPollenProc(e ecs.Entity) {
 	_, _, b, _, _, fo, _ := f.beeMap.Get(e)
-	// [COLL-01] SIMPLIFY: the activity is never expForagingP here
-	if b.Activity == activity.CollectPollen || b.Activity == activity.ExpForagingP {
+	// [COLL-01] NetLogo also checks for "expForagingP", which the activity never is here (removed in step F3)
+	if b.Activity == activity.CollectPollen {
 		_, _, state, _ := f.foodsourceMap.Get(fo.CurrentFoodsource)
 		if state.Pollen_g > 0 {
 			fo.PollenLoadSquadron_g = min(fo.PollenPellets_g*b.Number, state.Pollen_g)
 			b.Activity = activity.BringingPollen
-			memoNumber := b.Number
 			memoPollenLoad := fo.PollenLoadSquadron_g
-			state.Pollen_g = state.Pollen_g - memoPollenLoad
-			state.CumulPollenVisits = state.CumulPollenVisits + memoNumber
+			state.Pollen_g = state.Pollen_g - memoPollenLoad // cumulPollenVisits: never read, removed in step F3
 		} else {
 			b.Activity = activity.ReturningEmpty
 		}
 	}
-	// [COLL-02] SIMPLIFY: the activity is never expForagingN here
-	if b.Activity == activity.CollectNectar || b.Activity == activity.ExpForagingN {
+	// [COLL-02] NetLogo also checks for "expForagingN", which the activity never is here (removed in step F3)
+	if b.Activity == activity.CollectNectar {
 		_, fs, state, _ := f.foodsourceMap.Get(fo.CurrentFoodsource)
 		if state.Nectar_myl > 0 {
 			nectarRemoved := min(fo.Cropvolume_myl*b.Number, state.Nectar_myl)
 			fo.NectarLoadSquadron_kJ = nectarRemoved * f.constants.EnergySucrose_kJ_per_mymol * fs.NectarConcentration_mol_per_l
 			b.Activity = activity.BringingNectar
-			memoNumber := b.Number
-			state.Nectar_myl = state.Nectar_myl - nectarRemoved
-			state.CumulNectarVisits = state.CumulNectarVisits + memoNumber
+			state.Nectar_myl = state.Nectar_myl - nectarRemoved // cumulNectarVisits: never read, removed in step F3
 		} else {
 			b.Activity = activity.ReturningEmpty
 		}

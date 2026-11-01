@@ -18,14 +18,14 @@ import (
 // willowherb is American_willowherb: nectar_ml/flower 0.00035, concentration_mol/l 1.34, corollaDepth_mm 3.5,
 // intFlowerTime_s 0.6. nectarMax and pollenMax are chosen by hand.
 func willowherb() comp.Foodsource {
-	return comp.Foodsource{FlowerSpecies: "American_willowherb", NectarFlowerVolume_myl: 0.35,
+	return comp.Foodsource{NectarFlowerVolume_myl: 0.35,
 		NectarConcentration_mol_per_l: 1.34, CorollaDepth_mm: 3.5, InterFlowerTime_s: 0.6,
 		NectarMax_myl: 1000, PollenMax_g: 10}
 }
 
 // alsike is Alsike_clover: nectar_ml/flower 0.00046, concentration_mol/l 0.7, corollaDepth_mm 10, intFlowerTime_s 0.6.
 func alsike() comp.Foodsource {
-	return comp.Foodsource{FlowerSpecies: "Alsike_clover", NectarFlowerVolume_myl: 0.46,
+	return comp.Foodsource{NectarFlowerVolume_myl: 0.46,
 		NectarConcentration_mol_per_l: 0.7, CorollaDepth_mm: 10, InterFlowerTime_s: 0.6,
 		NectarMax_myl: 1000, PollenMax_g: 10}
 }
@@ -88,7 +88,8 @@ func TestDetectionProbREP(t *testing.T) {
 		{"edge 100 m away", 15, 0.6065306597},
 		{"colony inside the patch", 2, 1},
 		{"edge 750 m away", 80, 0.0235177459},
-		{"edge beyond 758 m", 90, 0},
+		// [DET-02] NetLogo gives 0 beyond ForagingRangeMax_m (758 m). The colony lists hold only masterpatches whose
+		// centre is in range [PRNG], so their edge is never beyond it (removed in step F3).
 	} {
 		p := aw.flowerPatch(tc.x, 0, 50, willowherb())[0]
 		if got := f.DetectionProbREP(p, 0, 0); math.Abs(got-tc.want) > 1e-10 {
@@ -203,8 +204,8 @@ func TestForagingTripPollen(t *testing.T) {
 	if math.Abs(b.PersonalTime_s-(412.2+165)) > 0.01 {
 		t.Errorf("personalTime_s %v, want about %v", b.PersonalTime_s, 412.2+165)
 	}
-	if st := aw.state(p); !almostEqual(st.Pollen_g, 1000-0.01206) || st.CumulPollenVisits != 1 {
-		t.Errorf("foodsource: %v g, %v visits", st.Pollen_g, st.CumulPollenVisits)
+	if st := aw.state(p); !almostEqual(st.Pollen_g, 1000-0.01206) {
+		t.Errorf("foodsource: %v g", st.Pollen_g)
 	}
 	if fo.PollenLoadSquadron_g != 0 || ecs.GetResource[globals.Totals](aw.w).TotalForagingTripsToday != 1 {
 		t.Errorf("load %v, trips %v", fo.PollenLoadSquadron_g, ecs.GetResource[globals.Totals](aw.w).TotalForagingTripsToday)
@@ -237,8 +238,8 @@ func TestForagingEmptiesFoodsource(t *testing.T) {
 	if !almostEqual(s.EnergyStore_kJ, want) {
 		t.Errorf("energy store %v kJ, want %v", s.EnergyStore_kJ, want)
 	}
-	if st := aw.state(p); st.Nectar_myl != 0 || st.CumulNectarVisits != 3 {
-		t.Errorf("foodsource: %v microlitres, %v visits; want 0, 3", st.Nectar_myl, st.CumulNectarVisits)
+	if st := aw.state(p); st.Nectar_myl != 0 {
+		t.Errorf("foodsource: %v microlitres, want 0", st.Nectar_myl)
 	}
 }
 
@@ -252,6 +253,7 @@ func TestForagingSearch(t *testing.T) {
 	bee := aw.worker(col, 1)
 	b, _, _, fo, _ := aw.bee(bee)
 	b.Activity = activity.NectarForaging
+	nectarBefore := [2]float64{aw.state(layers[0]).Nectar_myl, aw.state(layers[1]).Nectar_myl}
 
 	f.ForagingProc(aw.w, bee)
 
@@ -263,7 +265,7 @@ func TestForagingSearch(t *testing.T) {
 		t.Errorf("activity %v, want returningUnhappyN (novice)", b.Activity)
 	}
 	// [BLYR-03] willowherb: more energy per load and a shorter handling time than alsike
-	if aw.state(layers[0]).CumulNectarVisits != 1 || aw.state(layers[1]).CumulNectarVisits != 0 {
+	if aw.state(layers[0]).Nectar_myl >= nectarBefore[0] || aw.state(layers[1]).Nectar_myl != nectarBefore[1] {
 		t.Error("the bee did not collect at the best layer (willowherb)")
 	}
 }

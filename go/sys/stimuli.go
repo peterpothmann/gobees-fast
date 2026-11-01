@@ -19,7 +19,7 @@ func StimEgglayingREP(stores *comp.ColonyStores, counts *comp.ColonyCounts, sp *
 
 // StimNursingREP returns the nursing (incubation) stimulus of a colony [STNU]. sp is the colony's species.
 func StimNursingREP(stores *comp.ColonyStores, counts *comp.ColonyCounts, sp *comp.Species) float64 {
-	// [STNU-01] SIMPLIFY: NetLogo sets nursingStim to 0 twice.
+	// [STNU-01] NetLogo sets nursingStim to 0 twice, gobees-fast once.
 	nursingStim := 0.0
 	incubationRequiredToday_kJ := sp.DevQuotaIncubationToday_kJ * (counts.AllEggs + counts.AllLarvae + counts.AllPupae)
 	if incubationRequiredToday_kJ > stores.SummedIncubationToday_kJ {

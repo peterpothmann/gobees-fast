@@ -46,6 +46,7 @@ type DailyOutputExtended struct {
 	calendar     ecs.Resource[globals.Calendar]
 	bees         *ecs.Filter1[comp.Bee]
 	colonies     *ecs.Filter2[comp.Colony, comp.ColonyStores]
+	species      *ecs.Map1[comp.Species]
 	foodsources  *ecs.Filter1[comp.Foodsource]
 	stocks       *ecs.Filter1[comp.FoodsourceState]
 	badgers      *ecs.Filter1[comp.Badger]
@@ -62,6 +63,7 @@ func (o *DailyOutputExtended) Initialize(w *ecs.World) {
 	o.calendar = ecs.NewResource[globals.Calendar](w)
 	o.bees = ecs.NewFilter1[comp.Bee](w)
 	o.colonies = ecs.NewFilter2[comp.Colony, comp.ColonyStores](w)
+	o.species = ecs.NewMap1[comp.Species](w)
 	o.foodsources = ecs.NewFilter1[comp.Foodsource](w)
 	o.stocks = ecs.NewFilter1[comp.FoodsourceState](w)
 	o.badgers = ecs.NewFilter1[comp.Badger](w)
@@ -117,8 +119,9 @@ func (o *DailyOutputExtended) Values(w *ecs.World) []float64 {
 	for cq.Next() {
 		colony, stores := cq.Get()
 		colonies++
+		name := o.species.Get(colony.SpeciesIDcolony).Name
 		for i, s := range netLogoSpecies {
-			if colony.SpeciesNameColony == s {
+			if name == s {
 				perSpecies[i]++
 			}
 		}

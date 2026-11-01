@@ -396,8 +396,8 @@ func TestActivityLoopExampleFarm(t *testing.T) {
 		t.Error("no bee was ever active")
 	}
 	totals := ecs.GetResource[globals.Totals](a.World)
-	t.Logf("largest activity queue: %d bees. Day 200: %v adult workers, %v adult queens, %v adult males, brood %v/%v/%v",
-		maxQueue, totals.TotalAdultWorkers, totals.TotalAdultQueens, totals.TotalAdultMales,
+	t.Logf("largest activity queue: %d bees. Day 200: %v adult workers, %v adult males, brood %v/%v/%v",
+		maxQueue, totals.TotalAdultWorkers, totals.TotalAdultMales,
 		totals.TotalEggs, totals.TotalLarvae, totals.TotalPupae)
 }
 

@@ -37,8 +37,6 @@ type Totals struct {
 	TotalLarvae             float64
 	TotalPupae              float64
 	TotalAdultWorkers       float64
-	TotalAdultQueens        float64 // all adult queens, also without colony and hibernating
 	TotalAdultMales         float64
-	TotalAdults             float64 // all adults, also without colony and hibernating
 	TotalForagingTripsToday float64 // reset every morning, counted in ForagingProc (step 6)
 }

@@ -187,8 +187,8 @@ func TestNestSearchFoundsColonies(t *testing.T) {
 			t.Errorf("colony at %v outside the circle of the grassland", *cPos)
 		}
 		// [CCOL-04]
-		if !col.Queenright || col.QueenProduction || col.SwitchPointDate != params.NotSetHigh ||
-			col.ColonyFoundationDay != 10 || col.SpeciesIDcolony != ew.species || !almostEqual(stores.EnergyStore_kJ, 0.873) {
+		if col.QueenProduction || col.SwitchPointDate != params.NotSetHigh ||
+			col.SpeciesIDcolony != ew.species || !almostEqual(stores.EnergyStore_kJ, 0.873) {
 			t.Fatalf("colony %+v %+v", col, stores)
 		}
 	}
@@ -291,9 +291,6 @@ func TestPatchesInRangeAndFlowerLists(t *testing.T) {
 	}
 	// [FRNG-01]
 	checks := map[string][2][]ecs.Entity{
-		"pollen":         {r.PollenInFlowerAndRangeList, {a, d}},
-		"nectar":         {r.NectarInFlowerAndRangeList, {b, d}},
-		"all sources":    {r.AllSourcesInFlowerAndRangeList, {a, b, d}},
 		"pollen masters": {r.MasterpatchesWithPollenlayersInFlowerAndRangeList, {a, d}},
 		"nectar masters": {r.MasterpatchesWithNectarlayersInFlowerAndRangeList, {a, d}}, // b is a layer of a
 	}

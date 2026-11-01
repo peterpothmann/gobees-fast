@@ -24,6 +24,5 @@ type DailyOutput struct {
 // Extinction holds the output of the extinction check [GO-20]. Output only (BehaviorSpace).
 // SIMPLIFY: not needed for the model.
 type Extinction struct {
-	Survived         float64 // Survived?: 1 from Setup on [PAR-08], 0 once no colony and no bee is left
 	TimeToExtinction float64 // ticks of the first day without colonies and bees, 0 before
 }

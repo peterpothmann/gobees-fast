@@ -109,6 +109,20 @@ func TestMergeHedgesEquallyNearFieldIsRandom(t *testing.T) {
 	}
 }
 
+// testFlower returns the flower species of a layer of TestCreateLayersProc, from its values in the test table:
+// the foodsource does not store its flower species (removed in step F3).
+func testFlower(fs comp.Foodsource) string {
+	switch {
+	case fs.PatchType == "Scrub":
+		return "Scrub" // not split, NetLogo: flowerSpecies_relativeAbundanceList (list patchType 1)
+	case fs.StartDay == 100:
+		return "A"
+	case fs.NectarFlowerVolume_myl == 0:
+		return "C"
+	}
+	return "B"
+}
+
 func TestCreateLayersProc(t *testing.T) {
 	w := ecs.NewWorld()
 	who := &globals.WhoCounter{}
@@ -136,7 +150,7 @@ func TestCreateLayersProc(t *testing.T) {
 	query := ecs.NewFilter3[comp.Who, comp.Foodsource, comp.Layer](w).Query()
 	for query.Next() {
 		wh, fs, l := query.Get()
-		byKey[fs.PatchType+"/"+fs.FlowerSpecies] = testLayer{query.Entity(), wh.Who, *fs, *l}
+		byKey[fs.PatchType+"/"+testFlower(*fs)] = testLayer{query.Entity(), wh.Who, *fs, *l}
 	}
 	if len(byKey) != 4 {
 		t.Fatalf("got %d foodsources, want 4: %v", len(byKey), byKey)
@@ -147,10 +161,7 @@ func TestCreateLayersProc(t *testing.T) {
 	if a.fs.PollenMax_g != 2 || a.fs.NectarMax_myl != 200 || a.fs.NectarFlowerVolume_myl != 1 || a.fs.StartDay != 100 || a.fs.StopDay != 200 {
 		t.Errorf("layer A = %+v", a.fs)
 	}
-	// [LAYR-04] occurrence: "Patch" before ["Margin"], "Margin" after it
-	if a.fs.Occurrence != "Patch" || c.fs.Occurrence != "Margin" {
-		t.Errorf("occurrence A %q, C %q; want Patch, Margin", a.fs.Occurrence, c.fs.Occurrence)
-	}
+	// [LAYR-04] the stewardship option "Margin" gets no layer: 4 foodsources (checked above)
 	// [LAYR-06] C: nectar 0 below the limit, pollen 1 g kept
 	if c.fs.NectarMax_myl != 0 || c.fs.PollenMax_g != 1 {
 		t.Errorf("layer C nectar %v, pollen %v; want 0, 1", c.fs.NectarMax_myl, c.fs.PollenMax_g)
@@ -185,7 +196,7 @@ func TestCreateLayersProc(t *testing.T) {
 	})
 	for _, l := range []testLayer{a, c, crop} {
 		if !slices.Equal(l.l.LayersInPatchList, want) {
-			t.Errorf("%s/%s: layersInPatchList %v, want %v", l.fs.PatchType, l.fs.FlowerSpecies, l.l.LayersInPatchList, want)
+			t.Errorf("%s/%s: layersInPatchList %v, want %v", l.fs.PatchType, testFlower(l.fs), l.l.LayersInPatchList, want)
 		}
 	}
 	if !slices.Equal(scrub.l.LayersInPatchList, []ecs.Entity{scrub.e}) {
@@ -282,17 +293,12 @@ func TestCreateFoodsourcesExampleFarm(t *testing.T) {
 		// every layer points to a masterpatch of the same flower patch, i.e. same position and patch type
 		posMap := ecs.NewMap2[comp.Position, comp.Foodsource](w)
 		query := ecs.NewFilter3[comp.Position, comp.Foodsource, comp.Layer](w).Query()
-		n := 0
 		for query.Next() {
 			pos, fs, l := query.Get()
 			mpos, mfs := posMap.Get(l.MasterpatchID)
 			if *mpos != *pos || mfs.PatchType != fs.PatchType || mfs.Area_sqm != fs.Area_sqm {
-				t.Errorf("layer %s/%s points to masterpatch %s at %v", fs.PatchType, fs.FlowerSpecies, mfs.PatchType, *mpos)
+				t.Errorf("layer %s at %v points to masterpatch %s at %v", fs.PatchType, *pos, mfs.PatchType, *mpos)
 			}
-			n++
-		}
-		if n != landscape.TotalFoodSources {
-			t.Errorf("TotalFoodSources %d, counted %d", landscape.TotalFoodSources, n)
 		}
 	}
 	// Finding 21 (see trans/netlogo-findings.md#finding-21): NetLogo gave 36 masterpatches after Setup. gobees gives 36 with every seed: the random

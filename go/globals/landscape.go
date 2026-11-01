@@ -17,5 +17,4 @@ func (c *WhoCounter) Next() int64 {
 // Landscape holds the globals that CreateFoodsourcesProc [FSRC] sets.
 type Landscape struct {
 	Scaling_NLpatches_per_m float64 // NetLogo patches per metre, 1 / line 1 of the foodsources file, 8 decimals [FSRC-02]
-	TotalFoodSources        int     // output only [FSRC-13]
 }

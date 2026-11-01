@@ -36,7 +36,6 @@ type UpdateSeasonalEvents struct {
 
 	speciesFilter *ecs.Filter1[comp.Species]
 	beeFilter     *ecs.Filter1[comp.Bee]
-	fsFilter      *ecs.Filter1[comp.FoodsourceState]
 	speciesMap    *ecs.Map1[comp.Species]
 	beeMap        *ecs.Map1[comp.Bee]
 	countsMap     *ecs.Map1[comp.ColonyCounts]
@@ -52,7 +51,6 @@ func (s *UpdateSeasonalEvents) Initialize(w *ecs.World) {
 	s.death = newBeeDeath(w)
 	s.speciesFilter = ecs.NewFilter1[comp.Species](w)
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
-	s.fsFilter = ecs.NewFilter1[comp.FoodsourceState](w)
 	s.speciesMap = ecs.NewMap1[comp.Species](w)
 	s.beeMap = ecs.NewMap1[comp.Bee](w)
 	s.countsMap = ecs.NewMap1[comp.ColonyCounts](w)
@@ -92,13 +90,7 @@ func (s *UpdateSeasonalEvents) Update(w *ecs.World) {
 
 	// [SEAS-03]
 	if s.calendar.Day == 1 {
-		// output only
-		population := 0.0
-		query := s.beeFilter.Query()
-		for query.Next() {
-			population += query.Get().Number
-		}
-		s.counters.PopulationSizeDay365List = append(s.counters.PopulationSizeDay365List, population)
+		// populationSizeDay365List: output only, never read, removed in step F3
 
 		// the limit of hibernating queens, with TotalHibernatingQueens of the previous evening [OUT-01]
 		queensToKill := out.TotalHibernatingQueens - s.file.MaxHibernatingQueens
@@ -127,16 +119,7 @@ func (s *UpdateSeasonalEvents) Update(w *ecs.World) {
 			queensToKill -= s.beeMap.Get(e).Number
 			s.death.DieProc(w, e, "max. number of hibernating queens")
 		}
-
-		// visit counters: read only by the GUI and output files. ORDER: irrelevant.
-		if s.file.CumulVisitsOnlyLastYear {
-			fs := s.fsFilter.Query()
-			for fs.Next() {
-				state := fs.Get()
-				state.CumulNectarVisits = 0
-				state.CumulPollenVisits = 0
-			}
-		}
+		// reset of the visit counters with CumulVisitsOnlyLastYear?: the counters are never read, removed in step F3
 	}
 }
 

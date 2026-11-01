@@ -1,7 +1,6 @@
 package sys
 
 import (
-	"slices"
 	"testing"
 
 	"gobees/comp"
@@ -149,10 +148,6 @@ func TestSeasonalEventsHibernatingQueensLimit(t *testing.T) {
 	if cw.counters.TotalHibernatingQueensEverRemoved != 3 {
 		t.Errorf("TotalHibernatingQueensEverRemoved %v, want 3", cw.counters.TotalHibernatingQueensEverRemoved)
 	}
-	// output only: the number of bees before the queens were removed
-	if !slices.Equal(cw.counters.PopulationSizeDay365List, []float64{9}) {
-		t.Errorf("PopulationSizeDay365List %v, want [9]", cw.counters.PopulationSizeDay365List)
-	}
 }
 
 func TestSeasonalEventsHibernatingCohort(t *testing.T) {
@@ -168,23 +163,6 @@ func TestSeasonalEventsHibernatingCohort(t *testing.T) {
 	}
 	if cw.counters.TotalHibernatingQueensEverRemoved != 3 || cw.counters.TotalBeesEverDied != 10 {
 		t.Errorf("removed %v, died %v; want 3 and 10", cw.counters.TotalHibernatingQueensEverRemoved, cw.counters.TotalBeesEverDied)
-	}
-}
-
-func TestSeasonalEventsCumulVisits(t *testing.T) {
-	// [SEAS-03] the visit counters are reset on Day 1 with CumulVisitsOnlyLastYear?
-	for _, reset := range []bool{false, true} {
-		for _, day := range []float64{1, 2} {
-			cw, s, _, _ := seasWorld(t, day)
-			cw.file.CumulVisitsOnlyLastYear = reset
-			e := ecs.NewMap1[comp.FoodsourceState](cw.w).NewEntity(&comp.FoodsourceState{CumulNectarVisits: 4, CumulPollenVisits: 2})
-			s.Update(cw.w)
-			st := ecs.NewMap1[comp.FoodsourceState](cw.w).Get(e)
-			wantZero := reset && day == 1
-			if (st.CumulNectarVisits == 0) != wantZero || (st.CumulPollenVisits == 0) != wantZero {
-				t.Errorf("reset %v, day %v: visits %v/%v", reset, day, st.CumulNectarVisits, st.CumulPollenVisits)
-			}
-		}
 	}
 }
 

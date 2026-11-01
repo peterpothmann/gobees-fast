@@ -283,9 +283,6 @@ func TestDevelopmentLarvaePrecedence(t *testing.T) {
 			t.Errorf("%s: %v, want %v", tc.name, b.Stage, tc.want)
 		}
 	}
-	if _, _, n := bw.colony(col); n.TotalPupaeProduced != 2 {
-		t.Errorf("totalPupaeProduced %v, want 2", n.TotalPupaeProduced)
-	}
 }
 
 // layAndRaise lays one batch with a queen on day 200 and raises it with full food and slightly more than the
@@ -360,10 +357,10 @@ func TestDevelopmentWorkerTimeline(t *testing.T) {
 		t.Errorf("crop %v, glossa %v", f.Cropvolume_myl, f.GlossaLength_mm)
 	}
 	_, _, n := bw.colony(b.ColonyID)
-	if n.TotalAdultsProduced != 12 || n.TotalWorkersProduced != 12 || n.TotalLarvaeProduced != 12 || n.TotalPupaeProduced != 12 {
+	if n.TotalAdultsProduced != 12 {
 		t.Errorf("colony counters %+v", *n)
 	}
-	if bw.counters.TotalAdultsEverProduced != 12 || bw.counters.TotalBeesEverProduced != 12 {
+	if bw.counters.TotalBeesEverProduced != 12 {
 		t.Errorf("global counters %+v", *bw.counters)
 	}
 	// [CHK-04] every egg is accounted for
@@ -390,11 +387,8 @@ func TestDevelopmentQueenTimeline(t *testing.T) {
 		t.Errorf("thresholds %+v, pollen load %v", *th, f.PollenPellets_g)
 	}
 	_, _, n := bw.colony(b.ColonyID)
-	if n.TotalQueensProduced != 12 || n.TotalAdultsProduced != 12 || bw.counters.TotalAdultQueensEverProduced != 12 {
-		t.Errorf("queen counters: colony %v, global %v", n.TotalQueensProduced, bw.counters.TotalAdultQueensEverProduced)
-	}
-	if len(bw.counters.QueensProducingColoniesList) != 1 || bw.counters.QueensProducingColoniesList[0] != b.ColonyID {
-		t.Errorf("QueensProducingColoniesList %v", bw.counters.QueensProducingColoniesList)
+	if n.TotalAdultsProduced != 12 || bw.counters.TotalAdultQueensEverProduced != 12 {
+		t.Errorf("queen counters: colony %v, global %v", n.TotalAdultsProduced, bw.counters.TotalAdultQueensEverProduced)
 	}
 }
 

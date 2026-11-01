@@ -77,16 +77,13 @@ func (c *colonyFounder) CreateColoniesProc(w *ecs.World) {
 	for _, q := range queens {
 		qPos, qBee := c.beeMap.Get(q)
 		pos := *qPos
-		speciesID, speciesName := qBee.SpeciesID, qBee.SpeciesName
+		speciesID := qBee.SpeciesID
 
 		// [CCOL-05] not translated: gobees-fast has only cohort-based colonies (finding 30, see
 		// trans/netlogo-findings.md#finding-30).
 		// [CCOL-04]
 		colony := comp.Colony{
 			SpeciesIDcolony:      speciesID,
-			SpeciesNameColony:    speciesName,
-			ColonyFoundationDay:  float64(c.ticks.Ticks),
-			Queenright:           true,
 			QueenProduction:      false,
 			QueenProductionDate:  params.NotSetHigh,
 			SwitchPointDate:      params.NotSetHigh,
@@ -94,7 +91,7 @@ func (c *colonyFounder) CreateColoniesProc(w *ecs.World) {
 			EusocialPhaseDate:    params.NotSetHigh,
 		}
 		stores := comp.ColonyStores{EnergyStore_kJ: 100 * c.constants.EnergySucrose_kJ_per_mymol * 1.5}
-		counts := comp.ColonyCounts{Colonysize: 1}
+		counts := comp.ColonyCounts{}
 		e := c.colonyMap.NewEntity(&comp.Who{Who: c.who.Next()}, &pos, &colony, &stores, &comp.ColonyStimuli{}, &counts, &comp.ColonyRange{})
 
 		// [CCOL-03] the queen joins the colony (get her again, creating the colony may move components)
@@ -139,26 +136,22 @@ func (c *colonyFounder) PatchesInRangeProc(colony ecs.Entity) {
 	c.rangeMap.Get(colony).AllPatchesInRangeList = list
 }
 
-// FoodsourcesInFlowerAndRangeProc sets the lists of foodsources and masterpatches in range that offer pollen or
-// nectar now [FRNG].
+// FoodsourcesInFlowerAndRangeProc sets the lists of masterpatches in range that offer pollen or nectar now [FRNG].
+// Not translated: pollenInFlowerAndRangeList, nectarInFlowerAndRangeList and allSourcesInFlowerAndRangeList (never
+// read, removed in step F3).
 func (c *colonyFounder) FoodsourcesInFlowerAndRangeProc(colony ecs.Entity) {
 	r := c.rangeMap.Get(colony)
-	pol, polM, nec, necM := []ecs.Entity{}, []ecs.Entity{}, []ecs.Entity{}, []ecs.Entity{}
+	polM, necM := []ecs.Entity{}, []ecs.Entity{}
 	// [FRNG-01] ORDER: irrelevant, foreach over a list.
 	for _, fs := range r.AllPatchesInRangeList {
 		state, layer := c.foodsourceMap.Get(fs)
 		if state.Pollen_g > 0 {
-			pol = append(pol, fs)
 			polM = append(polM, layer.MasterpatchID)
 		}
 		if state.Nectar_myl > 0 {
-			nec = append(nec, fs)
 			necM = append(necM, layer.MasterpatchID)
 		}
 	}
-	r.PollenInFlowerAndRangeList = pol
 	r.MasterpatchesWithPollenlayersInFlowerAndRangeList = removeDuplicates(polM)
-	r.NectarInFlowerAndRangeList = nec
 	r.MasterpatchesWithNectarlayersInFlowerAndRangeList = removeDuplicates(necM)
-	r.AllSourcesInFlowerAndRangeList = removeDuplicates(append(append([]ecs.Entity{}, pol...), nec...))
 }

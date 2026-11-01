@@ -56,7 +56,7 @@ func (s *CheckNumbers) Update(w *ecs.World) {
 	}
 
 	// sums over all bees
-	var totalBeesPresent, eggs, larvae, pupae, adultWorkers, adultMales, adultQueens, adults float64
+	var totalBeesPresent, eggs, larvae, pupae, adultWorkers, adultMales float64
 	query := s.beeFilter.Query()
 	for query.Next() {
 		b := query.Get()
@@ -69,14 +69,11 @@ func (s *CheckNumbers) Update(w *ecs.World) {
 		case stage.Pupa:
 			pupae += b.Number
 		case stage.Adult:
-			adults += b.Number
 			switch b.Caste {
 			case caste.Worker:
 				adultWorkers += b.Number
 			case caste.Male:
 				adultMales += b.Number
-			case caste.Queen:
-				adultQueens += b.Number
 			}
 		}
 	}
@@ -97,8 +94,6 @@ func (s *CheckNumbers) Update(w *ecs.World) {
 		t.TotalAdultWorkers += c.AllAdultWorkers
 		t.TotalAdultMales += c.AllAdultMales
 	}
-	t.TotalAdultQueens = adultQueens
-	t.TotalAdults = adults
 	t.TotalForagingTripsToday = 0
 
 	// [CHK-03] finding 38 (see trans/netlogo-findings.md#finding-38)

@@ -70,11 +70,10 @@ func newColonyWorld(t *testing.T, seed uint64) *colonyWorld {
 
 // addColony adds a colony with the start values of CreateColoniesProc [CCOL-04]. change may modify them.
 func (cw *colonyWorld) addColony(change func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts)) ecs.Entity {
-	c := comp.Colony{SpeciesIDcolony: cw.species, SpeciesNameColony: "B_terrestris", Queenright: true,
-		QueenProductionDate: params.NotSetHigh, SwitchPointDate: params.NotSetHigh,
+	c := comp.Colony{SpeciesIDcolony: cw.species, QueenProductionDate: params.NotSetHigh, SwitchPointDate: params.NotSetHigh,
 		CompetitionPointDate: params.NotSetHigh, EusocialPhaseDate: params.NotSetHigh}
 	s := comp.ColonyStores{EnergyStore_kJ: 0.873}
-	n := comp.ColonyCounts{Colonysize: 1}
+	n := comp.ColonyCounts{}
 	if change != nil {
 		change(&c, &s, &n)
 	}
@@ -122,9 +121,8 @@ func TestUpdateColoniesStatistics(t *testing.T) {
 
 	cw.nextMorning()
 	c, s, n := cw.colony(col)
-	want := comp.ColonyCounts{Colonysize: 27, ColonyWeight_mg: 26*100 + 800, LarvaWorkerRatio: 2,
-		AllEggs: 10, AllLarvae: 6, AllPupae: 4, AllAdults: 7, AllAdultWorkers: 3,
-		AllAdultQueens: 2, AllAdultActiveQueens: 1, AllAdultMales: 2}
+	want := comp.ColonyCounts{LarvaWorkerRatio: 2, AllEggs: 10, AllLarvae: 6, AllPupae: 4, AllAdults: 7,
+		AllAdultWorkers: 3, AllAdultMales: 2}
 	if *n != want {
 		t.Errorf("statistics [UCOL-06]:\n got %+v\nwant %+v", *n, want)
 	}
@@ -132,8 +130,8 @@ func TestUpdateColoniesStatistics(t *testing.T) {
 		t.Errorf("[UCOL-05] summedIncubationToday_kJ = %v, want 0", s.SummedIncubationToday_kJ)
 	}
 	// [UCOL-07] the first adult worker starts the eusocial phase
-	if c.EusocialPhaseDate != 201 || c.ColonyAge != 1 {
-		t.Errorf("eusocialPhaseDate %v, colonyAge %v; want 201, 1", c.EusocialPhaseDate, c.ColonyAge)
+	if c.EusocialPhaseDate != 201 {
+		t.Errorf("eusocialPhaseDate %v, want 201", c.EusocialPhaseDate)
 	}
 	c, _, n = cw.colony(empty)
 	if n.LarvaWorkerRatio != params.NotSetHigh || c.EusocialPhaseDate != params.NotSetHigh {
@@ -173,9 +171,6 @@ func TestUpdateColoniesDeathAfterCP(t *testing.T) {
 	if cw.w.Alive(youngWorker) || !cw.w.Alive(col) {
 		t.Fatal("day 203: the worker must die, the colony must stay alive because of the male")
 	}
-	if c, _, _ := cw.colony(col); c.Queenright || c.ColonyAge != 3 {
-		t.Errorf("day 203: queenright %v, colonyAge %v; want false (no mated queen, [UCOL-10]), 3", c.Queenright, c.ColonyAge)
-	}
 
 	// the male dies (e.g. after MaxLifespanMales). The colony dies the next morning [UCOL-11].
 	death := newBeeDeath(cw.w)
@@ -187,8 +182,8 @@ func TestUpdateColoniesDeathAfterCP(t *testing.T) {
 	if cw.counters.ColonyDeathsNoBees != 1 || cw.counters.ColonyDeathsEndSeason != 0 {
 		t.Errorf("ColonyDeathsNoBees %v, ColonyDeathsEndSeason %v; want 1, 0", cw.counters.ColonyDeathsNoBees, cw.counters.ColonyDeathsEndSeason)
 	}
-	if len(cw.dead.List) != 1 || cw.dead.List[0].ColonyDeathDay != 204 || cw.dead.List[0].Colony.SpeciesNameColony != "B_terrestris" {
-		t.Errorf("dead colonies: %+v, want one record with colonyDeathDay 204 and the species name", cw.dead.List)
+	if len(cw.dead.List) != 1 || cw.dead.List[0].ColonyDeathDay != 204 || cw.dead.List[0].Colony.SpeciesIDcolony != cw.species {
+		t.Errorf("dead colonies: %+v, want one record with colonyDeathDay 204 and the species", cw.dead.List)
 	}
 }
 
@@ -329,20 +324,24 @@ func TestUpdateColoniesRangeLists(t *testing.T) {
 	fsMap := ecs.NewMap3[comp.Foodsource, comp.FoodsourceState, comp.Layer](cw.w)
 	inFlower := fsMap.NewEntity(&comp.Foodsource{}, &comp.FoodsourceState{Pollen_g: 1, Nectar_myl: 1}, &comp.Layer{Masterpatch: true})
 	notInFlower := fsMap.NewEntity(&comp.Foodsource{}, &comp.FoodsourceState{}, &comp.Layer{Masterpatch: true})
+	for _, e := range []ecs.Entity{inFlower, notInFlower} {
+		_, _, l := fsMap.Get(e)
+		l.MasterpatchID = e
+	}
 	col := cw.addColony(nil)
 	cw.addBee(col, stage.Adult, caste.Queen, 1, 300)
 	_, _, _, _, _, _, r := cw.colonyMap.Get(col)
 	r.AllPatchesInRangeList = []ecs.Entity{inFlower, notInFlower}
 
 	cw.nextMorning() // no update
-	if _, _, _, _, _, _, r := cw.colonyMap.Get(col); len(r.PollenInFlowerAndRangeList) != 0 {
+	if _, _, _, _, _, _, r := cw.colonyMap.Get(col); len(r.MasterpatchesWithPollenlayersInFlowerAndRangeList) != 0 {
 		t.Fatal("lists must not change without FoodsourcesInFlowerUpdate")
 	}
 	cw.today.FoodsourcesInFlowerUpdate = true
 	cw.nextMorning()
 	_, _, _, _, _, _, r = cw.colonyMap.Get(col)
-	if len(r.PollenInFlowerAndRangeList) != 1 || r.PollenInFlowerAndRangeList[0] != inFlower ||
-		len(r.NectarInFlowerAndRangeList) != 1 || len(r.AllSourcesInFlowerAndRangeList) != 1 {
+	if len(r.MasterpatchesWithPollenlayersInFlowerAndRangeList) != 1 || r.MasterpatchesWithPollenlayersInFlowerAndRangeList[0] != inFlower ||
+		len(r.MasterpatchesWithNectarlayersInFlowerAndRangeList) != 1 {
 		t.Errorf("lists after the update: %+v", *r)
 	}
 }

@@ -45,8 +45,8 @@ func TestCheckNumbersTotals(t *testing.T) {
 	got.TotalForagingTripsToday = 99
 	s.Update(cw.w)
 	// [CHK-02] finding 39 (see trans/netlogo-findings.md#finding-39)
-	want := globals.Totals{TotalEggs: 5, TotalLarvae: 4, TotalPupae: 3, TotalAdultWorkers: 1,
-		TotalAdultQueens: 2, TotalAdultMales: 1, TotalAdults: 4, TotalForagingTripsToday: 0}
+	want := globals.Totals{TotalEggs: 5, TotalLarvae: 4, TotalPupae: 3, TotalAdultWorkers: 1, TotalAdultMales: 1,
+		TotalForagingTripsToday: 0}
 	if *got != want {
 		t.Errorf("totals:\n got %+v\nwant %+v", *got, want)
 	}
@@ -116,18 +116,20 @@ func TestMorningExampleFarm(t *testing.T) {
 		for q.Next() {
 			c, n, r := q.Get()
 			colonies++
-			if n.Colonysize != 1 || n.AllAdults != 1 || c.EusocialPhaseDate != params.NotSetHigh {
-				t.Fatalf("colony: colonysize %v, allAdults %v, eusocialPhaseDate %v", n.Colonysize, n.AllAdults, c.EusocialPhaseDate)
+			if n.AllAdults != 1 || c.EusocialPhaseDate != params.NotSetHigh {
+				t.Fatalf("colony: allAdults %v, eusocialPhaseDate %v", n.AllAdults, c.EusocialPhaseDate)
 			}
-			if len(r.AllSourcesInFlowerAndRangeList) > 0 {
+			if len(r.MasterpatchesWithPollenlayersInFlowerAndRangeList)+
+				len(r.MasterpatchesWithNectarlayersInFlowerAndRangeList) > 0 {
 				withLists++
 			}
 		}
 		if float64(colonies) != counters.TotalColoniesEverProduced {
 			t.Fatalf("day %v: %d living colonies, %v founded", cal.Day, colonies, counters.TotalColoniesEverProduced)
 		}
-		if totals.TotalAdults != totals.TotalAdultQueens {
-			t.Fatalf("day %v: TotalAdults %v, TotalAdultQueens %v; only queens exist", cal.Day, totals.TotalAdults, totals.TotalAdultQueens)
+		if totals.TotalAdultWorkers != 0 || totals.TotalAdultMales != 0 {
+			t.Fatalf("day %v: %v adult workers, %v adult males; only queens exist", cal.Day, totals.TotalAdultWorkers,
+				totals.TotalAdultMales)
 		}
 	}
 	if maxNectar == 0 || withLists == 0 {

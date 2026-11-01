@@ -9,7 +9,6 @@ type Constants struct {
 	CallItaDay_s                                 float64 // End of the working day [s].
 	DailySwitchProbability                       float64 // Daily probability of the switch point (Duchateau & Velthuis 1988).
 	EnergyFactorOnFlower                         float64 // Energy factor while on a flower (Kacelnik et al. 1986).
-	EnergyHoney_kJ_per_ml                        float64 // Energy content of honey [kJ/ml] (Allen et al. 1978).
 	EnergyRequiredForPollenAssimilation_kJ_per_g float64 // [kJ/g] (Hrassnig & Crailsheim 2005).
 	EnergySucrose_kJ_per_mymol                   float64 // [kJ/micromol] (from BEEHAVE).
 	ForagingRangeMax_m                           float64 // Foraging range [m] (Knight et al. 2005). MaxForagingRange_m from the file is NOT used.
@@ -27,10 +26,9 @@ type Constants struct {
 // DefaultConstants returns the values from ParametersProc [PAR-03].
 func DefaultConstants() Constants {
 	return Constants{
-		CallItaDay_s:                                 24 * 3600,
-		DailySwitchProbability:                       0.13,
-		EnergyFactorOnFlower:                         0.3,
-		EnergyHoney_kJ_per_ml:                        22.67,
+		CallItaDay_s:           24 * 3600,
+		DailySwitchProbability: 0.13,
+		EnergyFactorOnFlower:   0.3,
 		EnergyRequiredForPollenAssimilation_kJ_per_g: 6.2,
 		EnergySucrose_kJ_per_mymol:                   0.00582,
 		ForagingRangeMax_m:                           758,
