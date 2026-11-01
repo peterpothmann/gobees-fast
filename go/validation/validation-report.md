@@ -1,324 +1,284 @@
-# Comparison with NetLogo
+# Validation of gobees-fast
 
-Every metric is checked on each day of its experiment (unless the description says otherwise): the median of the gobees runs on a day must lie within the 5-95 % band of the NetLogo runs on the same day. "Days inside the band" counts the days that pass. A metric passes (✅) only if all days pass. The last three columns show the values of one example day. Details: go/validation/README.md.
+Band: the median of the gobees-fast runs lies within the 5-95 % band of the NetLogo runs on every compared day (enforced by the tests, weak). KS: two-sample Kolmogorov-Smirnov test of the run summaries (value at day 0, maximum and mean of every year) of gobees-fast against NetLogo and against gobees, Bonferroni-corrected per experiment and comparison (family alpha 0.05). Reported, not enforced. 100 runs per model and experiment. Details: go/validation/README.md.
+
+| Experiment | Band: metrics inside on all days | KS vs NetLogo: significant tests | KS vs gobees: significant tests |
+| --- | --- | --- | --- |
+| `step3` | ✅ 9 of 9 | ✅ 0 of 15 | – no data |
+| `step4a` | ✅ 3 of 3 | ✅ 0 of 15 | – no data |
+| `step6` | ✅ 15 of 15 | ✅ 0 of 45 | – no data |
+| Example farm, 3 years (`step7`) | ✅ 15 of 15 | ✅ 0 of 105 | – no data |
+| Badgers (`step7_badgers`) | ✅ 16 of 16 | ✅ 0 of 112 | – no data |
+| Crop rotation (`step7_crop`) | ✅ 16 of 16 | ✅ 0 of 112 | – no data |
+| Individual-based colonies (`step8_ibm`) | ✅ 17 of 17 | – no data | – no data |
+| Genetics (`step8_genetics`) | ✅ 16 of 16 | ✅ 0 of 80 | – no data |
+| Several species (`step8_species`) | ✅ 22 of 22 | ✅ 0 of 110 | – no data |
+| Weather and foraging mortality (`step8_weather`) | ✅ 16 of 16 | ✅ 0 of 80 | – no data |
+| Other settings (`step8_settings`) | ✅ 17 of 17 | ✅ 0 of 85 | – no data |
 
 ## Steps 1 to 3: colony foundation in year 1
 
-<!-- section 03|Steps 1 to 3: colony foundation in year 1 -->
 Experiment `go/validation/experiments/step3.xml`: example farm, 500 B. terrestris queens, 250 days. Setup values and queen traits are compared at step 0 only (later, NetLogo colonies die with their queen, which is not yet translated). Colony foundation and queen counts are compared at every step.
 
-100 runs each.
+| Metric | Band: days inside | KS vs NetLogo | KS vs gobees |
+| --- | --- | --- | --- |
+| foodsources | ✅ 1 of 1 | ✅ 0 of 1 | – no data |
+| masterpatches | ✅ 1 of 1 | ✅ 0 of 1 | – no data |
+| nestsites | ✅ 1 of 1 | ✅ 0 of 1 | – no data |
+| nestsite_area | ✅ 1 of 1 | ✅ 0 of 1 | – no data |
+| mean_queen_weight | ✅ 1 of 1 | ✅ 0 of 1 | – no data |
+| mean_emerging_date | ✅ 1 of 1 | ✅ 0 of 1 | – no data |
+| colonies_founded | ✅ 251 of 251 | ✅ 0 of 3 | – no data |
+| queens_searching | ✅ 251 of 251 | ✅ 0 of 3 | – no data |
+| queens_hibernating | ✅ 251 of 251 | ✅ 0 of 3 | – no data |
 
-| | Metric | Days inside the band | Example day | gobees median | NetLogo median [5-95 %] |
-| --- | --- | --- | ---: | ---: | --- |
-| ✅ | foodsources | 1 of 1 days | 0 | 200 | 200 [200, 200] |
-| ✅ | masterpatches | 1 of 1 days | 0 | 36 | 36 [36, 36] |
-| ✅ | nestsites | 1 of 1 days | 0 | 23 | 23 [23, 23] |
-| ✅ | nestsite_area | 1 of 1 days | 0 | 306300 | 306300 [306300, 306300] |
-| ✅ | mean_queen_weight | 1 of 1 days | 0 | 785.204 | 785.257 [777.529, 792.012] |
-| ✅ | mean_emerging_date | 1 of 1 days | 0 | 91.132 | 91.011 [89.2796, 93.1467] |
-| ✅ | colonies_founded | 251 of 251 days | 250 | 135.5 | 134 [119, 151] |
-| ✅ | queens_searching | 251 of 251 days | 250 | 0 | 0 [0, 0] |
-| ✅ | queens_hibernating | 251 of 251 days | 250 | 0 | 0 [0, 0] |
-
-![Plots of the metrics over the days](plots/step3.png)
-
-Blue: NetLogo median and 5-95 % band, orange: gobees median, x axis: day.
+![step3](plots/step3.png)
 
 ## Step 4a: morning routine
 
-<!-- section 04a|Step 4a: morning routine -->
 Experiment `go/validation/experiments/step4a.xml`: example farm, 400 days. Day of the year, nectar and pollen available in the landscape. These values depend only on the landscape, so the NetLogo band is widened by a relative tolerance of 1e-9 (float sums in random order).
 
-100 runs each.
+| Metric | Band: days inside | KS vs NetLogo | KS vs gobees |
+| --- | --- | --- | --- |
+| day | ✅ 401 of 401 | ✅ 0 of 5 | – no data |
+| nectar_l | ✅ 401 of 401 | ✅ 0 of 5 | – no data |
+| pollen_kg | ✅ 401 of 401 | ✅ 0 of 5 | – no data |
 
-| | Metric | Days inside the band | Example day | gobees median | NetLogo median [5-95 %] |
-| --- | --- | --- | ---: | ---: | --- |
-| ✅ | day | 401 of 401 days | 400 | 35 | 35 [35, 35] |
-| ✅ | nectar_l | 401 of 401 days | 400 | 0.0112685 | 0.0112685 [0.0112685, 0.0112685] |
-| ✅ | pollen_kg | 401 of 401 days | 400 | 0.0155049 | 0.0155049 [0.0155049, 0.0155049] |
-
-![Plots of the metrics over the days](plots/step4a.png)
-
-Blue: NetLogo median and 5-95 % band, orange: gobees median, x axis: day.
+![step4a](plots/step4a.png)
 
 ## Steps 4b to 6: colony dynamics in year 1
 
-<!-- section 06|Steps 4b to 6: colony dynamics in year 1 -->
 Experiment `go/validation/experiments/step6.xml`: example farm, 500 B. terrestris queens, 364 days, with brood, the daily activity queue and foraging. Both models run without QueensLeavingNestProc and UpdateSeasonalEventsProc (step 7). Compared at every step: the gobees median must lie in the NetLogo 5-95 % band. The table shows day 150, the middle of the colony season.
 
-100 runs each.
+| Metric | Band: days inside | KS vs NetLogo | KS vs gobees |
+| --- | --- | --- | --- |
+| colonies | ✅ 365 of 365 | ✅ 0 of 3 | – no data |
+| dead_colonies | ✅ 365 of 365 | ✅ 0 of 3 | – no data |
+| eggs | ✅ 365 of 365 | ✅ 0 of 3 | – no data |
+| larvae | ✅ 365 of 365 | ✅ 0 of 3 | – no data |
+| pupae | ✅ 365 of 365 | ✅ 0 of 3 | – no data |
+| workers | ✅ 365 of 365 | ✅ 0 of 3 | – no data |
+| males | ✅ 365 of 365 | ✅ 0 of 3 | – no data |
+| young_queens | ✅ 365 of 365 | ✅ 0 of 3 | – no data |
+| energy_kJ | ✅ 365 of 365 | ✅ 0 of 3 | – no data |
+| pollen_g | ✅ 365 of 365 | ✅ 0 of 3 | – no data |
+| trips | ✅ 365 of 365 | ✅ 0 of 3 | – no data |
+| switch_point | ✅ 365 of 365 | ✅ 0 of 3 | – no data |
+| queen_production | ✅ 365 of 365 | ✅ 0 of 3 | – no data |
+| nectar_left_l | ✅ 365 of 365 | ✅ 0 of 3 | – no data |
+| pollen_left_kg | ✅ 365 of 365 | ✅ 0 of 3 | – no data |
 
-| | Metric | Days inside the band | Example day | gobees median | NetLogo median [5-95 %] |
-| --- | --- | --- | ---: | ---: | --- |
-| ✅ | colonies | 365 of 365 days | 150 | 33 | 32.5 [25.95, 41] |
-| ✅ | dead_colonies | 365 of 365 days | 150 | 99 | 101 [87.85, 116.05] |
-| ✅ | eggs | 365 of 365 days | 150 | 264 | 264 [96, 409.8] |
-| ✅ | larvae | 365 of 365 days | 150 | 444 | 444 [251.4, 684] |
-| ✅ | pupae | 365 of 365 days | 150 | 510 | 504 [288, 708.6] |
-| ✅ | workers | 365 of 365 days | 150 | 414 | 426 [214.8, 720.6] |
-| ✅ | males | 365 of 365 days | 150 | 168 | 180 [84, 301.2] |
-| ✅ | young_queens | 365 of 365 days | 150 | 36 | 36 [0, 96.6] |
-| ✅ | energy_kJ | 365 of 365 days | 150 | 11267.4 | 10997.5 [7181.8, 15971.6] |
-| ✅ | pollen_g | 365 of 365 days | 150 | 188.651 | 188.026 [128.883, 295.564] |
-| ✅ | trips | 365 of 365 days | 150 | 3172 | 3250.5 [1030.8, 6598.65] |
-| ✅ | switch_point | 365 of 365 days | 150 | 19 | 18 [12, 24.05] |
-| ✅ | queen_production | 365 of 365 days | 150 | 16 | 15 [9, 21.05] |
-| ✅ | nectar_left_l | 365 of 365 days | 150 | 1.57155 | 1.57687 [1.42276, 1.65923] |
-| ✅ | pollen_left_kg | 365 of 365 days | 150 | 0.580268 | 0.581087 [0.559733, 0.590312] |
-
-![Plots of the metrics over the days](plots/step6.png)
-
-Blue: NetLogo median and 5-95 % band, orange: gobees median, x axis: day.
+![step6](plots/step6.png)
 
 ## Step 7: the year cycle
 
-<!-- section 07.1|Step 7: the year cycle -->
 ### Example farm, 3 years
 
 Experiment `go/validation/experiments/step7.xml`: example farm, 500 B. terrestris queens, 1095 days, the full model (NetLogo `Go`, gobees `model.Default`) with the year cycle: young queens leave the nest and hibernate, the season ends, the queens emerge again. Both run with StopExtinct? = false. Compared at every step: the gobees median must lie in the NetLogo 5-95 % band. The table shows day 515 (day 150 of year 2).
 
-100 runs each.
+| Metric | Band: days inside | KS vs NetLogo | KS vs gobees |
+| --- | --- | --- | --- |
+| colonies | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| dead_colonies | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| colonies_founded | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| eggs | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| larvae | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| pupae | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| workers | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| males | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| young_queens | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| hibernating_queens | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| energy_kJ | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| pollen_g | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| trips | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| nectar_left_l | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| pollen_left_kg | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
 
-| | Metric | Days inside the band | Example day | gobees median | NetLogo median [5-95 %] |
-| --- | --- | --- | ---: | ---: | --- |
-| ✅ | colonies | 1096 of 1096 days | 515 | 25 | 26 [14, 40.15] |
-| ✅ | dead_colonies | 1096 of 1096 days | 515 | 215 | 214.5 [169.55, 269.4] |
-| ✅ | colonies_founded | 1096 of 1096 days | 515 | 241 | 238.5 [182.7, 306.35] |
-| ✅ | eggs | 1096 of 1096 days | 515 | 210 | 228 [35.4, 444.6] |
-| ✅ | larvae | 1096 of 1096 days | 515 | 360 | 336 [142.8, 710.4] |
-| ✅ | pupae | 1096 of 1096 days | 515 | 432 | 450 [215.4, 805.2] |
-| ✅ | workers | 1096 of 1096 days | 515 | 384 | 396 [130.8, 638.4] |
-| ✅ | males | 1096 of 1096 days | 515 | 180 | 162 [72, 348.6] |
-| ✅ | young_queens | 1096 of 1096 days | 515 | 0 | 0 [0, 24] |
-| ✅ | hibernating_queens | 1096 of 1096 days | 515 | 84 | 96 [12, 168] |
-| ✅ | energy_kJ | 1096 of 1096 days | 515 | 8946.62 | 9019.46 [4455.02, 14132.8] |
-| ✅ | pollen_g | 1096 of 1096 days | 515 | 161.356 | 157.115 [78.6733, 245.487] |
-| ✅ | trips | 1096 of 1096 days | 515 | 2622 | 2471 [541.4, 5926.95] |
-| ✅ | nectar_left_l | 1096 of 1096 days | 515 | 1.6026 | 1.61199 [1.45076, 1.68875] |
-| ✅ | pollen_left_kg | 1096 of 1096 days | 515 | 0.583593 | 0.584464 [0.560194, 0.593013] |
+![step7](plots/step7.png)
 
-![Plots of the metrics over the days](plots/step7.png)
-
-Blue: NetLogo median and 5-95 % band, orange: gobees median, x axis: day.
-
-<!-- section 07.2|Step 7: the year cycle -->
 ### Badgers
 
 Experiment `go/validation/experiments/step7_badgers.xml`: as step 7 (example farm, 1095 days, full model), with 2 badgers (N_Badgers = 2). They live on the two Scrub patches of the example farm and dig up each colony within 735 m with p = 0.019 per day. Both run with StopExtinct? = false. Compared at every step: the gobees median must lie in the NetLogo 5-95 % band. The table shows day 515 (day 150 of year 2).
 
-100 runs each.
+| Metric | Band: days inside | KS vs NetLogo | KS vs gobees |
+| --- | --- | --- | --- |
+| colonies | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| dead_colonies | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| colonies_founded | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| eggs | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| larvae | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| pupae | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| workers | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| males | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| young_queens | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| hibernating_queens | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| energy_kJ | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| pollen_g | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| trips | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| nectar_left_l | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| pollen_left_kg | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| badgers | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
 
-| | Metric | Days inside the band | Example day | gobees median | NetLogo median [5-95 %] |
-| --- | --- | --- | ---: | ---: | --- |
-| ✅ | colonies | 1096 of 1096 days | 515 | 5 | 5 [0, 16.05] |
-| ✅ | dead_colonies | 1096 of 1096 days | 515 | 165.5 | 167 [133.95, 209] |
-| ✅ | colonies_founded | 1096 of 1096 days | 515 | 169 | 173 [136.85, 221.1] |
-| ✅ | eggs | 1096 of 1096 days | 515 | 36 | 48 [0, 217.2] |
-| ✅ | larvae | 1096 of 1096 days | 515 | 60 | 90 [0, 301.8] |
-| ✅ | pupae | 1096 of 1096 days | 515 | 72 | 72 [0, 312] |
-| ✅ | workers | 1096 of 1096 days | 515 | 60 | 36 [0, 252.6] |
-| ✅ | males | 1096 of 1096 days | 515 | 12 | 0 [0, 85.2] |
-| ✅ | young_queens | 1096 of 1096 days | 515 | 0 | 0 [0, 0] |
-| ✅ | hibernating_queens | 1096 of 1096 days | 515 | 12 | 0 [0, 84.6] |
-| ✅ | energy_kJ | 1096 of 1096 days | 515 | 1317.8 | 1657.34 [0, 4870.28] |
-| ✅ | pollen_g | 1096 of 1096 days | 515 | 27.1528 | 25.5303 [0, 85.3044] |
-| ✅ | trips | 1096 of 1096 days | 515 | 202.5 | 364.5 [0, 3148.5] |
-| ✅ | nectar_left_l | 1096 of 1096 days | 515 | 1.70695 | 1.69854 [1.57051, 1.72161] |
-| ✅ | pollen_left_kg | 1096 of 1096 days | 515 | 0.593385 | 0.59328 [0.577997, 0.593753] |
-| ✅ | badgers | 1096 of 1096 days | 515 | 2 | 2 [2, 2] |
+![step7_badgers](plots/step7_badgers.png)
 
-![Plots of the metrics over the days](plots/step7_badgers.png)
-
-Blue: NetLogo median and 5-95 % band, orange: gobees median, x axis: day.
-
-<!-- section 07.3|Step 7: the year cycle -->
 ### Crop rotation
 
 Experiment `go/validation/experiments/step7_crop.xml`: as step 7 (example farm, 1095 days, full model), with a crop rotation of two maps. On Day 365 the landscape is replaced: year 2 runs on `Example_Farm_PlotTest_Foodsources.txt` (36 flower patches), year 3 on the example farm again. Both run with StopExtinct? = false. Compared at every step: the gobees median must lie in the NetLogo 5-95 % band. The table shows day 515 (day 150 of year 2, on the second map).
 
-100 runs each.
+| Metric | Band: days inside | KS vs NetLogo | KS vs gobees |
+| --- | --- | --- | --- |
+| colonies | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| dead_colonies | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| colonies_founded | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| eggs | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| larvae | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| pupae | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| workers | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| males | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| young_queens | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| hibernating_queens | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| energy_kJ | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| pollen_g | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| trips | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| nectar_left_l | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| pollen_left_kg | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
+| foodsources | ✅ 1096 of 1096 | ✅ 0 of 7 | – no data |
 
-| | Metric | Days inside the band | Example day | gobees median | NetLogo median [5-95 %] |
-| --- | --- | --- | ---: | ---: | --- |
-| ✅ | colonies | 1096 of 1096 days | 515 | 25 | 26 [13.95, 40.05] |
-| ✅ | dead_colonies | 1096 of 1096 days | 515 | 212.5 | 217 [174.85, 269.2] |
-| ✅ | colonies_founded | 1096 of 1096 days | 515 | 241 | 242.5 [191.8, 308.15] |
-| ✅ | eggs | 1096 of 1096 days | 515 | 204 | 228 [58.8, 456.6] |
-| ✅ | larvae | 1096 of 1096 days | 515 | 378 | 384 [131.4, 672.6] |
-| ✅ | pupae | 1096 of 1096 days | 515 | 432 | 426 [202.8, 780] |
-| ✅ | workers | 1096 of 1096 days | 515 | 378 | 342 [144, 684] |
-| ✅ | males | 1096 of 1096 days | 515 | 174 | 186 [71.4, 348.6] |
-| ✅ | young_queens | 1096 of 1096 days | 515 | 0 | 0 [0, 12] |
-| ✅ | hibernating_queens | 1096 of 1096 days | 515 | 96 | 84 [12, 180.6] |
-| ✅ | energy_kJ | 1096 of 1096 days | 515 | 8907.37 | 8873.48 [4826.49, 14107.3] |
-| ✅ | pollen_g | 1096 of 1096 days | 515 | 157.45 | 159.017 [96.1842, 231.341] |
-| ✅ | trips | 1096 of 1096 days | 515 | 2503.5 | 2478.5 [422.05, 5647.95] |
-| ✅ | nectar_left_l | 1096 of 1096 days | 515 | 1.675 | 1.67678 [1.56002, 1.75994] |
-| ✅ | pollen_left_kg | 1096 of 1096 days | 515 | 0.722048 | 0.722484 [0.708479, 0.730963] |
-| ✅ | foodsources | 1096 of 1096 days | 515 | 205 | 205 [205, 205] |
-
-![Plots of the metrics over the days](plots/step7_crop.png)
-
-Blue: NetLogo median and 5-95 % band, orange: gobees median, x axis: day.
+![step7_crop](plots/step7_crop.png)
 
 ## Step 8: model branches the example farm does not use
 
-<!-- section 08.1|Step 8: model branches the example farm does not use -->
 ### Individual-based colonies
 
 Experiment `go/validation/experiments/step8_ibm.xml`: example farm, full model, 730 days, with the parameter file `step8_ibm_Parameters.csv`: COLONIES_IBM = 10, the first 10 colonies are individual-based [CCOL-05]. Both run with StopExtinct? = false. The table shows day 150.
 
-100 runs each.
+| Metric | Band: days inside | KS vs NetLogo | KS vs gobees |
+| --- | --- | --- | --- |
+| colonies | ✅ 731 of 731 | – no data | – no data |
+| dead_colonies | ✅ 731 of 731 | – no data | – no data |
+| colonies_founded | ✅ 731 of 731 | – no data | – no data |
+| eggs | ✅ 731 of 731 | – no data | – no data |
+| larvae | ✅ 731 of 731 | – no data | – no data |
+| pupae | ✅ 731 of 731 | – no data | – no data |
+| workers | ✅ 731 of 731 | – no data | – no data |
+| males | ✅ 731 of 731 | – no data | – no data |
+| young_queens | ✅ 731 of 731 | – no data | – no data |
+| hibernating_queens | ✅ 731 of 731 | – no data | – no data |
+| energy_kJ | ✅ 731 of 731 | – no data | – no data |
+| pollen_g | ✅ 731 of 731 | – no data | – no data |
+| trips | ✅ 731 of 731 | – no data | – no data |
+| nectar_left_l | ✅ 731 of 731 | – no data | – no data |
+| pollen_left_kg | ✅ 731 of 731 | – no data | – no data |
+| ibm_colonies | ✅ 731 of 731 | – no data | – no data |
+| bee_agents | ✅ 731 of 731 | – no data | – no data |
 
-| | Metric | Days inside the band | Example day | gobees median | NetLogo median [5-95 %] |
-| --- | --- | --- | ---: | ---: | --- |
-| ✅ | colonies | 731 of 731 days | 150 | 34 | 34.5 [27, 44.05] |
-| ✅ | dead_colonies | 731 of 731 days | 150 | 98 | 99 [85.9, 113.1] |
-| ✅ | colonies_founded | 731 of 731 days | 150 | 130 | 135 [118, 149] |
-| ✅ | eggs | 731 of 731 days | 150 | 276 | 240 [131.4, 360.6] |
-| ✅ | larvae | 731 of 731 days | 150 | 432 | 444 [240, 721.8] |
-| ✅ | pupae | 731 of 731 days | 150 | 504 | 528 [288, 792] |
-| ✅ | workers | 731 of 731 days | 150 | 469 | 482 [226.55, 830.65] |
-| ✅ | males | 731 of 731 days | 150 | 222 | 228 [95.4, 348] |
-| ✅ | young_queens | 731 of 731 days | 150 | 0 | 0 [0, 24] |
-| ✅ | hibernating_queens | 731 of 731 days | 150 | 164.5 | 163 [67.9, 276.05] |
-| ✅ | energy_kJ | 731 of 731 days | 150 | 12867.1 | 13034.4 [8130.15, 17112.2] |
-| ✅ | pollen_g | 731 of 731 days | 150 | 225.504 | 227.409 [161.178, 296.443] |
-| ✅ | trips | 731 of 731 days | 150 | 2853.5 | 3142 [1204.5, 7868.8] |
-| ✅ | nectar_left_l | 731 of 731 days | 150 | 1.58382 | 1.57317 [1.37151, 1.66116] |
-| ✅ | pollen_left_kg | 731 of 731 days | 150 | 0.580337 | 0.580935 [0.553948, 0.591342] |
-| ✅ | ibm_colonies | 731 of 731 days | 150 | 9 | 9 [6, 10] |
-| ✅ | bee_agents | 731 of 731 days | 150 | 654 | 605.5 [472.45, 957.55] |
+![step8_ibm](plots/step8_ibm.png)
 
-![Plots of the metrics over the days](plots/step8_ibm.png)
-
-Blue: NetLogo median and 5-95 % band, orange: gobees median, x axis: day.
-
-<!-- section 08.2|Step 8: model branches the example farm does not use -->
 ### Genetics
 
 Experiment `go/validation/experiments/step8_genetics.xml`: example farm, full model, 730 days, with the parameter file `step8_genetics_Parameters.csv`: SexLocus? = true (diploid males), UnlimitedMales? = false (a queen without a male dies). Both run with StopExtinct? = false. The table shows day 150.
 
-100 runs each.
+| Metric | Band: days inside | KS vs NetLogo | KS vs gobees |
+| --- | --- | --- | --- |
+| colonies | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| dead_colonies | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| colonies_founded | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| eggs | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| larvae | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| pupae | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| workers | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| males | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| young_queens | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| hibernating_queens | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| energy_kJ | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| pollen_g | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| trips | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| nectar_left_l | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| pollen_left_kg | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| diploid_males | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
 
-| | Metric | Days inside the band | Example day | gobees median | NetLogo median [5-95 %] |
-| --- | --- | --- | ---: | ---: | --- |
-| ✅ | colonies | 731 of 731 days | 150 | 33 | 34 [25, 42.05] |
-| ✅ | dead_colonies | 731 of 731 days | 150 | 98 | 100 [86, 115] |
-| ✅ | colonies_founded | 731 of 731 days | 150 | 132 | 133 [117.95, 150] |
-| ✅ | eggs | 731 of 731 days | 150 | 264 | 264 [107.4, 444.6] |
-| ✅ | larvae | 731 of 731 days | 150 | 480 | 444 [239.4, 648.6] |
-| ✅ | pupae | 731 of 731 days | 150 | 522 | 516 [323.4, 756] |
-| ✅ | workers | 731 of 731 days | 150 | 444 | 426 [215.4, 672] |
-| ✅ | males | 731 of 731 days | 150 | 168 | 180 [84, 324] |
-| ✅ | young_queens | 731 of 731 days | 150 | 0 | 0 [0, 24] |
-| ✅ | hibernating_queens | 731 of 731 days | 150 | 104 | 115 [41.65, 198] |
-| ✅ | energy_kJ | 731 of 731 days | 150 | 10604.7 | 10419.4 [6099.56, 15256.4] |
-| ✅ | pollen_g | 731 of 731 days | 150 | 181.039 | 189.35 [126.253, 258.814] |
-| ✅ | trips | 731 of 731 days | 150 | 3443.5 | 2550 [974.5, 5872.6] |
-| ✅ | nectar_left_l | 731 of 731 days | 150 | 1.56207 | 1.59739 [1.41503, 1.67674] |
-| ✅ | pollen_left_kg | 731 of 731 days | 150 | 0.578132 | 0.58262 [0.568469, 0.591059] |
-| ✅ | diploid_males | 731 of 731 days | 150 | 0 | 0 [0, 0] |
+![step8_genetics](plots/step8_genetics.png)
 
-![Plots of the metrics over the days](plots/step8_genetics.png)
-
-Blue: NetLogo median and 5-95 % band, orange: gobees median, x axis: day.
-
-<!-- section 08.3|Step 8: model branches the example farm does not use -->
 ### Several species
 
 Experiment `go/validation/experiments/step8_species.xml`: example farm, full model, 730 days, with the parameter file `step8_species_Parameters.csv`: all 7 species, 150 queens of each Bombus species and 100 Psithyrus queens. Both run with StopExtinct? = false. The table shows day 150.
 
-100 runs each.
+| Metric | Band: days inside | KS vs NetLogo | KS vs gobees |
+| --- | --- | --- | --- |
+| colonies | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| dead_colonies | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| colonies_founded | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| eggs | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| larvae | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| pupae | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| workers | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| males | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| young_queens | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| hibernating_queens | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| energy_kJ | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| pollen_g | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| trips | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| nectar_left_l | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| pollen_left_kg | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| colonies_B_terrestris | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| colonies_B_pascuorum | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| colonies_B_lapidarius | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| colonies_B_hortorum | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| colonies_B_pratorum | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| colonies_B_hypnorum | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| psithyrus | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
 
-| | Metric | Days inside the band | Example day | gobees median | NetLogo median [5-95 %] |
-| --- | --- | --- | ---: | ---: | --- |
-| ✅ | colonies | 731 of 731 days | 150 | 88 | 91 [72.95, 104.05] |
-| ✅ | dead_colonies | 731 of 731 days | 150 | 125 | 127 [109, 140.1] |
-| ✅ | colonies_founded | 731 of 731 days | 150 | 210.5 | 216 [192.95, 236.15] |
-| ✅ | eggs | 731 of 731 days | 150 | 955 | 975 [642.3, 1471.05] |
-| ✅ | larvae | 731 of 731 days | 150 | 733 | 747.5 [528.4, 1021.55] |
-| ✅ | pupae | 731 of 731 days | 150 | 500 | 530.5 [348.65, 722.2] |
-| ✅ | workers | 731 of 731 days | 150 | 387.5 | 380.5 [198.7, 653.15] |
-| ✅ | males | 731 of 731 days | 150 | 101 | 94 [11.4, 205.2] |
-| ✅ | young_queens | 731 of 731 days | 150 | 0 | 0 [0, 12] |
-| ✅ | hibernating_queens | 731 of 731 days | 150 | 125.5 | 136 [91, 207.3] |
-| ✅ | energy_kJ | 731 of 731 days | 150 | 9732.52 | 10540.3 [7696.77, 14080.6] |
-| ✅ | pollen_g | 731 of 731 days | 150 | 179.32 | 191.311 [140.504, 246.483] |
-| ✅ | trips | 731 of 731 days | 150 | 3592.5 | 3808.5 [1999.85, 6422.65] |
-| ✅ | nectar_left_l | 731 of 731 days | 150 | 1.49995 | 1.50294 [1.38031, 1.59056] |
-| ✅ | pollen_left_kg | 731 of 731 days | 150 | 0.575796 | 0.575968 [0.560609, 0.584244] |
-| ✅ | colonies_B_terrestris | 731 of 731 days | 150 | 11 | 12 [7, 17.05] |
-| ✅ | colonies_B_pascuorum | 731 of 731 days | 150 | 20 | 19 [12.95, 26.05] |
-| ✅ | colonies_B_lapidarius | 731 of 731 days | 150 | 14.5 | 15 [9, 21] |
-| ✅ | colonies_B_hortorum | 731 of 731 days | 150 | 16 | 18 [11.9, 24] |
-| ✅ | colonies_B_pratorum | 731 of 731 days | 150 | 13 | 12 [7, 18] |
-| ✅ | colonies_B_hypnorum | 731 of 731 days | 150 | 13 | 13 [8.95, 19] |
-| ✅ | psithyrus | 731 of 731 days | 150 | 501.5 | 469.5 [220.45, 969.95] |
+![step8_species](plots/step8_species.png)
 
-![Plots of the metrics over the days](plots/step8_species.png)
-
-Blue: NetLogo median and 5-95 % band, orange: gobees median, x axis: day.
-
-<!-- section 08.4|Step 8: model branches the example farm does not use -->
 ### Weather and foraging mortality
 
 Experiment `go/validation/experiments/step8_weather.xml`: example farm, full model, 730 days, with the parameter file `step8_weather_Parameters.csv`: Weather = "foragingHoursExample" (foraging hours per day of the year), ForagingMortalityModel = "low". Both run with StopExtinct? = false. The table shows day 150.
 
-100 runs each.
+| Metric | Band: days inside | KS vs NetLogo | KS vs gobees |
+| --- | --- | --- | --- |
+| colonies | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| dead_colonies | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| colonies_founded | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| eggs | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| larvae | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| pupae | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| workers | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| males | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| young_queens | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| hibernating_queens | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| energy_kJ | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| pollen_g | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| trips | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| nectar_left_l | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| pollen_left_kg | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| foraging_period_s | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
 
-| | Metric | Days inside the band | Example day | gobees median | NetLogo median [5-95 %] |
-| --- | --- | --- | ---: | ---: | --- |
-| ✅ | colonies | 731 of 731 days | 150 | 70 | 71 [53, 86.15] |
-| ✅ | dead_colonies | 731 of 731 days | 150 | 157 | 161 [137, 180.1] |
-| ✅ | colonies_founded | 731 of 731 days | 150 | 229 | 229.5 [211, 249] |
-| ✅ | eggs | 731 of 731 days | 150 | 744 | 744 [528, 1104] |
-| ✅ | larvae | 731 of 731 days | 150 | 732 | 696 [383.4, 1092] |
-| ✅ | pupae | 731 of 731 days | 150 | 864 | 852 [455.4, 1213.8] |
-| ✅ | workers | 731 of 731 days | 150 | 816 | 792 [395.4, 1237.2] |
-| ✅ | males | 731 of 731 days | 150 | 312 | 300 [143.4, 492] |
-| ✅ | young_queens | 731 of 731 days | 150 | 0 | 12 [0, 36] |
-| ✅ | hibernating_queens | 731 of 731 days | 150 | 290.5 | 290.5 [175.8, 418.9] |
-| ✅ | energy_kJ | 731 of 731 days | 150 | 19279.8 | 18981.9 [11833.5, 27610.5] |
-| ✅ | pollen_g | 731 of 731 days | 150 | 371.955 | 367.896 [233.864, 500.635] |
-| ✅ | trips | 731 of 731 days | 150 | 4021 | 3654.5 [2088.2, 6027.55] |
-| ✅ | nectar_left_l | 731 of 731 days | 150 | 1.53946 | 1.55157 [1.44853, 1.62441] |
-| ✅ | pollen_left_kg | 731 of 731 days | 150 | 0.587876 | 0.588463 [0.580944, 0.592876] |
-| ✅ | foraging_period_s | 731 of 731 days | 150 | 6120 | 6120 [6120, 6120] |
+![step8_weather](plots/step8_weather.png)
 
-![Plots of the metrics over the days](plots/step8_weather.png)
-
-Blue: NetLogo median and 5-95 % band, orange: gobees median, x axis: day.
-
-<!-- section 08.5|Step 8: model branches the example farm does not use -->
 ### Other settings
 
 Experiment `go/validation/experiments/step8_settings.xml`: example farm, full model, 730 days, with the parameter file `step8_settings_Parameters.csv`: WinterMortality?, MergeHedges?, MinSizeFoodSources?, RemoveEmptyFoodSources?, KeepDeadColonies? = false, MaxHibernatingQueens = 150 (the limit takes effect on every 1 January, also on the first day). Both run with StopExtinct? = false. The table shows day 150.
 
-100 runs each.
+| Metric | Band: days inside | KS vs NetLogo | KS vs gobees |
+| --- | --- | --- | --- |
+| colonies | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| dead_colonies | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| colonies_founded | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| eggs | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| larvae | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| pupae | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| workers | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| males | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| young_queens | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| hibernating_queens | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| energy_kJ | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| pollen_g | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| trips | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| nectar_left_l | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| pollen_left_kg | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| foodsources | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
+| queens_removed | ✅ 731 of 731 | ✅ 0 of 5 | – no data |
 
-| | Metric | Days inside the band | Example day | gobees median | NetLogo median [5-95 %] |
-| --- | --- | --- | ---: | ---: | --- |
-| ✅ | colonies | 731 of 731 days | 150 | 6 | 7 [3, 10.05] |
-| ✅ | dead_colonies | 731 of 731 days | 150 | 76 | 77 [67, 86] |
-| ✅ | colonies_founded | 731 of 731 days | 150 | 83.5 | 84 [74.9, 92.1] |
-| ✅ | eggs | 731 of 731 days | 150 | 48 | 48 [12, 132] |
-| ✅ | larvae | 731 of 731 days | 150 | 48 | 48 [12, 132] |
-| ✅ | pupae | 731 of 731 days | 150 | 36 | 36 [0, 108] |
-| ✅ | workers | 731 of 731 days | 150 | 12 | 24 [0, 72.6] |
-| ✅ | males | 731 of 731 days | 150 | 0 | 0 [0, 24.6] |
-| ✅ | young_queens | 731 of 731 days | 150 | 0 | 0 [0, 0] |
-| ✅ | hibernating_queens | 731 of 731 days | 150 | 2 | 2 [0, 15] |
-| ✅ | energy_kJ | 731 of 731 days | 150 | 469.697 | 440.935 [111.035, 1403.53] |
-| ✅ | pollen_g | 731 of 731 days | 150 | 8.05129 | 8.90098 [2.37436, 19.4504] |
-| ✅ | trips | 731 of 731 days | 150 | 204 | 137.5 [8.95, 1045.25] |
-| ✅ | nectar_left_l | 731 of 731 days | 150 | 1.92943 | 1.93053 [1.90028, 1.93845] |
-| ✅ | pollen_left_kg | 731 of 731 days | 150 | 0.671871 | 0.671832 [0.669282, 0.672199] |
-| ✅ | foodsources | 731 of 731 days | 150 | 1826 | 1826 [1826, 1826] |
-| ✅ | queens_removed | 731 of 731 days | 150 | 350 | 350 [350, 350] |
+![step8_settings](plots/step8_settings.png)
 
-![Plots of the metrics over the days](plots/step8_settings.png)
-
-Blue: NetLogo median and 5-95 % band, orange: gobees median, x axis: day.
-
+Plots: blue, NetLogo median and 5-95 % band; dark grey, dashed, gobees median; orange, gobees-fast median; x axis: day.
