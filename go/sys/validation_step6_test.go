@@ -152,7 +152,7 @@ func TestValidationStep6AgainstNetLogo(t *testing.T) {
 			"brood, the daily activity queue and foraging. Both models run without QueensLeavingNestProc and " +
 			"UpdateSeasonalEventsProc (step 7). Compared at every step: the gobees median must lie in the NetLogo " +
 			"5-95 % band. The table shows day 150, the middle of the colony season.",
-		Runs: runs, Rows: rows})
+		Runs: runs, Rows: rows, Values: values})
 	if err != nil {
 		t.Fatal(err)
 	}

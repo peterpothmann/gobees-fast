@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -45,6 +46,48 @@ type Section struct {
 	Description string
 	Runs        int
 	Rows        []ReportRow
+	// Values holds the metrics of all runs, Values[metric][step][run]. WriteReport records them if DumpEnv is set.
+	Values Values
+}
+
+// Meta describes a recorded experiment, in the format of gobees-fast (its go/validation/cmd/report compares the
+// recorded results of gobees and gobees-fast).
+type Meta struct {
+	Order       string
+	Step        string
+	Title       string
+	Experiment  string
+	Description string
+	Runs        int
+	Metrics     []MetricMeta
+}
+
+// MetricMeta is a compared metric of an experiment: it is compared on the days 0 to Days-1.
+type MetricMeta struct {
+	Metric string
+	Days   int
+}
+
+// record writes the results of an experiment into the folder of DumpEnv: the quantiles per day and the run
+// summaries (WriteDump), and <experiment>_meta.json (Meta). Does nothing if DumpEnv is not set.
+func record(s Section) error {
+	dir := os.Getenv(DumpEnv)
+	if dir == "" || s.Values == nil {
+		return nil
+	}
+	if err := WriteDump(dir, s.Experiment, s.Values); err != nil {
+		return err
+	}
+	meta := Meta{Order: s.Order, Step: s.Step, Title: s.Title, Experiment: s.Experiment, Description: s.Description,
+		Runs: s.Runs}
+	for _, r := range s.Rows {
+		meta.Metrics = append(meta.Metrics, MetricMeta{Metric: r.Metric, Days: r.Steps})
+	}
+	b, err := json.MarshalIndent(meta, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, s.Experiment+"_meta.json"), b, 0o644)
 }
 
 const (
@@ -56,10 +99,14 @@ const (
 	sectionMarker = "<!-- section " // followed by the order, "|", the step heading and " -->"
 )
 
-// WriteReport adds the section to the report file in ReportEnv, or replaces the section with the same Order, and
-// writes the report sorted by Order. Does nothing if ReportEnv is not set.
+// WriteReport records the results if DumpEnv is set (record), then adds the section to the report file in
+// ReportEnv, or replaces the section with the same Order, and writes the report sorted by Order. Does nothing more
+// if ReportEnv is not set.
 // Several test processes can write at the same time: a lock file next to the report serialises them.
 func WriteReport(s Section) error {
+	if err := record(s); err != nil {
+		return err
+	}
 	path := os.Getenv(ReportEnv)
 	if path == "" {
 		return nil
