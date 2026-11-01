@@ -34,7 +34,7 @@ type cli struct {
 	Dir        string `short:"d" type:"path" default:"${default_dir}" placeholder:"PATH" help:"Folder of the input files, the folder of the .nlogo in NetLogo. The map and the file names in the parameter file are relative to it."`
 	Seed       int64  `short:"s" default:"0" help:"Random seed (RAND_SEED). 0 means a random seed [INIT-01]."`
 	Days       int    `default:"${default_days}" help:"Number of days (ticks) to run. 0 means no limit: the run only ends with StopExtinct? when the population is extinct [GO-20]."`
-	Output     bool   `short:"o" help:"Write the daily output of OutputDailyProc to ${default_output_file}, one row per tick, tab separated."`
+	Output     bool   `short:"o" help:"Write the daily output (the totals of OutputDailyProc and further values, see obs.DailyOutputExtended) to ${default_output_file}, one row per tick, tab separated."`
 	OutputFile string `short:"f" type:"path" placeholder:"PATH" help:"Write the daily output to PATH instead (implies -o)."`
 }
 
@@ -100,7 +100,8 @@ func main() {
 	if outputFile != "" {
 		// after all model systems, so that each row holds the state at the end of the day.
 		// reporter.CSV writes a row on every tick, creates missing folders and flushes the file in Finalize.
-		a.AddSystem(&reporter.CSV{Observer: &obs.DailyOutput{}, File: outputFile, Sep: "\t"})
+		// The comparisons with the reference commit (go/compare) read this output.
+		a.AddSystem(&reporter.CSV{Observer: &obs.DailyOutputExtended{}, File: outputFile, Sep: "\t"})
 	}
 
 	a.Run()

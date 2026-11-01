@@ -27,6 +27,10 @@ type Counters struct {
 	// PopulationSizeDay365List gets the number of bees on every 1 January [SEAS-03] (also on ticks 1). Output only.
 	// SIMPLIFY: not needed.
 	PopulationSizeDay365List []float64
+
+	// TotalForagersEverDiedForaging adds up the bees that died on a foraging trip [COST-01], [COST-02]. Not in
+	// NetLogo: output of gobees-fast (obs.DailyOutputExtended), read by no system.
+	TotalForagersEverDiedForaging float64
 }
 
 // ActiveBees is the daily activity queue: the active bees sorted by personalTime_s.

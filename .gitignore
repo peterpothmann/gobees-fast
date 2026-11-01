@@ -15,3 +15,5 @@ benchmark_netlogo_console.txt
 benchmark-report-local.md
 # daily output of go run . -o
 go/daily_output.csv
+# plan of gobees-fast, kept local
+docs/plan.md

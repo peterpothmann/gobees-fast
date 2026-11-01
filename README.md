@@ -6,29 +6,28 @@
   <img alt="gobees" src="docs/logo/gobees-logo-light.svg" width="560">
 </picture>
 
-[![Tests](https://github.com/peterpothmann/gobees/actions/workflows/tests.yml/badge.svg)](https://github.com/peterpothmann/gobees/actions/workflows/tests.yml)
+[![Tests](https://github.com/peterpothmann/gobees-fast/actions/workflows/tests.yml/badge.svg)](https://github.com/peterpothmann/gobees-fast/actions/workflows/tests.yml)
+[![Compare](https://github.com/peterpothmann/gobees-fast/actions/workflows/compare.yml/badge.svg)](https://github.com/peterpothmann/gobees-fast/actions/workflows/compare.yml)
 
 </div>
 
-`gobees` is a port of [BEE-STEWARD](https://beehave-model.net/bee-steward-is-published/) ([Twiston-Davies et al. 2021](#ref-twiston-davies2021)) from `NetLogo` to `Go`, built on the [Ark](https://github.com/mlange-42/ark) entity component system. `BEE-STEWARD` is a research and decision support tool for land management that promotes bumblebee populations. It combines the bumblebee population model [Bumble-BEEHAVE](https://beehave-model.net/category/bumblebeehave/) ([Becher et al. 2018](#ref-becher2018)) with the landscape module [BEESCOUT](https://beehave-model.net/category/beescout/) ([Becher et al. 2016](#ref-becher2016)). It simulates colonies of six *Bombus* species and the cuckoo bumblebee *Psithyrus*, from queen emergence through foraging and brood rearing to hibernation, over several years. The bees forage in a nectar and pollen landscape built from maps, with the flowering period of each plant species. Agri-environment schemes, such as flower strips, and crop rotations can be applied to selected fields.
+`gobees-fast` is the optimized version of [gobees](https://github.com/peterpothmann/gobees), a port of [BEE-STEWARD](https://beehave-model.net/bee-steward-is-published/) ([Twiston-Davies et al. 2021](#ref-twiston-davies2021)) from `NetLogo` to `Go`, built on the [Ark](https://github.com/mlange-42/ark) entity component system. `BEE-STEWARD` is a research and decision support tool for land management that promotes bumblebee populations. It combines the bumblebee population model [Bumble-BEEHAVE](https://beehave-model.net/category/bumblebeehave/) ([Becher et al. 2018](#ref-becher2018)) with the landscape module [BEESCOUT](https://beehave-model.net/category/beescout/) ([Becher et al. 2016](#ref-becher2016)). It simulates colonies of six *Bombus* species and the cuckoo bumblebee *Psithyrus*, from queen emergence through foraging and brood rearing to hibernation, over several years. The bees forage in a nectar and pollen landscape built from maps, with the flowering period of each plant species. Agri-environment schemes, such as flower strips, and crop rotations can be applied to selected fields.
 
 All credit for the scientific model, its development, and parameterisation belongs to the original authors and contributors of `BEE-STEWARD` and its component models.
 
-The goal is a faithful translation that preserves the behaviour of the original NetLogo implementation. Any unusual implementation details are documented and retained to maintain consistency with the original model. The goal is a faithful translation: gobees reproduces the NetLogo code, including its quirks, and does not change the model dynamics. Quirks are documented, not fixed
-
 > [!NOTE]
-> gobees is work in progress. The model is translated step by step and does not yet run the full bumblebee life cycle. The steps and their status are listed in [go/validation/README.md](go/validation/README.md#steps-and-their-validation).
+> gobees-fast is at its first step: apart from a longer daily output and the comparisons in [go/compare](go/compare/README.md), it is still the code of gobees (commit `40dc301`). The rest of this README describes gobees.
 
 A graphical interface for gobees is available in [gobees-ui](https://github.com/peterpothmann/gobees-ui). It shows the landscape, the flowering calendar and the queens of a running simulation, and explains how the model works in a schematic animation.
 
-## Two versions
+## gobees and gobees-fast
 
-gobees will come in two versions:
+- **gobees** stays as close as possible to the NetLogo code: same quirks, same variable and procedure names, same structure. It is meant for users who know BEE-STEWARD in NetLogo and want to move to Go, and who need to trace every result back to the NetLogo code.
+- **gobees-fast** (this repository) starts as a copy of gobees, with its history. It is changed in small steps: dead code and unused data are removed, the data model is simplified, and the quirks of the NetLogo code ([trans/netlogo-findings.md](trans/netlogo-findings.md)) are fixed. It is meant for users who learn BEE-STEWARD from scratch, and for applications where performance matters most.
 
-- **This version** stays as close as possible to the NetLogo code: same quirks, same variable and procedure names, same structure. It is meant for users who know BEE-STEWARD in NetLogo and want to move to Go, and who need to trace every result back to the NetLogo code.
-- **An optimized version** (planned, not started yet) will fix the quirks, rename variables, functions and systems, and slim down the model. It is meant for users who learn BEE-STEWARD from scratch, and for applications where performance matters most. Its results will differ from NetLogo wherever a quirk is fixed (to be checked).
+Every step is compared with an earlier commit of gobees-fast, first value by value, later by distributions over 100 seeds ([go/compare](go/compare/README.md)), and with NetLogo ([go/validation](go/validation/README.md)). Once a quirk that is active in the default run is fixed, the results differ from NetLogo, and gobees-fast is a modified model version, not BEE-STEWARD in Go.
 
-If you do not depend on NetLogo, use the optimized version once it is available.
+`git diff upstream/main` shows every change against gobees, with the remote `upstream` set to <https://github.com/peterpothmann/gobees>.
 
 ## How the translation works
 
@@ -54,6 +53,7 @@ The reference is written in NetLogo 5.3.1.
 | `go/util`      | functions that mirror NetLogo reporters                         |
 | `go/obs`       | observers of the model output                              |
 | `go/benchmark` | run time of gobees and NetLogo                                  |
+| `go/compare`   | comparison with the reference commit (exact, statistical, speed) |
 | `go/enum`      | castes, stages and activities as Go constants                   |
 | `netlogo`      | the annotated NetLogo model and its input files                 |
 | `trans`        | findings on the NetLogo code and the validation against NetLogo |
@@ -80,7 +80,7 @@ go run . -p my_Parameters.csv -d path/to/inputs -s 3 --days 730                #
 
 Unlike NetLogo, a missing parameter file is an error. NetLogo loads `_SYSTEM_Parameters.csv` instead.
 
-The daily totals of `OutputDailyProc` (colonies, queens, males, mean weights, ...) can be written to a tab-separated file. The CSV reporter of ark-tools adds one row at the end of every tick. Its first column `t` counts from 0, the column `ticks` holds the NetLogo ticks (1 on the first day). The other column names are the NetLogo names.
+The daily output can be written to a tab-separated file. It holds the totals of `OutputDailyProc` (colonies, queens, males, mean weights, ...), followed by brood, workers, stores, foraging trips, forager deaths, queens produced and the mean competition point date (`obs.DailyOutputExtended`). The CSV reporter of ark-tools adds one row at the end of every tick. Its first column `t` counts from 0, the column `ticks` holds the NetLogo ticks (1 on the first day). The totals of `OutputDailyProc` keep their NetLogo names.
 
 ```shell
 go run . -o                     # writes go/daily_output.csv
@@ -101,6 +101,10 @@ go test -short ./...         # without the comparison with NetLogo
 Single runs of gobees and NetLogo cannot be compared, because NetLogo's random number sequence cannot be reproduced in Go. Instead, 100 NetLogo runs give quantiles per day for each compared quantity, and a Go test requires the median of 100 gobees runs to lie within the NetLogo 5–95 % band. The NetLogo results are embedded in the repository, so NetLogo does not have to be installed to run the tests.
 
 The CI runs all tests on every pull request and on every push to `main`. In a pull request it commits the comparison report [go/validation/validation-report.md](go/validation/validation-report.md), with one plot per experiment, to the branch. Details on the experiments: [go/validation/README.md](go/validation/README.md).
+
+## Comparison with the reference commit
+
+The CI compares every pull request and every push to `main` with a reference commit of gobees-fast: value by value while a step must not change any random draw, otherwise by distributions over 100 seeds. It also times the current code against gobees. The results are in the summary of the run. Locally: `go/compare/run_compare.sh`. Details: [go/compare/README.md](go/compare/README.md).
 
 ## Benchmarks
 
