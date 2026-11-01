@@ -69,7 +69,7 @@ type ParameterFile struct {
 // the only value it accepts (lower-case names). The NetLogo files keep these columns, so they are read and checked,
 // but not stored.
 var removedParameters = map[string]string{
-	"colonies_ibm": "0", // individual-based colonies [CCOL-05], removed in step F2
+	"colonies_ibm": "0", // individual-based colonies [CCOL-05], removed in step F1
 }
 
 // ReadParameterFile reads a NetLogo parameter file [RPAR].

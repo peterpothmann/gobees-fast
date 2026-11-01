@@ -286,7 +286,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Consequence for gobees:** count only living individual-based colonies.
 - **Second Check**: 24.10.2026, PP
 - **Implemented:** `countIBMColonies` in `sys/create_colonies.go` counts living colonies. Test: `TestColoniesIBM`.
-- **gobees-fast:** removed with the individual-based colonies in step F2. `COLONIES_IBM` must be 0 in the parameter file.
+- **gobees-fast:** removed with the individual-based colonies in step F1. `COLONIES_IBM` must be 0 in the parameter file.
 
 <a id="finding-31"></a>
 
@@ -430,7 +430,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Consequence for gobees:** translate as it is. A test with an individual-based colony checks the cost of one egg.
 - **Second Check**: 24.10.2026
 - **Implemented:** `eggLayer.EgglayingProc` in `sys/egglaying.go`. Test: `TestEgglayingIndividualBased` (12 cohorts of 1 egg, stores reduced by 0.0015 g and 0.0093 kJ).
-- **gobees-fast:** removed with the individual-based colonies in step F2. Every colony lays one cohort of `batchsize` eggs. Test: `TestEgglayingOneCohort`.
+- **gobees-fast:** removed with the individual-based colonies in step F1. Every colony lays one cohort of `batchsize` eggs. Test: `TestEgglayingOneCohort`.
 
 <a id="finding-44"></a>
 

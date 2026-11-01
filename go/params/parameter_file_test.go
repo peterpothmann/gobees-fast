@@ -124,7 +124,7 @@ func TestParseParameterFileErrors(t *testing.T) {
 }
 
 func TestParseParameterFileRemovedParameter(t *testing.T) {
-	// COLONIES_IBM: individual-based colonies are removed (step F2). The NetLogo files keep the column with 0.
+	// COLONIES_IBM: individual-based colonies are removed (step F1). The NetLogo files keep the column with 0.
 	p, err := ParseParameterFile(strings.NewReader("COLONIES_IBM,N_Badgers\n0,2\n"))
 	if err != nil {
 		t.Fatal(err)

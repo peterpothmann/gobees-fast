@@ -33,7 +33,7 @@ func TestDailyOutputCSV(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// TotalIBMColonies of NetLogo is not written: gobees-fast has no individual-based colonies (step F2)
+	// TotalIBMColonies of NetLogo is not written: gobees-fast has no individual-based colonies (step F1)
 	want := "t\tticks\tTotalQueens\tTotalMatedQueens\tTotalUnmatedQueens\tTotalHibernatingQueens\t" +
 		"TotalColonies\tTotalBeeAgents\tTotalMales\tTotalActiveBees\tMeanWorkerWeight_mg\tMeanQueenWeight_mg\t" +
 		"MeanAdultWeight_mg\tTotalMapArea_km2\tColonyDensity_km2\n" +
