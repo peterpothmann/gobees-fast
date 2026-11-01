@@ -134,7 +134,7 @@ func TestValidationStep3AgainstNetLogo(t *testing.T) {
 		Description: "Experiment `go/validation/experiments/step3.xml`: example farm, 500 B. terrestris queens, 250 days. " +
 			"Setup values and queen traits are compared at step 0 only (later, NetLogo colonies die with their queen, " +
 			"which is not yet translated). Colony foundation and queen counts are compared at every step.",
-		Runs: runs, Rows: rows})
+		Runs: runs, Rows: rows, Values: values})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -153,6 +153,14 @@ Notes on the NetLogo command line:
 - The classpath must be the one in `app\NetLogo.cfg`. Adding all jars of the folder fails, because `NetLogoLite.jar` contains conflicting classes.
 - With 20 threads, 100 runs of 250 days take about 6 minutes (one run about 17 s).
 
+## Recording the results for gobees-fast
+
+If `VALIDATION_DUMP_DIR` is set to a folder, every comparison test also records the results of its runs there
+(`WriteReport`, `summary.go`): per experiment the quantiles per day, the run summaries (the value at day 0, the
+maximum and the mean of every year) and a description of the experiment. The CI of gobees-fast runs the comparison
+tests of gobees this way and compares the recorded results of gobees and gobees-fast. `summary.go` is the same file
+in both repositories, so that both write the same format. Without the variable nothing changes.
+
 ## Results
 
 The results are not written down by hand. The CI (workflow "Tests", `.github/workflows/tests.yml`) runs all tests
