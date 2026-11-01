@@ -1,6 +1,6 @@
 // Package benchmark compares the run time of NetLogo, gobees and gobees-fast on the example farm. NetLogo runs the
-// experiment netlogo.xml (run_netlogo.sh), gobees-fast and gobees run the same seeds and days, and the report shows
-// all three. See README.md.
+// experiment netlogo.xml (run_netlogo.sh), gobees and gobees-fast run as command line programs with the same seeds
+// and days, and the report shows all three. See README.md.
 package benchmark
 
 import (
@@ -13,29 +13,25 @@ import (
 	"sync"
 	"time"
 
-	"gobees/globals"
 	"gobees/internal/examplefiles"
-	"gobees/model"
-	"gobees/params"
-
-	"github.com/mlange-42/ark/ecs"
 )
 
 // Run is the run time of one model run.
 type Run struct {
 	Number int     // run number, counted as BehaviorSpace does, from 1
 	Seed   float64 // RAND_SEED
-	Setup  time.Duration
-	Days   time.Duration // all simulated days after the setup
-	// Program is the wall time of a run as a command line program (RunPrograms), from the start of the process to
-	// its end. Zero for the other runs, which time Setup and Days instead.
+	// Setup and Days are NetLogo's Setup and its simulated days. Zero for the Go programs.
+	Setup time.Duration
+	Days  time.Duration
+	// Program is the wall time of a Go program (RunPrograms), from the start of the process to its end. Zero for
+	// NetLogo.
 	Program time.Duration
 	// ColoniesFounded is TotalColoniesEverProduced at the end of the run. It shows whether the runs of both models
 	// did a comparable amount of work.
 	ColoniesFounded float64
 }
 
-// Whole returns the time of the whole run: the wall time of a program, otherwise setup and days.
+// Whole returns the time of the whole run: the wall time of a Go program, NetLogo's setup and days.
 func (r Run) Whole() time.Duration {
 	if r.Program > 0 {
 		return r.Program
@@ -97,54 +93,13 @@ func runAll(seeds []float64, threads int, run func(seed float64) (Run, error)) (
 	return runs, nil
 }
 
-// RunGobees runs the example farm with the code of this repository (gobees-fast) in the test process, once per
-// seed for the given number of days, with threads runs at the same time. As in netlogo.xml, StopExtinct? is false,
-// so that every run simulates all days.
-//
-// The input files are written to a temporary directory before the runs. The timed setup reads them from there,
-// including the parameter file, as NetLogo's Setup does.
-func RunGobees(seeds []float64, days, threads int) ([]Run, error) {
-	dir, err := writeInputFiles()
-	if err != nil {
-		return nil, err
-	}
-	defer os.RemoveAll(dir)
-	return runAll(seeds, threads, func(seed float64) (Run, error) { return runGobees(dir, seed, days) })
-}
-
-// runGobees runs the example farm once, with the input files in dir.
-func runGobees(dir string, seed float64, days int) (Run, error) {
-	start := time.Now()
-	file, err := params.ReadParameterFile(filepath.Join(dir, parameterFile))
-	if err != nil {
-		return Run{}, err
-	}
-	p := params.Default()
-	p.WorkingDirectory.Path = dir
-	p.File = file
-	p.File.StopExtinct = false
-	p.Interface.RAND_SEED = seed
-	p.Termination.MaxTicks = days
-	a := model.Default(p, nil)
-	a.Initialize()
-	setup := time.Since(start)
-
-	start = time.Now()
-	for range days {
-		a.Update()
-	}
-	run := Run{Seed: seed, Setup: setup, Days: time.Since(start)}
-	run.ColoniesFounded = ecs.GetResource[globals.Counters](a.World).TotalColoniesEverProduced
-	return run, nil
-}
-
 // RunPrograms runs the example farm with the command line program bin (go/main.go of any commit), once per seed
 // for the given number of days, with threads runs at the same time, and times each program as a whole. The program
 // writes no daily output. It cannot turn StopExtinct? off: a run that ends before the last day is an error, so that
 // all programs simulate the same days.
 //
 // The same command line in gobees and gobees-fast makes the two comparable: both are timed the same way, also
-// when the code of the base commit cannot time its setup and days separately.
+// though the code of the base commit cannot time its setup and days separately.
 //
 // Before the timed runs, the program runs once with the first seed, untimed. Without it, the first runs of a newly
 // built program took up to 1.7 times as long as the others (local run, Windows).

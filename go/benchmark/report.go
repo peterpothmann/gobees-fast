@@ -19,22 +19,15 @@ type Machine struct {
 	Commit string
 }
 
-// Report is the comparison of the run times.
+// Report is the comparison of the run times. Base (gobees) and Current (gobees-fast) have the same seeds and days as
+// NetLogo, in the same order.
 type Report struct {
-	NetLogo NetLogo
-	Gobees  []Run // gobees-fast in the test process, same seeds and days as NetLogo, in the same order
-	// Programs holds gobees and gobees-fast as command line programs, nil if they did not run.
-	Programs *Programs
-	Threads  int // runs at the same time, in all models
-	Machine  Machine
-}
-
-// Programs are the runs of the base commit (gobees) and of the current code (gobees-fast) as command line programs
-// (RunPrograms), with the same seeds and days as NetLogo, in the same order.
-type Programs struct {
+	NetLogo    NetLogo
 	BaseCommit string
 	Base       []Run
 	Current    []Run
+	Threads    int // runs at the same time, in all models
+	Machine    Machine
 }
 
 // WriteReport writes the report as Markdown to path.
@@ -47,59 +40,29 @@ func (r Report) Markdown() string {
 	var b strings.Builder
 	n := r.NetLogo
 	fmt.Fprintf(&b, "# Run time of NetLogo, gobees and gobees-fast\n\n"+
-		"The example farm with %d seeds, %d days each, %d runs at the same time in all models. NetLogo 5.3.1 runs "+
-		"headless with BehaviorSpace and the GUI switches off. Details: go/benchmark/README.md.\n\n",
-		len(n.Runs), n.Days, r.Threads)
+		"The example farm with %d seeds, %d days each, %d runs at the same time in all models. gobees is the base "+
+		"commit %s, gobees-fast the current code. NetLogo 5.3.1 runs headless with BehaviorSpace and the GUI "+
+		"switches off, its time is its Setup and its days, without the start of Java. gobees and gobees-fast run "+
+		"as command line programs without output, one version after the other, and are timed from the start of "+
+		"the program to its end, including reading the input files. Details: go/benchmark/README.md.\n\n",
+		len(n.Runs), n.Days, r.Threads, r.BaseCommit)
 
-	b.WriteString("## NetLogo and gobees-fast\n\n" +
-		"Setup is the time of NetLogo's Setup and of the gobees-fast setup, including reading the input files. The " +
-		"days are timed separately, without output during the run.\n\n")
-	b.WriteString("| | NetLogo median (min-max) | gobees-fast median (min-max) | NetLogo / gobees-fast |\n" +
-		"| --- | ---: | ---: | ---: |\n")
-	setup := func(run Run) time.Duration { return run.Setup }
-	days := func(run Run) time.Duration { return run.Days }
-	for _, row := range []struct {
-		name string
-		get  func(Run) time.Duration
-	}{{"Setup", setup}, {fmt.Sprintf("%d days", n.Days), days}} {
-		nl, gb := durations(n.Runs, row.get), durations(r.Gobees, row.get)
-		fmt.Fprintf(&b, "| %s | %s | %s | %.0f |\n", row.name, spread(nl), spread(gb),
-			float64(median(nl))/float64(median(gb)))
-	}
-
-	if p := r.Programs; p != nil {
-		fmt.Fprintf(&b, "\n## NetLogo, gobees and gobees-fast\n\n"+
-			"gobees is the base commit %s, gobees-fast the current code. Both run as command line programs without "+
-			"output, one version after the other, and are timed as a whole, from the start of the program to its "+
-			"end, including reading the input files. NetLogo's whole run is its Setup and its days, without the "+
-			"start of Java.\n\n", p.BaseCommit)
-		whole := func(run Run) time.Duration { return run.Whole() }
-		nl, base, cur := durations(n.Runs, whole), durations(p.Base, whole), durations(p.Current, whole)
-		b.WriteString("| | NetLogo median (min-max) | gobees median (min-max) | gobees-fast median (min-max) | " +
-			"NetLogo / gobees-fast | gobees / gobees-fast |\n| --- | ---: | ---: | ---: | ---: | ---: |\n")
-		fmt.Fprintf(&b, "| Whole run | %s | %s | %s | %.0f | %.2f |\n", spread(nl), spread(base), spread(cur),
-			float64(median(nl))/float64(median(cur)), float64(median(base))/float64(median(cur)))
-	}
+	whole := func(run Run) time.Duration { return run.Whole() }
+	nl, base, cur := durations(n.Runs, whole), durations(r.Base, whole), durations(r.Current, whole)
+	b.WriteString("| | NetLogo median (min-max) | gobees median (min-max) | gobees-fast median (min-max) | " +
+		"NetLogo / gobees-fast | gobees / gobees-fast |\n| --- | ---: | ---: | ---: | ---: | ---: |\n")
+	fmt.Fprintf(&b, "| Whole run | %s | %s | %s | %.0f | %.2f |\n", spread(nl), spread(base), spread(cur),
+		float64(median(nl))/float64(median(cur)), float64(median(base))/float64(median(cur)))
 
 	b.WriteString("\n## Runs\n\nThe runs of NetLogo and of the Go versions with the same seed are not the same " +
 		"run: NetLogo's random numbers cannot be reproduced in Go. The colonies founded show that all did a " +
 		"comparable amount of work.\n\n" +
-		"| Run | Seed | NetLogo setup | NetLogo days | NetLogo colonies founded | gobees-fast setup | gobees-fast days | " +
+		"| Run | Seed | NetLogo | NetLogo colonies founded | gobees | gobees colonies founded | gobees-fast | " +
 		"gobees-fast colonies founded |\n| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n")
 	for i, nl := range n.Runs {
-		gb := r.Gobees[i]
-		fmt.Fprintf(&b, "| %d | %g | %s | %s | %g | %s | %s | %g |\n", nl.Number, nl.Seed,
-			format(nl.Setup), format(nl.Days), nl.ColoniesFounded, format(gb.Setup), format(gb.Days), gb.ColoniesFounded)
-	}
-	if p := r.Programs; p != nil {
-		b.WriteString("\nAs programs:\n\n" +
-			"| Run | Seed | gobees | gobees colonies founded | gobees-fast | gobees-fast colonies founded |\n" +
-			"| ---: | ---: | ---: | ---: | ---: | ---: |\n")
-		for i, base := range p.Base {
-			cur := p.Current[i]
-			fmt.Fprintf(&b, "| %d | %g | %s | %g | %s | %g |\n", base.Number, base.Seed, format(base.Program),
-				base.ColoniesFounded, format(cur.Program), cur.ColoniesFounded)
-		}
+		base, cur := r.Base[i], r.Current[i]
+		fmt.Fprintf(&b, "| %d | %g | %s | %g | %s | %g | %s | %g |\n", nl.Number, nl.Seed, format(nl.Whole()),
+			nl.ColoniesFounded, format(base.Whole()), base.ColoniesFounded, format(cur.Whole()), cur.ColoniesFounded)
 	}
 
 	b.WriteString("\n## Machine\n\n")

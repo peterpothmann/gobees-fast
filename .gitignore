@@ -17,3 +17,5 @@ benchmark-report-local.md
 go/daily_output.csv
 # plan of gobees-fast, kept local
 docs/plan.md
+docs/inventory.md
+docs/model-scope.md
