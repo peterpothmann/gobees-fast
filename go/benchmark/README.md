@@ -1,18 +1,23 @@
-# Run time of gobees and NetLogo
+# Run time of NetLogo, gobees and gobees-fast
 
-Compares the run time of `gobees` with `BEE-STEWARD` (NetLogo 5.3.1) on the example farm. Report: [benchmark-report.md](benchmark-report.md). To check whether both models have the same behaviour please look into the validation ([go/validation/README.md](../validation/README.md)).
+Compares the run time of `BEE-STEWARD` (NetLogo 5.3.1), `gobees` and `gobees-fast` on the example farm. `gobees` is the base commit in [go/compare/commits.env](../compare/commits.env) (the fork point), `gobees-fast` the current code. Report: [benchmark-report.md](benchmark-report.md). To check whether the models have the same behaviour please look into the validation ([go/validation/README.md](../validation/README.md)) and the comparison with the reference commit ([go/compare/README.md](../compare/README.md)).
 
 ## What is measured
 
-Both models run the example farm with the seeds 1 to 6, 365 days each, 2 runs at the same time. Per run, two times:
+All models run the example farm with the seeds 1 to 6, 365 days each, 2 runs at the same time.
 
-- **Setup**: NetLogo's `Setup`, in `gobees` reading the parameter file, `model.Default` and `Initialize`.
-- **Days**: 365 × NetLogo's `Go`, 365 × `Update` in `gobees`.
+NetLogo and `gobees-fast`, which runs in the test process, are timed in two parts per run:
+
+- **Setup**: NetLogo's `Setup`, in `gobees-fast` reading the parameter file, `model.Default` and `Initialize`.
+- **Days**: 365 × NetLogo's `Go`, 365 × `Update` in `gobees-fast`.
+
+`gobees` and `gobees-fast` are also run as command line programs (`go/main.go` of each commit, without output) and timed as a whole, from the start of the program to its end. The code of the base commit cannot time its setup and days separately, so this is the only time that is measured the same way in both. It includes the start of the process and reading the input files, about the same in both. The report compares this time with NetLogo's setup and days.
 
 ## Fairness
 
-- Same CI runner, NetLogo first, then `gobees` (compiled before NetLogo starts).
-- Same input files, seeds, days and runs at the same time. `StopExtinct?` is false, so every run simulates all days. The runs differ between the models (NetLogo's random numbers cannot be reproduced in Go), so the report lists the colonies founded per run as a check of the work done.
+- Same CI runner, NetLogo first, then `gobees-fast` in the test process, then the programs of `gobees` and of `gobees-fast` (all compiled before NetLogo starts).
+- Same input files, seeds, days and runs at the same time. `StopExtinct?` is false in NetLogo and in the test process, so every run simulates all days. The programs read `StopExtinct?` from the parameter file. A program run that ends before the last day is an error.
+- Each program runs once, untimed, before its timed runs. Without it, the first runs of a newly built program took up to 1.7 times as long as the others, and `gobees`, which runs first, looked slower than it is. The runs differ between the models (NetLogo's random numbers cannot be reproduced in Go), so the report lists the colonies founded per run as a check of the work done.
 - No output during a run: NetLogo records its metrics only at the end (`runMetricsEveryStep="false"`).
 - No GUI: the `Show...?` switches are turned off after NetLogo's `Setup`. `ShowCohorts?` ([GO-19]) and `ShowPlots?` ([OUT-03]) run code every day.
 - No start-up time: the start of Java and the compilation of the model are not timed.
@@ -22,7 +27,9 @@ The first NetLogo run per thread includes the warm-up of Java (longer `Setup`). 
 
 ## When it runs
 
-The workflow `.github/workflows/benchmark.yml` runs in pull requests with the label `benchmark` (when the label is added and on every push). It commits the report to the branch and adds it to the summary of the run. It runs in parallel to the tests.
+The workflow `.github/workflows/benchmark.yml` runs in pull requests with the label `benchmark` (when the label is added and on every push). It builds `gobees` from the base commit in a git worktree. It commits the report to the branch and adds it to the summary of the run. It runs in parallel to the tests.
+
+The comparison in [go/compare](../compare/README.md) also times `gobees-fast` against the base commit, in every pull request, but without NetLogo.
 
 ## Running it locally
 
@@ -34,3 +41,13 @@ BENCHMARK_NETLOGO_TABLE=../../benchmark_netlogo.csv BENCHMARK_NETLOGO_CONSOLE=..
 ```
 
 The report is `go/benchmark/benchmark-report-local.md`, next to the report of the CI. The paths are relative to `go/benchmark`, where the test runs. The runs at the same time (here 2) must match in both commands. Without these variables the test is skipped.
+
+For the columns of `gobees`, build both programs first and add their paths:
+
+```shell
+git worktree add --detach ../gobees-base 40dc301 && go -C ../gobees-base/go build -o "$PWD/gobees.exe" . && git worktree remove --force ../gobees-base
+go -C go build -o "$PWD/gobees-fast.exe" .
+BENCHMARK_BASE_BIN=../../gobees.exe BENCHMARK_CURRENT_BIN=../../gobees-fast.exe BENCHMARK_BASE_COMMIT=40dc301 ...   # and the variables above
+```
+
+Without `BENCHMARK_BASE_BIN` and `BENCHMARK_CURRENT_BIN`, the report has no column for `gobees`.

@@ -1,9 +1,11 @@
-# Run time of gobees and NetLogo on the example farm (go/benchmark/README.md). Runs only in pull requests with the
-# label "benchmark": when the label is added, and on every push to the pull request while it has the label.
+# Run time of NetLogo, gobees and gobees-fast on the example farm (go/benchmark/README.md). Runs only in pull
+# requests with the label "benchmark": when the label is added, and on every push to the pull request while it has
+# the label.
 #
-# NetLogo 5.3.1 and gobees run one after the other on the same runner, with the same seeds, days and number of runs
-# at the same time. The workflow commits the report go/benchmark/benchmark-report.md to the branch of the pull
-# request, so that a squash merge brings it to main, and adds it to the summary of the run.
+# NetLogo 5.3.1, gobees-fast and gobees (the base commit of go/compare/commits.env) run one after the other on the
+# same runner, with the same seeds, days and number of runs at the same time. The workflow commits the report
+# go/benchmark/benchmark-report.md to the branch of the pull request, so that a squash merge brings it to main, and
+# adds it to the summary of the run.
 name: Benchmark
 
 on:
@@ -30,9 +32,11 @@ jobs:
     permissions:
       contents: write # to commit the report to the branch of the pull request
     steps:
+      # the full history: the base commit is checked out as a worktree
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref }}
+          fetch-depth: 0
 
       - uses: actions/setup-go@v5
         with:
@@ -61,10 +65,17 @@ jobs:
           mkdir -p ~/netlogo
           tar xzf "$RUNNER_TEMP/netlogo.tgz" -C ~/netlogo
 
-      # Compiled before NetLogo runs, so that nothing else runs on the runner while NetLogo is timed.
-      - name: Build gobees
-        working-directory: go
-        run: go test -c -o "$RUNNER_TEMP/benchmark.test" ./benchmark
+      # Compiled before NetLogo runs, so that nothing else runs on the runner while NetLogo is timed. gobees is the
+      # command line program of the base commit, gobees-fast the one of the current code.
+      - name: Build gobees-fast and gobees
+        run: |
+          source go/compare/commits.env
+          git worktree add --detach --quiet "$RUNNER_TEMP/base" "$BASE_COMMIT"
+          go -C "$RUNNER_TEMP/base/go" build -o "$RUNNER_TEMP/gobees" .
+          git worktree remove --force "$RUNNER_TEMP/base"
+          go -C go build -o "$RUNNER_TEMP/gobees-fast" .
+          go -C go test -c -o "$RUNNER_TEMP/benchmark.test" ./benchmark
+          echo "BENCHMARK_BASE_COMMIT=$(git rev-parse --short "$BASE_COMMIT^{commit}")" >> "$GITHUB_ENV"
 
       - name: Machine
         run: lscpu
@@ -72,11 +83,13 @@ jobs:
       - name: Run NetLogo
         run: bash go/benchmark/run_netlogo.sh ~/netlogo/netlogo-5.3.1-64 "$BENCHMARK_THREADS" "$RUNNER_TEMP/netlogo_table.csv" "$RUNNER_TEMP/netlogo_console.txt"
 
-      - name: Run gobees and write the report
+      - name: Run gobees-fast and gobees and write the report
         working-directory: go/benchmark
         env:
           BENCHMARK_NETLOGO_TABLE: ${{ runner.temp }}/netlogo_table.csv
           BENCHMARK_NETLOGO_CONSOLE: ${{ runner.temp }}/netlogo_console.txt
+          BENCHMARK_BASE_BIN: ${{ runner.temp }}/gobees
+          BENCHMARK_CURRENT_BIN: ${{ runner.temp }}/gobees-fast
           BENCHMARK_REPORT: ${{ github.workspace }}/go/benchmark/benchmark-report.md
         run: |
           export BENCHMARK_JAVA="$(java -version 2>&1 | head -n 1)"

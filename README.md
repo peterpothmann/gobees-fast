@@ -52,7 +52,7 @@ The reference is written in NetLogo 5.3.1.
 | `go/params`    | parameters and the reader for NetLogo parameter files           |
 | `go/util`      | functions that mirror NetLogo reporters                         |
 | `go/obs`       | observers of the model output                              |
-| `go/benchmark` | run time of gobees and NetLogo                                  |
+| `go/benchmark` | run time of NetLogo, gobees and gobees-fast                     |
 | `go/compare`   | comparison with the reference commit (exact, statistical, speed) |
 | `go/enum`      | castes, stages and activities as Go constants                   |
 | `netlogo`      | the annotated NetLogo model and its input files                 |
@@ -108,7 +108,7 @@ The CI compares every pull request and every push to `main` with a reference com
 
 ## Benchmarks
 
-In pull requests with the label `benchmark`, the CI runs the example farm in NetLogo 5.3.1 and in gobees on the same runner, with the same seeds and days, and times the setup and the simulated days of each run. It commits the report [go/benchmark/benchmark-report.md](go/benchmark/benchmark-report.md) to the branch. How the comparison is kept fair: [go/benchmark/README.md](go/benchmark/README.md).
+In pull requests with the label `benchmark`, the CI runs the example farm in NetLogo 5.3.1, in gobees (the fork point) and in gobees-fast on the same runner, with the same seeds and days, and times each run. It commits the report [go/benchmark/benchmark-report.md](go/benchmark/benchmark-report.md) to the branch. How the comparison is kept fair: [go/benchmark/README.md](go/benchmark/README.md).
 
 ## References
 
