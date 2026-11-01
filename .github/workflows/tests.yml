@@ -1,13 +1,17 @@
-# Runs on every pull request and every push to main: formatting, go vet and all Go tests, incl. the comparison
-# with NetLogo (go/sys/validation_*_test.go, go/model/validation_step*_test.go). NetLogo itself does not run here:
-# its reference results are embedded in go/validation, see go/validation/README.md.
+# Runs on every pull request and every push to main. Three jobs:
 #
-# The comparison tests write the report go/validation/validation-report.md and one plot per experiment to
-# go/validation/plots/. In a pull request, the workflow commits both to the branch of the pull request, so that a
-# squash merge brings code, report and plots to main together.
-# On main it only runs the tests and never commits.
-# The summary of each run shows all test results and the comparison report. Both are also uploaded as artifact
-# "reports".
+#   - test: formatting, go vet and all Go tests of gobees-fast, incl. the comparison tests with NetLogo
+#     (go/sys/validation_*_test.go, go/model/validation_step*_test.go). They record the results of their runs
+#     (VALIDATION_DUMP_DIR).
+#   - gobees: the comparison tests of gobees (the repository in GOBEES_REF of go/compare/commits.env), at the same
+#     time, recording their results the same way. Needs the secret GOBEES_TOKEN (read access to gobees). Without
+#     it, or if gobees does not record results yet, the report compares with NetLogo only.
+#   - report: compares the results of gobees-fast with NetLogo and with gobees (go/validation/cmd/report), writes
+#     go/validation/validation-report.md with one plot per experiment, adds both to the summary of the run and
+#     posts a short summary as a comment in the pull request, updated on every run. In a pull request it commits
+#     report and plots to the branch, if the tests passed, so that a squash merge brings them to main.
+#
+# NetLogo itself does not run here: its results are embedded in go/validation, see go/validation/README.md.
 name: Tests
 
 on:
@@ -23,14 +27,10 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write # to commit the report to the branch of a pull request
     defaults:
       run:
         working-directory: go
     steps:
-      # In a pull request, check out the branch itself (not GitHub's merge commit), so that the report can be
-      # committed to it.
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref || github.ref }}
@@ -56,15 +56,10 @@ jobs:
       - name: Install gotestsum
         run: go install gotest.tools/gotestsum@v1.13.0
 
-      # The comparison tests write their sections to VALIDATION_REPORT (Markdown) and their plots next to it. The
-      # report and the plots of the checkout are deleted first, so that they hold only the results of this run.
       - name: Test
         env:
-          VALIDATION_REPORT: ${{ github.workspace }}/go/validation/validation-report.md
-        run: |
-          rm -f "$VALIDATION_REPORT"
-          rm -rf "$(dirname "$VALIDATION_REPORT")/plots"
-          gotestsum --format testname --junitfile ${{ github.workspace }}/test-results.xml -- -count=1 -timeout 30m ./...
+          VALIDATION_DUMP_DIR: ${{ runner.temp }}/validation-fast
+        run: gotestsum --format testname --junitfile ${{ github.workspace }}/test-results.xml -- -count=1 -timeout 30m ./...
 
       - name: Summary of all tests
         if: always()
@@ -72,34 +67,137 @@ jobs:
         with:
           paths: test-results.xml
 
-      - name: Comparison with NetLogo
-        if: always()
-        working-directory: .
-        run: |
-          if [ -f go/validation/validation-report.md ]; then
-            cat go/validation/validation-report.md >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "No comparison report was written." >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      - name: Upload reports
+      - name: Upload the recorded results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: reports
-          path: |
-            test-results.xml
-            go/validation/validation-report.md
-            go/validation/plots/
+          name: validation-fast
+          path: ${{ runner.temp }}/validation-fast/
           if-no-files-found: ignore
 
+  gobees:
+    runs-on: ubuntu-latest
+    env:
+      HAS_TOKEN: ${{ secrets.GOBEES_TOKEN != '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: go/compare/commits.env
+          sparse-checkout-cone-mode: false
+
+      - name: Version of gobees
+        run: |
+          source go/compare/commits.env
+          echo "GOBEES_REF=$GOBEES_REF" >> "$GITHUB_ENV"
+          if [ "$HAS_TOKEN" != "true" ]; then
+            echo "::notice::No secret GOBEES_TOKEN: the validation report compares with NetLogo only."
+          fi
+
+      - uses: actions/checkout@v4
+        if: env.HAS_TOKEN == 'true'
+        with:
+          repository: peterpothmann/gobees
+          ref: ${{ env.GOBEES_REF }}
+          token: ${{ secrets.GOBEES_TOKEN }}
+          path: gobees
+
+      - uses: actions/setup-go@v5
+        if: env.HAS_TOKEN == 'true'
+        with:
+          go-version-file: gobees/go/go.mod
+          cache-dependency-path: gobees/go/go.sum
+
+      # Only the comparison tests. Their result does not matter here (gobees is compared with NetLogo in its own
+      # repository), only the recorded results.
+      - name: Comparison tests of gobees
+        if: env.HAS_TOKEN == 'true'
+        continue-on-error: true
+        working-directory: gobees/go
+        env:
+          VALIDATION_DUMP_DIR: ${{ runner.temp }}/validation-gobees
+        run: go test -count=1 -timeout 30m -run 'Validation' ./...
+
+      - name: Upload the recorded results
+        if: env.HAS_TOKEN == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-gobees
+          path: ${{ runner.temp }}/validation-gobees/
+          if-no-files-found: ignore
+
+  report:
+    needs: [test, gobees]
+    if: always() && needs.test.result != 'cancelled'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # to commit the report to the branch of a pull request
+      pull-requests: write # to comment in the pull request
+    steps:
+      # In a pull request, check out the branch itself (not GitHub's merge commit), so that the report can be
+      # committed to it.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go/go.mod
+          cache-dependency-path: go/go.sum
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: validation-fast
+          path: ${{ runner.temp }}/validation-fast
+
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: validation-gobees
+          path: ${{ runner.temp }}/validation-gobees
+
+      # The report and the plots of the checkout are deleted first, so that they hold only the results of this run.
+      - name: Report
+        working-directory: go
+        run: |
+          rm -f validation/validation-report.md
+          rm -rf validation/plots
+          go run ./validation/cmd/report -fast "$RUNNER_TEMP/validation-fast" -gobees "$RUNNER_TEMP/validation-gobees" \
+            -out validation -comment "$RUNNER_TEMP/validation-comment.md" \
+            -url "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.head_ref || github.ref_name }}/go/validation/validation-report.md"
+          cat validation/validation-report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the report
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-report
+          path: |
+            go/validation/validation-report.md
+            go/validation/plots/
+
+      - name: Comment on the pull request
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync(process.env.RUNNER_TEMP + '/validation-comment.md', 'utf8');
+            const marker = '<!-- validation-report -->';
+            const {owner, repo} = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments, {owner, repo, issue_number});
+            const old = comments.find(c => c.body.startsWith(marker));
+            if (old) {
+              await github.rest.issues.updateComment({owner, repo, comment_id: old.id, body});
+            } else {
+              await github.rest.issues.createComment({owner, repo, issue_number, body});
+            }
+
       # Only in a pull request from this repository and only if all tests passed. A commit pushed with the
-      # GITHUB_TOKEN does not start a new workflow run. The gobees runs use fixed seeds, so the report changes only
-      # when the results change, and only then a commit is made. The Benchmark workflow may push its report to the
-      # same branch at the same time, so the push is retried on top of the newest state of the branch.
+      # GITHUB_TOKEN does not start a new workflow run. The runs use fixed seeds, so the report changes only when the
+      # results change, and only then a commit is made. The Benchmark workflow may push its report to the same branch
+      # at the same time, so the push is retried on top of the newest state of the branch.
       - name: Commit the report to the pull request
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        working-directory: .
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && needs.test.result == 'success'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

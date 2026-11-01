@@ -1,6 +1,6 @@
-# Validation against NetLogo
+# Validation against NetLogo and gobees
 
-`gobees` is compared with the original NetLogo model as early as possible. The final report is [validation-report.md](validation-report.md) in this folder. The CI writes it in every pull request and commits it to the branch of the pull request, so it reaches `main` with the squash merge (details in [Results](#results)). Each experiment measures only quantities that depend on the parts already translated, so a deviation points to the steps that cause it.
+`gobees-fast` is compared with the original NetLogo model and with `gobees` (the faithful translation, which every step of gobees-fast starts from). The final report is [validation-report.md](validation-report.md) in this folder. The CI writes it in every pull request, posts a short summary as a comment in the pull request and commits the report to the branch of the pull request, so it reaches `main` with the squash merge (details in [Results](#results)). Each experiment measures only quantities that depend on the parts already translated, so a deviation points to the steps that cause it.
 
 The comparison starts with step 3. Steps 0 to 2 produce no dynamics that could be compared over time: step 0 is the schedule, step 1 reads parameters, step 2 builds the landscape and the species. Their results are checked by unit tests against the input files, and the landscape and species values are also compared with NetLogo at step 0 of the step 3 experiment. So the first experiment covers steps 1 to 3 together. From step 3 on, every step gets its own experiment with the quantities that become comparable with it (see the overview below).
 
@@ -17,6 +17,16 @@ An experiment records a set of metrics (e.g. the number of colonies, workers, th
 A metric passes only if it passes on every day of the experiment, e.g. on all 365 days (0 to 364) of step 6. One day outside the band makes the test fail and names the day. The report therefore says "365 of 365 days" for every metric, and shows the values of one day as an example (step 6: day 150, the middle of the colony season; at the end of the year nearly all values are 0). The test log also names the day on which the `gobees` median is farthest from the NetLogo median, relative to the width of the band.
 
 For values that depend only on the landscape (step 4a), all NetLogo runs agree up to the last digits of float sums, so the band is widened by a relative tolerance of 1e-9.
+
+This band check is weak: in the comparison with the reference commit, a 10 % higher foraging mortality left the median inside the band on every day ([go/compare/README.md](../compare/README.md)). It stays as the check that the tests enforce, and the report adds a stronger one.
+
+## Run summaries and Kolmogorov-Smirnov tests
+
+Every run is reduced to a few numbers per metric (`RunSummaries` in `summary.go`): the value at day 0 (setup), and for every year of 365 days the maximum and the mean (year 1: days 1 to 365, year 2: 366 to 730, ...; a shorter last year uses the days it has). For a metric compared only on day 0 (part of step 3), only the setup value is used.
+
+For every summary, the 100 values of gobees-fast are compared with the 100 values of NetLogo and with the 100 values of gobees by a two-sample Kolmogorov-Smirnov test (the same test as in [go/compare](../compare/README.md)). The values are rounded to 9 significant digits first, so that float sums in a different order count as equal. All tests of one experiment and one comparison together have a significance level of 0.05 (Bonferroni: each test uses 0.05 divided by the number of tests).
+
+The KS tests are reported, not enforced: the first results show what differs, before a test fails because of it.
 
 ## Parametrisation of the experiments
 
@@ -116,11 +126,16 @@ go/validation/
     step8_*_Parameters.csv    parameter files, written by scripts/parameter_files.py
   scripts/
     run_netlogo_experiment.ps1  runs an experiment headless with NetLogo 5.3.1
-    aggregate_netlogo.py        turns the BehaviorSpace table into the quantiles per day and metric
+    aggregate_netlogo.py        turns the BehaviorSpace table into the quantiles per day and metric and the run summaries
     parameter_files.py          writes the parameter files of the step 8 experiments
   reference/                  NetLogo reference: netlogo_<experiment>.csv (step, metric, n, q05, q25, q50, q75, q95)
+                              and netlogo_<experiment>_runs.csv (run, metric, period, kind, value)
   reference.go                embeds the reference files
-  validation.go, report.go    reading the reference, median, report
+  validation.go               reading the reference, median
+  summary.go                  run summaries, recording the results of the tests (the same file in gobees)
+  report.go                   what the tests record (WriteReport)
+  crossreport.go              comparison of the recorded results with NetLogo and gobees, report and comment
+  cmd/report/                 the command that writes report, plots and comment
   plot.go                     the plots of the report (gonum/plot)
   validation-report.md        the report, written by the CI
   plots/                      one plot per experiment (<experiment>.png), written by the CI with the report
@@ -155,49 +170,37 @@ Notes on the NetLogo command line:
 
 ## Results
 
-The results are not written down by hand. The CI (workflow "Tests", `.github/workflows/tests.yml`) runs all tests
-on every pull request and on every push to `main`. The comparison tests write the report
-[validation-report.md](validation-report.md): for every metric, on how many days the gobees median lies within the
-NetLogo band (see "How every day is checked"), and the values of one example day. Below each table is one image
-with a small plot per metric over all compared days: the NetLogo 5-95 % band and median (blue) and the gobees median
-(orange), from `go/validation/plots/<experiment>.png`. Metrics compared only on day 0 (part of step 3) have no plot.
+The results are not written down by hand. The CI (workflow "Tests", `.github/workflows/tests.yml`) runs on every
+pull request and on every push to `main`, in three jobs:
 
-- In a pull request, the CI commits the report and the plots to the branch of the pull request ("Update validation
-  report and plots", made by github-actions), but only if all tests passed and something changed. Pull the branch
-  before you push to it again. With a squash merge, code, report and plots reach `main` in one commit. The plots are
-  byte-identical for the same results, so they are committed only when the results change.
-- On `main`, the CI only runs the tests and never commits.
-- The summary of each run (Actions, then the run) shows all test results and the report, which are also attached to
-  the run as artifact `reports`.
+1. `test` runs all tests of gobees-fast. The comparison tests record the results of their runs in the folder of
+   `VALIDATION_DUMP_DIR` (`WriteReport`): per experiment the quantiles per day (`<experiment>.csv`), the run
+   summaries (`<experiment>_runs.csv`) and what the report needs to know about the experiment
+   (`<experiment>_meta.json`).
+2. `gobees` runs the comparison tests of gobees at the same time and records its results the same way. The version is
+   `GOBEES_REF` in `go/compare/commits.env` (default `main`), so a change of gobees shows in the next comparison. It
+   needs the repository secret `GOBEES_TOKEN`, a fine-grained token with read access to the contents of gobees.
+   Without it, the report compares with NetLogo only.
+3. `report` runs `go run ./validation/cmd/report`, which compares the results of gobees-fast with NetLogo and with
+   gobees and writes [validation-report.md](validation-report.md) with one plot per experiment
+   (`plots/<experiment>.png`: the NetLogo band and median, the gobees median and the gobees-fast median over the
+   days). It adds the report to the summary of the run, posts a short summary as a comment in the pull request
+   (updated on every run), and commits report and plots to the branch of the pull request if the tests passed and
+   something changed ("Update validation report and plots", made by github-actions). Pull the branch before you push
+   to it again. On `main` it never commits.
 
-The gobees runs use fixed seeds (1 to 100), so the report changes only when the results change.
+The runs use fixed seeds (1 to 100), so the report changes only when the results change.
 
 What each experiment measures and why is described in the experiment file (e.g. `experiments/step3.xml`) and in the
 comparison test (e.g. `go/sys/validation_step3_test.go`).
 
-To create the comparison report locally (not needed, the CI does it), set `VALIDATION_REPORT` to an absolute path
-(`go test` runs the test in the package folder, e.g. `go/sys`, so a relative path would end up there). Each test
-adds its section to the file or replaces its old section, and writes the report sorted by step
-(`validation.Section.Order`): the packages `go/sys` and `go/model` run at the same time and finish in any order. A
-lock file (`validation-report.md.lock`) keeps them from writing at the same time; a test that is killed while
-writing can leave it behind, then delete it. The commands delete the old report first, so that it holds only the
-sections of this run. A local report replaces the committed one; `git checkout validation/validation-report.md`
-restores it.
-
-PowerShell:
-
-```powershell
-cd go
-$env:VALIDATION_REPORT = "$PWD\validation\validation-report.md"
-Remove-Item $env:VALIDATION_REPORT, validation\plots -Recurse -ErrorAction SilentlyContinue
-go test -count=1 -timeout 30m -run Validation ./sys ./model
-Remove-Item Env:VALIDATION_REPORT
-```
-
-Git Bash:
+To create the report locally (not needed, the CI does it), record the results and run the command. The folder must
+be an absolute path, because `go test` runs every test in its package folder. For the comparison with gobees, run
+the same tests in a checkout of gobees with another folder and pass it with `-gobees`. A local report replaces the
+committed one; `git checkout validation/validation-report.md validation/plots` restores it.
 
 ```bash
 cd go
-rm -rf validation/validation-report.md validation/plots
-VALIDATION_REPORT="$PWD/validation/validation-report.md" go test -count=1 -timeout 30m -run Validation ./sys ./model
+VALIDATION_DUMP_DIR="$PWD/../validation-results" go test -count=1 -timeout 30m -run Validation ./sys ./model
+go run ./validation/cmd/report -fast ../validation-results -out validation
 ```

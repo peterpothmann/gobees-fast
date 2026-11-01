@@ -119,7 +119,7 @@ func compareWithNetLogo(t *testing.T, c netLogoComparison) {
 	}
 
 	if err := validation.WriteReport(validation.Section{Order: c.order, Step: c.step, Title: c.title, Experiment: c.experiment,
-		Description: c.description, Runs: runs, Rows: rows}); err != nil {
+		Description: c.description, Runs: runs, Rows: rows, Values: values}); err != nil {
 		t.Fatal(err)
 	}
 	for _, f := range failures {
