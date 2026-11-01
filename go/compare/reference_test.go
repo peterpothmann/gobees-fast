@@ -5,7 +5,9 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -24,6 +26,7 @@ const (
 	reportDirEnv       = "COMPARE_REPORT_DIR"       // folder of the NetLogo report and its plots, none if empty
 	reportURLEnv       = "COMPARE_REPORT_URL"       // link to the NetLogo report in the comment, may be empty
 	runURLEnv          = "COMPARE_RUN_URL"          // link to the workflow run in the comment, may be empty
+	removedEnv         = "COMPARE_REMOVED_COLUMNS"  // REMOVED_COLUMNS of commits.env, space-separated
 )
 
 const (
@@ -131,8 +134,9 @@ func runScenario(t *testing.T, s Scenario, dir, cur, ref, base string, phase int
 		baseRuns = run(base)
 	}
 
-	r := ScenarioResult{Scenario: s}
+	r := ScenarioResult{Scenario: s, Removed: strings.Fields(os.Getenv(removedEnv))}
 	common, missing, added := Columns(reference[0].Table, current[0].Table)
+	missing = notRemoved(missing, r.Removed)
 	r.ReferenceColumns, r.NotInReference = dataColumns(common), added
 	switch {
 	case len(missing) > 0:
@@ -144,6 +148,7 @@ func runScenario(t *testing.T, s Scenario, dir, cur, ref, base string, phase int
 	}
 
 	common, missing, added = Columns(baseRuns[0].Table, current[0].Table)
+	missing = notRemoved(missing, r.Removed)
 	r.BaseColumns, r.NotInBase = dataColumns(common), added
 	if len(missing) > 0 {
 		r.Drift = MissingColumnsCell(missing)
@@ -157,6 +162,12 @@ func runScenario(t *testing.T, s Scenario, dir, cur, ref, base string, phase int
 		r.NetLogo = NetLogoCell(r.NetLogoResult)
 	}
 	return r
+}
+
+// notRemoved returns the missing columns that are not removed on purpose (REMOVED_COLUMNS of commits.env). A column
+// is removed only together with its model branch (obs.DailyOutputExtended), any other missing column is an error.
+func notRemoved(missing, removed []string) []string {
+	return slices.DeleteFunc(missing, func(c string) bool { return slices.Contains(removed, c) })
 }
 
 // TestSpeedAgainstBase times the base commit and the current code on the same machine, one run after the other and

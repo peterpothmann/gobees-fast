@@ -17,7 +17,6 @@ var wantExampleFarmParameters = ParameterFile{
 	Backgroundcolour:                    5,
 	BackgroundImage:                     "none",
 	Black_th:                            1,
-	COLONIES_IBM:                        0,
 	CropRotationListAsString:            "",
 	CumulVisitsOnlyLastYear:             false,
 	FlowerspeciesFile:                   "_SYSTEM_Flowerspecies.csv", // column name "FlowerspeciesFile " with trailing blank
@@ -115,11 +114,23 @@ func TestParseParameterFileErrors(t *testing.T) {
 		"string without quotes":                  "Weather\nConstant\n",
 		"boolean expected":                       "StopExtinct?\n1\n",
 		"no value row":                           "Weather\n",
+		"removed parameter with another value":   "COLONIES_IBM\n10\n",
 	}
 	for name, csv := range cases {
 		if _, err := ParseParameterFile(strings.NewReader(csv)); err == nil {
 			t.Errorf("%s: expected an error", name)
 		}
+	}
+}
+
+func TestParseParameterFileRemovedParameter(t *testing.T) {
+	// COLONIES_IBM: individual-based colonies are removed (step F2). The NetLogo files keep the column with 0.
+	p, err := ParseParameterFile(strings.NewReader("COLONIES_IBM,N_Badgers\n0,2\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.N_Badgers != 2 {
+		t.Errorf("N_Badgers = %v, want 2", p.N_Badgers)
 	}
 }
 

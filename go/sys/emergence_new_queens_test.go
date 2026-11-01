@@ -187,7 +187,7 @@ func TestNestSearchFoundsColonies(t *testing.T) {
 			t.Errorf("colony at %v outside the circle of the grassland", *cPos)
 		}
 		// [CCOL-04]
-		if !col.CohortBased || !col.Queenright || col.QueenProduction || col.SwitchPointDate != params.NotSetHigh ||
+		if !col.Queenright || col.QueenProduction || col.SwitchPointDate != params.NotSetHigh ||
 			col.ColonyFoundationDay != 10 || col.SpeciesIDcolony != ew.species || !almostEqual(stores.EnergyStore_kJ, 0.873) {
 			t.Fatalf("colony %+v %+v", col, stores)
 		}
@@ -239,26 +239,6 @@ func TestDieRemovesFromActiveBees(t *testing.T) {
 	// [DIE-01] TotalBeesEverDied + number, removed from the activity queue and from the world
 	if ew.counters.TotalBeesEverDied != 5 || len(ew.active.List) != 1 || ew.active.List[0] != b || ew.w.Alive(a) {
 		t.Errorf("TotalBeesEverDied %v, queue %v, alive %v", ew.counters.TotalBeesEverDied, ew.active.List, ew.w.Alive(a))
-	}
-}
-
-func TestColoniesIBM(t *testing.T) {
-	ew := newEmergenceWorld(t, 7)
-	ew.file.COLONIES_IBM = 1
-	ew.sp.ChanceFindNest = 1
-	ew.addQueen(10, 1, 700)
-	ew.addQueen(10, 1, 700)
-	ew.sys.Update(ew.w)
-	// [CCOL-05] only the first colony is individual-based
-	ibm := 0
-	query := ecs.NewFilter1[comp.Colony](ew.w).Query()
-	for query.Next() {
-		if !query.Get().CohortBased {
-			ibm++
-		}
-	}
-	if ibm != 1 {
-		t.Errorf("%d individual-based colonies, want 1", ibm)
 	}
 }
 

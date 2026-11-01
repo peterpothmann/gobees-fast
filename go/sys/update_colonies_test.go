@@ -70,7 +70,7 @@ func newColonyWorld(t *testing.T, seed uint64) *colonyWorld {
 
 // addColony adds a colony with the start values of CreateColoniesProc [CCOL-04]. change may modify them.
 func (cw *colonyWorld) addColony(change func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts)) ecs.Entity {
-	c := comp.Colony{SpeciesIDcolony: cw.species, SpeciesNameColony: "B_terrestris", CohortBased: true, Queenright: true,
+	c := comp.Colony{SpeciesIDcolony: cw.species, SpeciesNameColony: "B_terrestris", Queenright: true,
 		QueenProductionDate: params.NotSetHigh, SwitchPointDate: params.NotSetHigh,
 		CompetitionPointDate: params.NotSetHigh, EusocialPhaseDate: params.NotSetHigh}
 	s := comp.ColonyStores{EnergyStore_kJ: 0.873}

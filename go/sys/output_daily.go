@@ -45,14 +45,10 @@ func (s *OutputDaily) Initialize(w *ecs.World) {
 func (s *OutputDaily) Update(w *ecs.World) {
 	o := &s.output
 	// [OUT-01]
-	o.TotalIBMColonies, o.TotalColonies = 0, 0
+	// TotalIBMColonies is not translated: gobees-fast has only cohort-based colonies.
 	colonies := s.colonyFilter.Query()
-	for colonies.Next() {
-		o.TotalColonies++
-		if !colonies.Get().CohortBased {
-			o.TotalIBMColonies++
-		}
-	}
+	o.TotalColonies = float64(colonies.Count())
+	colonies.Close()
 
 	o.TotalQueens, o.TotalMatedQueens, o.TotalUnmatedQueens, o.TotalHibernatingQueens = 0, 0, 0, 0
 	o.TotalBeeAgents, o.TotalMales = 0, 0

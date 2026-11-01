@@ -22,7 +22,7 @@ type DailyOutput struct {
 func (o *DailyOutput) Initialize(w *ecs.World) {
 	o.ticks = ecs.NewResource[globals.Ticks](w)
 	o.output = ecs.NewResource[globals.DailyOutput](w)
-	o.values = make([]float64, 15)
+	o.values = make([]float64, 14)
 }
 
 func (o *DailyOutput) Update(w *ecs.World) {}
@@ -30,7 +30,6 @@ func (o *DailyOutput) Update(w *ecs.World) {}
 func (o *DailyOutput) Header() []string {
 	return []string{
 		"ticks",
-		"TotalIBMColonies",
 		"TotalQueens",
 		"TotalMatedQueens",
 		"TotalUnmatedQueens",
@@ -50,19 +49,18 @@ func (o *DailyOutput) Header() []string {
 func (o *DailyOutput) Values(w *ecs.World) []float64 {
 	d := o.output.Get()
 	o.values[0] = float64(o.ticks.Get().Ticks)
-	o.values[1] = d.TotalIBMColonies
-	o.values[2] = d.TotalQueens
-	o.values[3] = d.TotalMatedQueens
-	o.values[4] = d.TotalUnmatedQueens
-	o.values[5] = d.TotalHibernatingQueens
-	o.values[6] = d.TotalColonies
-	o.values[7] = d.TotalBeeAgents
-	o.values[8] = d.TotalMales
-	o.values[9] = d.TotalActiveBees
-	o.values[10] = d.MeanWorkerWeight_mg
-	o.values[11] = d.MeanQueenWeight_mg
-	o.values[12] = d.MeanAdultWeight_mg
-	o.values[13] = d.TotalMapArea_km2
-	o.values[14] = d.ColonyDensity_km2
+	o.values[1] = d.TotalQueens
+	o.values[2] = d.TotalMatedQueens
+	o.values[3] = d.TotalUnmatedQueens
+	o.values[4] = d.TotalHibernatingQueens
+	o.values[5] = d.TotalColonies
+	o.values[6] = d.TotalBeeAgents
+	o.values[7] = d.TotalMales
+	o.values[8] = d.TotalActiveBees
+	o.values[9] = d.MeanWorkerWeight_mg
+	o.values[10] = d.MeanQueenWeight_mg
+	o.values[11] = d.MeanAdultWeight_mg
+	o.values[12] = d.TotalMapArea_km2
+	o.values[13] = d.ColonyDensity_km2
 	return o.values
 }

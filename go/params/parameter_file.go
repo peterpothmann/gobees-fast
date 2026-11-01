@@ -18,7 +18,6 @@ type ParameterFile struct {
 	AbundanceBoost                      float64 `netlogo:"AbundanceBoost"`                      // Factor on the flower abundance of all foodsources.
 	BeeSpeciesInitialQueensListAsString string  `netlogo:"BeeSpeciesInitialQueensListAsString"` // Species and initial queens, e.g. "B_terrestris 500" [QINI].
 	BeespeciesFile                      string  `netlogo:"BeespeciesFile"`                      // Bee species table.
-	COLONIES_IBM                        float64 `netlogo:"COLONIES_IBM"`                        // Number of individual-based colonies; all others are cohort-based.
 	CropRotationListAsString            string  `netlogo:"CropRotationListAsString"`            // Maps of the crop rotation, separated by blanks [PAR-07].
 	CumulVisitsOnlyLastYear             bool    `netlogo:"CumulVisitsOnlyLastYear?"`            // Reset cumulative visit counters on 1 January.
 	FlowerspeciesFile                   string  `netlogo:"FlowerspeciesFile"`                   // Flower species table. The column name in the file has a trailing blank.
@@ -66,6 +65,13 @@ type ParameterFile struct {
 	White_th              float64 `netlogo:"White_th"`
 }
 
+// removedParameters are parameters of the NetLogo parameter files whose model branch gobees-fast does not have, with
+// the only value it accepts (lower-case names). The NetLogo files keep these columns, so they are read and checked,
+// but not stored.
+var removedParameters = map[string]string{
+	"colonies_ibm": "0", // individual-based colonies [CCOL-05], removed in step F2
+}
+
 // ReadParameterFile reads a NetLogo parameter file [RPAR].
 func ReadParameterFile(path string) (ParameterFile, error) {
 	f, err := os.Open(path)
@@ -111,6 +117,13 @@ func ParseParameterFile(r io.Reader) (ParameterFile, error) {
 		literal := parameterLiteral(name, values[idx])
 
 		key := strings.ToLower(strings.TrimSpace(name)) // NetLogo names are case-insensitive.
+		if allowed, removed := removedParameters[key]; removed {
+			if strings.TrimSpace(literal) != allowed {
+				return p, fmt.Errorf("parameter %q = %s is not supported by gobees-fast, only %s", name, literal,
+					allowed)
+			}
+			continue
+		}
 		field, ok := fields[key]
 		if !ok {
 			// NetLogo: run "set <name> ..." fails for an unknown variable.

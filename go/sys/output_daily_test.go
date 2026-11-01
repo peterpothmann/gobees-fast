@@ -30,7 +30,7 @@ func TestOutputDailyTotals(t *testing.T) {
 	// [OUT-01]
 	cw := outputWorld(t)
 	col := cw.addColony(nil)
-	ibm := cw.addColony(func(c *comp.Colony, _ *comp.ColonyStores, _ *comp.ColonyCounts) { c.CohortBased = false })
+	col2 := cw.addColony(nil)
 	weight := func(e ecs.Entity, mg float64) {
 		_, _, b, _, _, _, _ := cw.beeMap.Get(e)
 		b.Weight_mg = mg
@@ -41,7 +41,7 @@ func TestOutputDailyTotals(t *testing.T) {
 	cw.addBee(col, stage.Pupa, caste.Queen, 2, 0)                // queen brood, unmated
 	weight(cw.addBee(col, stage.Adult, caste.Male, 4, 1), 100)
 	cw.addBee(col, stage.Larva, caste.Male, 2, 0)
-	weight(cw.addBee(ibm, stage.Adult, caste.Worker, 1, 3), 100)
+	weight(cw.addBee(col2, stage.Adult, caste.Worker, 1, 3), 100)
 	weight(cw.addBee(col, stage.Adult, caste.Worker, 5, 3), 200)
 	cw.addBee(col, stage.Egg, caste.Undefined, 5, 0)
 	active := ecs.GetResource[globals.ActiveBees](cw.w)
@@ -52,8 +52,7 @@ func TestOutputDailyTotals(t *testing.T) {
 	got := *ecs.GetResource[globals.DailyOutput](cw.w)
 	// the mean weights are means over adult agents, not weighted by number
 	want := globals.DailyOutput{
-		TotalIBMColonies: 1, TotalColonies: 2,
-		TotalQueens: 7, TotalMatedQueens: 4, TotalUnmatedQueens: 3, TotalHibernatingQueens: 3,
+		TotalColonies: 2, TotalQueens: 7, TotalMatedQueens: 4, TotalUnmatedQueens: 3, TotalHibernatingQueens: 3,
 		TotalBeeAgents: 9, TotalMales: 6, TotalActiveBees: 3,
 		MeanWorkerWeight_mg: 150, MeanQueenWeight_mg: (600 + 800 + 500) / 3.0,
 		MeanAdultWeight_mg: (600 + 800 + 500 + 100 + 100 + 200) / 6.0,

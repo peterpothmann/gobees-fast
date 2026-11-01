@@ -25,6 +25,8 @@ type ScenarioResult struct {
 	// NotInBase the columns of the current code that the other version does not write.
 	ReferenceColumns, BaseColumns []string
 	NotInReference, NotInBase     []string
+	// Removed are the columns the current code removes on purpose (REMOVED_COLUMNS of commits.env), not compared.
+	Removed []string
 	NetLogoResult                 NetLogoResult
 }
 

@@ -49,9 +49,9 @@ func TestDailyOutputExtended(t *testing.T) {
 		bees.NewEntity(&b)
 	}
 	colonies := ecs.NewMap2[comp.Colony, comp.ColonyStores](w)
-	colonies.NewEntity(&comp.Colony{CompetitionPointDate: 150, CohortBased: true, SpeciesNameColony: "B_terrestris"},
+	colonies.NewEntity(&comp.Colony{CompetitionPointDate: 150, SpeciesNameColony: "B_terrestris"},
 		&comp.ColonyStores{EnergyStore_kJ: 100, PollenStore_g: 2})
-	colonies.NewEntity(&comp.Colony{CompetitionPointDate: 160, CohortBased: true, SpeciesNameColony: "B_hortorum"},
+	colonies.NewEntity(&comp.Colony{CompetitionPointDate: 160, SpeciesNameColony: "B_hortorum"},
 		&comp.ColonyStores{EnergyStore_kJ: 50, PollenStore_g: 1})
 	colonies.NewEntity(&comp.Colony{CompetitionPointDate: params.NotSetHigh, SpeciesNameColony: "B_terrestris"},
 		&comp.ColonyStores{EnergyStore_kJ: 10})
@@ -76,7 +76,7 @@ func TestDailyOutputExtended(t *testing.T) {
 		"colonies": 3, "dead_colonies": 4, "colonies_founded": 9,
 		"eggs": 12, "larvae": 10, "pupae": 8, "workers": 21, "males": 4, "young_queens": 1, "hibernating_queens": 1,
 		"energy_kJ": 160, "pollen_g": 3, "trips": 40, "nectar_left_l": 2, "pollen_left_kg": 2.5,
-		"badgers": 1, "foodsources": 2, "ibm_colonies": 1, "bee_agents": 10, "diploid_males": 3,
+		"badgers": 1, "foodsources": 2, "bee_agents": 10, "diploid_males": 3,
 		"colonies_B_terrestris": 2, "colonies_B_hortorum": 1, "colonies_B_pascuorum": 0, "psithyrus": 2,
 		"foraging_period_s": 28800, "queens_removed": 11,
 		"ForagerDeathsToday": 3, "TotalAdultQueensEverProduced": 7, "MeanCompetitionPointDate": 155,

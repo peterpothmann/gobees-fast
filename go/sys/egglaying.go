@@ -10,7 +10,6 @@ import (
 	"gobees/enum/stage"
 	"gobees/globals"
 	"gobees/params"
-	"gobees/util"
 
 	"github.com/mlange-42/ark/ecs"
 )
@@ -55,41 +54,32 @@ func (l *eggLayer) EgglayingProc(e ecs.Entity) []ecs.Entity {
 	sp := l.speciesMap.Get(mother.SpeciesID)
 	colonyID := mother.ColonyID
 
-	// [EGG-01] individual-based colonies pay for one egg (finding 43, see trans/netlogo-findings.md#finding-43)
+	// [EGG-01] one cohort of batchsize eggs. gobees-fast has no individual-based colonies, which lay batchsize
+	// cohorts of 1 egg in NetLogo (findings 30, 43, see trans/netlogo-findings.md#finding-43).
 	motherCaste := mother.Caste
-	newCohorts := 1.0
 	beesInCohort := sp.Batchsize
-	eggWeight := sp.DevWeightEgg_mg
-	pollenToMass := sp.PollenToBodymassFactor
-	colony, stores, _ := l.colonyMap.Get(colonyID)
-	if !colony.CohortBased {
-		newCohorts = sp.Batchsize
-		beesInCohort = 1
-	}
-	pollenCost_g := beesInCohort * eggWeight * pollenToMass / 1000
+	pollenCost_g := beesInCohort * sp.DevWeightEgg_mg * sp.PollenToBodymassFactor / 1000
 	energyCost_kJ := pollenCost_g * l.constants.EnergyRequiredForPollenAssimilation_kJ_per_g
 
 	// [EGG-02]
 	var eggs []ecs.Entity
+	_, stores, _ := l.colonyMap.Get(colonyID)
 	if stores.PollenStore_g > pollenCost_g && stores.EnergyStore_kJ > energyCost_kJ {
-		eggs = l.hatch(e, int(newCohorts))
-		// ORDER: irrelevant, each egg only sets itself. Shuffled (decision C).
-		util.Shuffle(l.rng, eggs)
-		ticks := float64(l.ticks.Ticks)
-		for _, egg := range eggs {
-			colony, _, _ := l.colonyMap.Get(colonyID)
-			_, _, b, _, _, _, _ := l.beeMap.Get(egg)
-			if motherCaste == caste.Queen {
-				if ticks > colony.SwitchPointDate {
-					b.Ploidy = 1
-				} else {
-					b.Ploidy = 2
-				}
+		// NetLogo shuffles the new cohorts (decision C). One cohort draws no random number.
+		egg := l.hatch(e)
+		eggs = []ecs.Entity{egg}
+		colony, _, _ := l.colonyMap.Get(colonyID)
+		_, _, b, _, _, _, _ := l.beeMap.Get(egg)
+		if motherCaste == caste.Queen {
+			if float64(l.ticks.Ticks) > colony.SwitchPointDate {
+				b.Ploidy = 1
 			} else {
-				b.Ploidy = 1 // never run: workers do not lay eggs, see the annotation
+				b.Ploidy = 2
 			}
-			l.EggsParameterSettingProc(egg, beesInCohort)
+		} else {
+			b.Ploidy = 1 // never run: workers do not lay eggs, see the annotation
 		}
+		l.EggsParameterSettingProc(egg, beesInCohort)
 		_, stores, _ := l.colonyMap.Get(colonyID)
 		stores.PollenStore_g = stores.PollenStore_g - pollenCost_g
 		stores.EnergyStore_kJ = stores.EnergyStore_kJ - energyCost_kJ
@@ -101,23 +91,16 @@ func (l *eggLayer) EgglayingProc(e ecs.Entity) []ecs.Entity {
 	return eggs
 }
 
-// hatch creates n copies of the bee e with all its values and a new who number each, and returns them in the
-// order of creation. NetLogo: hatch n.
-func (l *eggLayer) hatch(e ecs.Entity, n int) []ecs.Entity {
+// hatch creates a copy of the bee e with all its values and a new who number. NetLogo: hatch 1.
+func (l *eggLayer) hatch(e ecs.Entity) ecs.Entity {
 	_, pos, bee, gen, th, forager, dev := l.beeMap.Get(e)
 	// copy the values first: creating entities can move the components in memory
 	p, b, g, t, f, d := *pos, *bee, *gen, *th, *forager, *dev
-	result := make([]ecs.Entity, 0, n)
-	for range n {
-		gc, fc := g, f
-		gc.AllelesList = slices.Clone(g.AllelesList)
-		gc.SpermathecaList = slices.Clone(g.SpermathecaList)
-		fc.KnownMasterpatchesNectarList = slices.Clone(f.KnownMasterpatchesNectarList)
-		fc.KnownMasterpatchesPollenList = slices.Clone(f.KnownMasterpatchesPollenList)
-		pc, bc, tc, dc := p, b, t, d
-		result = append(result, l.beeMap.NewEntity(&comp.Who{Who: l.who.Next()}, &pc, &bc, &gc, &tc, &fc, &dc))
-	}
-	return result
+	g.AllelesList = slices.Clone(g.AllelesList)
+	g.SpermathecaList = slices.Clone(g.SpermathecaList)
+	f.KnownMasterpatchesNectarList = slices.Clone(f.KnownMasterpatchesNectarList)
+	f.KnownMasterpatchesPollenList = slices.Clone(f.KnownMasterpatchesPollenList)
+	return l.beeMap.NewEntity(&comp.Who{Who: l.who.Next()}, &p, &b, &g, &t, &f, &d)
 }
 
 // EggsParameterSettingProc sets the alleles, the caste and the start values of a new egg (cohort) [EGGP]. The egg

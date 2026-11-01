@@ -17,7 +17,7 @@ import (
 var NetLogoMetrics = []string{
 	"colonies", "dead_colonies", "colonies_founded", "eggs", "larvae", "pupae", "workers", "males", "young_queens",
 	"hibernating_queens", "energy_kJ", "pollen_g", "trips", "nectar_left_l", "pollen_left_kg",
-	"badgers", "foodsources", "ibm_colonies", "bee_agents", "diploid_males",
+	"badgers", "foodsources", "bee_agents", "diploid_males",
 	"colonies_B_terrestris", "colonies_B_pascuorum", "colonies_B_lapidarius", "colonies_B_hortorum",
 	"colonies_B_pratorum", "colonies_B_hypnorum", "psithyrus",
 	"foraging_period_s", "queens_removed",
@@ -29,8 +29,9 @@ var netLogoSpecies = []string{"B_terrestris", "B_pascuorum", "B_lapidarius", "B_
 // DailyOutputExtended observes the columns of DailyOutput, the NetLogo metrics and further daily values of
 // gobees-fast. It is the output of the comparisons (go/compare) and of the command line (-o).
 //
-// The column names stay the same in all steps of gobees-fast: the comparison matches the columns by name.
-// The first 15 columns (ticks and 14 totals) are those of DailyOutput, so that a version without the further
+// The comparison matches the columns by name. A column is removed only together with its model branch, and is
+// then listed in REMOVED_COLUMNS of go/compare/commits.env (e.g. TotalIBMColonies and ibm_colonies, step F1).
+// The first 14 columns (ticks and 13 totals) are those of DailyOutput, so that a version without the further
 // columns (e.g. gobees) can be compared on them. Then follow the columns of NetLogoMetrics, then, all at the end of
 // the day:
 //
@@ -110,15 +111,12 @@ func (o *DailyOutputExtended) Values(w *ecs.World) []float64 {
 		}
 	}
 
-	var colonies, ibmColonies, energy, pollen, cpSum, cpCount float64
+	var colonies, energy, pollen, cpSum, cpCount float64
 	perSpecies := make([]float64, len(netLogoSpecies))
 	cq := o.colonies.Query()
 	for cq.Next() {
 		colony, stores := cq.Get()
 		colonies++
-		if !colony.CohortBased {
-			ibmColonies++
-		}
 		for i, s := range netLogoSpecies {
 			if colony.SpeciesNameColony == s {
 				perSpecies[i]++
@@ -158,7 +156,7 @@ func (o *DailyOutputExtended) Values(w *ecs.World) []float64 {
 		colonies, float64(len(o.deadColonies.Get().List)), counters.TotalColoniesEverProduced,
 		eggs, larvae, pupae, workers, males, youngQueens, hibernating,
 		energy, pollen, o.totals.Get().TotalForagingTripsToday, nectar / 1000000, pollenLeft / 1000,
-		badgers, foodsources, ibmColonies, beeAgents, diploidMales,
+		badgers, foodsources, beeAgents, diploidMales,
 	}
 	values = append(values, perSpecies...)
 	values = append(values, psithyrus, o.calendar.Get().DailyForagingPeriod_s, counters.TotalHibernatingQueensEverRemoved,
