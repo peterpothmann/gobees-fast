@@ -79,6 +79,8 @@ go run . -p my_Parameters.csv -d path/to/inputs -s 3 --days 730                #
 
 Unlike NetLogo, a missing parameter file is an error. NetLogo loads `_SYSTEM_Parameters.csv` instead.
 
+The parameter `Weather` is either one of NetLogo's constant options (`"Constant 8 hrs"`, ...) or the name of a weather file in the same folder: a CSV table with the columns `Day` (1 to 365) and `ForagingPeriod_s` (the foraging period in seconds, 0 to 86400), and optionally `Year` (1, 2, ...). A file without `Year` holds one year, which repeats every year. With `Year`, the years follow each other and then repeat. NetLogo's example year `"foragingHoursExample"`, a list in the NetLogo code, is the file [netlogo/_SYSTEM_Weather_foragingHoursExample.csv](netlogo/_SYSTEM_Weather_foragingHoursExample.csv). The NetLogo name `"foragingHoursExample"` reads this file, so NetLogo's parameter files run unchanged.
+
 The daily output can be written to a tab-separated file. It holds the totals of `OutputDailyProc` (colonies, queens, males, mean weights, ...), followed by brood, workers, stores, foraging trips, forager deaths, queens produced and the mean competition point date (`obs.DailyOutputExtended`). The CSV reporter of ark-tools adds one row at the end of every tick. Its first column `t` counts from 0, the column `ticks` holds the NetLogo ticks (1 on the first day). The totals of `OutputDailyProc` keep their NetLogo names.
 
 ```shell

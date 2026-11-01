@@ -199,6 +199,8 @@ func WriteInputFiles(dir string) error {
 		"Example_Farm_PlotTest_Foodsources.txt": examplefiles.ExampleFarmPlotTestFoodsources,
 		"_SYSTEM_Flowerspecies.csv":             examplefiles.Flowerspecies,
 		"_SYSTEM_BumbleSpecies_UK_01.csv":       examplefiles.BumbleSpecies,
+		// Weather = "foragingHoursExample" of step8_weather (versions from step F2 on; the others ignore it)
+		"_SYSTEM_Weather_foragingHoursExample.csv": examplefiles.WeatherForagingHoursExample,
 	}
 	for name, text := range files {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0o644); err != nil {
