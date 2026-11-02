@@ -225,4 +225,4 @@ WinterMortality?, MergeHedges?, MinSizeFoodSources?, RemoveEmptyFoodSources?, Ke
 
 ![step8_settings](plots/step8_settings.png)
 
-Plots: blue, NetLogo median and 5-95 % band; orange, gobees-fast median; x axis: day.
+Plots: blue, NetLogo median and 5-95 % band; red, gobees median; grey dashed, gobees-fast median; x axis: day.
