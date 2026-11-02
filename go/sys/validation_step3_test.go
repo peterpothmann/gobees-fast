@@ -97,7 +97,6 @@ func TestValidationStep3AgainstNetLogo(t *testing.T) {
 		{"mean_queen_weight", false}, {"mean_emerging_date", false},
 		{"colonies_founded", true}, {"queens_searching", true}, {"queens_hibernating", true},
 	}
-	rows := []validation.ReportRow{}
 	failures := []string{}
 	for _, c := range checks {
 		last := 0
@@ -105,14 +104,12 @@ func TestValidationStep3AgainstNetLogo(t *testing.T) {
 			last = steps
 		}
 		outside := []string{}
-		medians, bands := []float64{}, []validation.Quantiles{}
 		for step := 0; step <= last; step++ {
 			q, ok := reference[validation.Key{Step: step, Metric: c.metric}]
 			if !ok {
 				t.Fatalf("no NetLogo reference for %s at step %d", c.metric, step)
 			}
 			median := validation.Median(values[c.metric][step])
-			medians, bands = append(medians, median), append(bands, q)
 			if median < q.Q05 || median > q.Q95 {
 				outside = append(outside, fmt.Sprintf("step %d: gobees median %.4g, NetLogo 5-95 %% [%.4g, %.4g]", step, median, q.Q05, q.Q95))
 			}
@@ -121,23 +118,12 @@ func TestValidationStep3AgainstNetLogo(t *testing.T) {
 		gobees := validation.Median(values[c.metric][last])
 		t.Logf("%-20s step %3d: gobees median %10.4g | NetLogo median %10.4g [%.4g, %.4g]",
 			c.metric, last, gobees, final.Q50, final.Q05, final.Q95)
-		rows = append(rows, validation.ReportRow{Metric: c.metric, Steps: last + 1, Within: last + 1 - len(outside),
-			Step: last, Gobees: gobees, NetLogo: final,
-			Medians: medians, Bands: bands})
 		if len(outside) > 0 {
 			failures = append(failures, fmt.Sprintf("%s: gobees median outside the NetLogo 5-95 %% band at %d of %d steps, e.g. %s",
 				c.metric, len(outside), last+1, outside[0]))
 		}
 	}
 
-	err = validation.WriteReport(validation.Section{Order: "03", Experiment: "step3", Step: "Steps 1 to 3: colony foundation in year 1",
-		Description: "Experiment `go/validation/experiments/step3.xml`: example farm, 500 B. terrestris queens, 250 days. " +
-			"Setup values and queen traits are compared at step 0 only (later, NetLogo colonies die with their queen, " +
-			"which is not yet translated). Colony foundation and queen counts are compared at every step.",
-		Runs: runs, Rows: rows, Values: values})
-	if err != nil {
-		t.Fatal(err)
-	}
 	for _, f := range failures {
 		t.Error(f)
 	}

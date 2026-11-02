@@ -1,4 +1,4 @@
-package validation
+package compare
 
 import (
 	"fmt"
@@ -18,11 +18,12 @@ import (
 var (
 	colourNetLogo     = color.NRGBA{R: 0x2a, G: 0x78, B: 0xd6, A: 0xff}
 	colourNetLogoBand = color.NRGBA{R: 0x2a, G: 0x78, B: 0xd6, A: 0x38} // the band as a light wash
-	colourGobees      = color.NRGBA{R: 0xeb, G: 0x68, B: 0x34, A: 0xff} // gobees-fast
-	colourText        = color.NRGBA{R: 0x0b, G: 0x0b, B: 0x0b, A: 0xff}
-	colourMuted       = color.NRGBA{R: 0x52, G: 0x51, B: 0x4e, A: 0xff}
-	colourGrid        = color.NRGBA{R: 0xe4, G: 0xe3, B: 0xdf, A: 0xff}
-	colourSurface     = color.NRGBA{R: 0xfc, G: 0xfc, B: 0xfb, A: 0xff}
+	// gobees-fast: thick and 60 % opaque, so that the NetLogo median below it stays visible
+	colourGobees  = color.NRGBA{R: 0xeb, G: 0x68, B: 0x34, A: 0x99}
+	colourText    = color.NRGBA{R: 0x0b, G: 0x0b, B: 0x0b, A: 0xff}
+	colourMuted   = color.NRGBA{R: 0x52, G: 0x51, B: 0x4e, A: 0xff}
+	colourGrid    = color.NRGBA{R: 0xe4, G: 0xe3, B: 0xdf, A: 0xff}
+	colourSurface = color.NRGBA{R: 0xfc, G: 0xfc, B: 0xfb, A: 0xff}
 )
 
 const (
@@ -39,10 +40,10 @@ const (
 // plotCaption explains the plots below the image in the report.
 const plotCaption = "Plots: blue, NetLogo median and 5-95 % band; orange, gobees-fast median; x axis: day."
 
-// writePlot draws one panel per row that has at least 2 days (Medians, Bands) into a PNG file: the NetLogo band,
+// writePlot draws one panel per metric that has at least 2 days (Medians, Bands) into a PNG file: the NetLogo band,
 // the NetLogo median and the gobees-fast median over the days. The first tile holds the legend. It returns false and
 // writes nothing if no row has 2 days.
-func writePlot(path string, rows []ReportRow) (bool, error) {
+func writePlot(path string, rows []NetLogoMetric) (bool, error) {
 	plots := []*plot.Plot{legendPlot()}
 	for _, r := range rows {
 		if len(r.Medians) < 2 {
@@ -109,7 +110,7 @@ func newPlot() *plot.Plot {
 }
 
 // metricPlot returns the panel of one metric.
-func metricPlot(r ReportRow) (*plot.Plot, error) {
+func metricPlot(r NetLogoMetric) (*plot.Plot, error) {
 	p := newPlot()
 	p.Title.Text = r.Metric
 
@@ -123,12 +124,12 @@ func metricPlot(r ReportRow) (*plot.Plot, error) {
 	netlogo := make(plotter.XYs, n)
 	gobees := make(plotter.XYs, n)
 	for d := range n {
-		band = append(band, plotter.XY{X: float64(d), Y: r.Bands[d].Q95})
-		netlogo[d] = plotter.XY{X: float64(d), Y: r.Bands[d].Q50}
-		gobees[d] = plotter.XY{X: float64(d), Y: r.Medians[d]}
+		band = append(band, plotter.XY{X: float64(d + 1), Y: r.Bands[d].Q95})
+		netlogo[d] = plotter.XY{X: float64(d + 1), Y: r.Bands[d].Q50}
+		gobees[d] = plotter.XY{X: float64(d + 1), Y: r.Medians[d]}
 	}
 	for d := n - 1; d >= 0; d-- {
-		band = append(band, plotter.XY{X: float64(d), Y: r.Bands[d].Q05})
+		band = append(band, plotter.XY{X: float64(d + 1), Y: r.Bands[d].Q05})
 	}
 
 	poly, err := plotter.NewPolygon(band)
@@ -146,9 +147,9 @@ func metricPlot(r ReportRow) (*plot.Plot, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", r.Metric, err)
 	}
-	gb.Color, gb.Width = colourGobees, vg.Points(1.2)
+	gb.Color, gb.Width = colourGobees, vg.Points(2.4)
 	p.Add(poly, nl, gb) // gobees-fast on top: the version under test
-	p.X.Min, p.X.Max = 0, float64(n-1)
+	p.X.Min, p.X.Max = 1, float64(n)
 	return p, nil
 }
 
@@ -160,7 +161,7 @@ func legendPlot() *plot.Plot {
 	band.Color = colourNetLogoBand
 	band.LineStyle.Width = 0
 	nl := &plotter.Line{LineStyle: draw.LineStyle{Color: colourNetLogo, Width: vg.Points(2)}}
-	gb := &plotter.Line{LineStyle: draw.LineStyle{Color: colourGobees, Width: vg.Points(2)}}
+	gb := &plotter.Line{LineStyle: draw.LineStyle{Color: colourGobees, Width: vg.Points(3)}}
 	p.Legend.Add("NetLogo 5-95 % band (100 runs)", band)
 	p.Legend.Add("NetLogo median", nl)
 	p.Legend.Add("gobees-fast median (100 runs)", gb)
