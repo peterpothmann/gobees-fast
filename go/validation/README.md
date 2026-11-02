@@ -177,17 +177,16 @@ pull request and on every push to `main`, in three jobs:
    `VALIDATION_DUMP_DIR` (`WriteReport`): per experiment the quantiles per day (`<experiment>.csv`), the run
    summaries (`<experiment>_runs.csv`) and what the report needs to know about the experiment
    (`<experiment>_meta.json`).
-2. `gobees` runs the comparison tests of gobees at the same time and records its results the same way. The version is
-   `GOBEES_REF` in `go/compare/commits.env` (default `main`), so a change of gobees shows in the next comparison. It
-   needs the repository secret `GOBEES_TOKEN`, a fine-grained token with read access to the contents of gobees.
-   Without it, the report compares with NetLogo only.
-3. `report` runs `go run ./validation/cmd/report`, which compares the results of gobees-fast with NetLogo and with
-   gobees and writes [validation-report.md](validation-report.md) with one plot per experiment
-   (`plots/<experiment>.png`: the NetLogo band and median, the gobees median and the gobees-fast median over the
-   days). It adds the report to the summary of the run, posts a short summary as a comment in the pull request
-   (updated on every run), and commits report and plots to the branch of the pull request if the tests passed and
-   something changed ("Update validation report and plots", made by github-actions). Pull the branch before you push
-   to it again. On `main` it never commits.
+2. `compare` runs the comparisons with the reference commit and with gobees at the same time
+   ([go/compare](../compare/README.md)).
+3. `report` runs `go run ./validation/cmd/report`, which compares the results of gobees-fast with NetLogo and writes
+   [validation-report.md](validation-report.md) with one plot per experiment (`plots/<experiment>.png`: the NetLogo
+   band and median and the gobees-fast median over the days). It writes one comment with the results of `compare`
+   and one row for NetLogo: "Does it still match NetLogo?", passed if every metric of every experiment lies within
+   the NetLogo band on all days (see [go/compare](../compare/README.md#the-comment)). The comment goes to the pull
+   request (updated on every run) and, with the full report, to the summary of the run. In a pull request, the job
+   commits report and plots to the branch if the tests passed and something changed ("Update validation report and
+   plots", made by github-actions). Pull the branch before you push to it again. On `main` it never commits.
 
 The runs use fixed seeds (1 to 100), so the report changes only when the results change.
 
@@ -195,8 +194,7 @@ What each experiment measures and why is described in the experiment file (e.g. 
 comparison test (e.g. `go/sys/validation_step3_test.go`).
 
 To create the report locally (not needed, the CI does it), record the results and run the command. The folder must
-be an absolute path, because `go test` runs every test in its package folder. For the comparison with gobees, run
-the same tests in a checkout of gobees with another folder and pass it with `-gobees`. A local report replaces the
+be an absolute path, because `go test` runs every test in its package folder. A local report replaces the
 committed one; `git checkout validation/validation-report.md validation/plots` restores it.
 
 ```bash

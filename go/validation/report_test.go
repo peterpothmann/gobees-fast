@@ -23,36 +23,31 @@ func recordExperiment(t *testing.T, dir string, value func(run, day int) float64
 }
 
 func TestCompare(t *testing.T) {
-	// gobees-fast and gobees found as many colonies as NetLogo at the start of step 3 (0 on days 0 to 2), so the
-	// band holds. gobees differs from gobees-fast: every summary differs, the KS tests against gobees fail.
-	fast, gobees := t.TempDir(), t.TempDir()
+	// gobees-fast founds as many colonies as NetLogo at the start of step 3 (0 on days 0 to 2), so the band holds.
+	fast := t.TempDir()
 	recordExperiment(t, fast, func(run, day int) float64 { return 0 })
-	recordExperiment(t, gobees, func(run, day int) float64 { return float64(run + day + 1) })
 
-	results, err := Compare(fast, gobees)
+	results, err := Compare(fast)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(results) != 1 || len(results[0].Metrics) != 1 {
 		t.Fatalf("results: %+v", results)
 	}
-	m := results[0].Metrics[0]
-	if m.BandDays != 3 || len(m.Gobees) != 3 || len(m.Row.BaseMedians) != 3 {
-		t.Errorf("band days %d, gobees tests %d, gobees medians %d; want 3, 3, 3", m.BandDays, len(m.Gobees),
-			len(m.Row.BaseMedians))
-	}
-	if sig := significant(m.Gobees, results[0].GobeesAlpha); len(sig) != 3 {
-		t.Errorf("significant tests against gobees: %v, want all 3", m.Gobees)
+	if m := results[0].Metrics[0]; m.BandDays != 3 {
+		t.Errorf("band days %d, want 3", m.BandDays)
 	}
 
-	comment := Comment(results, "https://example.org/report")
-	report := Report(results, map[string]bool{"step3": true})
-	for _, want := range []string{CommentMarker, "| `step3` | ✅ 1 of 1 |", "❌ 3 of 3 |", "colonies_founded, setup",
-		"https://example.org/report"} {
-		if !strings.Contains(comment, want) {
-			t.Errorf("comment lacks %q:\n%s", want, comment)
+	check := NetLogoCheck(results, "https://example.org/report")
+	if check.Status != "✅" || check.Result != "1 of 1 validation experiments inside the NetLogo 5–95 % band on all days" {
+		t.Errorf("check: %q %q", check.Status, check.Result)
+	}
+	for _, want := range []string{"| `step3` | ✅ 1 of 1 |", "https://example.org/report"} {
+		if !strings.Contains(check.Details, want) {
+			t.Errorf("details lack %q:\n%s", want, check.Details)
 		}
 	}
+	report := Report(results, map[string]bool{"step3": true})
 	for _, want := range []string{"## Step 1", "| colonies_founded | ✅ 3 of 3 |", "![step3](plots/step3.png)"} {
 		if !strings.Contains(report, want) {
 			t.Errorf("report lacks %q:\n%s", want, report)
@@ -60,15 +55,18 @@ func TestCompare(t *testing.T) {
 	}
 }
 
-func TestCompareWithoutGobees(t *testing.T) {
+func TestNetLogoCheckOutsideBand(t *testing.T) {
+	// 1 + run + day colonies founded on days 0 to 2: NetLogo founds none before day 3.
 	fast := t.TempDir()
-	recordExperiment(t, fast, func(run, day int) float64 { return 0 })
-	results, err := Compare(fast, "")
+	recordExperiment(t, fast, func(run, day int) float64 { return float64(1 + run + day) })
+	results, err := Compare(fast)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if results[0].HasGobees() || !strings.Contains(Comment(results, ""), "– no data") {
-		t.Errorf("without gobees: %+v", results[0])
+	check := NetLogoCheck(results, "")
+	if check.Status != "❌" || !strings.Contains(check.Result, "0 of 1 validation experiments") ||
+		!strings.Contains(check.Result, "outside: `step3`") {
+		t.Errorf("check: %q %q", check.Status, check.Result)
 	}
 }
 

@@ -13,17 +13,14 @@ import (
 	"gobees/compare"
 )
 
-// The comparison of the recorded results of gobees-fast (WriteReport) with NetLogo and with gobees, written by
-// cmd/report as the validation report and as a short comment for a pull request.
+// The comparison of the recorded results of gobees-fast (WriteReport) with NetLogo, written by cmd/report as the
+// validation report and as the NetLogo row of the pull request comment (NetLogoCheck, compare.Comment).
 //
 // Two criteria per metric:
-//   - Band: the gobees-fast median lies within the NetLogo 5-95 % band on every compared day.
+//   - Band: the gobees-fast median lies within the NetLogo 5-95 % band on every compared day. Enforced by the tests.
 //   - KS: a two-sample Kolmogorov-Smirnov test per run summary (RunSummaries: the value at day 0, the yearly
-//     maximum and mean), against NetLogo and against gobees. Bonferroni-corrected per experiment and comparison,
-//     family alpha compare.FamilyAlpha. Reported, not enforced (yet).
-
-// CommentMarker starts the pull request comment, so that the workflow finds and updates it.
-const CommentMarker = "<!-- validation-report -->"
+//     maximum and mean) against NetLogo. Bonferroni-corrected per experiment, family alpha compare.FamilyAlpha.
+//     Reported in the full report, not enforced.
 
 // Test is one Kolmogorov-Smirnov test of a run summary.
 type Test struct {
@@ -37,7 +34,6 @@ type MetricResult struct {
 	Days     int    // compared days 0 to Days-1
 	BandDays int    // days on which the gobees-fast median lies within the NetLogo 5-95 % band
 	NetLogo  []Test // gobees-fast against NetLogo, nil without NetLogo run summaries
-	Gobees   []Test // gobees-fast against gobees, nil without gobees results
 	Row      ReportRow
 }
 
@@ -45,19 +41,16 @@ type MetricResult struct {
 type ExperimentResult struct {
 	Meta    Meta
 	Metrics []MetricResult
-	// NetLogoAlpha and GobeesAlpha are the Bonferroni-corrected levels: FamilyAlpha / number of tests.
-	NetLogoAlpha, GobeesAlpha float64
+	// NetLogoAlpha is the Bonferroni-corrected level: FamilyAlpha / number of tests.
+	NetLogoAlpha float64
 }
 
 // HasNetLogo reports whether NetLogo run summaries exist for the experiment.
 func (e ExperimentResult) HasNetLogo() bool { return e.Metrics[0].NetLogo != nil }
 
-// HasGobees reports whether gobees results exist for the experiment.
-func (e ExperimentResult) HasGobees() bool { return e.Metrics[0].Gobees != nil }
-
-// Compare compares the experiments recorded in fastDir (gobees-fast) with NetLogo and, if gobeesDir is not empty
-// and holds the experiment, with gobees. The experiments are sorted by Meta.Order.
-func Compare(fastDir, gobeesDir string) ([]ExperimentResult, error) {
+// Compare compares the experiments recorded in fastDir (gobees-fast) with NetLogo. The experiments are sorted by
+// Meta.Order.
+func Compare(fastDir string) ([]ExperimentResult, error) {
 	metas, err := filepath.Glob(filepath.Join(fastDir, "*_meta.json"))
 	if err != nil {
 		return nil, err
@@ -75,7 +68,7 @@ func Compare(fastDir, gobeesDir string) ([]ExperimentResult, error) {
 		if err := json.Unmarshal(b, &meta); err != nil {
 			return nil, fmt.Errorf("%s: %w", path, err)
 		}
-		r, err := compareExperiment(meta, fastDir, gobeesDir)
+		r, err := compareExperiment(meta, fastDir)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", meta.Experiment, err)
 		}
@@ -104,18 +97,10 @@ func readRecord(dir, experiment string) (q map[Key]Quantiles, runs map[Summary][
 	return q, runs, true, nil
 }
 
-func compareExperiment(meta Meta, fastDir, gobeesDir string) (ExperimentResult, error) {
+func compareExperiment(meta Meta, fastDir string) (ExperimentResult, error) {
 	fastQ, fastRuns, ok, err := readRecord(fastDir, meta.Experiment)
 	if err != nil || !ok {
 		return ExperimentResult{}, fmt.Errorf("no recorded results in %s: %v", fastDir, err)
-	}
-	var baseQ map[Key]Quantiles
-	var baseRuns map[Summary][]float64
-	hasBase := false
-	if gobeesDir != "" {
-		if baseQ, baseRuns, hasBase, err = readRecord(gobeesDir, meta.Experiment); err != nil {
-			return ExperimentResult{}, err
-		}
 	}
 	nlText, nlRunsText, err := NetLogoReference(meta.Experiment)
 	if err != nil {
@@ -133,7 +118,7 @@ func compareExperiment(meta Meta, fastDir, gobeesDir string) (ExperimentResult, 
 	}
 
 	result := ExperimentResult{Meta: meta}
-	nNetLogo, nGobees := 0, 0
+	nNetLogo := 0
 	for _, m := range meta.Metrics {
 		r := MetricResult{Metric: m.Metric, Days: m.Days, Row: ReportRow{Metric: m.Metric, Steps: m.Days}}
 		for d := range m.Days {
@@ -148,25 +133,17 @@ func compareExperiment(meta Meta, fastDir, gobeesDir string) (ExperimentResult, 
 			}
 			r.Row.Medians = append(r.Row.Medians, fast)
 			r.Row.Bands = append(r.Row.Bands, nl)
-			if hasBase {
-				r.Row.BaseMedians = append(r.Row.BaseMedians, baseQ[Key{d, m.Metric}].Q50)
-			}
 		}
 		r.Row.Within = r.BandDays
-		for _, s := range summaries(m) {
-			if nlRuns != nil {
+		if nlRuns != nil {
+			for _, s := range summaries(m) {
 				r.NetLogo = append(r.NetLogo, ksTest(s, fastRuns[s], nlRuns[s]))
 				nNetLogo++
-			}
-			if hasBase {
-				r.Gobees = append(r.Gobees, ksTest(s, fastRuns[s], baseRuns[s]))
-				nGobees++
 			}
 		}
 		result.Metrics = append(result.Metrics, r)
 	}
 	result.NetLogoAlpha = compare.FamilyAlpha / float64(max(1, nNetLogo))
-	result.GobeesAlpha = compare.FamilyAlpha / float64(max(1, nGobees))
 	return result, nil
 }
 
@@ -211,7 +188,7 @@ func significant(tests []Test, alpha float64) []Test {
 }
 
 // counts sums the band days and the significant tests of an experiment.
-func (e ExperimentResult) counts() (bandOK, metrics, nlSig, nlTests, gbSig, gbTests int) {
+func (e ExperimentResult) counts() (bandOK, metrics, nlSig, nlTests int) {
 	for _, m := range e.Metrics {
 		metrics++
 		if m.BandDays == m.Days {
@@ -219,8 +196,6 @@ func (e ExperimentResult) counts() (bandOK, metrics, nlSig, nlTests, gbSig, gbTe
 		}
 		nlSig += len(significant(m.NetLogo, e.NetLogoAlpha))
 		nlTests += len(m.NetLogo)
-		gbSig += len(significant(m.Gobees, e.GobeesAlpha))
-		gbTests += len(m.Gobees)
 	}
 	return
 }
@@ -253,64 +228,54 @@ func experimentName(m Meta) string {
 // summaryTable returns the table with one row per experiment.
 func summaryTable(results []ExperimentResult) string {
 	var b strings.Builder
-	b.WriteString("| Experiment | Band: metrics inside on all days | KS vs NetLogo: significant tests | " +
-		"KS vs gobees: significant tests |\n| --- | --- | --- | --- |\n")
+	b.WriteString("| Experiment | Band: metrics inside on all days | KS vs NetLogo: significant tests |\n" +
+		"| --- | --- | --- |\n")
 	for _, e := range results {
-		bandOK, metrics, nlSig, nlTests, gbSig, gbTests := e.counts()
-		fmt.Fprintf(&b, "| %s | %s | %s | %s |\n", experimentName(e.Meta), bandCell(bandOK, metrics),
-			cell(nlSig, nlTests, e.HasNetLogo()), cell(gbSig, gbTests, e.HasGobees()))
+		bandOK, metrics, nlSig, nlTests := e.counts()
+		fmt.Fprintf(&b, "| %s | %s | %s |\n", experimentName(e.Meta), bandCell(bandOK, metrics),
+			cell(nlSig, nlTests, e.HasNetLogo()))
 	}
 	return b.String()
 }
 
 const criteria = "Band: the median of the gobees-fast runs lies within the 5-95 % band of the NetLogo runs on every " +
 	"compared day (enforced by the tests, weak). KS: two-sample Kolmogorov-Smirnov test of the run summaries (value " +
-	"at day 0, maximum and mean of every year) of gobees-fast against NetLogo and against gobees, Bonferroni-" +
-	"corrected per experiment and comparison (family alpha 0.05). Reported, not enforced. 100 runs per model and " +
-	"experiment."
+	"at day 0, maximum and mean of every year) of gobees-fast against NetLogo, Bonferroni-corrected per experiment " +
+	"(family alpha 0.05). Reported, not enforced. 100 runs per model and experiment."
 
-// Comment returns the pull request comment: the summary table and the most significant tests. reportURL links to
-// the full report, may be empty.
-func Comment(results []ExperimentResult, reportURL string) string {
+// NetLogoCheck returns the NetLogo row of the pull request comment (compare.Comment): passed if every metric of every
+// experiment lies within the NetLogo band on all days. reportURL links to the full report, may be empty.
+func NetLogoCheck(results []ExperimentResult, reportURL string) compare.Check {
+	c := compare.Question("3-netlogo")
 	var b strings.Builder
-	b.WriteString(CommentMarker + "\n## Validation against NetLogo and gobees\n\n")
-	b.WriteString(summaryTable(results))
-	worst := func(name string, pick func(MetricResult) []Test, alpha func(ExperimentResult) float64) {
-		type item struct {
-			exp string
-			t   Test
+	b.WriteString("| Experiment | Metrics inside the band on all days |\n| --- | --- |\n")
+	outside := []string{}
+	for _, e := range results {
+		bandOK, metrics, _, _ := e.counts()
+		if bandOK < metrics {
+			outside = append(outside, "`"+e.Meta.Experiment+"`")
 		}
-		items := []item{}
-		for _, e := range results {
-			for _, m := range e.Metrics {
-				for _, t := range significant(pick(m), alpha(e)) {
-					items = append(items, item{e.Meta.Experiment, t})
-				}
-			}
-		}
-		if len(items) == 0 {
-			return
-		}
-		slices.SortFunc(items, func(a, b item) int {
-			if a.t.P < b.t.P {
-				return -1
-			} else if a.t.P > b.t.P {
-				return 1
-			}
-			return 0
-		})
-		fmt.Fprintf(&b, "\nMost significant differences to %s:\n\n", name)
-		for _, it := range items[:min(5, len(items))] {
-			fmt.Fprintf(&b, "- `%s`: %s (D = %.2f, p = %.2g)\n", it.exp, it.t.Summary, it.t.D, it.t.P)
-		}
+		fmt.Fprintf(&b, "| %s | %s |\n", experimentName(e.Meta), bandCell(bandOK, metrics))
 	}
-	worst("gobees", func(m MetricResult) []Test { return m.Gobees }, func(e ExperimentResult) float64 { return e.GobeesAlpha })
-	worst("NetLogo", func(m MetricResult) []Test { return m.NetLogo }, func(e ExperimentResult) float64 { return e.NetLogoAlpha })
-	b.WriteString("\n" + criteria + "\n")
 	if reportURL != "" {
-		fmt.Fprintf(&b, "\nFull report with plots: %s\n", reportURL)
+		fmt.Fprintf(&b, "\nFull report with plots and the Kolmogorov-Smirnov tests: %s\n", reportURL)
 	}
-	return b.String()
+	c.Details = b.String()
+
+	c.Status = "✅"
+	c.Result = fmt.Sprintf("%d of %d validation experiments inside the NetLogo 5–95 %% band on all days",
+		len(results)-len(outside), len(results))
+	if len(outside) > 0 {
+		c.Status = "❌"
+		c.Result += ", outside: " + strings.Join(outside, ", ")
+	}
+	runs := 0
+	if len(results) > 0 {
+		runs = results[0].Meta.Runs
+	}
+	c.Scope = fmt.Sprintf("The %d validation experiments of go/validation, %d runs per experiment and model.",
+		len(results), runs)
+	return c
 }
 
 // Report returns the full validation report as Markdown. The plot of an experiment is plots/<experiment>.png,
@@ -329,10 +294,10 @@ func Report(results []ExperimentResult, plots map[string]bool) string {
 			fmt.Fprintf(&b, "\n### %s\n", e.Meta.Title)
 		}
 		fmt.Fprintf(&b, "\n%s\n\n", e.Meta.Description)
-		b.WriteString("| Metric | Band: days inside | KS vs NetLogo | KS vs gobees |\n| --- | --- | --- | --- |\n")
+		b.WriteString("| Metric | Band: days inside | KS vs NetLogo |\n| --- | --- | --- |\n")
 		for _, m := range e.Metrics {
-			fmt.Fprintf(&b, "| %s | %s | %s | %s |\n", m.Metric, bandCell(m.BandDays, m.Days),
-				testCell(m.NetLogo, e.NetLogoAlpha, e.HasNetLogo()), testCell(m.Gobees, e.GobeesAlpha, e.HasGobees()))
+			fmt.Fprintf(&b, "| %s | %s | %s |\n", m.Metric, bandCell(m.BandDays, m.Days),
+				testCell(m.NetLogo, e.NetLogoAlpha, e.HasNetLogo()))
 		}
 		if plots[e.Meta.Experiment] {
 			fmt.Fprintf(&b, "\n![%s](plots/%s.png)\n", e.Meta.Experiment, e.Meta.Experiment)

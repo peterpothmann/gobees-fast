@@ -1,7 +1,5 @@
 package validation
 
-// Keep this file the same as go/validation/summary_test.go of gobees.
-
 import (
 	"os"
 	"path/filepath"

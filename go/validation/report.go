@@ -18,8 +18,6 @@ type ReportRow struct {
 	// They are drawn in the plot of the experiment. A row with fewer than 2 days gets no panel.
 	Medians []float64
 	Bands   []Quantiles
-	// BaseMedians holds the median of the gobees runs of every compared day, nil if gobees did not run (cmd/report).
-	BaseMedians []float64
 }
 
 // Section is the comparison of one experiment.
@@ -60,7 +58,7 @@ type MetricMeta struct {
 
 // WriteReport records the results of an experiment in the folder of DumpEnv: the quantiles per day and the run
 // summaries (WriteDump), and <experiment>_meta.json (Meta). Does nothing if DumpEnv is not set. cmd/report compares
-// the records of gobees-fast with NetLogo and with gobees and writes the report.
+// the records of gobees-fast with NetLogo and writes the report.
 func WriteReport(s Section) error {
 	dir := os.Getenv(DumpEnv)
 	if dir == "" || s.Values == nil {

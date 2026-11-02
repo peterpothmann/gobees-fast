@@ -7,7 +7,6 @@
 </picture>
 
 [![Tests](https://github.com/peterpothmann/gobees-fast/actions/workflows/tests.yml/badge.svg)](https://github.com/peterpothmann/gobees-fast/actions/workflows/tests.yml)
-[![Compare](https://github.com/peterpothmann/gobees-fast/actions/workflows/compare.yml/badge.svg)](https://github.com/peterpothmann/gobees-fast/actions/workflows/compare.yml)
 
 </div>
 
@@ -104,7 +103,7 @@ The CI runs all tests on every pull request and on every push to `main`. In a pu
 
 ## Comparison with the reference commit
 
-The CI compares every pull request and every push to `main` with a reference commit of gobees-fast: value by value while a step must not change any random draw, otherwise by distributions over 100 seeds. It also times the current code against gobees. The results are in the summary of the run. Locally: `go/compare/run_compare.sh`. Details: [go/compare/README.md](go/compare/README.md).
+The CI compares every pull request and every push to `main` with a reference commit of gobees-fast: value by value while a step must not change any random draw, otherwise by distributions over 100 seeds. It also compares the distributions with gobees, to catch differences that add up over several steps, and times the current code against gobees. One comment in the pull request answers four questions: did this step change the results, has the model drifted away from gobees, does it still match NetLogo, and how fast is it. Locally: `go/compare/run_compare.sh`. Details: [go/compare/README.md](go/compare/README.md).
 
 ## Benchmarks
 

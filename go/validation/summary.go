@@ -11,8 +11,7 @@ import (
 )
 
 // DumpEnv is the environment variable with a folder. If it is set, every comparison test writes the results of its
-// runs there (WriteDump): the CI collects them from gobees and gobees-fast and compares them (cmd/report).
-// Keep this file the same as go/validation/summary.go of gobees: both write the same format.
+// runs there (WriteDump): the CI collects them and compares them with NetLogo (cmd/report).
 const DumpEnv = "VALIDATION_DUMP_DIR"
 
 // DaysPerYear is the length of a period of the run summaries.
