@@ -35,26 +35,17 @@ type ColonyStimuli struct {
 	StimPollenForaging float64
 }
 
-// ColonyCounts holds the numbers of bees, deaths and production of a colony.
+// ColonyCounts holds the numbers of bees of a colony, set in [UCOL-06].
+// The brood death counters (broodDeath..., ...DeathsIncubation, larvaDeathsWeight), totalEggsProduced and
+// totalAdultsProduced: read only by the egg accounting [CHK-04], allAdultMales: read only by [CHK-03]. Removed in
+// step F4 together with the checks.
 type ColonyCounts struct {
-	LarvaWorkerRatio        float64
-	AllEggs                 float64
-	AllLarvae               float64
-	AllPupae                float64
-	AllAdults               float64
-	AllAdultWorkers         float64
-	AllAdultMales           float64
-	BroodDeathBadger        float64
-	BroodDeathEndSeason     float64
-	BroodDeathsCP           float64
-	BroodDeathsEnergyStores float64
-	BroodDeathsNoAdults     float64
-	EggDeathsIncubation     float64
-	LarvaDeathsIncubation   float64
-	LarvaDeathsWeight       float64
-	PupaDeathsIncubation    float64
-	TotalEggsProduced       float64
-	TotalAdultsProduced     float64
+	LarvaWorkerRatio float64
+	AllEggs          float64
+	AllLarvae        float64
+	AllPupae         float64
+	AllAdults        float64
+	AllAdultWorkers  float64
 }
 
 // ColonyRange holds the foodsources within the foraging range of a colony [PRNG], [FRNG].

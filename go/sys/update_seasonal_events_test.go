@@ -12,20 +12,18 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// seasWorld is a colonyWorld with the totals of the previous evening (OutputDaily) and morning (CheckNumbers),
-// set by hand, and the UpdateSeasonalEvents system.
-func seasWorld(t *testing.T, day float64) (*colonyWorld, *UpdateSeasonalEvents, *globals.DailyOutput, *globals.Totals) {
+// seasWorld is a colonyWorld with the brood totals of the previous morning (CheckNumbers), set by hand, and the
+// UpdateSeasonalEvents system. The totals of the previous evening (OutputDailyProc) are counted from the bees.
+func seasWorld(t *testing.T, day float64) (*colonyWorld, *UpdateSeasonalEvents, *globals.Totals) {
 	t.Helper()
 	cw := newColonyWorld(t, 1)
 	cw.ticks.Ticks = int64(day)
 	cw.cal.Day = day
-	out := &globals.DailyOutput{}
-	ecs.AddResource(cw.w, out)
 	totals := &globals.Totals{}
 	ecs.AddResource(cw.w, totals)
 	s := &UpdateSeasonalEvents{}
 	s.Initialize(cw.w)
-	return cw, s, out, totals
+	return cw, s, totals
 }
 
 // addHibernatingQueen adds a mated, hibernating queen (cohort) without colony.
@@ -39,10 +37,8 @@ func (cw *colonyWorld) addHibernatingQueen(number float64) ecs.Entity {
 func TestSeasonalEventsSeasonStop(t *testing.T) {
 	// [SEAS-01] on Day seasonStop (305 for B_terrestris) every bee of the species that does not hibernate dies
 	for _, day := range []float64{304, 305} {
-		cw, s, _, _ := seasWorld(t, day)
-		col := cw.addColony(func(c *comp.Colony, st *comp.ColonyStores, n *comp.ColonyCounts) {
-			n.TotalEggsProduced = 9 // the 5 eggs and 4 larvae below
-		})
+		cw, s, _ := seasWorld(t, day)
+		col := cw.addColony(nil)
 		cw.addBee(col, stage.Adult, caste.Queen, 1, 60)
 		cw.addBee(col, stage.Adult, caste.Worker, 10, 5)
 		cw.addBee(col, stage.Adult, caste.Male, 2, 1)
@@ -54,31 +50,26 @@ func TestSeasonalEventsSeasonStop(t *testing.T) {
 
 		s.Update(cw.w)
 		alive := countEntities(ecs.NewFilter1[comp.Bee](cw.w))
-		_, _, n := cw.colony(col)
 		if day == 304 {
-			if alive != 8 || n.BroodDeathEndSeason != 0 {
-				t.Errorf("day 304: %d bee agents, broodDeathEndSeason %v; want 8 and 0", alive, n.BroodDeathEndSeason)
+			if alive != 8 {
+				t.Errorf("day 304: %d bee agents, want 8", alive)
 			}
 			continue
 		}
 		if alive != 1 || !cw.w.Alive(hibernating) || cw.w.Alive(searching) {
 			t.Errorf("day 305: %d bee agents alive, want only the hibernating queen", alive)
 		}
-		if n.BroodDeathEndSeason != 9 {
-			t.Errorf("broodDeathEndSeason %v, want 9", n.BroodDeathEndSeason)
-		}
-		// the colony dies later this morning in [UCOL-11], counted as end of season. Its eggs are accounted for.
+		// the colony dies later this morning in [UCOL-11]
 		cw.sys.Update(cw.w)
-		if cw.w.Alive(col) || cw.counters.ColonyDeathsEndSeason != 1 || cw.counters.ColonyDeathsNoBees != 0 {
-			t.Errorf("colony alive %v, ColonyDeathsEndSeason %v, ColonyDeathsNoBees %v; want false, 1, 0",
-				cw.w.Alive(col), cw.counters.ColonyDeathsEndSeason, cw.counters.ColonyDeathsNoBees)
+		if cw.w.Alive(col) {
+			t.Error("the colony without bees is alive")
 		}
 	}
 }
 
 func TestSeasonalEventsSeasonStopOtherSpecies(t *testing.T) {
 	// [SEAS-01] per species: a species with a later seasonStop keeps its bees
-	cw, s, _, _ := seasWorld(t, 305)
+	cw, s, _ := seasWorld(t, 305)
 	other := cw.speciesEntityNamed(t, "late")
 	ecs.NewMap1[comp.Species](cw.w).Get(other).SeasonStop = 330
 	e := cw.addBee(ecs.Entity{}, stage.Adult, caste.Queen, 1, 0)
@@ -92,25 +83,31 @@ func TestSeasonalEventsSeasonStopOtherSpecies(t *testing.T) {
 
 func TestSeasonalEventsMalesDie(t *testing.T) {
 	// [SEAS-02] all males die if every queen hibernates, there is no brood and males exist, with the totals of the
-	// previous evening (TotalQueens, TotalHibernatingQueens, TotalMales) and morning (brood)
+	// previous evening (TotalQueens, TotalHibernatingQueens, TotalMales, counted from the bees) and morning (brood)
 	cases := []struct {
 		name                string
-		queens, hib, males  float64
+		activeQueen         bool // a queen that does not hibernate
+		males               bool
 		eggs, larvae, pupae float64
 		die                 bool
 	}{
-		{"all queens hibernate", 4, 4, 3, 0, 0, 0, true},
-		{"a queen is active", 4, 3, 3, 0, 0, 0, false},
-		{"brood left", 4, 4, 3, 0, 0, 1, false},
-		{"no males", 4, 4, 0, 0, 0, 0, false},
+		{"all queens hibernate", false, true, 0, 0, 0, true},
+		{"a queen is active", true, true, 0, 0, 0, false},
+		{"brood left", false, true, 0, 0, 1, false},
+		{"no males", false, false, 0, 0, 0, false},
 	}
 	for _, c := range cases {
-		cw, s, out, totals := seasWorld(t, 250)
-		out.TotalQueens, out.TotalHibernatingQueens, out.TotalMales = c.queens, c.hib, c.males
+		cw, s, totals := seasWorld(t, 250)
 		totals.TotalEggs, totals.TotalLarvae, totals.TotalPupae = c.eggs, c.larvae, c.pupae
 		col := cw.addColony(nil)
-		males := []ecs.Entity{cw.addMale(col, 1), cw.addMale(ecs.Entity{}, 2)}
+		males := []ecs.Entity{}
+		if c.males {
+			males = append(males, cw.addMale(col, 1), cw.addMale(ecs.Entity{}, 2))
+		}
 		queen := cw.addHibernatingQueen(4)
+		if c.activeQueen {
+			cw.addBee(ecs.Entity{}, stage.Adult, caste.Queen, 1, 0)
+		}
 		s.Update(cw.w)
 		for _, m := range males {
 			if cw.w.Alive(m) == c.die {
@@ -123,9 +120,30 @@ func TestSeasonalEventsMalesDie(t *testing.T) {
 	}
 }
 
+func TestSeasonalEventsTotalsBeforeSeasonStop(t *testing.T) {
+	// [SEAS-02] uses the totals of the previous evening [OUT-01]: a queen that dies on Day seasonStop in [SEAS-01]
+	// still counts as not hibernating, so the males survive this morning.
+	cw, s, _ := seasWorld(t, 305)
+	other := cw.speciesEntityNamed(t, "late")
+	ecs.NewMap1[comp.Species](cw.w).Get(other).SeasonStop = 330
+	male := cw.addMale(ecs.Entity{}, 2)
+	_, _, b, _, _, _, _ := cw.beeMap.Get(male)
+	b.SpeciesID = other // survives [SEAS-01]
+	cw.addHibernatingQueen(4)
+	cw.addBee(ecs.Entity{}, stage.Adult, caste.Queen, 1, 0) // dies in [SEAS-01]
+	s.Update(cw.w)
+	if !cw.w.Alive(male) {
+		t.Error("the males died on the day the last active queen died")
+	}
+	s.Update(cw.w) // the next morning: all queens hibernate
+	if cw.w.Alive(male) {
+		t.Error("the males survived the next morning")
+	}
+}
+
 func TestSeasonalEventsHibernatingQueensLimit(t *testing.T) {
 	// [SEAS-03] on Day 1: queensToKill = TotalHibernatingQueens (previous evening) - MaxHibernatingQueens
-	cw, s, out, _ := seasWorld(t, 366)
+	cw, s, _ := seasWorld(t, 366)
 	cw.cal.Day = 1
 	cw.file.MaxHibernatingQueens = 5
 	queens := []ecs.Entity{}
@@ -133,7 +151,6 @@ func TestSeasonalEventsHibernatingQueensLimit(t *testing.T) {
 		queens = append(queens, cw.addHibernatingQueen(1))
 	}
 	active := cw.addBee(ecs.Entity{}, stage.Adult, caste.Queen, 1, 0) // not hibernating: never killed here
-	out.TotalHibernatingQueens = 8
 	s.Update(cw.w)
 
 	alive := 0
@@ -145,24 +162,20 @@ func TestSeasonalEventsHibernatingQueensLimit(t *testing.T) {
 	if alive != 5 || !cw.w.Alive(active) {
 		t.Errorf("%d hibernating queens alive, active queen alive %v; want 5 and true", alive, cw.w.Alive(active))
 	}
-	if cw.counters.TotalHibernatingQueensEverRemoved != 3 {
-		t.Errorf("TotalHibernatingQueensEverRemoved %v, want 3", cw.counters.TotalHibernatingQueensEverRemoved)
-	}
 }
 
 func TestSeasonalEventsHibernatingCohort(t *testing.T) {
-	// [SEAS-03] a cohort can remove more queens than needed. TotalHibernatingQueensEverRemoved adds the planned
-	// number.
-	cw, s, out, _ := seasWorld(t, 1)
+	// [SEAS-03] a cohort can remove more queens than needed. The planned number (TotalHibernatingQueensEverRemoved)
+	// is output, see obs.Counters.
+	cw, s, _ := seasWorld(t, 1)
 	cw.file.MaxHibernatingQueens = 7
 	cohort := cw.addHibernatingQueen(10)
-	out.TotalHibernatingQueens = 10
 	s.Update(cw.w)
 	if cw.w.Alive(cohort) {
 		t.Errorf("cohort of 10 survived with 3 queens to kill")
 	}
-	if cw.counters.TotalHibernatingQueensEverRemoved != 3 || cw.counters.TotalBeesEverDied != 10 {
-		t.Errorf("removed %v, died %v; want 3 and 10", cw.counters.TotalHibernatingQueensEverRemoved, cw.counters.TotalBeesEverDied)
+	if cw.tally.beesDied != 10 {
+		t.Errorf("%v bees died, want 10", cw.tally.beesDied)
 	}
 }
 

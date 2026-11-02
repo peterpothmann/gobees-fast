@@ -99,8 +99,8 @@ func TestQueensLeavingNestNoMale(t *testing.T) {
 	if cw.w.Alive(young) {
 		t.Errorf("young queen without a male survived")
 	}
-	if cw.counters.TotalBeesEverDied != 2 {
-		t.Errorf("TotalBeesEverDied %v, want 2 (the cohort)", cw.counters.TotalBeesEverDied)
+	if cw.tally.beesDied != 2 {
+		t.Errorf("%v bees died, want 2 (the cohort)", cw.tally.beesDied)
 	}
 }
 

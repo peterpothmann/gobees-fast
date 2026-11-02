@@ -25,8 +25,7 @@ type colonyWorld struct {
 	today     *globals.FoodsourcesToday
 	file      *params.ParameterFile
 	constants *params.Constants
-	counters  *globals.Counters
-	dead      *globals.DeadColonies
+	tally     *tally
 	sys       *UpdateColonies
 	species   ecs.Entity
 	colonyMap *colonyMapper
@@ -52,8 +51,7 @@ func newColonyWorld(t *testing.T, seed uint64) *colonyWorld {
 	ecs.AddResource(w, &globals.Landscape{Scaling_NLpatches_per_m: 0.1})
 	cw.who = &globals.WhoCounter{}
 	ecs.AddResource(w, cw.who)
-	cw.counters = &globals.Counters{}
-	ecs.AddResource(w, cw.counters)
+	cw.tally = newTally(w)
 	ecs.AddResource(w, &globals.ActiveBees{})
 	ecs.AddResource(w, &globals.Daytime{})
 
@@ -64,7 +62,6 @@ func newColonyWorld(t *testing.T, seed uint64) *colonyWorld {
 
 	cw.sys = &UpdateColonies{}
 	cw.sys.Initialize(w)
-	cw.dead = ecs.GetResource[globals.DeadColonies](w)
 	return cw
 }
 
@@ -122,7 +119,7 @@ func TestUpdateColoniesStatistics(t *testing.T) {
 	cw.nextMorning()
 	c, s, n := cw.colony(col)
 	want := comp.ColonyCounts{LarvaWorkerRatio: 2, AllEggs: 10, AllLarvae: 6, AllPupae: 4, AllAdults: 7,
-		AllAdultWorkers: 3, AllAdultMales: 2}
+		AllAdultWorkers: 3}
 	if *n != want {
 		t.Errorf("statistics [UCOL-06]:\n got %+v\nwant %+v", *n, want)
 	}
@@ -162,8 +159,8 @@ func TestUpdateColoniesDeathAfterCP(t *testing.T) {
 	if cw.w.Alive(queen) || cw.w.Alive(oldWorker) || !cw.w.Alive(youngWorker) || !cw.w.Alive(male) {
 		t.Fatal("day 202: queen and old worker must die, young worker and male survive")
 	}
-	if cw.counters.TotalBeesEverDied != 2 {
-		t.Errorf("TotalBeesEverDied %v, want 2", cw.counters.TotalBeesEverDied)
+	if cw.tally.beesDied != 2 {
+		t.Errorf("%v bees died, want 2", cw.tally.beesDied)
 	}
 	_, _, b, _, _, _, _ := cw.beeMap.Get(youngWorker)
 	b.AdultAge = 11
@@ -179,35 +176,22 @@ func TestUpdateColoniesDeathAfterCP(t *testing.T) {
 	if cw.w.Alive(col) {
 		t.Fatal("day 204: the colony without bees must die")
 	}
-	if cw.counters.ColonyDeathsNoBees != 1 || cw.counters.ColonyDeathsEndSeason != 0 {
-		t.Errorf("ColonyDeathsNoBees %v, ColonyDeathsEndSeason %v; want 1, 0", cw.counters.ColonyDeathsNoBees, cw.counters.ColonyDeathsEndSeason)
-	}
-	if len(cw.dead.List) != 1 || cw.dead.List[0].ColonyDeathDay != 204 || cw.dead.List[0].Colony.SpeciesIDcolony != cw.species {
-		t.Errorf("dead colonies: %+v, want one record with colonyDeathDay 204 and the species", cw.dead.List)
+	if cw.tally.coloniesDied != 1 {
+		t.Errorf("%d colonies died, want 1", cw.tally.coloniesDied)
 	}
 }
 
 func TestUpdateColoniesEnergyDepleted(t *testing.T) {
-	// [UCOL-03] all bees die, the brood is counted, the colony dies on the same morning [UCOL-11]
+	// [UCOL-03] all bees die, the colony dies on the same morning [UCOL-11]
 	cw := newColonyWorld(t, 1)
-	cw.ticks.Ticks = 309 // Day 310 >= seasonStop 305: counted as end of season
-	col := cw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) {
-		s.EnergyStore_kJ = -0.1
-		n.TotalEggsProduced = 7 // for the egg accounting at death [CHK-04]
-	})
+	col := cw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) { s.EnergyStore_kJ = -0.1 })
 	cw.addBee(col, stage.Adult, caste.Queen, 1, 300)
 	cw.addBee(col, stage.Larva, caste.Undefined, 5, 0)
 	cw.addBee(col, stage.Egg, caste.Undefined, 2, 0)
 
 	cw.nextMorning()
-	if cw.w.Alive(col) || cw.counters.TotalBeesEverDied != 8 {
-		t.Fatalf("colony alive %v, TotalBeesEverDied %v; want false, 8", cw.w.Alive(col), cw.counters.TotalBeesEverDied)
-	}
-	if cw.counters.ColonyDeathsEndSeason != 1 || cw.counters.ColonyDeathsNoBees != 0 {
-		t.Errorf("ColonyDeathsEndSeason %v, ColonyDeathsNoBees %v; want 1, 0", cw.counters.ColonyDeathsEndSeason, cw.counters.ColonyDeathsNoBees)
-	}
-	if got := cw.dead.List[0].Counts.BroodDeathsEnergyStores; got != 7 {
-		t.Errorf("broodDeathsEnergyStores %v, want 7", got)
+	if cw.w.Alive(col) || cw.tally.beesDied != 8 {
+		t.Fatalf("colony alive %v, %v bees died; want false, 8", cw.w.Alive(col), cw.tally.beesDied)
 	}
 }
 
@@ -215,7 +199,7 @@ func TestUpdateColoniesNoAdults(t *testing.T) {
 	// [UCOL-04] brood without any adult dies. An adult male keeps the brood alive (finding 38, see
 	// trans/netlogo-findings.md#finding-38).
 	cw := newColonyWorld(t, 1)
-	orphan := cw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) { n.TotalEggsProduced = 3 })
+	orphan := cw.addColony(nil)
 	cw.addBee(orphan, stage.Egg, caste.Undefined, 3, 0)
 	withMale := cw.addColony(nil)
 	brood := cw.addBee(withMale, stage.Pupa, caste.Worker, 6, 0)
@@ -225,20 +209,12 @@ func TestUpdateColoniesNoAdults(t *testing.T) {
 	if cw.w.Alive(orphan) {
 		t.Fatal("the colony with brood only must die")
 	}
-	if got := cw.dead.List[0].Counts.BroodDeathsNoAdults; got != 3 {
-		t.Errorf("broodDeathsNoAdults %v, want 3", got)
+	if cw.tally.beesDied != 3 {
+		t.Errorf("%v bees died, want the 3 eggs", cw.tally.beesDied)
 	}
 	if !cw.w.Alive(brood) || !cw.w.Alive(withMale) {
 		t.Error("brood with an adult male must survive")
 	}
-}
-
-func TestUpdateColoniesEggCheck(t *testing.T) {
-	// [CHK-04] at death (decision E): eggs that are not accounted for are an assertion
-	cw := newColonyWorld(t, 1)
-	col := cw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) { n.TotalEggsProduced = 5 })
-	cw.addBee(col, stage.Egg, caste.Undefined, 3, 0)
-	expectPanic(t, "5 eggs produced, 3 died", func() { cw.nextMorning() })
 }
 
 func TestUpdateColoniesSwitchPoint(t *testing.T) {
@@ -343,27 +319,5 @@ func TestUpdateColoniesRangeLists(t *testing.T) {
 	if len(r.MasterpatchesWithPollenlayersInFlowerAndRangeList) != 1 || r.MasterpatchesWithPollenlayersInFlowerAndRangeList[0] != inFlower ||
 		len(r.MasterpatchesWithNectarlayersInFlowerAndRangeList) != 1 {
 		t.Errorf("lists after the update: %+v", *r)
-	}
-}
-
-func TestUpdateColoniesDeadColoniesNewYear(t *testing.T) {
-	// [UCOL-12] on 1 January the dead colonies are removed unless KeepDeadColonies?
-	for _, keep := range []bool{true, false} {
-		cw := newColonyWorld(t, 1)
-		cw.file.KeepDeadColonies = keep
-		cw.addColony(nil) // no bees: dies on the next morning
-		cw.ticks.Ticks = 364
-		cw.nextMorning() // Day 365
-		if len(cw.dead.List) != 1 {
-			t.Fatalf("keep %v: %d dead colonies on day 365, want 1", keep, len(cw.dead.List))
-		}
-		cw.nextMorning() // Day 1
-		want := 1
-		if !keep {
-			want = 0
-		}
-		if len(cw.dead.List) != want {
-			t.Errorf("KeepDeadColonies %v: %d dead colonies on 1 January, want %d", keep, len(cw.dead.List), want)
-		}
 	}
 }

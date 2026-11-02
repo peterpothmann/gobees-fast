@@ -149,15 +149,14 @@ func TestUpdateFoodsources(t *testing.T) {
 		ticks                    int64
 		dandelion, daisy, cereal bool
 		update                   bool
-		nectar_l, pollen_kg      float64
 	}{
-		{0, false, false, false, true, 0, 0}, // Setup: Crop_Cereals sets the flag (startDay = stopDay = 0)
-		{1, true, true, false, true, 3, 3},   // 1 + 2 million microlitres = 3 l, 1 + 2 kg
-		{2, true, true, false, false, 3, 3},
-		{363, true, true, false, false, 3, 3},
-		{364, false, true, false, true, 2, 2}, // stopDay of Dandelion
-		{365, false, false, false, true, 0, 0},
-		{366, true, true, false, true, 3, 3}, // Day 1 of year 2
+		{0, false, false, false, true}, // Setup: Crop_Cereals sets the flag (startDay = stopDay = 0)
+		{1, true, true, false, true},
+		{2, true, true, false, false},
+		{363, true, true, false, false},
+		{364, false, true, false, true}, // stopDay of Dandelion
+		{365, false, false, false, true},
+		{366, true, true, false, true}, // Day 1 of year 2
 	}
 	for _, c := range cases {
 		ticks.Ticks = c.ticks
@@ -171,10 +170,6 @@ func TestUpdateFoodsources(t *testing.T) {
 		}
 		if today.FoodsourcesInFlowerUpdate != c.update {
 			t.Errorf("ticks %d: FoodsourcesInFlowerUpdate %v, want %v", c.ticks, today.FoodsourcesInFlowerUpdate, c.update)
-		}
-		if today.NectarAvailableTotalToday_l != c.nectar_l || today.PollenAvailableTotalToday_kg != c.pollen_kg {
-			t.Errorf("ticks %d: totals %v l, %v kg; want %v, %v", c.ticks,
-				today.NectarAvailableTotalToday_l, today.PollenAvailableTotalToday_kg, c.nectar_l, c.pollen_kg)
 		}
 	}
 

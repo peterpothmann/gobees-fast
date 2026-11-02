@@ -26,8 +26,7 @@ type BadgersOnTheProwl struct {
 	badgerFilter *ecs.Filter2[comp.Position, comp.Badger]
 	colonyFilter *ecs.Filter2[comp.Position, comp.Colony]
 	beeFilter    *ecs.Filter1[comp.Bee]
-	colonyMap    *ecs.Map2[comp.ColonyStores, comp.ColonyCounts]
-	beeMap       *ecs.Map1[comp.Bee]
+	colonyMap    *ecs.Map1[comp.ColonyStores]
 }
 
 func (s *BadgersOnTheProwl) Initialize(w *ecs.World) {
@@ -37,8 +36,7 @@ func (s *BadgersOnTheProwl) Initialize(w *ecs.World) {
 	s.badgerFilter = ecs.NewFilter2[comp.Position, comp.Badger](w)
 	s.colonyFilter = ecs.NewFilter2[comp.Position, comp.Colony](w)
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
-	s.colonyMap = ecs.NewMap2[comp.ColonyStores, comp.ColonyCounts](w)
-	s.beeMap = ecs.NewMap1[comp.Bee](w)
+	s.colonyMap = ecs.NewMap1[comp.ColonyStores](w)
 }
 
 func (s *BadgersOnTheProwl) Update(w *ecs.World) {
@@ -80,7 +78,7 @@ func (s *BadgersOnTheProwl) Update(w *ecs.World) {
 			if s.rng.Float64() >= encounterProb*digUpProb { // NetLogo: random-float 1 < encounterProb * digUpProb
 				continue
 			}
-			stores, _ := s.colonyMap.Get(col)
+			stores := s.colonyMap.Get(col)
 			stores.EnergyStore_kJ = 0
 			stores.PollenStore_g = 0
 			// every bee of the colony dies, in random order. Each bee dies independently.
@@ -91,15 +89,10 @@ func (s *BadgersOnTheProwl) Update(w *ecs.World) {
 				}
 			}
 			util.Shuffle(s.rng, victims)
-			memoBroodDeaths := 0.0
+			// memoBroodDeaths, broodDeathBadger: read only by the egg accounting [CHK-04], removed in step F4
 			for _, e := range victims {
-				if bee := s.beeMap.Get(e); bee.Brood {
-					memoBroodDeaths += bee.Number
-				}
 				s.death.DieProc(w, e, "Colony killed by badger!")
 			}
-			_, counts := s.colonyMap.Get(col)
-			counts.BroodDeathBadger += memoBroodDeaths
 		}
 	}
 }

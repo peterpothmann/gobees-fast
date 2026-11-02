@@ -7,6 +7,7 @@ import (
 	"gobees/comp"
 	"gobees/enum/caste"
 	"gobees/enum/stage"
+	"gobees/event"
 	"gobees/globals"
 	"gobees/params"
 	"gobees/util"
@@ -27,8 +28,9 @@ type Development struct {
 	rng       *rand.Rand
 	ticks     *globals.Ticks
 	constants *params.Constants
-	counters  *globals.Counters
 	death     beeDeath
+	// queenEmerged is event.QueenEmerged.
+	queenEmerged ecs.Event
 
 	beeFilter  *ecs.Filter1[comp.Bee]
 	beeMap     *beeMapper
@@ -40,7 +42,7 @@ func (s *Development) Initialize(w *ecs.World) {
 	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.ticks = ecs.GetResource[globals.Ticks](w)
 	s.constants = ecs.GetResource[params.Constants](w)
-	s.counters = ecs.GetResource[globals.Counters](w)
+	s.queenEmerged = w.Event(event.QueenEmerged).For(ecs.C[comp.Bee]())
 	s.death = newBeeDeath(w)
 
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
@@ -119,6 +121,7 @@ func (s *Development) Development_Mortality_AdultsProc(w *ecs.World, e ecs.Entit
 }
 
 // Development_PupaeProc lets a pupa become an adult once it is old enough and incubated enough [DEVP].
+// totalAdultsProduced of the colony: read only by the egg accounting [CHK-04], removed in step F4.
 func (s *Development) Development_PupaeProc(e ecs.Entity) {
 	_, _, bee, _, th, forager, dev := s.beeMap.Get(e)
 	sp := s.speciesMap.Get(bee.SpeciesID)
@@ -129,8 +132,6 @@ func (s *Development) Development_PupaeProc(e ecs.Entity) {
 		if dev.CumulIncubationReceived_kJ >= sp.DevIncubationEmergingTH_kJ && bee.BroodAge >= sp.DevAgeEmergingMin_d {
 			bee.Stage = stage.Adult
 			bee.Brood = false
-			_, counts := s.colonyMap.Get(bee.ColonyID)
-			counts.TotalAdultsProduced += bee.Number
 			forager.Cropvolume_myl = CropAndPelletSizeREP("nectar", bee.Weight_mg, sp)
 			forager.PollenPellets_g = CropAndPelletSizeREP("pollen", bee.Weight_mg, sp)
 			*th = thresholds(sitWorker)
@@ -143,8 +144,6 @@ func (s *Development) Development_PupaeProc(e ecs.Entity) {
 		if dev.CumulIncubationReceived_kJ >= sp.DevIncubationEmergingTH_kJ && bee.BroodAge >= sp.DevAgeEmergingMin_d {
 			bee.Brood = false
 			bee.Stage = stage.Adult
-			_, counts := s.colonyMap.Get(bee.ColonyID)
-			counts.TotalAdultsProduced += bee.Number
 		}
 	}
 
@@ -159,9 +158,7 @@ func (s *Development) Development_PupaeProc(e ecs.Entity) {
 			}
 			bee.Stage = stage.Adult
 			bee.Brood = false
-			s.counters.TotalAdultQueensEverProduced += bee.Number
-			_, counts := s.colonyMap.Get(bee.ColonyID)
-			counts.TotalAdultsProduced += bee.Number
+			s.queenEmerged.Emit(e) // totalAdultQueensEverProduced: output only, counted by the observers (step F4)
 			forager.Cropvolume_myl = CropAndPelletSizeREP("nectar", bee.Weight_mg, sp)
 			forager.PollenPellets_g = CropAndPelletSizeREP("pollen", bee.Weight_mg, sp)
 			*th = thresholds(sitYoungQueen)

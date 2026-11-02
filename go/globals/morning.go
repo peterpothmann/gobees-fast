@@ -23,20 +23,19 @@ func (w *Weather) ForagingPeriod_s(year, day int) float64 {
 }
 
 // FoodsourcesToday holds the globals that UpdateFoodsourcesProc sets [UFS].
+// NectarAvailableTotalToday_l and PollenAvailableTotalToday_kg: output only, removed in step F4. The NetLogo
+// comparison of step 4a sums them itself.
 type FoodsourcesToday struct {
-	NectarAvailableTotalToday_l  float64 // output only
-	PollenAvailableTotalToday_kg float64 // output only
-	FoodsourcesInFlowerUpdate    bool    // true on days when a foodsource starts or stops flowering, read by [UCOL-01]
+	FoodsourcesInFlowerUpdate bool // true on days when a foodsource starts or stops flowering, read by [UCOL-01]
 }
 
-// Totals are the daily totals that CheckNumbersProc sets in the morning [CHK-02] (finding 39, see
+// Totals are the daily totals of the brood that CheckNumbersProc sets in the morning [CHK-02] (finding 39, see
 // trans/netlogo-findings.md#finding-39). UpdateSeasonalEventsProc reads TotalEggs + TotalLarvae + TotalPupae on
-// the next morning [SEAS-02]. The others are output only.
+// the next morning [SEAS-02].
+// TotalAdultWorkers, TotalAdultMales (read only by the check [CHK-03]) and TotalForagingTripsToday (output only,
+// counted by the observers from event.ForagingTrip): removed in step F4.
 type Totals struct {
-	TotalEggs               float64
-	TotalLarvae             float64
-	TotalPupae              float64
-	TotalAdultWorkers       float64
-	TotalAdultMales         float64
-	TotalForagingTripsToday float64 // reset every morning, counted in ForagingProc (step 6)
+	TotalEggs   float64
+	TotalLarvae float64
+	TotalPupae  float64
 }

@@ -14,7 +14,8 @@ import (
 // Stops when no colonies and no bees are left and StopExtinct? is true,
 // or after params.Termination.MaxTicks days (replaces the "Run for period" button).
 // NetLogo's stop is the last command of Go, so the run ends after this day, as Terminate does.
-// Initialize sets Survived? = 1, as ParametersProc does [PAR-08].
+// TimeToExtinction: output only, set by the observers (obs.Counters, step F4). Survived? [PAR-08]: never read,
+// removed in step F3.
 //
 // NetLogo: end of Go.
 type Extinction struct {
@@ -22,7 +23,6 @@ type Extinction struct {
 	termParams *params.Termination
 	file       *params.ParameterFile
 	ticks      *globals.Ticks
-	extinction globals.Extinction
 
 	colonyFilter *ecs.Filter1[comp.Colony]
 	beeFilter    *ecs.Filter1[comp.Bee]
@@ -33,8 +33,6 @@ func (s *Extinction) Initialize(w *ecs.World) {
 	s.termParams = ecs.GetResource[params.Termination](w)
 	s.file = ecs.GetResource[params.ParameterFile](w)
 	s.ticks = ecs.GetResource[globals.Ticks](w)
-	s.extinction = globals.Extinction{} // Survived? [PAR-08]: never read, removed in step F3
-	ecs.AddResource(w, &s.extinction)
 	s.colonyFilter = ecs.NewFilter1[comp.Colony](w)
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
 }
@@ -47,13 +45,8 @@ func (s *Extinction) Update(w *ecs.World) {
 	bees := s.beeFilter.Query()
 	n += bees.Count()
 	bees.Close()
-	if n == 0 {
-		if s.extinction.TimeToExtinction <= 0 {
-			s.extinction.TimeToExtinction = float64(s.ticks.Ticks)
-		}
-		if s.file.StopExtinct {
-			s.termRes.Terminate = true
-		}
+	if n == 0 && s.file.StopExtinct {
+		s.termRes.Terminate = true
 	}
 	// not NetLogo: the run length of the "Run for period" button or BehaviorSpace
 	if s.termParams.MaxTicks > 0 && s.ticks.Ticks >= int64(s.termParams.MaxTicks) {

@@ -5,6 +5,7 @@ import (
 	"math"
 	"testing"
 
+	"gobees/comp"
 	"gobees/globals"
 	"gobees/validation"
 
@@ -30,17 +31,17 @@ func TestValidationStep4aAgainstNetLogo(t *testing.T) {
 		values[m] = make([][]float64, steps+1)
 	}
 	for run := 1; run <= runs; run++ {
+		today := &foodsourceTotals{}
 		a := newExampleFarmSetup(t, float64(run), &CreateInitialQueens{}, &Tick{}, &UpdateMorning{}, &UpdateFoodsources{},
-			&EmergenceNewQueens{}, &UpdateColonies{}, &CheckNumbers{SkipColonyCheck: true})
+			today, &EmergenceNewQueens{}, &UpdateColonies{}, &CheckNumbers{})
 		cal := ecs.GetResource[globals.Calendar](a.World)
-		today := ecs.GetResource[globals.FoodsourcesToday](a.World)
 		for step := 0; step <= steps; step++ {
 			if step > 0 {
 				a.Update()
 			}
 			values["day"][step] = append(values["day"][step], cal.Day)
-			values["nectar_l"][step] = append(values["nectar_l"][step], today.NectarAvailableTotalToday_l)
-			values["pollen_kg"][step] = append(values["pollen_kg"][step], today.PollenAvailableTotalToday_kg)
+			values["nectar_l"][step] = append(values["nectar_l"][step], today.nectar_l)
+			values["pollen_kg"][step] = append(values["pollen_kg"][step], today.pollen_kg)
 		}
 	}
 
@@ -71,3 +72,28 @@ func TestValidationStep4aAgainstNetLogo(t *testing.T) {
 		t.Error(f)
 	}
 }
+
+// foodsourceTotals sums the nectar [l] and the pollen [kg] of all foodsources, as UpdateFoodsourcesProc sets
+// NectarAvailableTotalToday_l and PollenAvailableTotalToday_kg [UFS-01], [UFS-02]. Output only, not in the model
+// since step F4. Added right after UpdateFoodsources: the values of the morning, before foraging.
+type foodsourceTotals struct {
+	nectar_l, pollen_kg float64
+	filter              *ecs.Filter1[comp.FoodsourceState]
+}
+
+func (s *foodsourceTotals) Initialize(w *ecs.World) {
+	s.filter = ecs.NewFilter1[comp.FoodsourceState](w)
+	s.Update(w) // UpdateFoodsources runs in Setup too [INIT-10]
+}
+
+func (s *foodsourceTotals) Update(w *ecs.World) {
+	s.nectar_l, s.pollen_kg = 0, 0
+	query := s.filter.Query()
+	for query.Next() {
+		st := query.Get()
+		s.nectar_l += st.Nectar_myl / (1000 * 1000)
+		s.pollen_kg += st.Pollen_g / 1000
+	}
+}
+
+func (s *foodsourceTotals) Finalize(w *ecs.World) {}

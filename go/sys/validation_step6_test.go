@@ -8,7 +8,8 @@ import (
 	"gobees/comp"
 	"gobees/enum/caste"
 	"gobees/enum/stage"
-	"gobees/globals"
+	"gobees/internal/check"
+	"gobees/obs"
 	"gobees/params"
 	"gobees/validation"
 
@@ -20,9 +21,9 @@ var step6MetricNames = []string{"colonies", "dead_colonies", "eggs", "larvae", "
 	"young_queens", "energy_kJ", "pollen_g", "trips", "switch_point", "queen_production", "nectar_left_l",
 	"pollen_left_kg"}
 
-// step6Metrics returns the metrics of go/validation/experiments/step6.xml for the current state of the world,
-// with the same definitions as the NetLogo reporters in the experiment file.
-func step6Metrics(w *ecs.World) map[string]float64 {
+// step6Metrics returns the metrics of go/validation/experiments/step6.xml for the current state of the world and
+// the counters of the run, with the same definitions as the NetLogo reporters in the experiment file.
+func step6Metrics(w *ecs.World, counters *obs.Counters) map[string]float64 {
 	m := map[string]float64{}
 	cols := ecs.NewFilter2[comp.Colony, comp.ColonyStores](w).Query()
 	for cols.Next() {
@@ -37,7 +38,7 @@ func step6Metrics(w *ecs.World) map[string]float64 {
 			m["queen_production"]++
 		}
 	}
-	m["dead_colonies"] = float64(len(ecs.GetResource[globals.DeadColonies](w).List))
+	m["dead_colonies"] = float64(counters.DeadColonies)
 
 	bees := ecs.NewFilter1[comp.Bee](w).Query()
 	for bees.Next() {
@@ -60,7 +61,7 @@ func step6Metrics(w *ecs.World) map[string]float64 {
 			}
 		}
 	}
-	m["trips"] = ecs.GetResource[globals.Totals](w).TotalForagingTripsToday
+	m["trips"] = counters.TotalForagingTripsToday
 
 	fs := ecs.NewFilter1[comp.FoodsourceState](w).Query()
 	for fs.Next() {
@@ -97,14 +98,18 @@ func TestValidationStep6AgainstNetLogo(t *testing.T) {
 		}
 	}
 	for run := 1; run <= runs; run++ {
+		counters := &obs.Counters{} // after the model systems
 		a := newExampleFarmSetup(t, float64(run), &CreateInitialQueens{}, &Tick{}, &UpdateMorning{}, &UpdateFoodsources{},
-			&EmergenceNewQueens{}, &WakeUpBees{}, &UpdateColonies{}, &CheckNumbers{SkipColonyCheck: true},
+			&EmergenceNewQueens{}, &WakeUpBees{}, &UpdateColonies{}, &CheckNumbers{},
 			&NeedNectarPollenLarvaeToday{}, &ActivityLoop{}, &EndOfDayResting{}, &FeedLarvae{}, &QueenProductionDate{},
-			&Development{}, &MortalityBrood{})
-		record(0, step6Metrics(a.World))
+			&Development{}, &MortalityBrood{}, counters)
+		record(0, step6Metrics(a.World, counters))
 		for step := 1; step <= steps; step++ {
 			a.Update()
-			record(step, step6Metrics(a.World))
+			if err := check.Day(a.World, false); err != nil {
+				t.Fatalf("run %d, step %d: %v", run, step, err)
+			}
+			record(step, step6Metrics(a.World, counters))
 		}
 	}
 

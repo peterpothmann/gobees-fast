@@ -264,7 +264,6 @@ func newExampleFarmSetupWith(t *testing.T, seed float64, change func(p *params.P
 	a := app.New()
 	p.Apply(a.World)
 	ecs.AddResource(a.World, &globals.WhoCounter{})
-	ecs.AddResource(a.World, &globals.Counters{})
 	ecs.AddResource(a.World, &globals.ActiveBees{})
 	ecs.AddResource(a.World, &globals.Daytime{})
 	a.AddSystem(&Parameters{})

@@ -29,8 +29,6 @@ func Default(p params.Params, a *app.App) *app.App {
 	p.Apply(a.World) // [INIT-01] random seed, parameters as resources
 	who := globals.WhoCounter{}
 	ecs.AddResource(a.World, &who)
-	counters := globals.Counters{}
-	ecs.AddResource(a.World, &counters)
 	activeBees := globals.ActiveBees{}
 	ecs.AddResource(a.World, &activeBees)
 	daytime := globals.Daytime{}
@@ -45,7 +43,7 @@ func Default(p params.Params, a *app.App) *app.App {
 	a.AddSystem(&sys.CreateInitialQueens{}) // [INIT-09] CreateInitialQueensProc
 	// [INIT-10] UpdateMorning_Proc at ticks = 0: runs in the Initialize of the morning systems below [GO-04].
 	// [INIT-11] CreateSignsProc: GUI only, not translated.
-	// [INIT-12] OutputDailyProc: runs once in OutputDaily.Initialize [GO-18].
+	// [INIT-12] OutputDailyProc: output only, in the observers (obs.DailyOutput) [GO-18].
 	// [INIT-13], [INIT-14]: GUI only, not translated.
 	// [INIT-15] assertion on undefined habitat types: part of CreateFoodsources.
 
@@ -63,7 +61,7 @@ func Default(p params.Params, a *app.App) *app.App {
 	a.AddSystem(&sys.CropRotation{})         // [MORN-09] CropRotationProc [CROP] on Day 365
 	a.AddSystem(&sys.UpdateColonies{})       // [MORN-10] UpdateColoniesProc [UCOL]
 	// [MORN-11] UpdateColonyStoreBarsProc: GUI only, not translated.
-	a.AddSystem(&sys.CheckNumbers{})                // [MORN-12] CheckNumbersProc [CHK]
+	a.AddSystem(&sys.CheckNumbers{})                // [MORN-12] CheckNumbersProc [CHK], totals only, no checks
 	a.AddSystem(&sys.NeedNectarPollenLarvaeToday{}) // [GO-05] NeedNectarPollenLarvaeTodayProc
 	a.AddSystem(&sys.ActivityLoop{})                // [GO-06] to [GO-10] event loop [NEXT], [ACT]. Foraging: step 6
 	a.AddSystem(&sys.EndOfDayResting{})             // [GO-11] all adult females resting
@@ -73,7 +71,8 @@ func Default(p params.Params, a *app.App) *app.App {
 	a.AddSystem(&sys.Development{})                 // [GO-15] DevelopmentProc
 	a.AddSystem(&sys.MortalityBrood{})              // [GO-16] MortalityBroodProc
 	a.AddSystem(&sys.BadgersOnTheProwl{})           // [GO-17] BadgersOnTheProwlProc
-	a.AddSystem(&sys.OutputDaily{})                 // [GO-18] OutputDailyProc (totals only, no plots)
+	// [GO-18] OutputDailyProc: output only, in the observers (obs.DailyOutput). UpdateSeasonalEvents counts the
+	// three totals it reads itself.
 	// [GO-19] DrawCohortsProc: GUI only, not translated.
 	a.AddSystem(&sys.Extinction{}) // [GO-20] extinction check and run length
 

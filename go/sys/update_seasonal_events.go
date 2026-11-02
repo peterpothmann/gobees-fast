@@ -20,7 +20,7 @@ import (
 //
 // Part of the morning routine [MORN-06], after UpdateFoodsources and before EmergenceNewQueens.
 // In Setup (Day 0, [INIT-10]) nothing happens: Day is neither seasonStop nor 1, and TotalMales is 0. So it does not
-// run in Initialize, and the totals of OutputDaily and CheckNumbers need not exist yet.
+// run in Initialize, and the totals of CheckNumbers need not exist yet.
 // Not translated: moving the hibernating queens to (0, 0) on 1 January (GUI only, their position is never read)
 // and the message in the output area.
 //
@@ -29,34 +29,33 @@ type UpdateSeasonalEvents struct {
 	rng      *rand.Rand
 	calendar *globals.Calendar
 	file     *params.ParameterFile
-	counters *globals.Counters
-	output   ecs.Resource[globals.DailyOutput] // set by OutputDaily
-	totals   ecs.Resource[globals.Totals]      // set by CheckNumbers
+	totals   ecs.Resource[globals.Totals] // set by CheckNumbers
 	death    beeDeath
 
 	speciesFilter *ecs.Filter1[comp.Species]
 	beeFilter     *ecs.Filter1[comp.Bee]
 	speciesMap    *ecs.Map1[comp.Species]
 	beeMap        *ecs.Map1[comp.Bee]
-	countsMap     *ecs.Map1[comp.ColonyCounts]
 }
 
 func (s *UpdateSeasonalEvents) Initialize(w *ecs.World) {
 	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.calendar = ecs.GetResource[globals.Calendar](w)
 	s.file = ecs.GetResource[params.ParameterFile](w)
-	s.counters = ecs.GetResource[globals.Counters](w)
-	s.output = ecs.NewResource[globals.DailyOutput](w)
 	s.totals = ecs.NewResource[globals.Totals](w)
 	s.death = newBeeDeath(w)
 	s.speciesFilter = ecs.NewFilter1[comp.Species](w)
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
 	s.speciesMap = ecs.NewMap1[comp.Species](w)
 	s.beeMap = ecs.NewMap1[comp.Bee](w)
-	s.countsMap = ecs.NewMap1[comp.ColonyCounts](w)
 }
 
 func (s *UpdateSeasonalEvents) Update(w *ecs.World) {
+	// The totals of OutputDailyProc of the previous evening [OUT-01] that [SEAS-02] and [SEAS-03] read. gobees counts
+	// them here, before [SEAS-01] (step F4). The same values: between OutputDailyProc and this point only the
+	// extinction check, tick, the calendar and the foodsources are updated, and no bee changes.
+	totalQueens, totalHibernatingQueens, totalMales := s.dailyTotals()
+
 	// [SEAS-01] ORDER: irrelevant, each bee dies independently, the colony counters are sums.
 	species := []ecs.Entity{}
 	speciesQuery := s.speciesFilter.Query()
@@ -71,18 +70,16 @@ func (s *UpdateSeasonalEvents) Update(w *ecs.World) {
 		for _, e := range askBees(s.beeFilter, s.rng, func(b *comp.Bee) bool {
 			return b.SpeciesID == sp && b.Activity != activity.Hibernate
 		}) {
-			if b := s.beeMap.Get(e); b.Brood {
-				s.countsMap.Get(b.ColonyID).BroodDeathEndSeason += b.Number
-			}
+			// broodDeathEndSeason of the colony: read only by the egg accounting [CHK-04], removed in step F4
 			s.death.DieProc(w, e, "End of season")
 		}
 	}
 
-	// [SEAS-02] totals of two different times: OutputDaily of the previous evening [OUT-01] and CheckNumbers of the
+	// [SEAS-02] totals of two different times: OutputDailyProc of the previous evening [OUT-01] and CheckNumbers of the
 	// previous morning [CHK-02], finding 39 (see trans/netlogo-findings.md#finding-39). ORDER: irrelevant.
-	out, totals := s.output.Get(), s.totals.Get()
-	if out.TotalHibernatingQueens == out.TotalQueens && totals.TotalEggs+totals.TotalLarvae+totals.TotalPupae == 0 &&
-		out.TotalMales > 0 {
+	totals := s.totals.Get()
+	if totalHibernatingQueens == totalQueens && totals.TotalEggs+totals.TotalLarvae+totals.TotalPupae == 0 &&
+		totalMales > 0 {
 		for _, e := range askBees(s.beeFilter, s.rng, func(b *comp.Bee) bool { return b.Caste == caste.Male }) {
 			s.death.DieProc(w, e, "Males: all queens in hibernation!")
 		}
@@ -93,10 +90,8 @@ func (s *UpdateSeasonalEvents) Update(w *ecs.World) {
 		// populationSizeDay365List: output only, never read, removed in step F3
 
 		// the limit of hibernating queens, with TotalHibernatingQueens of the previous evening [OUT-01]
-		queensToKill := out.TotalHibernatingQueens - s.file.MaxHibernatingQueens
-		if queensToKill > 0 {
-			s.counters.TotalHibernatingQueensEverRemoved += queensToKill // output only, the planned number
-		}
+		// totalHibernatingQueensEverRemoved (the planned number): output only, computed by the observers (step F4)
+		queensToKill := totalHibernatingQueens - s.file.MaxHibernatingQueens
 		// ORDER: the random choice of the queens matters only through the random numbers.
 		// NetLogo: one-of the hibernating queens per round. Removing the chosen one from the list gives the same
 		// distribution. A cohort can remove more queens than needed.
@@ -109,7 +104,7 @@ func (s *UpdateSeasonalEvents) Update(w *ecs.World) {
 		for queensToKill > 0 {
 			if len(hibernating) == 0 {
 				// NetLogo: ask one-of an empty agentset is a runtime error. Cannot happen: no hibernating queen dies
-				// between OutputDaily and this point.
+				// between dailyTotals at the start of Update and this point.
 				panic(fmt.Sprintf("UpdateSeasonalEventsProc: %v queens to kill, but no hibernating queen left", queensToKill))
 			}
 			i := s.rng.IntN(len(hibernating))
@@ -124,3 +119,23 @@ func (s *UpdateSeasonalEvents) Update(w *ecs.World) {
 }
 
 func (s *UpdateSeasonalEvents) Finalize(w *ecs.World) {}
+
+// dailyTotals returns the numbers of queens (all stages), hibernating bees (only queens hibernate) and males (all
+// stages), as OutputDailyProc sets TotalQueens, TotalHibernatingQueens and TotalMales [OUT-01].
+// ORDER: irrelevant, only sums.
+func (s *UpdateSeasonalEvents) dailyTotals() (queens, hibernating, males float64) {
+	query := s.beeFilter.Query()
+	for query.Next() {
+		b := query.Get()
+		switch b.Caste {
+		case caste.Queen:
+			queens += b.Number
+		case caste.Male:
+			males += b.Number
+		}
+		if b.Activity == activity.Hibernate {
+			hibernating += b.Number
+		}
+	}
+	return queens, hibernating, males
+}

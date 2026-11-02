@@ -24,7 +24,7 @@ type emergenceWorld struct {
 	ticks     *globals.Ticks
 	file      *params.ParameterFile
 	derived   *globals.Derived
-	counters  *globals.Counters
+	tally     *tally
 	active    *globals.ActiveBees
 	species   ecs.Entity
 	sp        *comp.Species
@@ -49,8 +49,7 @@ func newEmergenceWorld(t *testing.T, seed uint64) *emergenceWorld {
 	ecs.AddResource(w, ew.derived)
 	ecs.AddResource(w, &globals.Landscape{Scaling_NLpatches_per_m: 0.1})
 	ecs.AddResource(w, &globals.WhoCounter{})
-	ew.counters = &globals.Counters{}
-	ecs.AddResource(w, ew.counters)
+	ew.tally = newTally(w)
 	ew.active = &globals.ActiveBees{}
 	ecs.AddResource(w, ew.active)
 
@@ -147,8 +146,8 @@ func TestEmergenceWinterMortality(t *testing.T) {
 	if math.Abs(float64(survivors)-640) > 4*20.9 {
 		t.Errorf("%d of %d queens survived, want about 640", survivors, n)
 	}
-	if ew.counters.TotalBeesEverDied != float64(n-survivors) {
-		t.Errorf("TotalBeesEverDied = %v, want %d", ew.counters.TotalBeesEverDied, n-survivors)
+	if ew.tally.beesDied != float64(n-survivors) {
+		t.Errorf("%v bees died, want %d", ew.tally.beesDied, n-survivors)
 	}
 }
 
@@ -192,8 +191,8 @@ func TestNestSearchFoundsColonies(t *testing.T) {
 			t.Fatalf("colony %+v %+v", col, stores)
 		}
 	}
-	if len(colonies) != n || ew.counters.TotalColoniesEverProduced != n {
-		t.Errorf("%d colonies, TotalColoniesEverProduced %v, want %d", len(colonies), ew.counters.TotalColoniesEverProduced, n)
+	if len(colonies) != n {
+		t.Errorf("%d colonies, want %d", len(colonies), n)
 	}
 	// [NSFS-01] area-weighted: 100 / 10100 = 1 % at the small hedge, about 10 of 1000 (sd 3.1)
 	if atSmall > 25 {
@@ -225,8 +224,8 @@ func TestNestSearchWithoutNestSites(t *testing.T) {
 	ew.addQueen(10, 1, 700)
 	ew.sys.Update(ew.w)
 	// [EMER-04] a species without nest sites: the queens die
-	if len(ew.bees()) != 0 || ew.counters.TotalBeesEverDied != 2 {
-		t.Errorf("%d queens left, TotalBeesEverDied %v; want 0, 2", len(ew.bees()), ew.counters.TotalBeesEverDied)
+	if len(ew.bees()) != 0 || ew.tally.beesDied != 2 {
+		t.Errorf("%d queens left, %v bees died; want 0, 2", len(ew.bees()), ew.tally.beesDied)
 	}
 }
 
@@ -237,8 +236,8 @@ func TestDieRemovesFromActiveBees(t *testing.T) {
 	ew.active.List = []ecs.Entity{a, b}
 	ew.sys.death.DieProc(ew.w, a, "test")
 	// [DIE-01] TotalBeesEverDied + number, removed from the activity queue and from the world
-	if ew.counters.TotalBeesEverDied != 5 || len(ew.active.List) != 1 || ew.active.List[0] != b || ew.w.Alive(a) {
-		t.Errorf("TotalBeesEverDied %v, queue %v, alive %v", ew.counters.TotalBeesEverDied, ew.active.List, ew.w.Alive(a))
+	if ew.tally.beesDied != 5 || len(ew.active.List) != 1 || ew.active.List[0] != b || ew.w.Alive(a) {
+		t.Errorf("%v bees died, queue %v, alive %v", ew.tally.beesDied, ew.active.List, ew.w.Alive(a))
 	}
 }
 
@@ -305,11 +304,15 @@ func TestExampleFarmFirstYear(t *testing.T) {
 	// One year with the translated parts of steps 1 to 3: every initial queen has either founded a colony,
 	// died (winter or nest search), or is still searching or hibernating at the end.
 	a := newExampleFarmSetup(t, 11, &CreateInitialQueens{}, &Tick{}, &EmergenceNewQueens{})
+	w := a.World
+	tally := newTally(w) // Setup kills no bee
 	for range 365 {
 		a.Update()
 	}
-	w := a.World
-	counters := ecs.GetResource[globals.Counters](w)
+	// without UpdateColonies no colony dies: the living colonies are all colonies founded
+	colonies := ecs.NewFilter1[comp.Colony](w).Query()
+	founded := float64(colonies.Count())
+	colonies.Close()
 	searching, hibernating := 0, 0
 	query := ecs.NewFilter1[comp.Bee](w).Query()
 	for query.Next() {
@@ -321,8 +324,7 @@ func TestExampleFarmFirstYear(t *testing.T) {
 			searching++
 		}
 	}
-	founded := counters.TotalColoniesEverProduced
-	died := counters.TotalBeesEverDied
+	died := tally.beesDied
 	t.Logf("founded %v, died %v, still searching %d, hibernating %d", founded, died, searching, hibernating)
 	if founded+died+float64(searching+hibernating) != 500 {
 		t.Errorf("founded %v + died %v + searching %d + hibernating %d != 500", founded, died, searching, hibernating)

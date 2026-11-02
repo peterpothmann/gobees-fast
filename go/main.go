@@ -92,6 +92,9 @@ func main() {
 	}
 
 	a := model.Default(p, nil)
+	// after all model systems: colonies founded and bees died for the summary below (the benchmark reads it)
+	counters := obs.Counters{}
+	a.AddSystem(&counters)
 
 	outputFile := c.OutputFile
 	if c.Output && outputFile == "" {
@@ -108,7 +111,6 @@ func main() {
 
 	ticks := ecs.GetResource[globals.Ticks](a.World)
 	derived := ecs.GetResource[globals.Derived](a.World)
-	counters := ecs.GetResource[globals.Counters](a.World)
 	fmt.Printf("species: %v\n", derived.BeeSpeciesInitialQueensList)
 	fmt.Printf("colonies founded: %v, bees died: %v\n", counters.TotalColoniesEverProduced, counters.TotalBeesEverDied)
 	fmt.Printf("finished after %d days\n", ticks.Ticks)
