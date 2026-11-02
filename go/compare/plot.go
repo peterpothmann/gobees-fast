@@ -13,17 +13,19 @@ import (
 	"gonum.org/v1/plot/vg/vgimg"
 )
 
-// Colours of the plots: slots 1 (blue), 2 (orange) and 3 (dark grey) of the categorical reference palette of the
-// dataviz guidelines, light mode, on an explicitly light surface (GitHub shows a PNG as it is, also in dark mode).
+// Colours of the plots: blue and red of the categorical reference palette of the dataviz guidelines, light mode,
+// and its secondary text grey, on an explicitly light surface (GitHub shows a PNG as it is, also in dark mode).
 var (
 	colourNetLogo     = color.NRGBA{R: 0x2a, G: 0x78, B: 0xd6, A: 0xff}
 	colourNetLogoBand = color.NRGBA{R: 0x2a, G: 0x78, B: 0xd6, A: 0x38} // the band as a light wash
-	// gobees-fast: thick and 60 % opaque, so that the NetLogo median below it stays visible
-	colourGobees  = color.NRGBA{R: 0xeb, G: 0x68, B: 0x34, A: 0x99}
-	colourText    = color.NRGBA{R: 0x0b, G: 0x0b, B: 0x0b, A: 0xff}
-	colourMuted   = color.NRGBA{R: 0x52, G: 0x51, B: 0x4e, A: 0xff}
-	colourGrid    = color.NRGBA{R: 0xe4, G: 0xe3, B: 0xdf, A: 0xff}
-	colourSurface = color.NRGBA{R: 0xfc, G: 0xfc, B: 0xfb, A: 0xff}
+	// gobees: thick and 50 % opaque, so that the NetLogo median below it stays visible
+	colourGobees = color.NRGBA{R: 0xe3, G: 0x49, B: 0x48, A: 0x80}
+	// gobees-fast: thin, dashed and 60 % opaque, so that gobees below it stays visible in the gaps and at the edges
+	colourGobeesFast = color.NRGBA{R: 0x52, G: 0x51, B: 0x4e, A: 0x99}
+	colourText       = color.NRGBA{R: 0x0b, G: 0x0b, B: 0x0b, A: 0xff}
+	colourMuted      = color.NRGBA{R: 0x52, G: 0x51, B: 0x4e, A: 0xff}
+	colourGrid       = color.NRGBA{R: 0xe4, G: 0xe3, B: 0xdf, A: 0xff}
+	colourSurface    = color.NRGBA{R: 0xfc, G: 0xfc, B: 0xfb, A: 0xff}
 )
 
 const (
@@ -37,12 +39,21 @@ const (
 	fontLegend = 13 // [pt]
 )
 
+// Lines of the medians [pt].
+var (
+	widthNetLogo     = vg.Points(1.2)
+	widthGobees      = vg.Points(2.8)
+	widthGobeesFast  = vg.Points(1.6)
+	dashesGobeesFast = []vg.Length{vg.Points(5), vg.Points(3)}
+)
+
 // plotCaption explains the plots below the image in the report.
-const plotCaption = "Plots: blue, NetLogo median and 5-95 % band; orange, gobees-fast median; x axis: day."
+const plotCaption = "Plots: blue, NetLogo median and 5-95 % band; red, gobees median; grey dashed, gobees-fast " +
+	"median; x axis: day."
 
 // writePlot draws one panel per metric that has at least 2 days (Medians, Bands) into a PNG file: the NetLogo band,
-// the NetLogo median and the gobees-fast median over the days. The first tile holds the legend. It returns false and
-// writes nothing if no row has 2 days.
+// the NetLogo median, the gobees median (if the metric has BaseMedians) and the gobees-fast median over the days.
+// The first tile holds the legend. It returns false and writes nothing if no row has 2 days.
 func writePlot(path string, rows []NetLogoMetric) (bool, error) {
 	plots := []*plot.Plot{legendPlot()}
 	for _, r := range rows {
@@ -122,11 +133,11 @@ func metricPlot(r NetLogoMetric) (*plot.Plot, error) {
 	n := len(r.Medians)
 	band := make(plotter.XYs, 0, 2*n)
 	netlogo := make(plotter.XYs, n)
-	gobees := make(plotter.XYs, n)
+	gobeesFast := make(plotter.XYs, n)
 	for d := range n {
 		band = append(band, plotter.XY{X: float64(d + 1), Y: r.Bands[d].Q95})
 		netlogo[d] = plotter.XY{X: float64(d + 1), Y: r.Bands[d].Q50}
-		gobees[d] = plotter.XY{X: float64(d + 1), Y: r.Medians[d]}
+		gobeesFast[d] = plotter.XY{X: float64(d + 1), Y: r.Medians[d]}
 	}
 	for d := n - 1; d >= 0; d-- {
 		band = append(band, plotter.XY{X: float64(d + 1), Y: r.Bands[d].Q05})
@@ -142,18 +153,31 @@ func metricPlot(r NetLogoMetric) (*plot.Plot, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", r.Metric, err)
 	}
-	nl.Color, nl.Width = colourNetLogo, vg.Points(1.2)
-	gb, err := plotter.NewLine(gobees)
+	nl.Color, nl.Width = colourNetLogo, widthNetLogo
+	p.Add(poly, nl)
+	if len(r.BaseMedians) == n {
+		gobees := make(plotter.XYs, n)
+		for d, median := range r.BaseMedians {
+			gobees[d] = plotter.XY{X: float64(d + 1), Y: median}
+		}
+		gb, err := plotter.NewLine(gobees)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", r.Metric, err)
+		}
+		gb.Color, gb.Width = colourGobees, widthGobees
+		p.Add(gb)
+	}
+	gf, err := plotter.NewLine(gobeesFast)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", r.Metric, err)
 	}
-	gb.Color, gb.Width = colourGobees, vg.Points(2.4)
-	p.Add(poly, nl, gb) // gobees-fast on top: the version under test
+	gf.Color, gf.Width, gf.Dashes = colourGobeesFast, widthGobeesFast, dashesGobeesFast
+	p.Add(gf) // gobees-fast on top: the version under test
 	p.X.Min, p.X.Max = 1, float64(n)
 	return p, nil
 }
 
-// legendPlot returns the first tile: no axes, only the legend of the three marks.
+// legendPlot returns the first tile: no axes, only the legend of the four marks.
 func legendPlot() *plot.Plot {
 	p := newPlot()
 	p.HideAxes()
@@ -161,10 +185,13 @@ func legendPlot() *plot.Plot {
 	band.Color = colourNetLogoBand
 	band.LineStyle.Width = 0
 	nl := &plotter.Line{LineStyle: draw.LineStyle{Color: colourNetLogo, Width: vg.Points(2)}}
-	gb := &plotter.Line{LineStyle: draw.LineStyle{Color: colourGobees, Width: vg.Points(3)}}
+	gb := &plotter.Line{LineStyle: draw.LineStyle{Color: colourGobees, Width: widthGobees}}
+	gf := &plotter.Line{LineStyle: draw.LineStyle{Color: colourGobeesFast, Width: widthGobeesFast,
+		Dashes: dashesGobeesFast}}
 	p.Legend.Add("NetLogo 5-95 % band (100 runs)", band)
 	p.Legend.Add("NetLogo median", nl)
-	p.Legend.Add("gobees-fast median (100 runs)", gb)
+	p.Legend.Add("gobees median (100 runs)", gb)
+	p.Legend.Add("gobees-fast median (100 runs)", gf)
 	p.Legend.Top, p.Legend.Left = true, true
 	p.Legend.TextStyle.Color = colourText
 	p.Legend.TextStyle.Font.Size = vg.Points(fontLegend)

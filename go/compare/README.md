@@ -6,7 +6,7 @@ scenarios of the full model with the current code and compares it with three ver
 | Compared with | Version | Why |
 | --- | --- | --- |
 | its previous step | the reference commit, an earlier commit of gobees-fast; it moves with the steps | did this step change the results? |
-| gobees | the base commit `40dc301`, the fork point; it stays fixed | differences too small to show in a single step but adding up over several |
+| gobees | the base commit, gobees with the output of the NetLogo metrics (see [Commits](#commits)); it stays fixed | differences too small to show in a single step but adding up over several |
 | NetLogo | the 100 NetLogo runs of each scenario, embedded in [go/validation](../validation/README.md) | does it still match the original model? |
 
 It also times the current code against gobees. The CI shows all results in one comment per pull request, a table
@@ -52,9 +52,12 @@ The experiments of parts of the model (`step3`, `step4a`, `step6`) cannot run as
 Every version runs as a command line program (`go/main.go`) with `-s <seed> --days <days> -p <parameter file>
 -f <file>`, with seeds 1 to 100, and is compared on its daily output (`obs.DailyOutputExtended`) from day 1 on (the
 programs write no row for the setup). The columns are matched by name. Columns only the current code has are listed
-in the comment and not compared: gobees writes only the 15 columns of `obs.DailyOutput` (`ticks` and 14 values). A
-column of the other version that the current code no longer has is an error: the column names stay the same in all
-steps.
+in the comment and not compared. A column of the other version that the current code no longer has is an error: the
+column names stay the same in all steps.
+
+gobees writes the same columns (its `obs.DailyOutputExtended`) except `ForagerDeathsToday`, which it does not
+count. The drift is therefore compared on all other columns, and the plots of the NetLogo report show the gobees
+median. The fork point `40dc301` wrote only the 15 columns of `obs.DailyOutput` (`ticks` and 14 values).
 
 | Comparison | Passes if |
 | --- | --- |
@@ -83,9 +86,13 @@ differs from NetLogo in some of them.
 [commits.env](commits.env) holds:
 
 - `REFERENCE_COMMIT`: the previous step. It moves at the end of each phase, and in phase 3 after each fix. Until the
-  steps F0 are merged, it is the fork point `40dc301`, i.e. gobees, which writes only the 15 columns of
-  `obs.DailyOutput`. After the merge it is set to the merge commit.
-- `BASE_COMMIT`: gobees, the fork point `40dc301`. It stays fixed.
+  steps F0 are merged, it is the base commit, i.e. gobees, and shares its program. After the merge it is set to the
+  merge commit.
+- `BASE_COMMIT`: gobees. Not the fork point `40dc301`, but the later commit of gobees that writes the NetLogo
+  metrics (`obs.DailyOutputExtended`). Between the two, only the output and the validation tests of gobees changed,
+  not the model. The commit is not in the history of gobees-fast. It is in this repository as the tag `gobees-base`,
+  which the CI gets with the full history (`fetch-depth: 0`). The tag is pushed once from the remote `upstream`
+  (gobees): `git fetch upstream` and `git push origin <commit>:refs/tags/gobees-base`. It stays fixed.
 - `PHASE`: 1 compares exactly with the previous step, 2 and 3 statistically.
 
 ## Running the comparisons

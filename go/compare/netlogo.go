@@ -16,6 +16,9 @@ type NetLogoMetric struct {
 	Medians []float64              // median of the current runs, days 1 to Days
 	Bands   []validation.Quantiles // NetLogo quantiles, days 1 to Days
 	Tests   []SummaryTest          // Kolmogorov-Smirnov tests of the yearly summaries, smallest p first
+	// BaseMedians is the median of the gobees runs, days 1 to Days, nil if gobees does not write the metric. Only
+	// plotted: the drift is compared on all columns (StatisticalCell).
+	BaseMedians []float64
 }
 
 // NetLogoResult is the comparison of a scenario with the NetLogo runs of its experiment.
@@ -41,8 +44,9 @@ func (r NetLogoResult) Passed() bool {
 }
 
 // CompareNetLogo compares the runs of the current code in a scenario with the NetLogo runs of its experiment, on all
-// metrics of the NetLogo reference. Each must be a column of the runs.
-func CompareNetLogo(s Scenario, runs []Run) (NetLogoResult, error) {
+// metrics of the NetLogo reference. Each must be a column of the runs. base are the runs of gobees, nil if none:
+// their medians are only kept for the plots.
+func CompareNetLogo(s Scenario, runs, base []Run) (NetLogoResult, error) {
 	quantilesText, runsText, err := validation.NetLogoReference(s.Name)
 	if err != nil {
 		return NetLogoResult{}, err
@@ -91,6 +95,7 @@ func CompareNetLogo(s Scenario, runs []Run) (NetLogoResult, error) {
 			}
 			m.Medians, m.Bands = append(m.Medians, median), append(m.Bands, q)
 		}
+		m.BaseMedians = dailyMedians(base, metric, s.Days)
 		if netlogoRuns != nil {
 			m.Tests = netLogoTests(runs, metric, netlogoRuns)
 			tests += len(m.Tests)
@@ -99,6 +104,23 @@ func CompareNetLogo(s Scenario, runs []Run) (NetLogoResult, error) {
 	}
 	result.Alpha = FamilyAlpha / float64(max(1, tests))
 	return result, nil
+}
+
+// dailyMedians returns the median of the runs in a column for days 1 to days, nil if there are no runs, the runs
+// lack the column or end before the last day.
+func dailyMedians(runs []Run, column string, days int) []float64 {
+	if len(runs) == 0 || runs[0].Table.Column(column) < 0 {
+		return nil
+	}
+	medians := make([]float64, days)
+	for d := range days {
+		values := dayValues(runs, column, d)
+		if len(values) < len(runs) {
+			return nil
+		}
+		medians[d] = Quantile(values, 0.5)
+	}
+	return medians
 }
 
 // netLogoTests compares the yearly summaries of a metric with those of the NetLogo runs. Values are rounded to 9

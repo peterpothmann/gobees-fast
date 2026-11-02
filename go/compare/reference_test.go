@@ -151,7 +151,7 @@ func runScenario(t *testing.T, s Scenario, dir, cur, ref, base string, phase int
 		r.Drift = StatisticalCell(baseRuns, current, common)
 	}
 
-	if r.NetLogoResult, err = CompareNetLogo(s, current); err != nil {
+	if r.NetLogoResult, err = CompareNetLogo(s, current, baseRuns); err != nil {
 		r.NetLogo = Cell{Ran: true, Text: err.Error()}
 	} else {
 		r.NetLogo = NetLogoCell(r.NetLogoResult)

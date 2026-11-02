@@ -1,6 +1,7 @@
 package compare
 
 import (
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -42,7 +43,15 @@ func netLogoRuns(t *testing.T, value func(median float64) float64) []Run {
 }
 
 func TestCompareNetLogo(t *testing.T) {
-	r, err := CompareNetLogo(Scenarios[0], netLogoRuns(t, func(m float64) float64 { return m }))
+	median := netLogoRuns(t, func(m float64) float64 { return m })
+	// gobees one above the NetLogo median, without the column eggs
+	base := netLogoRuns(t, func(m float64) float64 { return m + 1 })
+	base[0].Table.Header = slices.Clone(base[0].Table.Header)
+	base[0].Table.Header[base[0].Table.Column("eggs")] = "no_eggs"
+	for i := range base {
+		base[i].Table = base[0].Table
+	}
+	r, err := CompareNetLogo(Scenarios[0], median, base)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,15 +61,26 @@ func TestCompareNetLogo(t *testing.T) {
 	if c := NetLogoCell(r); !c.Passed || c.Text != "15 of 15 metrics in band" {
 		t.Errorf("cell: %+v", c)
 	}
+	for _, m := range r.Metrics {
+		switch {
+		case m.Metric == "eggs" && m.BaseMedians != nil:
+			t.Errorf("eggs: gobees medians %v, want none", m.BaseMedians[:3])
+		case m.Metric != "eggs" && (len(m.BaseMedians) != 1095 || m.BaseMedians[0] != m.Medians[0]+1):
+			t.Errorf("%s: %d gobees medians, want 1095 one above the medians", m.Metric, len(m.BaseMedians))
+		}
+	}
 
-	// far above the NetLogo runs on every day where they are not all 0
-	r, err = CompareNetLogo(Scenarios[0], netLogoRuns(t, func(m float64) float64 { return 2*m + 1e6 }))
+	// far above the NetLogo runs on every day where they are not all 0, no gobees runs
+	r, err = CompareNetLogo(Scenarios[0], netLogoRuns(t, func(m float64) float64 { return 2*m + 1e6 }), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	c := NetLogoCell(r)
 	if c.Passed || c.Text != "0 of 15 metrics in band" || !strings.Contains(c.Details, "- colonies: 0 of 1095 days") {
 		t.Errorf("cell: %+v", c)
+	}
+	if r.Metrics[0].BaseMedians != nil {
+		t.Errorf("gobees medians without gobees runs")
 	}
 }
 
@@ -117,7 +137,8 @@ func TestComment(t *testing.T) {
 }
 
 func TestReport(t *testing.T) {
-	r, err := CompareNetLogo(Scenarios[0], netLogoRuns(t, func(m float64) float64 { return m }))
+	median := netLogoRuns(t, func(m float64) float64 { return m })
+	r, err := CompareNetLogo(Scenarios[0], median, median)
 	if err != nil {
 		t.Fatal(err)
 	}

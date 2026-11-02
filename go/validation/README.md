@@ -180,8 +180,8 @@ pull request and on every push to `main`, in two jobs:
 2. `compare` runs [go/compare](../compare/README.md): every scenario against the previous step, gobees and NetLogo.
    It writes one comment with a table, one row per scenario and one column per comparison, to the pull request
    (updated on every run) and to the summary of the run. It writes [validation-report.md](validation-report.md)
-   with one plot per scenario (`plots/<scenario>.png`: the NetLogo band and median and the gobees-fast median over
-   the days) and the Kolmogorov-Smirnov tests against NetLogo. In a pull request, the job commits report and plots
+   with one plot per scenario (`plots/<scenario>.png`: the NetLogo band and median, the gobees median and the
+   gobees-fast median over the days) and the Kolmogorov-Smirnov tests against NetLogo. In a pull request, the job commits report and plots
    to the branch if all comparisons passed and something changed ("Update validation report and plots", made by
    github-actions). Pull the branch before you push to it again. On `main` it never commits.
 
