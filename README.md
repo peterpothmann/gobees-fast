@@ -50,9 +50,9 @@ The reference is written in NetLogo 5.3.1.
 | `go/globals`   | global state of the model                                       |
 | `go/params`    | parameters and the reader for NetLogo parameter files           |
 | `go/util`      | functions that mirror NetLogo reporters                         |
-| `go/obs`       | observers of the model output                              |
+| `go/obs`       | observers of the model output                                   |
 | `go/benchmark` | run time of NetLogo, gobees and gobees-fast                     |
-| `go/compare`   | comparison with the reference commit (exact, statistical, speed) |
+| `go/compare`   | check of each step: scenarios against the previous step, gobees and NetLogo |
 | `go/enum`      | castes, stages and activities as Go constants                   |
 | `netlogo`      | the annotated NetLogo model and its input files                 |
 | `trans`        | findings on the NetLogo code and the validation against NetLogo |
@@ -99,11 +99,11 @@ go test -short ./...         # without the comparison with NetLogo
 
 Single runs of gobees and NetLogo cannot be compared, because NetLogo's random number sequence cannot be reproduced in Go. Instead, 100 NetLogo runs give quantiles per day for each compared quantity, and a Go test requires the median of 100 gobees runs to lie within the NetLogo 5–95 % band. The NetLogo results are embedded in the repository, so NetLogo does not have to be installed to run the tests.
 
-The CI runs all tests on every pull request and on every push to `main`. In a pull request it commits the comparison report [go/validation/validation-report.md](go/validation/validation-report.md), with one plot per experiment, to the branch. Details on the experiments: [go/validation/README.md](go/validation/README.md).
+The experiments of the full model run as scenarios of the check of each step (below), which writes the report [go/validation/validation-report.md](go/validation/validation-report.md) with one plot per scenario and, in a pull request, commits it to the branch. The experiments of parts of the model are Go tests. Details on the experiments: [go/validation/README.md](go/validation/README.md).
 
-## Comparison with the reference commit
+## Check of each step
 
-The CI compares every pull request and every push to `main` with a reference commit of gobees-fast: value by value while a step must not change any random draw, otherwise by distributions over 100 seeds. It also compares the distributions with gobees, to catch differences that add up over several steps, and times the current code against gobees. One comment in the pull request answers four questions: did this step change the results, has the model drifted away from gobees, does it still match NetLogo, and how fast is it. Locally: `go/compare/run_compare.sh`. Details: [go/compare/README.md](go/compare/README.md).
+The CI checks every pull request and every push to `main`: it runs each scenario (the example farm and the settings of the NetLogo experiments) 100 times with gobees-fast and compares it with three versions: its previous step (a reference commit of gobees-fast, value by value while a step must not change any random draw, otherwise by distributions), gobees (by distributions, to catch differences that add up over several steps) and NetLogo (the band of the NetLogo runs). It also times gobees-fast against gobees. One comment in the pull request shows the results as a table, one row per scenario and one column per comparison. Locally: `go/compare/run_compare.sh`. Details: [go/compare/README.md](go/compare/README.md).
 
 ## Benchmarks
 

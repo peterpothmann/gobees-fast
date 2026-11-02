@@ -1,15 +1,22 @@
-# Comparison with the reference commit
+# Check of a step
 
-gobees-fast starts as a copy of gobees and is changed in small steps. Every step is checked against an earlier
-commit of gobees-fast, the reference, and against gobees itself, the base. This folder holds these checks. The
-comparison with NetLogo ([go/validation](../validation/README.md)) runs in every step as well. The CI shows the
-results of all of them in one comment per pull request (see [The comment](#the-comment)).
+gobees-fast starts as a copy of gobees and is changed in small steps. This folder checks every step: it runs the
+scenarios of the full model with the current code and compares it with three versions:
+
+| Compared with | Version | Why |
+| --- | --- | --- |
+| its previous step | the reference commit, an earlier commit of gobees-fast; it moves with the steps | did this step change the results? |
+| gobees | the base commit `40dc301`, the fork point; it stays fixed | differences too small to show in a single step but adding up over several |
+| NetLogo | the 100 NetLogo runs of each scenario, embedded in [go/validation](../validation/README.md) | does it still match the original model? |
+
+It also times the current code against gobees. The CI shows all results in one comment per pull request, a table
+with one row per scenario and one column per comparison (see [The comment](#the-comment)).
 
 ## Phases
 
 The steps are grouped into three phases, ordered by how strictly a step can be checked.
 
-| Phase | What changes | Check against the reference |
+| Phase | What changes | Check against the previous step |
 | --- | --- | --- |
 | 1. Exact | Changes that keep the number and the order of all random draws, e.g. dead code, unused fields, fixes of quirks that are not active in the default run | Same value on every day in every column, for every seed |
 | 2. Statistically equal | Changes that alter the random draws or the order of agents, but should not change the dynamics, e.g. leaving out a shuffle, other Ark tables | Distributions over many seeds |
@@ -20,23 +27,44 @@ Some changes without effect on the dynamics still change the random draws: a shu
 random numbers, and gobees shuffles before every `ask`, so a change of the order of the entities before a shuffle
 (e.g. other Ark tables) changes its result. Such changes belong to phase 2.
 
+## Scenarios
+
+A scenario is a setting of the full model ([scenario.go](scenario.go)): the example farm with the parameters of a
+NetLogo experiment in `go/validation/experiments`, and the same name. Its parameter file is that of the experiment
+(or of the example farm) with `StopExtinct? = false`, as in all experiments, so that every run has all days.
+
+| Scenario | Days | Setting |
+| --- | ---: | --- |
+| `step7` | 1095 | the example farm |
+| `step7_badgers` | 1095 | 2 badgers |
+| `step7_crop` | 1095 | a crop rotation of two maps |
+| `step8_ibm` | 730 | 10 individual-based colonies |
+| `step8_genetics` | 730 | diploid males, no unlimited males |
+| `step8_species` | 730 | all 7 species |
+| `step8_weather` | 730 | foraging hours per day of the year, low foraging mortality |
+| `step8_settings` | 730 | further switches and a limit of hibernating queens |
+
+The experiments of parts of the model (`step3`, `step4a`, `step6`) cannot run as a program. They are tests in
+`go/sys` (`validation_step*_test.go`) and run with all other tests.
+
 ## The comparisons
 
-All runs use the example farm, with the input files of `go/internal/examplefiles`. Both versions run as command
-line programs (`go/main.go`) with `-s <seed> --days <days> -f <file>` and are compared on their daily output
-(`obs.DailyOutputExtended`). The columns are matched by name. Columns only the current code has are reported and
-not compared (gobees writes only the 15 columns of `obs.DailyOutput`: `ticks` and 14 values). A column of the other version that the
-current code no longer has is an error: the column names stay the same in all steps.
+Every version runs as a command line program (`go/main.go`) with `-s <seed> --days <days> -p <parameter file>
+-f <file>`, with seeds 1 to 100, and is compared on its daily output (`obs.DailyOutputExtended`) from day 1 on (the
+programs write no row for the setup). The columns are matched by name. Columns only the current code has are listed
+in the comment and not compared: gobees writes only the 15 columns of `obs.DailyOutput` (`ticks` and 14 values). A
+column of the other version that the current code no longer has is an error: the column names stay the same in all
+steps.
 
-| Test | Runs | Passes if |
-| --- | --- | --- |
-| `TestExactAgainstReference` | seeds 1 to 100, 1095 days (3 years), per version | every value of every common column is equal |
-| `TestStatisticalAgainstReference` | the same runs | (1) the daily median of the current code lies within the 5 to 95 % band of the reference, for every day and column, and (2) no yearly summary (maximum and mean of each column in each year) differs in a two-sample Kolmogorov-Smirnov test at the level 0.05 divided by the number of tests (Bonferroni) |
-| `TestDriftAgainstBase` | the same seeds and days, against the base commit (gobees) | like `TestStatisticalAgainstReference` |
-| `TestSpeedAgainstBase` | seeds 1 to 10, 365 days, per version, one run after the other | always (reports the median wall time per run and the speed-up) |
+| Comparison | Passes if |
+| --- | --- |
+| Exact (previous step, phase 1) | every value of every common column is equal, in every run |
+| Statistical (previous step in phases 2 and 3, gobees always) | (1) the daily median of the current code lies within the 5 to 95 % band of the other version, for every day and column, and (2) no yearly summary (maximum and mean of each column in each year) differs in a two-sample Kolmogorov-Smirnov test at the level 0.05 divided by the number of tests (Bonferroni) |
+| NetLogo | the daily median of each metric of the NetLogo experiment lies within the 5 to 95 % band of the NetLogo runs, for every day ([netlogo.go](netlogo.go)) |
+| Speed | always: 10 runs of 365 days on the example farm per version, one after the other and alternating between the versions, without output; reports the median wall time per run |
 
-The comparisons use the same runs of each program. The reference moves with the steps, the base stays fixed, so
-the drift comparison shows differences that are too small to show in a single step but add up over several.
+The program writes the metrics of the NetLogo experiments as columns under their NetLogo names
+(`obs.NetLogoMetrics`), so all three comparisons read the same output.
 
 **Why the Kolmogorov-Smirnov tests are needed.** The daily band alone is a weak check. Tested with the current
 code against itself with a higher foraging mortality (`ForagingMortalityFactor` in the parameter file, 100 seeds,
@@ -47,17 +75,18 @@ code against itself with a higher foraging mortality (`ForagingMortalityFactor` 
 | 1.1 (10 % more forager deaths) | 0 of 26280 | 62 of 144 |
 | 1.25 | 672 of 26280 | 112 of 144 |
 
+Against NetLogo, the Kolmogorov-Smirnov tests are only reported (in the NetLogo report), not enforced: gobees itself
+differs from NetLogo in some of them.
+
 ## Commits
 
 [commits.env](commits.env) holds:
 
-- `REFERENCE_COMMIT`: the reference of the exact and the statistical comparison. It moves at the end of each
-  phase, and in phase 3 after each fix. Until step F0 is merged, it is the fork point `40dc301`, i.e. gobees,
-  which writes only the 15 columns of `obs.DailyOutput`. After the merge of F0 it is set to the merge commit.
-- `BASE_COMMIT`: the base of the drift and the speed comparison, the fork point `40dc301`, i.e. gobees. It stays
-  fixed.
-- `COMPARE_TESTS`: the comparisons of the current phase. Phase 1: `Exact|Drift|Speed`. In phases 2 and 3 the exact
-  comparison fails by design and is replaced by the statistical one: `Statistical|Drift|Speed`.
+- `REFERENCE_COMMIT`: the previous step. It moves at the end of each phase, and in phase 3 after each fix. Until the
+  steps F0 are merged, it is the fork point `40dc301`, i.e. gobees, which writes only the 15 columns of
+  `obs.DailyOutput`. After the merge it is set to the merge commit.
+- `BASE_COMMIT`: gobees, the fork point `40dc301`. It stays fixed.
+- `PHASE`: 1 compares exactly with the previous step, 2 and 3 statistically.
 
 ## Running the comparisons
 
@@ -68,32 +97,38 @@ go/compare/run_compare.sh
 ```
 
 The script checks the reference and the base commit out into temporary git worktrees, builds the command line
-program of each and of the current working tree (incl. uncommitted changes), and runs the tests of
-`COMPARE_TESTS`. The worktrees are removed at the end. Locally with 2 runs at the same time, everything takes
-about 1.5 minutes.
+program of each and of the current working tree (incl. uncommitted changes), runs all scenarios and the speed
+comparison (`TestScenarios`, `TestSpeedAgainstBase`) and writes the comment to `compare-comment.md` in the repository
+root. The worktrees are removed at the end.
 
 | Environment variable | Meaning |
 | --- | --- |
 | `COMPARE_THREADS` | runs at the same time, default: number of CPUs |
-| `COMPARE_CHECKS` | folder the results are written to, one JSON file per question of the comment (the CI sets it) |
+| `COMPARE_COMMENT` | file of the comment, default `compare-comment.md` in the repository root |
+| `COMPARE_REPORT_DIR` | folder the NetLogo report `validation-report.md` and its plots are written to (the CI uses `go/validation`), none if empty |
 
 Without the variables set by the script (`COMPARE_REFERENCE_BIN`, `COMPARE_CURRENT_BIN`, `COMPARE_BASE_BIN`),
 `go test ./...` skips these tests and runs only the unit tests of the package.
 
-`go test -v` shows the result of each comparison in its log.
-
 ## The comment
 
 The CI ([.github/workflows/tests.yml](../../.github/workflows/tests.yml), job `compare`) runs the script on every
-pull request and every push to `main`. The job `report` writes one comment with one row per question, in the pull
-request and in the summary of the run (`compare.Comment`, written by `go/validation/cmd/report`):
+pull request and every push to `main` and posts the comment in the pull request (updated on every run) and in the
+summary of the run (`Comment` in [report.go](report.go)):
 
-| Question | Answered by |
-| --- | --- |
-| Did this step change the results? | `TestExactAgainstReference` (phase 1) or `TestStatisticalAgainstReference` (phases 2 and 3) |
-| Has the model drifted away from gobees? | `TestDriftAgainstBase` |
-| Does it still match NetLogo? | the comparison tests of [go/validation](../validation/README.md): every metric within the NetLogo 5-95 % band on all days |
-| How fast is it? | `TestSpeedAgainstBase` |
+```markdown
+gobees-fast in this pull request, compared with:
 
-Below the rows, the comment lists the runs of each question and, collapsed, the details. A question without a
-result (e.g. a program did not build) is shown as failed.
+| Scenario | its previous step (`40dc301`), exact | gobees (`40dc301`), statistical | NetLogo |
+| --- | --- | --- | --- |
+| Example farm, 3 years | ✅ identical | ✅ equal | ✅ 15 of 15 metrics in band |
+| Badgers | ✅ identical | ✅ equal | ✅ 16 of 16 metrics in band |
+| … | | | |
+
+**Speed:** 1.02× as fast as gobees `40dc301` (…)
+```
+
+Below the table, the comment lists the runs and the compared columns and, collapsed, the details of every comparison
+that failed. A scenario without a result (e.g. a program failed) is shown as failed. The CI also writes the NetLogo
+report [go/validation/validation-report.md](../validation/validation-report.md) with one plot per scenario and, in a
+pull request, commits it to the branch if all comparisons passed.

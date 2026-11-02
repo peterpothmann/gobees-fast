@@ -1,121 +1,112 @@
 package compare
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
+	"math"
+	"slices"
 	"strings"
 )
 
-// Check is the answer to one question of the check of a step: a row of the pull request comment and, if Details is
-// not empty, a collapsed section below it (Comment). The comparison tests write their checks with WriteCheck, the
-// validation report (go/validation/cmd/report) adds the check against NetLogo and writes the comment.
-type Check struct {
-	Name     string // file name and position in the comment, one of the names of Questions
-	Question string
-	Status   string // "✅", "❌", or empty if the check only reports (speed)
-	Result   string // one line
-	Scope    string // what was run and compared, one line
-	Details  string // Markdown, may be empty
+// Cell is the result of one comparison of a scenario, a cell of the table in the comment (Comment).
+type Cell struct {
+	Ran     bool // false: the comparison gave no result (e.g. a program failed), shown as failed
+	Passed  bool
+	Text    string // short result, e.g. "identical"
+	Details string // Markdown, shown below the table if the comparison failed, may be empty
 }
 
-// Questions are the checks of a step, in the order of the comment.
-var Questions = []Check{
-	{Name: "1-changed", Question: "Did this step change the results?"},
-	{Name: "2-drift", Question: "Has the model drifted away from gobees?"},
-	{Name: "3-netlogo", Question: "Does it still match NetLogo?"},
-	{Name: "4-speed", Question: "How fast is it?"},
+// ScenarioResult holds the comparisons of the current code in a scenario.
+type ScenarioResult struct {
+	Scenario Scenario
+	Changed  Cell // against the reference commit: exact (phase 1) or statistical (phases 2 and 3)
+	Drift    Cell // against the base commit (gobees), statistical
+	NetLogo  Cell
+	// ReferenceColumns and BaseColumns are the compared columns without the time columns, NotInReference and
+	// NotInBase the columns of the current code that the other version does not write.
+	ReferenceColumns, BaseColumns []string
+	NotInReference, NotInBase     []string
+	NetLogoResult                 NetLogoResult
 }
 
-// Question returns the check of Questions with the given name, without a result.
-func Question(name string) Check {
-	for _, q := range Questions {
-		if q.Name == name {
-			return q
+// ExactCell compares the runs value by value (Exact): passed if every run is equal on the columns.
+func ExactCell(reference, current []Run, columns []string) Cell {
+	failures := []string{}
+	for i := range reference {
+		if err := Exact(reference[i].Table, current[i].Table, columns); err != nil {
+			failures = append(failures, fmt.Sprintf("seed %d: %v", reference[i].Seed, err))
 		}
 	}
-	panic("unknown check " + name)
+	if len(failures) == 0 {
+		return Cell{Ran: true, Passed: true, Text: "identical"}
+	}
+	var b strings.Builder
+	b.WriteString("First difference of each run that differs (at most 5):\n\n")
+	for _, f := range failures[:min(5, len(failures))] {
+		fmt.Fprintf(&b, "- %s\n", f)
+	}
+	return Cell{Ran: true, Text: fmt.Sprintf("%d of %d runs differ", len(failures), len(reference)),
+		Details: b.String()}
 }
 
-// CommentMarker starts the pull request comment, so that the workflow finds and updates it.
-const CommentMarker = "<!-- check-report -->"
-
-// WriteCheck writes the check as <dir>/<name>.json.
-func WriteCheck(dir string, c Check) error {
-	b, err := json.MarshalIndent(c, "", "  ")
-	if err != nil {
-		return err
-	}
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return err
-	}
-	return os.WriteFile(filepath.Join(dir, c.Name+".json"), b, 0o644)
-}
-
-// ReadChecks reads the checks written by WriteCheck in dir. A missing folder gives no checks.
-func ReadChecks(dir string) ([]Check, error) {
-	paths, err := filepath.Glob(filepath.Join(dir, "*.json"))
-	if err != nil {
-		return nil, err
-	}
-	checks := []Check{}
-	for _, path := range paths {
-		b, err := os.ReadFile(path)
-		if err != nil {
-			return nil, err
-		}
-		var c Check
-		if err := json.Unmarshal(b, &c); err != nil {
-			return nil, fmt.Errorf("%s: %w", path, err)
-		}
-		checks = append(checks, c)
-	}
-	return checks, nil
-}
-
-// Comment returns the pull request comment: one row per question of Questions, the scope of all checks and the
-// details of each. A question without a check failed to give a result and is shown as failed. runURL links to the
-// workflow run, may be empty.
-func Comment(checks []Check, runURL string) string {
-	byName := map[string]Check{}
-	for _, c := range checks {
-		byName[c.Name] = c
-	}
-	missing := "no result"
-	if runURL != "" {
-		missing = fmt.Sprintf("no result, see the [run](%s)", runURL)
-	}
-	ordered := make([]Check, len(Questions))
-	for i, q := range Questions {
-		c, ok := byName[q.Name]
-		if !ok {
-			c = q
-			c.Status, c.Result = "❌", missing
-		}
-		ordered[i] = c
+// StatisticalCell compares the distributions over the runs on the columns: passed if the daily median of the
+// current runs lies within the 5 to 95 % band of the other runs on every day and column (Band), and no yearly
+// summary differs in a two-sample Kolmogorov-Smirnov test at FamilyAlpha divided by the number of tests
+// (CompareSummaries).
+func StatisticalCell(other, current []Run, columns []string) Cell {
+	columns = dataColumns(columns)
+	checks, violations := Band(other, current, columns)
+	tests := CompareSummaries(other, current, columns)
+	alpha := FamilyAlpha / float64(max(1, len(tests)))
+	significant := slices.DeleteFunc(slices.Clone(tests), func(s SummaryTest) bool { return s.P >= alpha })
+	if len(violations) == 0 && len(significant) == 0 {
+		return Cell{Ran: true, Passed: true, Text: "equal"}
 	}
 
 	var b strings.Builder
-	b.WriteString(CommentMarker + "\n## Check of this step\n\n| | Question | Result |\n| --- | --- | --- |\n")
-	for _, c := range ordered {
-		fmt.Fprintf(&b, "| %s | %s | %s |\n", c.Status, c.Question, c.Result)
+	fmt.Fprintf(&b, "Daily band: %d of %d days and columns outside.\n\n", len(violations), checks)
+	for _, v := range violations[:min(5, len(violations))] {
+		fmt.Fprintf(&b, "- day %d, %s: median %v, band [%v, %v]\n", v.Day, v.Column, v.Median, v.Q05, v.Q95)
 	}
-	b.WriteString("\n<details><summary>Runs</summary>\n\n")
-	for _, c := range ordered {
-		if c.Scope != "" {
-			fmt.Fprintf(&b, "- **%s** %s\n", c.Question, c.Scope)
+	fmt.Fprintf(&b, "\nYearly maximum and mean: %d of %d Kolmogorov-Smirnov tests with p < %.2g.\n\n",
+		len(significant), len(tests), alpha)
+	for _, s := range significant[:min(5, len(significant))] {
+		fmt.Fprintf(&b, "- %s: D = %.3f, p = %.3g\n", s.Summary, s.D, s.P)
+	}
+	return Cell{Ran: true, Text: fmt.Sprintf("differs (%d days outside the band, %d Kolmogorov-Smirnov tests)",
+		len(violations), len(significant)), Details: b.String()}
+}
+
+// NetLogoCell is the cell of the comparison with NetLogo: passed if every metric lies within the NetLogo band on
+// every day.
+func NetLogoCell(r NetLogoResult) Cell {
+	inside := 0
+	var b strings.Builder
+	for _, m := range r.Metrics {
+		if m.Inside == r.Days {
+			inside++
+			continue
+		}
+		for d, median := range m.Medians {
+			q := m.Bands[d]
+			tol := 1e-9 * math.Max(1, math.Abs(q.Q50))
+			if median < q.Q05-tol || median > q.Q95+tol {
+				fmt.Fprintf(&b, "- %s: %d of %d days inside the band, first outside: day %d, median %v, NetLogo "+
+					"[%v, %v]\n", m.Metric, m.Inside, r.Days, d+1, median, q.Q05, q.Q95)
+				break
+			}
 		}
 	}
-	b.WriteString("\n</details>\n")
-	for _, c := range ordered {
-		if c.Details != "" {
-			fmt.Fprintf(&b, "\n<details><summary>%s</summary>\n\n%s\n\n</details>\n", c.Question,
-				strings.TrimSpace(c.Details))
-		}
-	}
-	if runURL != "" {
-		fmt.Fprintf(&b, "\nLogs of all tests: [run](%s)\n", runURL)
-	}
-	return b.String()
+	return Cell{Ran: true, Passed: r.Passed(), Text: fmt.Sprintf("%d of %d metrics in band", inside, len(r.Metrics)),
+		Details: b.String()}
+}
+
+// MissingColumnsCell is the cell of a comparison that cannot run because the current code lacks columns of the
+// other version: the column names stay the same in all steps (obs.DailyOutputExtended).
+func MissingColumnsCell(missing []string) Cell {
+	return Cell{Ran: true, Text: "columns missing: " + strings.Join(missing, ", ")}
+}
+
+// dataColumns returns the columns without the time columns.
+func dataColumns(columns []string) []string {
+	return slices.DeleteFunc(slices.Clone(columns), func(c string) bool { return c == "t" || c == "ticks" })
 }

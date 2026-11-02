@@ -1,14 +1,16 @@
-// Package compare compares the current code of gobees-fast with a reference commit (README.md).
+// Package compare checks a step of gobees-fast: it runs the scenarios (scenario.go) with the current code, the
+// reference commit and the base commit (gobees) and compares the current code with each of them and with NetLogo.
 //
-// Both versions run as command line programs (go/main.go) with the same input files, seeds and days, and write
-// their daily output with -f. The tables are compared on the columns both versions have, matched by name:
+// All versions run as command line programs (go/main.go) with the same input files, parameter file, seeds and days,
+// and write their daily output with -f. The tables are compared on the columns both versions have, matched by name:
 //
 //   - Exact: every value of every common column must be equal (phase 1).
-//   - Statistical: distributions over many seeds (phases 2 and 3), see stats.go.
+//   - Statistical: distributions over many seeds (phases 2 and 3, and always against gobees), see stats.go.
+//   - NetLogo: the daily median of each metric within the band of the NetLogo runs, see netlogo.go.
 //   - Speed: run times of the current code and of the base commit, reported only.
 //
-// The programs are built by run_compare.sh, the tests read their paths from the environment (reference_test.go).
-// See README.md.
+// The programs are built by run_compare.sh, the tests read their paths from the environment (reference_test.go)
+// and write the pull request comment and the NetLogo report (report.go). See README.md.
 package compare
 
 import (
@@ -120,24 +122,36 @@ type Run struct {
 	Duration time.Duration // wall time of the program, incl. reading the input files
 }
 
-// RunProgram runs the gobees program bin once with the input files in dir and returns its daily output.
-func RunProgram(bin, dir string, seed int64, days int) (Run, error) {
-	out, err := os.CreateTemp("", "gobees-compare-*.csv")
-	if err != nil {
-		return Run{}, err
+// RunProgram runs the gobees program bin once with the input files in dir and the parameter file parameters (a
+// path, empty for the example farm file in dir). With output, it returns the daily output in Run.Table, otherwise
+// the program writes none (for timing).
+func RunProgram(bin, dir, parameters string, seed int64, days int, output bool) (Run, error) {
+	args := []string{"-d", dir, "-s", strconv.FormatInt(seed, 10), "--days", strconv.Itoa(days)}
+	if parameters != "" {
+		args = append(args, "-p", parameters)
 	}
-	out.Close()
-	defer os.Remove(out.Name())
+	out := ""
+	if output {
+		f, err := os.CreateTemp("", "gobees-compare-*.csv")
+		if err != nil {
+			return Run{}, err
+		}
+		f.Close()
+		defer os.Remove(f.Name())
+		out = f.Name()
+		args = append(args, "-f", out)
+	}
 
-	cmd := exec.Command(bin, "-d", dir, "-s", strconv.FormatInt(seed, 10), "--days", strconv.Itoa(days),
-		"-f", out.Name())
 	start := time.Now()
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return Run{}, fmt.Errorf("%s, seed %d: %w\n%s", filepath.Base(bin), seed, err, output)
+	if text, err := exec.Command(bin, args...).CombinedOutput(); err != nil {
+		return Run{}, fmt.Errorf("%s, seed %d: %w\n%s", filepath.Base(bin), seed, err, text)
 	}
 	run := Run{Seed: seed, Duration: time.Since(start)}
+	if !output {
+		return run, nil
+	}
 
-	f, err := os.Open(out.Name())
+	f, err := os.Open(out)
 	if err != nil {
 		return run, err
 	}
@@ -148,9 +162,9 @@ func RunProgram(bin, dir string, seed int64, days int) (Run, error) {
 	return run, nil
 }
 
-// RunPrograms runs the program once per seed, with threads runs at the same time. The runs are in the order of
-// the seeds.
-func RunPrograms(bin, dir string, seeds []int64, days, threads int) ([]Run, error) {
+// RunPrograms runs the program once per seed (RunProgram), with threads runs at the same time. The runs are in the
+// order of the seeds.
+func RunPrograms(bin, dir, parameters string, seeds []int64, days, threads int, output bool) ([]Run, error) {
 	runs := make([]Run, len(seeds))
 	errs := make([]error, len(seeds))
 	next := make(chan int)
@@ -158,7 +172,7 @@ func RunPrograms(bin, dir string, seeds []int64, days, threads int) ([]Run, erro
 	for range threads {
 		wg.Go(func() {
 			for i := range next {
-				runs[i], errs[i] = RunProgram(bin, dir, seeds[i], days)
+				runs[i], errs[i] = RunProgram(bin, dir, parameters, seeds[i], days, output)
 			}
 		})
 	}
@@ -176,14 +190,15 @@ func RunPrograms(bin, dir string, seeds []int64, days, threads int) ([]Run, erro
 }
 
 // WriteInputFiles writes the input files of the example farm into dir, as the command line reads them with -d
-// and the default flags. Both versions read the same files.
+// and the default flags, and the second map of the crop rotation scenario. All versions read the same files.
 func WriteInputFiles(dir string) error {
 	files := map[string]string{
-		"_SYSTEM_Example_Farm_Parameters.csv":  examplefiles.ExampleFarmParameters,
-		"_SYSTEM_Habitats.csv":                 examplefiles.Habitats,
-		"_SYSTEM_Example_Farm_Foodsources.txt": examplefiles.ExampleFarmFoodsources,
-		"_SYSTEM_Flowerspecies.csv":            examplefiles.Flowerspecies,
-		"_SYSTEM_BumbleSpecies_UK_01.csv":      examplefiles.BumbleSpecies,
+		"_SYSTEM_Example_Farm_Parameters.csv":   examplefiles.ExampleFarmParameters,
+		"_SYSTEM_Habitats.csv":                  examplefiles.Habitats,
+		"_SYSTEM_Example_Farm_Foodsources.txt":  examplefiles.ExampleFarmFoodsources,
+		"Example_Farm_PlotTest_Foodsources.txt": examplefiles.ExampleFarmPlotTestFoodsources,
+		"_SYSTEM_Flowerspecies.csv":             examplefiles.Flowerspecies,
+		"_SYSTEM_BumbleSpecies_UK_01.csv":       examplefiles.BumbleSpecies,
 	}
 	for name, text := range files {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0o644); err != nil {
