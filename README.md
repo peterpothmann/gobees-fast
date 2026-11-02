@@ -80,7 +80,7 @@ go run . -p my_Parameters.csv -d path/to/inputs -s 3 --days 730                #
 
 Unlike NetLogo, a missing parameter file is an error. NetLogo loads `_SYSTEM_Parameters.csv` instead.
 
-The daily totals of `OutputDailyProc` (colonies, queens, males, mean weights, ...) can be written to a tab-separated file. The CSV reporter of ark-tools adds one row at the end of every tick. Its first column `t` counts from 0, the column `ticks` holds the NetLogo ticks (1 on the first day). The other column names are the NetLogo names.
+The daily totals of `OutputDailyProc` (colonies, queens, males, mean weights, ...) and the metrics of the NetLogo experiments in `go/validation/experiments` (eggs, larvae, workers, stores, foraging trips, ...) can be written to a tab-separated file (`obs.DailyOutput`). The CSV reporter of ark-tools adds one row at the end of every tick. Its first column `t` counts from 0, the column `ticks` holds the NetLogo ticks (1 on the first day). The other column names are the NetLogo names: the globals of `OutputDailyProc`, then the names of the reporters in the experiments, then `TotalAdultQueensEverProduced` and `MeanCompetitionPointDate`. gobees-fast compares its steps with gobees on these columns.
 
 ```shell
 go run . -o                     # writes go/daily_output.csv
