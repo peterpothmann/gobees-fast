@@ -55,7 +55,7 @@ programs write no row for the setup). The columns are matched by name. Columns o
 in the comment and not compared. A column of the other version that the current code no longer has is an error: the
 column names stay the same in all steps.
 
-gobees writes the same columns (its `obs.DailyOutputExtended`) except `ForagerDeathsToday`, which it does not
+gobees writes the same columns (its `obs.DailyOutput`) except `ForagerDeathsToday`, which it does not
 count. The drift is therefore compared on all other columns, and the plots of the NetLogo report show the gobees
 median. The fork point `40dc301` wrote only the 15 columns of `obs.DailyOutput` (`ticks` and 14 values).
 
@@ -88,11 +88,11 @@ differs from NetLogo in some of them.
 - `REFERENCE_COMMIT`: the previous step. It moves at the end of each phase, and in phase 3 after each fix. Until the
   steps F0 are merged, it is the base commit, i.e. gobees, and shares its program. After the merge it is set to the
   merge commit.
-- `BASE_COMMIT`: gobees. Not the fork point `40dc301`, but the later commit of gobees that writes the NetLogo
-  metrics (`obs.DailyOutputExtended`). Between the two, only the output and the validation tests of gobees changed,
-  not the model. The commit is not in the history of gobees-fast. It is in this repository as the tag `gobees-base`,
-  which the CI gets with the full history (`fetch-depth: 0`). The tag is pushed once from the remote `upstream`
-  (gobees): `git fetch upstream` and `git push origin <commit>:refs/tags/gobees-base`. It stays fixed.
+- `BASE_COMMIT`: gobees. Not the fork point `40dc301`, but `ff06b97`, the later commit of gobees that writes the
+  NetLogo metrics (its `obs.DailyOutput`). Between the two, only the output and the validation tests of gobees
+  changed, not the model. The commit is not in the history of gobees-fast. It is in this repository as the tag
+  `gobees-base`, which the CI gets with the full history (`fetch-depth: 0`). The tag is pushed once from the remote
+  `upstream` (gobees): `git fetch upstream` and `git push origin ff06b97:refs/tags/gobees-base`. It stays fixed.
 - `PHASE`: 1 compares exactly with the previous step, 2 and 3 statistically.
 
 ## Running the comparisons
