@@ -41,7 +41,8 @@ func TestParseWeatherFileExample(t *testing.T) {
 	// [FPER-02] the example weather year holds item 0 to 364 of the NetLogo list, which has 366 items: ".5" after a
 	// "0" is item 42, so day 43 gets 0.5 h (finding 1, see trans/netlogo-findings.md#finding-1). NetLogo reads item
 	// Day - 1 with Day <= 365, item 365 never. The file holds hours * 3600 in whole seconds: on 15 days NetLogo's
-	// product differs in the last bit (e.g. 16.9 * 3600 = 60839.99999999999).
+	// product differs in the last bit (e.g. 16.9 * 3600 = 60839.99999999999). go/compare rounds the output column
+	// foraging_period_s for this reason (RoundedColumns in go/compare/compare.go).
 	netlogo := netLogoForagingHoursExample(t)
 	if len(netlogo) != 366 || netlogo[41] != 0 || netlogo[42] != 0.5 {
 		t.Fatalf("NetLogo list: %d items, items 41 and 42 = %v, %v; want 366, 0, 0.5", len(netlogo), netlogo[41],
