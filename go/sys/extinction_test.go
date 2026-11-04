@@ -14,8 +14,8 @@ import (
 )
 
 func TestExtinction(t *testing.T) {
-	// [GO-20] TimeToExtinction is the first day without colonies and bees, Survived? goes from 1 [PAR-08] to 0,
-	// and the run stops only with StopExtinct?.
+	// [GO-20] TimeToExtinction is the first day without colonies and bees, and the run stops only with
+	// StopExtinct?.
 	for _, stop := range []bool{false, true} {
 		cw := newColonyWorld(t, 1)
 		cw.file.StopExtinct = stop
@@ -25,8 +25,8 @@ func TestExtinction(t *testing.T) {
 		s := &Extinction{}
 		s.Initialize(cw.w)
 		ext := ecs.GetResource[globals.Extinction](cw.w)
-		if ext.Survived != 1 || ext.TimeToExtinction != 0 {
-			t.Fatalf("after Setup: Survived? %v, TimeToExtinction %v; want 1 and 0", ext.Survived, ext.TimeToExtinction)
+		if ext.TimeToExtinction != 0 {
+			t.Fatalf("after Setup: TimeToExtinction %v, want 0", ext.TimeToExtinction)
 		}
 
 		// a hibernating queen alone keeps the population alive, a colony alone too
@@ -37,8 +37,8 @@ func TestExtinction(t *testing.T) {
 		cw.w.RemoveEntity(queen)
 		cw.ticks.Ticks = 201
 		s.Update(cw.w)
-		if ext.Survived != 1 || ext.TimeToExtinction != 0 || term.Terminate {
-			t.Fatalf("population alive: Survived? %v, TimeToExtinction %v, terminate %v", ext.Survived, ext.TimeToExtinction, term.Terminate)
+		if ext.TimeToExtinction != 0 || term.Terminate {
+			t.Fatalf("population alive: TimeToExtinction %v, terminate %v", ext.TimeToExtinction, term.Terminate)
 		}
 
 		cw.w.RemoveEntity(col)
@@ -46,9 +46,9 @@ func TestExtinction(t *testing.T) {
 		s.Update(cw.w)
 		cw.ticks.Ticks = 203
 		s.Update(cw.w) // NetLogo with StopExtinct? = false runs on: the first day is kept
-		if ext.Survived != 0 || ext.TimeToExtinction != 202 || term.Terminate != stop {
-			t.Errorf("StopExtinct? %v: Survived? %v, TimeToExtinction %v, terminate %v; want 0, 202, %v",
-				stop, ext.Survived, ext.TimeToExtinction, term.Terminate, stop)
+		if ext.TimeToExtinction != 202 || term.Terminate != stop {
+			t.Errorf("StopExtinct? %v: TimeToExtinction %v, terminate %v; want 202, %v",
+				stop, ext.TimeToExtinction, term.Terminate, stop)
 		}
 	}
 }

@@ -48,12 +48,15 @@ func TestDailyOutputExtended(t *testing.T) {
 	} {
 		bees.NewEntity(&b)
 	}
+	species := ecs.NewMap1[comp.Species](w)
+	terrestris := species.NewEntity(&comp.Species{Name: "B_terrestris"})
+	hortorum := species.NewEntity(&comp.Species{Name: "B_hortorum"})
 	colonies := ecs.NewMap2[comp.Colony, comp.ColonyStores](w)
-	colonies.NewEntity(&comp.Colony{CompetitionPointDate: 150, SpeciesNameColony: "B_terrestris"},
+	colonies.NewEntity(&comp.Colony{CompetitionPointDate: 150, SpeciesIDcolony: terrestris},
 		&comp.ColonyStores{EnergyStore_kJ: 100, PollenStore_g: 2})
-	colonies.NewEntity(&comp.Colony{CompetitionPointDate: 160, SpeciesNameColony: "B_hortorum"},
+	colonies.NewEntity(&comp.Colony{CompetitionPointDate: 160, SpeciesIDcolony: hortorum},
 		&comp.ColonyStores{EnergyStore_kJ: 50, PollenStore_g: 1})
-	colonies.NewEntity(&comp.Colony{CompetitionPointDate: params.NotSetHigh, SpeciesNameColony: "B_terrestris"},
+	colonies.NewEntity(&comp.Colony{CompetitionPointDate: params.NotSetHigh, SpeciesIDcolony: terrestris},
 		&comp.ColonyStores{EnergyStore_kJ: 10})
 	foodsources := ecs.NewMap2[comp.Foodsource, comp.FoodsourceState](w)
 	foodsources.NewEntity(&comp.Foodsource{}, &comp.FoodsourceState{Nectar_myl: 1500000, Pollen_g: 2000})
@@ -92,8 +95,9 @@ func TestDailyOutputExtended(t *testing.T) {
 
 func TestDailyOutputExtendedNoCompetitionPoint(t *testing.T) {
 	w := newWorld(&globals.Ticks{}, &globals.Totals{}, &globals.Counters{})
+	terrestris := ecs.NewMap1[comp.Species](w).NewEntity(&comp.Species{Name: "B_terrestris"})
 	ecs.NewMap2[comp.Colony, comp.ColonyStores](w).NewEntity(
-		&comp.Colony{CompetitionPointDate: params.NotSetHigh}, &comp.ColonyStores{})
+		&comp.Colony{CompetitionPointDate: params.NotSetHigh, SpeciesIDcolony: terrestris}, &comp.ColonyStores{})
 
 	o := DailyOutputExtended{}
 	o.Initialize(w)

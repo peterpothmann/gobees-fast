@@ -125,7 +125,7 @@ func TestUpdateFoodsources(t *testing.T) {
 	names := []string{"Dandelion", "Daisy", "Crop_Cereals"}
 	entities := map[string]ecs.Entity{}
 	for i, n := range names {
-		fs := comp.Foodsource{FlowerSpecies: n, StartDay: periods[n][0], StopDay: periods[n][1],
+		fs := comp.Foodsource{StartDay: periods[n][0], StopDay: periods[n][1],
 			NectarMax_myl: float64(i+1) * 1e6, PollenMax_g: float64(i+1) * 1000}
 		// state left over from the day before: is overwritten every morning
 		entities[n] = fsMap.NewEntity(&fs, &comp.FoodsourceState{Nectar_myl: 7, Pollen_g: 7})

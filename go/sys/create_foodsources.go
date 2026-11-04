@@ -98,11 +98,7 @@ func CreateFoodsourcesProc(w *ecs.World, foodsourcesFile string, landscape *glob
 	if err := CreateLayersProc(w, kept, flowers, file, derived.CSS_OptionsList, who, rng); err != nil {
 		panic(err)
 	}
-
-	// [FSRC-13] output only
-	query := ecs.NewFilter1[comp.Foodsource](w).Query()
-	landscape.TotalFoodSources = query.Count()
-	query.Close()
+	// [FSRC-13] TotalFoodSources: output only, never read, removed in step F3.
 }
 
 func readFoodsourcesFile(path string) (float64, []flowerPatch, error) {
@@ -223,9 +219,8 @@ func MergeHedgesProc(patches []*flowerPatch, rng *rand.Rand) {
 				master = l.hedge
 				continue
 			}
+			// [HEDG-04] NetLogo also adds nectarMax_myl and pollenMax_g, which are always 0 here (removed in step F3)
 			master.Area_sqm += l.hedge.Area_sqm
-			master.NectarMax_myl += l.hedge.NectarMax_myl // SIMPLIFY: always 0 + 0 here [HEDG-04]
-			master.PollenMax_g += l.hedge.PollenMax_g     // SIMPLIFY: always 0 + 0 here [HEDG-04]
 			l.hedge.Area_sqm = 0
 		}
 	}
@@ -276,11 +271,10 @@ func CreateLayersProc(w *ecs.World, patches []*flowerPatch, flowers *flowerSpeci
 
 	for _, p := range toSplit {
 		var master ecs.Entity
-		occurrence := "Patch"
-		// [LAYR-04] ORDER: irrelevant, foreach over a list.
+		// [LAYR-04] ORDER: irrelevant, foreach over a list. A stewardship option is no flower species and gets no
+		// layer. NetLogo stores it as occurrence of the following layers, which nothing reads (removed in step F3).
 		for _, e := range p.FlowerSpeciesList {
 			if slices.Contains(cssOptions, e.Name) {
-				occurrence = e.Name
 				continue
 			}
 			// [LAYR-05] hatch: a new who number, all values of the flower patch, then the flower data.
@@ -298,10 +292,6 @@ func CreateLayersProc(w *ecs.World, patches []*flowerPatch, flowers *flowerSpeci
 				PatchType:                     p.PatchType,
 				Area_sqm:                      p.Area_sqm,
 				Radius_m:                      p.Radius_m,
-				PatchInfo:                     p.PatchInfo,
-				Occurrence:                    occurrence,
-				FlowerSpecies:                 e.Name,
-				RelativeAbundance:             e.Value,
 				PollenMax_g:                   p.Area_sqm * relAbundance * data.Pollen_g_per_flower,
 				NectarFlowerVolume_myl:        data.Nectar_ml_per_flower * 1000,
 				NectarConcentration_mol_per_l: data.Concentration_mol_per_l,
@@ -346,16 +336,12 @@ func CreateLayersProc(w *ecs.World, patches []*flowerPatch, flowers *flowerSpeci
 			continue
 		}
 		e := newFoodsource(p, p.who, comp.Foodsource{
-			Id_Beescout:       p.Id_Beescout,
-			PatchType:         p.PatchType,
-			Area_sqm:          p.Area_sqm,
-			Radius_m:          p.Radius_m,
-			PatchInfo:         p.PatchInfo,
-			Occurrence:        "Patch",
-			FlowerSpecies:     p.PatchType, // flowerSpecies_relativeAbundanceList (list patchType 1)
-			RelativeAbundance: 1,
-			NectarMax_myl:     p.NectarMax_myl,
-			PollenMax_g:       p.PollenMax_g,
+			Id_Beescout:   p.Id_Beescout,
+			PatchType:     p.PatchType,
+			Area_sqm:      p.Area_sqm,
+			Radius_m:      p.Radius_m,
+			NectarMax_myl: p.NectarMax_myl,
+			PollenMax_g:   p.PollenMax_g,
 		})
 		l := layerMapper.Get(e)
 		l.Masterpatch = true

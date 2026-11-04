@@ -4,7 +4,6 @@ import (
 	"math/rand/v2"
 
 	"gobees/comp"
-	"gobees/enum/activity"
 	"gobees/enum/caste"
 	"gobees/enum/stage"
 	"gobees/globals"
@@ -192,10 +191,7 @@ func (s *UpdateColonies) updateColony(w *ecs.World, col ecs.Entity, members []ec
 		colony.CompetitionPointDate = CompetitionPointDateREP(colony)
 	}
 
-	// [UCOL-10]
-	if len(alive(func(b *comp.Bee) bool { return b.Caste == caste.Queen && b.Mated })) == 0 {
-		colony.Queenright = false
-	}
+	// [UCOL-10] queenright?: never read, removed in step F3
 
 	// [UCOL-11]
 	if len(alive(all)) == 0 {
@@ -205,16 +201,13 @@ func (s *UpdateColonies) updateColony(w *ecs.World, col ecs.Entity, members []ec
 			s.counters.ColonyDeathsNoBees++
 		}
 		s.colDeath.DieProc(w, col, "Colony: No adults or brood left in this colony!")
-	} else {
-		colony.ColonyAge++
-	}
+	} // otherwise colonyAge + 1: never read, removed in step F3
 }
 
 // statistics sets the colony statistics from the living members of the colony [UCOL-06].
 func (s *UpdateColonies) statistics(c *comp.ColonyCounts, members []ecs.Entity) {
 	c.AllEggs, c.AllLarvae, c.AllPupae, c.AllAdults = 0, 0, 0, 0
-	c.AllAdultWorkers, c.AllAdultQueens, c.AllAdultActiveQueens, c.AllAdultMales = 0, 0, 0, 0
-	c.Colonysize, c.ColonyWeight_mg = 0, 0
+	c.AllAdultWorkers, c.AllAdultMales = 0, 0
 	for _, e := range members {
 		b := s.beeMap.Get(e)
 		switch b.Stage {
@@ -230,19 +223,9 @@ func (s *UpdateColonies) statistics(c *comp.ColonyCounts, members []ecs.Entity) 
 				c.AllAdultWorkers += b.Number
 			}
 		}
-		if !b.Brood {
-			switch b.Caste {
-			case caste.Queen:
-				c.AllAdultQueens += b.Number
-				if b.Activity != activity.Hibernate {
-					c.AllAdultActiveQueens += b.Number
-				}
-			case caste.Male:
-				c.AllAdultMales += b.Number
-			}
+		if !b.Brood && b.Caste == caste.Male {
+			c.AllAdultMales += b.Number
 		}
-		c.Colonysize += b.Number
-		c.ColonyWeight_mg += b.Number * b.Weight_mg
 	}
 	if c.AllAdultWorkers > 0 {
 		c.LarvaWorkerRatio = c.AllLarvae / c.AllAdultWorkers
@@ -257,13 +240,13 @@ func CompetitionPointDateREP(c *comp.Colony) float64 {
 	// [CPD-01] x: days from the first worker to the first queen-destined eggs (about -5 to 40).
 	// y: days from the first worker to the CP, linear in x (Duchateau & Velthuis 1988, Fig. 6).
 	// The CP is rounded to a whole day (.5 up) and lies at most 45 days after the first worker.
-	compDate := params.NotSetHigh // as in NetLogo, overwritten below. SIMPLIFY: not needed.
+	// NetLogo first sets compDate to NotSetHigh and overwrites it below (removed in step F3).
 	x := c.QueenProductionDate - c.EusocialPhaseDate
 	// float64(...) forces Go to round after the multiplication, as Java does. Otherwise Go may compute
 	// 0.7*x + 15.5 in one step (fused multiply-add), which can change the last bit and thus the rounding.
 	y := float64(0.7*x) + 15.5
 	latestCPafter_d := 45.0
-	compDate = util.Round(c.EusocialPhaseDate + y)
+	compDate := util.Round(c.EusocialPhaseDate + y)
 	// The CP is at most 45 days after the eusocial phase
 	if compDate-c.EusocialPhaseDate > latestCPafter_d {
 		compDate = c.EusocialPhaseDate + latestCPafter_d // set to 45 days after eusocial phase (first worker), as in NetLogo

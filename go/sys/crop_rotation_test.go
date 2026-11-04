@@ -87,8 +87,7 @@ func TestCropRotation(t *testing.T) {
 	inRange := []ecs.Entity{anyFs}
 	col := ecs.NewMap7[comp.Who, comp.Position, comp.Colony, comp.ColonyStores, comp.ColonyStimuli, comp.ColonyCounts, comp.ColonyRange](w).NewEntity(
 		&comp.Who{}, &comp.Position{}, &comp.Colony{}, &comp.ColonyStores{}, &comp.ColonyStimuli{}, &comp.ColonyCounts{},
-		&comp.ColonyRange{AllPatchesInRangeList: inRange, AllSourcesInFlowerAndRangeList: inRange,
-			PollenInFlowerAndRangeList: inRange, NectarInFlowerAndRangeList: inRange,
+		&comp.ColonyRange{AllPatchesInRangeList: inRange,
 			MasterpatchesWithPollenlayersInFlowerAndRangeList: inRange, MasterpatchesWithNectarlayersInFlowerAndRangeList: inRange})
 
 	// [MORN-09] only on Day 365
@@ -120,9 +119,11 @@ func TestCropRotation(t *testing.T) {
 	if minWho <= maxWhoBefore {
 		t.Errorf("new foodsources start at who %d, want more than %d", minWho, maxWhoBefore)
 	}
-	if got := ecs.GetResource[globals.Landscape](w).TotalFoodSources; got != 3 {
-		t.Errorf("TotalFoodSources %d, want 3", got)
+	foodsources := ecs.NewFilter1[comp.Foodsource](w).Query()
+	if got := foodsources.Count(); got != 3 {
+		t.Errorf("%d foodsources, want 3", got)
 	}
+	foodsources.Close()
 
 	// [CROP-02] the bee forgets her foodsources
 	f = ecs.NewMap1[comp.Forager](w).Get(bee)
@@ -130,14 +131,13 @@ func TestCropRotation(t *testing.T) {
 		!f.NectarsourceToGoTo.IsZero() || !f.PollensourceToGoTo.IsZero() || !f.CurrentFoodsource.IsZero() {
 		t.Errorf("bee still knows foodsources: %+v", *f)
 	}
-	// the colony empties its in-flower lists, but keeps allPatchesInRangeList and allSourcesInFlowerAndRangeList
+	// the colony empties its in-flower lists, but keeps allPatchesInRangeList
 	r := ecs.NewMap1[comp.ColonyRange](w).Get(col)
-	if len(r.PollenInFlowerAndRangeList)+len(r.NectarInFlowerAndRangeList)+
-		len(r.MasterpatchesWithPollenlayersInFlowerAndRangeList)+len(r.MasterpatchesWithNectarlayersInFlowerAndRangeList) != 0 {
+	if len(r.MasterpatchesWithPollenlayersInFlowerAndRangeList)+len(r.MasterpatchesWithNectarlayersInFlowerAndRangeList) != 0 {
 		t.Errorf("in-flower lists not empty: %+v", *r)
 	}
-	if !slices.Equal(r.AllPatchesInRangeList, inRange) || !slices.Equal(r.AllSourcesInFlowerAndRangeList, inRange) || w.Alive(anyFs) {
-		t.Errorf("allPatchesInRangeList and allSourcesInFlowerAndRangeList must keep the dead foodsource")
+	if !slices.Equal(r.AllPatchesInRangeList, inRange) || w.Alive(anyFs) {
+		t.Errorf("allPatchesInRangeList must keep the dead foodsource")
 	}
 	// [FRNG] reads the dead foodsources: NetLogo runtime error, gobees panics
 	founder := newColonyFounder(w, rand.New(ecs.GetResource[resource.Rand](w)))

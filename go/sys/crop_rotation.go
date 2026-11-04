@@ -87,8 +87,8 @@ func (s *CropRotation) CropRotationProc(w *ecs.World) {
 		f.PollensourceToGoTo = ecs.Entity{}
 		f.CurrentFoodsource = ecs.Entity{}
 	}
-	// every colony empties its in-flower lists, but NOT AllPatchesInRangeList [PRNG] and
-	// AllSourcesInFlowerAndRangeList: they keep the dead foodsources. FoodsourcesInFlowerAndRangeProc [FRNG] reads
+	// every colony empties its in-flower lists of masterpatches, but NOT AllPatchesInRangeList [PRNG]: it keeps the
+	// dead foodsources. FoodsourcesInFlowerAndRangeProc [FRNG] reads
 	// AllPatchesInRangeList on the next flowering change and panics there (Ark: "can't get components of a dead
 	// entity", NetLogo: runtime error on a dead turtle). Needs a colony alive on Day 365, which the species of
 	// netlogo/_SYSTEM_BumbleSpecies_UK_01.csv cannot have (seasonStop 305).
@@ -98,8 +98,6 @@ func (s *CropRotation) CropRotationProc(w *ecs.World) {
 		r := s.rangeMap.Get(e)
 		r.MasterpatchesWithNectarlayersInFlowerAndRangeList = []ecs.Entity{}
 		r.MasterpatchesWithPollenlayersInFlowerAndRangeList = []ecs.Entity{}
-		r.NectarInFlowerAndRangeList = []ecs.Entity{}
-		r.PollenInFlowerAndRangeList = []ecs.Entity{}
 	}
 
 	// [CROP-03] the new landscape: new who numbers, random numbers for the hedges and layers

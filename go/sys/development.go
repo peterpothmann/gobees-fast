@@ -3,7 +3,6 @@ package sys
 import (
 	"math"
 	"math/rand/v2"
-	"slices"
 
 	"gobees/comp"
 	"gobees/enum/caste"
@@ -123,19 +122,15 @@ func (s *Development) Development_Mortality_AdultsProc(w *ecs.World, e ecs.Entit
 func (s *Development) Development_PupaeProc(e ecs.Entity) {
 	_, _, bee, _, th, forager, dev := s.beeMap.Get(e)
 	sp := s.speciesMap.Get(bee.SpeciesID)
-	// [DEVP-01] SIMPLIFY: cumulTimePupa_d is never read.
-	dev.CumulTimePupa_d = dev.CumulTimePupa_d + 1
+	// [DEVP-01] cumulTimePupa_d: never read, removed in step F3.
 
 	// [DEVP-02]
 	if bee.Caste == caste.Worker {
 		if dev.CumulIncubationReceived_kJ >= sp.DevIncubationEmergingTH_kJ && bee.BroodAge >= sp.DevAgeEmergingMin_d {
 			bee.Stage = stage.Adult
 			bee.Brood = false
-			newWorkers := bee.Number
-			s.counters.TotalAdultsEverProduced += bee.Number
 			_, counts := s.colonyMap.Get(bee.ColonyID)
-			counts.TotalAdultsProduced += newWorkers
-			counts.TotalWorkersProduced += newWorkers
+			counts.TotalAdultsProduced += bee.Number
 			forager.Cropvolume_myl = CropAndPelletSizeREP("nectar", bee.Weight_mg, sp)
 			forager.PollenPellets_g = CropAndPelletSizeREP("pollen", bee.Weight_mg, sp)
 			*th = thresholds(sitWorker)
@@ -148,12 +143,8 @@ func (s *Development) Development_PupaeProc(e ecs.Entity) {
 		if dev.CumulIncubationReceived_kJ >= sp.DevIncubationEmergingTH_kJ && bee.BroodAge >= sp.DevAgeEmergingMin_d {
 			bee.Brood = false
 			bee.Stage = stage.Adult
-			newMales := bee.Number
-			s.counters.TotalAdultsEverProduced += bee.Number
-			s.counters.TotalAdultMalesEverProduced += bee.Number
 			_, counts := s.colonyMap.Get(bee.ColonyID)
-			counts.TotalAdultsProduced += newMales
-			counts.TotalMalesProduced += newMales
+			counts.TotalAdultsProduced += bee.Number
 		}
 	}
 
@@ -168,15 +159,9 @@ func (s *Development) Development_PupaeProc(e ecs.Entity) {
 			}
 			bee.Stage = stage.Adult
 			bee.Brood = false
-			newQueensProduced := bee.Number
-			if !slices.Contains(s.counters.QueensProducingColoniesList, bee.ColonyID) {
-				s.counters.QueensProducingColoniesList = append(s.counters.QueensProducingColoniesList, bee.ColonyID)
-			}
-			s.counters.TotalAdultsEverProduced += bee.Number
 			s.counters.TotalAdultQueensEverProduced += bee.Number
 			_, counts := s.colonyMap.Get(bee.ColonyID)
-			counts.TotalQueensProduced += newQueensProduced
-			counts.TotalAdultsProduced += newQueensProduced
+			counts.TotalAdultsProduced += bee.Number
 			forager.Cropvolume_myl = CropAndPelletSizeREP("nectar", bee.Weight_mg, sp)
 			forager.PollenPellets_g = CropAndPelletSizeREP("pollen", bee.Weight_mg, sp)
 			*th = thresholds(sitYoungQueen)
@@ -226,10 +211,7 @@ func (s *Development) Development_LarvaeProc(e ecs.Entity, whoCol ecs.Entity) {
 		dev.CumulIncubationReceived_kJ >= sp.DevIncubationPupationTH_kJ &&
 		bee.BroodAge >= sp.DevAgePupationMin_d &&
 		bee.Weight_mg >= sp.DevWeightPupationMin_mg {
-		bee.Stage = stage.Pupa
-		memoNumber := bee.Number
-		_, counts := s.colonyMap.Get(bee.ColonyID)
-		counts.TotalPupaeProduced += memoNumber // never read
+		bee.Stage = stage.Pupa // totalPupaeProduced: never read, removed in step F3
 	}
 
 	if bee.Caste == caste.Queen &&
@@ -237,9 +219,6 @@ func (s *Development) Development_LarvaeProc(e ecs.Entity, whoCol ecs.Entity) {
 		bee.BroodAge >= sp.DevAge_Q_PupationMin_d &&
 		bee.Weight_mg >= sp.DevWeight_Q_PupationMin_mg {
 		bee.Stage = stage.Pupa
-		memoNumber := bee.Number
-		_, counts := s.colonyMap.Get(bee.ColonyID)
-		counts.TotalPupaeProduced += memoNumber // never read
 	}
 }
 
@@ -247,12 +226,8 @@ func (s *Development) Development_LarvaeProc(e ecs.Entity, whoCol ecs.Entity) {
 func (s *Development) Development_EggsProc(e ecs.Entity) {
 	_, _, bee, _, _, _, dev := s.beeMap.Get(e)
 	sp := s.speciesMap.Get(bee.SpeciesID)
-	// [DEVE-01] SIMPLIFY: cumulTimeEgg_d and totalLarvaeProduced are never read.
-	dev.CumulTimeEgg_d = dev.CumulTimeEgg_d + 1
+	// [DEVE-01] cumulTimeEgg_d and totalLarvaeProduced: never read, removed in step F3.
 	if dev.CumulIncubationReceived_kJ >= sp.DevIncubationHatchingTH_kJ && bee.BroodAge >= sp.DevAgeHatchingMin_d {
 		bee.Stage = stage.Larva
-		memoNumber := bee.Number
-		_, counts := s.colonyMap.Get(bee.ColonyID)
-		counts.TotalLarvaeProduced += memoNumber
 	}
 }

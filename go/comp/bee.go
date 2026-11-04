@@ -66,7 +66,5 @@ type Forager struct {
 // Development holds the brood development state of a bee (translated in step 4).
 type Development struct {
 	CumulIncubationReceived_kJ float64
-	CumulTimeEgg_d             float64
 	CumulTimeLarva_d           float64
-	CumulTimePupa_d            float64
 }

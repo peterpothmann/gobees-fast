@@ -514,6 +514,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Who reads `deadCols`:** checked on 2026-10-23. Only three places: the egg accounting assertion in `CheckNumbersProc` on day 364, `UpdateColoniesProc` (deletes all dead colonies on 1 January unless `KeepDeadColonies?`), and the GUI (white dots if `ShowDeadCols?`). No output, plot or BehaviorSpace experiment reads `deadCols`, and no model procedure iterates over all `turtles`. Nobody reads `speciesNameColony` of a dead colony, so the loss has no effect.
 - **Consequence for gobees:** no effect on the dynamics. gobees deletes the colony entity at death and writes its data into a record of dead colonies, including `speciesNameColony` (decision E in `trans/data-model.md`). The egg accounting check runs at death instead of on day 364.
 - **Second Check**: 23.10.2026, PP
+- **gobees-fast:** colonies have no `speciesNameColony` since step F3 (never read). The record keeps the species as `SpeciesIDcolony`.
 
 <a id="finding-10"></a>
 
@@ -524,6 +525,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Status:** confirmed when annotating `CreateLayersProc` on 2026-10-23. The name has no effect on the dynamics. Only the interpretation of the input data is affected.
 - **Second Check**: 23.10.2026, PP
 - **Implemented:** `CreateLayersProc` in `sys/create_foodsources.go` (`RelativeAbundance` stores the value without `AbundanceBoost`). Test: `TestCreateLayers` (100 m2 x 2 x 0.01 g = 2 g pollen).
+- **gobees-fast:** `RelativeAbundance` is removed in step F3 (never read). The value enters only `pollenMax_g` and `nectarMax_myl`.
 
 <a id="finding-11"></a>
 
