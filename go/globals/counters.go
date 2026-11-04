@@ -1,29 +1,13 @@
 package globals
 
 import (
-	"gobees/comp"
-
 	"github.com/mlange-42/ark/ecs"
 )
 
-// Counters holds global counters of the run (NetLogo globals).
-type Counters struct {
-	TotalBeesEverDied         float64 // [DIE-01]
-	TotalBeesEverProduced     float64 // [EGGP-02], read by [CHK-01]
-	TotalColoniesEverProduced float64 // [CCOL-08]
-	ColonyDeathsEndSeason     float64 // [UCOL-11], read by [CHK-04]
-	ColonyDeathsNoBees        float64 // [UCOL-11], read by [CHK-04]
-
-	TotalAdultQueensEverProduced float64 // [DEVP-04], output only (BehaviorSpace)
-
-	// TotalHibernatingQueensEverRemoved adds up the planned number of queens to kill on 1 January [SEAS-03], not
-	// the removed number. Output only, read by the NetLogo validation (step8_settings).
-	TotalHibernatingQueensEverRemoved float64
-
-	// TotalForagersEverDiedForaging adds up the bees that died on a foraging trip [COST-01], [COST-02]. Not in
-	// NetLogo: output of gobees-fast (obs.DailyOutputExtended), read by no system.
-	TotalForagersEverDiedForaging float64
-}
+// The NetLogo globals that only the output or the checks read are not part of the model (step F4): the counters of
+// bees and colonies ([DIE-01], [EGGP-02], [CCOL-08], [UCOL-11], [DEVP-04], [SEAS-03]), the record of the dead
+// colonies (deadCols, [DIE-02], [UCOL-12]) and the run summaries. The observers in package obs count them from Ark
+// events (package event).
 
 // ActiveBees is the daily activity queue: the active bees sorted by personalTime_s.
 // NetLogo: ActiveBeesSortedList. Filled in the morning [MORN-08] and used by the activity loop (both step 5).
@@ -36,22 +20,4 @@ type ActiveBees struct {
 // Read by the foraging stimuli [STNE-03], [STPO-03].
 type Daytime struct {
 	Daytime_s float64
-}
-
-// DeadColony is the record of a dead colony: the colony's data at death, as NetLogo keeps it in deadCols-own,
-// plus colonyDeathDay [DIE-02]. Unlike deadCols it keeps the species, SpeciesIDcolony (finding 9, see
-// trans/netlogo-findings.md#finding-9).
-type DeadColony struct {
-	Who            int64
-	Position       comp.Position
-	Colony         comp.Colony
-	Stores         comp.ColonyStores
-	Counts         comp.ColonyCounts
-	ColonyDeathDay float64 // ticks
-}
-
-// DeadColonies records the dead colonies (decision E in trans/data-model.md). NetLogo: the agentset deadCols.
-// Output only, no model procedure reads it.
-type DeadColonies struct {
-	List []DeadColony
 }

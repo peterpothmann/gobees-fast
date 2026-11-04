@@ -9,6 +9,7 @@ import (
 	"gobees/comp"
 	"gobees/enum/activity"
 	"gobees/enum/caste"
+	"gobees/event"
 	"gobees/globals"
 	"gobees/params"
 	"gobees/util"
@@ -28,8 +29,9 @@ type forager struct {
 	constants *params.Constants
 	derived   *globals.Derived
 	landscape *globals.Landscape
-	totals    *globals.Totals
 	death     beeDeath
+	trip      ecs.Event // event.ForagingTrip
+	died      ecs.Event // event.DiedForaging
 
 	beeMap        *beeMapper
 	colonyMap     *ecs.Map4[comp.Position, comp.Colony, comp.ColonyStores, comp.ColonyRange]
@@ -44,8 +46,9 @@ func newForager(w *ecs.World, rng *rand.Rand) forager {
 		constants:     ecs.GetResource[params.Constants](w),
 		derived:       ecs.GetResource[globals.Derived](w),
 		landscape:     ecs.GetResource[globals.Landscape](w),
-		totals:        ecs.GetResource[globals.Totals](w),
 		death:         newBeeDeath(w),
+		trip:          w.Event(event.ForagingTrip).For(ecs.C[comp.Bee]()),
+		died:          w.Event(event.DiedForaging).For(ecs.C[comp.Bee]()),
 		beeMap:        newBeeMapper(w),
 		colonyMap:     ecs.NewMap4[comp.Position, comp.Colony, comp.ColonyStores, comp.ColonyRange](w),
 		foodsourceMap: ecs.NewMap4[comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](w),
@@ -56,8 +59,8 @@ func newForager(w *ecs.World, rng *rand.Rand) forager {
 // ForagingProc lets the bee e make one foraging trip [FOR]. The bee may die on the trip.
 func (f *forager) ForagingProc(w *ecs.World, e ecs.Entity) {
 	_, _, b, _, _, fo, _ := f.beeMap.Get(e)
-	// [FOR-01]
-	f.totals.TotalForagingTripsToday = f.totals.TotalForagingTripsToday + b.Number
+	// [FOR-01] totalForagingTripsToday: output only, counted by the observers (step F4)
+	f.trip.Emit(e)
 	// [FOR-02]
 	if b.Activity == activity.PollenForaging {
 		fo.PollenForager = true
@@ -427,7 +430,7 @@ func (f *forager) Foraging_costsAndChoiceProc(w *ecs.World, e ecs.Entity) bool {
 		survivalChance := math.Pow(survivalPerSecond, tripDuration_s)
 		mortalityRisk := 1 - survivalChance
 		if f.rng.Float64() < mortalityRisk {
-			f.death.counters.TotalForagersEverDiedForaging += b.Number // output only, not in NetLogo
+			f.died.Emit(e) // output only, not in NetLogo
 			f.death.DieProc(w, e, "foraging: empty")
 			return false
 		}
@@ -457,7 +460,7 @@ func (f *forager) Foraging_costsAndChoiceProc(w *ecs.World, e ecs.Entity) bool {
 		survivalChance := math.Pow(survivalPerSecond, tripDuration_s)
 		mortalityRisk := 1 - survivalChance
 		if f.rng.Float64() < mortalityRisk {
-			f.death.counters.TotalForagersEverDiedForaging += b.Number // output only, not in NetLogo
+			f.died.Emit(e) // output only, not in NetLogo
 			f.death.DieProc(w, e, "foraging: N or P forager")
 			return false
 		}

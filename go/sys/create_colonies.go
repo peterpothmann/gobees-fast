@@ -30,7 +30,6 @@ type colonyFounder struct {
 	file      *params.ParameterFile
 	constants *params.Constants
 	landscape *globals.Landscape
-	counters  *globals.Counters
 	who       *globals.WhoCounter
 
 	beeFilter        *ecs.Filter1[comp.Bee]
@@ -49,7 +48,6 @@ func newColonyFounder(w *ecs.World, rng *rand.Rand) colonyFounder {
 		file:             ecs.GetResource[params.ParameterFile](w),
 		constants:        ecs.GetResource[params.Constants](w),
 		landscape:        ecs.GetResource[globals.Landscape](w),
-		counters:         ecs.GetResource[globals.Counters](w),
 		who:              ecs.GetResource[globals.WhoCounter](w),
 		beeFilter:        ecs.NewFilter1[comp.Bee](w),
 		foodsourceFilter: ecs.NewFilter2[comp.Position, comp.Foodsource](w),
@@ -103,8 +101,8 @@ func (c *colonyFounder) CreateColoniesProc(w *ecs.World) {
 		c.PatchesInRangeProc(e)
 		c.FoodsourcesInFlowerAndRangeProc(e)
 
-		// [CCOL-08]
-		c.counters.TotalColoniesEverProduced++
+		// [CCOL-08] totalColoniesEverProduced: output and [CHK-04] only, removed in step F4. The observers count
+		// the new colonies (ecs.OnCreateEntity, obs.Counters).
 	}
 }
 

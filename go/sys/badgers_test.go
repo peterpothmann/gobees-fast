@@ -102,12 +102,10 @@ func (cw *colonyWorld) addColonyAt(x, y float64, change func(c *comp.Colony, s *
 }
 
 func TestBadgersDigUpColony(t *testing.T) {
-	// [BADG-01] a dug-up colony loses its stores and all its bees, the brood is counted in broodDeathBadger.
-	// The colony dies the next morning in [UCOL-11].
+	// [BADG-01] a dug-up colony loses its stores and all its bees. The colony dies the next morning in [UCOL-11].
 	cw, s := prowlWorld(t, 1, comp.Position{X: 0, Y: 0})
 	near := cw.addColonyAt(10, 0, func(c *comp.Colony, st *comp.ColonyStores, n *comp.ColonyCounts) {
 		st.EnergyStore_kJ, st.PollenStore_g = 50, 3
-		n.TotalEggsProduced = 7 // the 5 eggs and 2 larvae below
 	})
 	cw.addBee(near, stage.Adult, caste.Queen, 1, 30)
 	cw.addBee(near, stage.Adult, caste.Worker, 3, 5)
@@ -123,9 +121,9 @@ func TestBadgersDigUpColony(t *testing.T) {
 		}
 		s.Update(cw.w)
 	}
-	_, st, n := cw.colony(near)
-	if st.EnergyStore_kJ != 0 || st.PollenStore_g != 0 || n.BroodDeathBadger != 7 {
-		t.Fatalf("near colony: energy %v, pollen %v, broodDeathBadger %v; want 0, 0, 7", st.EnergyStore_kJ, st.PollenStore_g, n.BroodDeathBadger)
+	_, st, _ := cw.colony(near)
+	if st.EnergyStore_kJ != 0 || st.PollenStore_g != 0 {
+		t.Fatalf("near colony: energy %v, pollen %v; want 0, 0", st.EnergyStore_kJ, st.PollenStore_g)
 	}
 	if left := len(beesByColony(ecs.NewFilter1[comp.Bee](cw.w), func(b *comp.Bee) bool { return true })[near]); left != 0 {
 		t.Errorf("%d bee agents left in the dug-up colony", left)
@@ -134,13 +132,13 @@ func TestBadgersDigUpColony(t *testing.T) {
 		t.Errorf("colony alive %v, far queen alive %v, hibernating queen alive %v; want all true",
 			cw.w.Alive(near), cw.w.Alive(farQueen), cw.w.Alive(hibernating))
 	}
-	if cw.counters.TotalBeesEverDied != 11 {
-		t.Errorf("TotalBeesEverDied %v, want 11", cw.counters.TotalBeesEverDied)
+	if cw.tally.beesDied != 11 {
+		t.Errorf("%v bees died, want 11", cw.tally.beesDied)
 	}
-	// next morning: the empty colony dies, its eggs are accounted for (eggCheck in colonyDeath)
+	// next morning: the empty colony dies
 	cw.nextMorning()
-	if cw.w.Alive(near) || cw.counters.ColonyDeathsNoBees != 1 {
-		t.Errorf("colony alive %v, ColonyDeathsNoBees %v; want false and 1", cw.w.Alive(near), cw.counters.ColonyDeathsNoBees)
+	if cw.w.Alive(near) || cw.tally.coloniesDied != 1 {
+		t.Errorf("colony alive %v, %d colonies died; want false and 1", cw.w.Alive(near), cw.tally.coloniesDied)
 	}
 }
 

@@ -1,31 +1,168 @@
 package obs
 
 import (
+	"math"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"gobees/comp"
+	"gobees/enum/activity"
+	"gobees/enum/caste"
+	"gobees/enum/stage"
 	"gobees/globals"
+	"gobees/params"
 
 	"github.com/mlange-42/ark-tools/reporter"
 	"github.com/mlange-42/ark/ecs"
 )
 
-func TestDailyOutputCSV(t *testing.T) {
+// newWorld returns a world with the resources that the observers read: ticks 1, day 1, the default world size
+// (0-300 x 0-210), scaling 0.1 patches per m, an empty parameter file.
+func newWorld(t *testing.T) *ecs.World {
+	t.Helper()
 	w := ecs.NewWorld()
-	ticks := globals.Ticks{Ticks: 1}
-	ecs.AddResource(w, &ticks)
-	output := globals.DailyOutput{TotalQueens: 500, TotalHibernatingQueens: 500, TotalMapArea_km2: 1.25}
-	ecs.AddResource(w, &output)
+	ecs.AddResource(w, &globals.Ticks{Ticks: 1})
+	ecs.AddResource(w, &globals.Calendar{Day: 1})
+	world := params.Default().World
+	ecs.AddResource(w, &world)
+	ecs.AddResource(w, &globals.Landscape{Scaling_NLpatches_per_m: 0.1})
+	ecs.AddResource(w, &globals.ActiveBees{})
+	ecs.AddResource(w, &params.ParameterFile{})
+	return w
+}
+
+// addBee adds a bee with the given values. Adults are no brood.
+func addBee(w *ecs.World, b comp.Bee) ecs.Entity {
+	b.Brood = b.Stage != stage.Adult
+	return ecs.NewMap1[comp.Bee](w).NewEntity(&b)
+}
+
+// addFoodsourceAt adds a foodsource with the given radius at (x, y).
+func addFoodsourceAt(w *ecs.World, x, y, radius_m float64) ecs.Entity {
+	return ecs.NewMap2[comp.Position, comp.Foodsource](w).NewEntity(&comp.Position{X: x, Y: y}, &comp.Foodsource{Radius_m: radius_m})
+}
+
+func almostEqual(a, b float64) bool {
+	return math.Abs(a-b) <= 1e-9*math.Max(1, math.Abs(b))
+}
+
+func TestDailyOutputTotals(t *testing.T) {
+	// [OUT-01]
+	w := newWorld(t)
+	colonies := ecs.NewMap1[comp.Colony](w)
+	colonies.NewEntity(&comp.Colony{})
+	colonies.NewEntity(&comp.Colony{})
+	rest := activity.Resting // the zero value of Activity is Hibernate
+	for _, b := range []comp.Bee{
+		{Stage: stage.Adult, Caste: caste.Queen, Number: 3, Mated: true, Activity: activity.Hibernate, Weight_mg: 600},
+		{Stage: stage.Adult, Caste: caste.Queen, Number: 1, Mated: true, Activity: rest, Weight_mg: 800}, // mother queen
+		{Stage: stage.Adult, Caste: caste.Queen, Number: 1, Activity: rest, Weight_mg: 500},              // young queen, unmated
+		{Stage: stage.Pupa, Caste: caste.Queen, Number: 2, Activity: rest},                               // queen brood, unmated
+		{Stage: stage.Adult, Caste: caste.Male, Number: 4, Activity: rest, Weight_mg: 100},
+		{Stage: stage.Larva, Caste: caste.Male, Number: 2, Activity: rest},
+		{Stage: stage.Adult, Caste: caste.Worker, Number: 1, Activity: rest, Weight_mg: 100},
+		{Stage: stage.Adult, Caste: caste.Worker, Number: 5, Activity: rest, Weight_mg: 200},
+		{Stage: stage.Egg, Caste: caste.Undefined, Number: 5, Activity: rest},
+	} {
+		addBee(w, b)
+	}
+	ecs.GetResource[globals.ActiveBees](w).List = make([]ecs.Entity, 3)
+
+	o := &DailyOutput{}
+	o.Initialize(w)
+	o.Values(w)
+	// the mean weights are means over adult agents, not weighted by number
+	want := DailyTotals{
+		TotalColonies: 2, TotalQueens: 7, TotalMatedQueens: 4, TotalUnmatedQueens: 3, TotalHibernatingQueens: 3,
+		TotalBeeAgents: 9, TotalMales: 6, TotalActiveBees: 3,
+		MeanWorkerWeight_mg: 150, MeanQueenWeight_mg: (600 + 800 + 500) / 3.0,
+		MeanAdultWeight_mg: (600 + 800 + 500 + 100 + 100 + 200) / 6.0,
+	}
+	if o.Totals != want {
+		t.Errorf("totals:\n got %+v\nwant %+v", o.Totals, want)
+	}
+
+	// without adults the mean weights are 0
+	adults := []ecs.Entity{}
+	query := ecs.NewFilter1[comp.Bee](w).Query()
+	for query.Next() {
+		if !query.Get().Brood {
+			adults = append(adults, query.Entity())
+		}
+	}
+	for _, e := range adults {
+		w.RemoveEntity(e)
+	}
+	o.Values(w)
+	if d := o.Totals; d.MeanWorkerWeight_mg != 0 || d.MeanQueenWeight_mg != 0 || d.MeanAdultWeight_mg != 0 {
+		t.Errorf("mean weights without adults: %v, %v, %v; want 0", d.MeanWorkerWeight_mg, d.MeanQueenWeight_mg, d.MeanAdultWeight_mg)
+	}
+}
+
+func TestTotalMapAreaREP(t *testing.T) {
+	// [OUT-02], [AREA]. Worked example (positions chosen by hand), Scaling 0.1 patches per m:
+	// A (100, 100), radius 100 m = 10 patches; B (150, 120), radius 50 m = 5 patches.
+	// top: B 120 + 5 = 125, bottom: A 100 - 10 = 90, right: B 150 + 5 = 155, left: A 100 - 10 = 90.
+	// (125 - 90) * (155 - 90) = 2275 patches^2 = 227500 m2 = 0.2275 km2.
+	w := newWorld(t)
+	addFoodsourceAt(w, 100, 100, 100)
+	addFoodsourceAt(w, 150, 120, 50)
+	colonies := ecs.NewMap1[comp.Colony](w)
+	colonies.NewEntity(&comp.Colony{})
+	colonies.NewEntity(&comp.Colony{})
+	o := &DailyOutput{}
+	o.Initialize(w) // [INIT-12] the area of the landscape after Setup
+	o.Values(w)
+	if d := o.Totals; !almostEqual(d.TotalMapArea_km2, 0.2275) || !almostEqual(d.ColonyDensity_km2, 2/0.2275) {
+		t.Errorf("area %v km2, density %v; want 0.2275 and %v", d.TotalMapArea_km2, d.ColonyDensity_km2, 2/0.2275)
+	}
+	// computed only once: a new foodsource does not change it
+	addFoodsourceAt(w, 10, 10, 10)
+	o.Values(w)
+	if !almostEqual(o.Totals.TotalMapArea_km2, 0.2275) {
+		t.Errorf("area changed to %v", o.Totals.TotalMapArea_km2)
+	}
+
+	// limited to the world: C (295, 5), radius 100 m: right 305 -> 300, bottom -5 -> 0.
+	// (125 - 0) * (300 - 90) = 26250 patches^2 = 2.625 km2
+	w = newWorld(t)
+	addFoodsourceAt(w, 100, 100, 100)
+	addFoodsourceAt(w, 150, 120, 50)
+	addFoodsourceAt(w, 295, 5, 100)
+	o = &DailyOutput{}
+	o.Initialize(w)
+	if got := o.TotalMapAreaREP(); !almostEqual(got, 2.625) {
+		t.Errorf("area limited to the world: %v km2, want 2.625", got)
+	}
+
+	// no foodsources: no area, no density
+	w = newWorld(t)
+	o = &DailyOutput{}
+	o.Initialize(w)
+	o.Values(w)
+	if d := o.Totals; d.TotalMapArea_km2 != 0 || d.ColonyDensity_km2 != 0 {
+		t.Errorf("without foodsources: area %v, density %v; want 0", d.TotalMapArea_km2, d.ColonyDensity_km2)
+	}
+}
+
+func TestDailyOutputCSV(t *testing.T) {
+	w := newWorld(t)
+	ecs.GetResource[globals.Landscape](w).Scaling_NLpatches_per_m = 1
+	addFoodsourceAt(w, 100, 100, 100) // 200 x 200 patches = 200 m x 200 m = 0.04 km2
+	queens := addBee(w, comp.Bee{Stage: stage.Adult, Caste: caste.Queen, Number: 500, Mated: true, Activity: activity.Hibernate})
 
 	file := filepath.Join(t.TempDir(), "out", "daily_output.csv")
 	csv := reporter.CSV{Observer: &DailyOutput{}, File: file, Sep: "\t"}
 	csv.Initialize(w)
 	csv.Update(w) // day 1
 
-	ticks.Ticks = 2
-	output.TotalColonies, output.TotalHibernatingQueens, output.MeanQueenWeight_mg = 2, 498, 600.5
-	output.ColonyDensity_km2 = 1.6
+	ecs.GetResource[globals.Ticks](w).Ticks = 2
+	ecs.NewMap1[comp.Bee](w).Get(queens).Number = 498
+	colonies := ecs.NewMap1[comp.Colony](w)
+	colonies.NewEntity(&comp.Colony{})
+	colonies.NewEntity(&comp.Colony{})
+	addBee(w, comp.Bee{Stage: stage.Adult, Caste: caste.Queen, Number: 1, Mated: true, Weight_mg: 600, Activity: activity.Resting})
 	csv.Update(w) // day 2
 	csv.Finalize(w)
 
@@ -37,8 +174,8 @@ func TestDailyOutputCSV(t *testing.T) {
 	want := "t\tticks\tTotalQueens\tTotalMatedQueens\tTotalUnmatedQueens\tTotalHibernatingQueens\t" +
 		"TotalColonies\tTotalBeeAgents\tTotalMales\tTotalActiveBees\tMeanWorkerWeight_mg\tMeanQueenWeight_mg\t" +
 		"MeanAdultWeight_mg\tTotalMapArea_km2\tColonyDensity_km2\n" +
-		"0\t1\t500\t0\t0\t500\t0\t0\t0\t0\t0\t0\t0\t1.25\t0\n" +
-		"1\t2\t500\t0\t0\t498\t2\t0\t0\t0\t0\t600.5\t0\t1.25\t1.6\n"
+		"0\t1\t500\t500\t0\t500\t0\t1\t0\t0\t0\t0\t0\t0.04\t0\n" +
+		"1\t2\t499\t499\t0\t498\t2\t2\t0\t0\t0\t300\t300\t0.04\t50\n"
 	if got := string(b); got != want {
 		t.Errorf("got\n%s\nwant\n%s", got, want)
 	}

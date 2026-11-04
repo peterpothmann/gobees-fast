@@ -29,8 +29,6 @@ type UpdateColonies struct {
 	today     *globals.FoodsourcesToday
 	file      *params.ParameterFile
 	constants *params.Constants
-	counters  *globals.Counters
-	dead      globals.DeadColonies
 	beeDeath  beeDeath
 	colDeath  colonyDeath
 	colonies  colonyFounder
@@ -49,10 +47,7 @@ func (s *UpdateColonies) Initialize(w *ecs.World) {
 	s.today = ecs.GetResource[globals.FoodsourcesToday](w)
 	s.file = ecs.GetResource[params.ParameterFile](w)
 	s.constants = ecs.GetResource[params.Constants](w)
-	s.counters = ecs.GetResource[globals.Counters](w)
-	ecs.AddResource(w, &s.dead)
 	s.beeDeath = newBeeDeath(w)
-	s.colDeath = newColonyDeath(w)
 	s.colonies = newColonyFounder(w, s.rng)
 
 	s.colonyFilter = ecs.NewFilter1[comp.Colony](w)
@@ -87,10 +82,8 @@ func (s *UpdateColonies) Update(w *ecs.World) {
 		s.updateColony(w, col, beesOf[col])
 	}
 
-	// [UCOL-12] the record then holds the same colonies as NetLogo's deadCols.
-	if !s.file.KeepDeadColonies && s.calendar.Day == 1 {
-		s.dead.List = s.dead.List[:0]
-	}
+	// [UCOL-12] removing the dead colonies on 1 January: the record of the dead colonies is output, kept by the
+	// observers (obs.Counters), step F4.
 }
 
 func (s *UpdateColonies) Finalize(w *ecs.World) {}
@@ -117,8 +110,7 @@ func (s *UpdateColonies) updateColony(w *ecs.World, col ecs.Entity, members []ec
 	}
 	all := func(b *comp.Bee) bool { return true }
 
-	countBroodMort_NA := 0.0
-	countBroodMort_ES := 0.0
+	// countBroodMort_NA, countBroodMort_ES: read only by the egg accounting [CHK-04], removed in step F4
 
 	// [UCOL-01]
 	if s.today.FoodsourcesInFlowerUpdate {
@@ -142,9 +134,6 @@ func (s *UpdateColonies) updateColony(w *ecs.World, col ecs.Entity, members []ec
 	// [UCOL-03]
 	if stores.EnergyStore_kJ <= 0 {
 		for _, e := range ask(all) {
-			if b := s.beeMap.Get(e); b.Brood {
-				countBroodMort_ES += b.Number
-			}
 			s.beeDeath.DieProc(w, e, "Colony's energy store depleted!")
 		}
 	}
@@ -155,18 +144,13 @@ func (s *UpdateColonies) updateColony(w *ecs.World, col ecs.Entity, members []ec
 	}
 	if adults == 0 {
 		for _, e := range ask(all) {
-			if b := s.beeMap.Get(e); b.Brood {
-				countBroodMort_NA += b.Number
-			}
 			s.beeDeath.DieProc(w, e, "No adult bees left!")
 		}
 	}
 	// get the components again: removing entities is a structural change of the world
 	colony, stores, counts = s.colonyMap.Get(col)
 
-	// [UCOL-05]
-	counts.BroodDeathsNoAdults += countBroodMort_NA
-	counts.BroodDeathsEnergyStores += countBroodMort_ES
+	// [UCOL-05] broodDeathsNoAdults, broodDeathsEnergyStores: removed in step F4
 	stores.SummedIncubationToday_kJ = 0
 
 	// [UCOL-06]
@@ -194,20 +178,16 @@ func (s *UpdateColonies) updateColony(w *ecs.World, col ecs.Entity, members []ec
 	// [UCOL-10] queenright?: never read, removed in step F3
 
 	// [UCOL-11]
+	// colonyDeathsEndSeason, colonyDeathsNoBees: read only by [CHK-04], removed in step F4
 	if len(alive(all)) == 0 {
-		if s.calendar.Day >= s.speciesMap.Get(colony.SpeciesIDcolony).SeasonStop {
-			s.counters.ColonyDeathsEndSeason++
-		} else {
-			s.counters.ColonyDeathsNoBees++
-		}
 		s.colDeath.DieProc(w, col, "Colony: No adults or brood left in this colony!")
 	} // otherwise colonyAge + 1: never read, removed in step F3
 }
 
 // statistics sets the colony statistics from the living members of the colony [UCOL-06].
 func (s *UpdateColonies) statistics(c *comp.ColonyCounts, members []ecs.Entity) {
-	c.AllEggs, c.AllLarvae, c.AllPupae, c.AllAdults = 0, 0, 0, 0
-	c.AllAdultWorkers, c.AllAdultMales = 0, 0
+	// allAdultMales: read only by [CHK-03], removed in step F4
+	c.AllEggs, c.AllLarvae, c.AllPupae, c.AllAdults, c.AllAdultWorkers = 0, 0, 0, 0, 0
 	for _, e := range members {
 		b := s.beeMap.Get(e)
 		switch b.Stage {
@@ -222,9 +202,6 @@ func (s *UpdateColonies) statistics(c *comp.ColonyCounts, members []ecs.Entity) 
 			if b.Caste == caste.Worker {
 				c.AllAdultWorkers += b.Number
 			}
-		}
-		if !b.Brood && b.Caste == caste.Male {
-			c.AllAdultMales += b.Number
 		}
 	}
 	if c.AllAdultWorkers > 0 {

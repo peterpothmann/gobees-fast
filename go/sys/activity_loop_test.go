@@ -9,6 +9,7 @@ import (
 	"gobees/enum/caste"
 	"gobees/enum/stage"
 	"gobees/globals"
+	"gobees/internal/check"
 
 	"github.com/mlange-42/ark/ecs"
 )
@@ -29,7 +30,6 @@ func newActivityWorld(t *testing.T, seed uint64) *activityWorld {
 	aw := &activityWorld{broodWorld: newBroodWorld(t, seed), wake: &WakeUpBees{},
 		loop: &ActivityLoop{CheckActiveCount: true}, eod: &EndOfDayResting{}}
 	aw.cal.DailyForagingPeriod_s = 8 * 3600
-	ecs.AddResource(aw.w, &globals.Totals{})
 	ecs.AddResource(aw.w, &globals.Derived{MortalityForager_per_s: 1e-05}) // ForagingMortalityModel "high" [PAR-04]
 	aw.wake.Initialize(aw.w)
 	aw.loop.Initialize(aw.w)
@@ -143,7 +143,7 @@ func TestStimuli(t *testing.T) {
 		{"founding, larvae present", 1, comp.ColonyCounts{AllAdults: 1, AllLarvae: 12}, 0},
 		{"workers present", 0, comp.ColonyCounts{AllAdults: 2, AllEggs: 12}, 1},
 		// finding 45 (see trans/netlogo-findings.md#finding-45): a male counts like a worker
-		{"queen and one male", 0, comp.ColonyCounts{AllAdults: 2, AllAdultMales: 1, AllEggs: 12}, 1},
+		{"queen and one male", 0, comp.ColonyCounts{AllAdults: 2, AllEggs: 12}, 1},
 	} {
 		stores := comp.ColonyStores{PollenStore_g: tc.pollen}
 		if got := StimEgglayingREP(&stores, &tc.counts, sp); got != tc.want {
@@ -377,28 +377,30 @@ func TestActivityLoopQueenWithoutColony(t *testing.T) {
 
 func TestActivityLoopExampleFarm(t *testing.T) {
 	// the full schedule of steps 0 to 6 on the example farm for 200 days. CheckActiveCount compares the length of
-	// the queue with NetLogo's count in every turn [GO-06].
+	// the queue with NetLogo's count in every turn [GO-06]. The checks of the state [CHK-03] run every day.
 	if testing.Short() {
 		t.Skip("200 days of the example farm")
 	}
 	loop := &ActivityLoop{CheckActiveCount: true}
 	a := newExampleFarmSetup(t, 1, &CreateInitialQueens{}, &Tick{}, &UpdateMorning{}, &UpdateFoodsources{},
-		&EmergenceNewQueens{}, &WakeUpBees{}, &UpdateColonies{}, &CheckNumbers{SkipColonyCheck: true},
+		&EmergenceNewQueens{}, &WakeUpBees{}, &UpdateColonies{}, &CheckNumbers{},
 		&NeedNectarPollenLarvaeToday{}, loop, &EndOfDayResting{}, &FeedLarvae{}, &QueenProductionDate{},
 		&Development{}, &MortalityBrood{})
 	active := ecs.GetResource[globals.ActiveBees](a.World)
 	maxQueue := 0
 	for range 200 {
 		a.Update()
+		if err := check.Day(a.World, false); err != nil {
+			t.Fatal(err)
+		}
 		maxQueue = max(maxQueue, len(active.List))
 	}
 	if maxQueue == 0 {
 		t.Error("no bee was ever active")
 	}
 	totals := ecs.GetResource[globals.Totals](a.World)
-	t.Logf("largest activity queue: %d bees. Day 200: %v adult workers, %v adult males, brood %v/%v/%v",
-		maxQueue, totals.TotalAdultWorkers, totals.TotalAdultMales,
-		totals.TotalEggs, totals.TotalLarvae, totals.TotalPupae)
+	t.Logf("largest activity queue: %d bees. Day 200: brood %v/%v/%v",
+		maxQueue, totals.TotalEggs, totals.TotalLarvae, totals.TotalPupae)
 }
 
 func TestNextActiveBeeREPAfterDeath(t *testing.T) {

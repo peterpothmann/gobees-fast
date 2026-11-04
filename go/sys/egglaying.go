@@ -25,11 +25,10 @@ type eggLayer struct {
 	ticks     *globals.Ticks
 	file      *params.ParameterFile
 	constants *params.Constants
-	counters  *globals.Counters
 	who       *globals.WhoCounter
 
 	beeMap     *beeMapper
-	colonyMap  *ecs.Map3[comp.Colony, comp.ColonyStores, comp.ColonyCounts]
+	colonyMap  *ecs.Map2[comp.Colony, comp.ColonyStores]
 	speciesMap *ecs.Map1[comp.Species]
 }
 
@@ -39,10 +38,9 @@ func newEggLayer(w *ecs.World, rng *rand.Rand) eggLayer {
 		ticks:      ecs.GetResource[globals.Ticks](w),
 		file:       ecs.GetResource[params.ParameterFile](w),
 		constants:  ecs.GetResource[params.Constants](w),
-		counters:   ecs.GetResource[globals.Counters](w),
 		who:        ecs.GetResource[globals.WhoCounter](w),
 		beeMap:     newBeeMapper(w),
-		colonyMap:  ecs.NewMap3[comp.Colony, comp.ColonyStores, comp.ColonyCounts](w),
+		colonyMap:  ecs.NewMap2[comp.Colony, comp.ColonyStores](w),
 		speciesMap: ecs.NewMap1[comp.Species](w),
 	}
 }
@@ -63,12 +61,12 @@ func (l *eggLayer) EgglayingProc(e ecs.Entity) []ecs.Entity {
 
 	// [EGG-02]
 	var eggs []ecs.Entity
-	_, stores, _ := l.colonyMap.Get(colonyID)
+	_, stores := l.colonyMap.Get(colonyID)
 	if stores.PollenStore_g > pollenCost_g && stores.EnergyStore_kJ > energyCost_kJ {
 		// NetLogo shuffles the new cohorts (decision C). One cohort draws no random number.
 		egg := l.hatch(e)
 		eggs = []ecs.Entity{egg}
-		colony, _, _ := l.colonyMap.Get(colonyID)
+		colony, _ := l.colonyMap.Get(colonyID)
 		_, _, b, _, _, _, _ := l.beeMap.Get(egg)
 		if motherCaste == caste.Queen {
 			if float64(l.ticks.Ticks) > colony.SwitchPointDate {
@@ -80,7 +78,7 @@ func (l *eggLayer) EgglayingProc(e ecs.Entity) []ecs.Entity {
 			b.Ploidy = 1 // never run: workers do not lay eggs, see the annotation
 		}
 		l.EggsParameterSettingProc(egg, beesInCohort)
-		_, stores, _ := l.colonyMap.Get(colonyID)
+		_, stores := l.colonyMap.Get(colonyID)
 		stores.PollenStore_g = stores.PollenStore_g - pollenCost_g
 		stores.EnergyStore_kJ = stores.EnergyStore_kJ - energyCost_kJ
 	}
@@ -128,8 +126,7 @@ func (l *eggLayer) EggsParameterSettingProc(e ecs.Entity, beesInCohort float64) 
 	// [EGGP-02], [EGGP-03] kept from the mother: ColonyID, SpeciesID, SpeciesName, MtDNA (and the position, GUI
 	// only). activityList: GUI log, not translated.
 	g.SpermathecaList = []float64{}
-	b.Number = beesInCohort
-	l.counters.TotalBeesEverProduced += b.Number
+	b.Number = beesInCohort // totalBeesEverProduced: read only by [CHK-01], removed in step F4
 	b.Activity = activity.Resting
 	b.AdultAge = 0
 	b.Brood = true
@@ -155,6 +152,5 @@ func (l *eggLayer) EggsParameterSettingProc(e ecs.Entity, beesInCohort float64) 
 	b.PersonalTime_s = 0
 	f.PollenForager = false
 	f.PollenLoadSquadron_g = 0
-	_, _, counts := l.colonyMap.Get(b.ColonyID)
-	counts.TotalEggsProduced += beesInCohort
+	// totalEggsProduced of the colony: read only by the egg accounting [CHK-04], removed in step F4
 }

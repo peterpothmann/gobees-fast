@@ -25,7 +25,7 @@ type MortalityBrood struct {
 
 	beeFilter  *ecs.Filter1[comp.Bee]
 	beeMap     *ecs.Map2[comp.Bee, comp.Development]
-	colonyMap  *ecs.Map2[comp.Colony, comp.ColonyCounts]
+	colonyMap  *ecs.Map1[comp.Colony]
 	speciesMap *ecs.Map1[comp.Species]
 }
 
@@ -36,7 +36,7 @@ func (s *MortalityBrood) Initialize(w *ecs.World) {
 
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
 	s.beeMap = ecs.NewMap2[comp.Bee, comp.Development](w)
-	s.colonyMap = ecs.NewMap2[comp.Colony, comp.ColonyCounts](w)
+	s.colonyMap = ecs.NewMap1[comp.Colony](w)
 	s.speciesMap = ecs.NewMap1[comp.Species](w)
 }
 
@@ -48,12 +48,12 @@ func (s *MortalityBrood) Update(w *ecs.World) {
 	for _, e := range askAllBees(s.beeFilter, s.rng) {
 		b, dev := s.beeMap.Get(e)
 		sp := s.speciesMap.Get(b.SpeciesID)
-		memoNumber := b.Number
+		// memoNumber and the brood death counters of the colony (eggDeathsIncubation, larvaDeathsWeight,
+		// larvaDeathsIncubation, pupaDeathsIncubation, broodDeathsCP): read only by the egg accounting [CHK-04],
+		// removed in step F4. The assertion of [MORB-02] stays.
 
 		// [MORB-01]
 		if b.Stage == stage.Egg && b.BroodAge > sp.DevAgeHatchingMax_d {
-			_, counts := s.colonyMap.Get(b.ColonyID)
-			counts.EggDeathsIncubation += memoNumber
 			s.death.DieProc(w, e, "Egg: broodAge > devAgeHatchingMax_d")
 			continue
 		}
@@ -70,14 +70,6 @@ func (s *MortalityBrood) Update(w *ecs.World) {
 					relativeWeight = b.Weight_mg / sp.DevWeightPupationMin_mg
 					relativeIncub = dev.CumulIncubationReceived_kJ / sp.DevIncubationPupationTH_kJ
 				}
-				// NOTE: if both are equal and < 1, neither counter is increased (see the annotation)
-				_, counts := s.colonyMap.Get(b.ColonyID)
-				if relativeWeight < 1 && relativeWeight < relativeIncub {
-					counts.LarvaDeathsWeight += memoNumber
-				}
-				if relativeIncub < 1 && relativeIncub < relativeWeight {
-					counts.LarvaDeathsIncubation += memoNumber
-				}
 				if relativeWeight >= 1 && relativeIncub >= 1 {
 					panic("Neither Weight or Incubation reason for death: MortalityBroodProc (1)")
 				}
@@ -93,8 +85,6 @@ func (s *MortalityBrood) Update(w *ecs.World) {
 			}
 			if ((b.Caste == caste.Worker || b.Caste == caste.Male) && b.BroodAge > sp.DevAgeEmergingMax_d) ||
 				(b.Caste == caste.Queen && b.BroodAge > sp.DevAge_Q_EmergingMax_d) {
-				_, counts := s.colonyMap.Get(b.ColonyID)
-				counts.PupaDeathsIncubation += memoNumber
 				s.death.DieProc(w, e, "Pupa: broodAge > max. emerging age")
 				continue
 			}
@@ -102,9 +92,8 @@ func (s *MortalityBrood) Update(w *ecs.World) {
 
 		// [MORB-04] adults without colony are skipped
 		if !b.ColonyID.IsZero() {
-			if colony, counts := s.colonyMap.Get(b.ColonyID); ticks > colony.CompetitionPointDate {
+			if colony := s.colonyMap.Get(b.ColonyID); ticks > colony.CompetitionPointDate {
 				if b.Stage == stage.Egg {
-					counts.BroodDeathsCP += memoNumber
 					s.death.DieProc(w, e, "Egg: CP!")
 				}
 			}

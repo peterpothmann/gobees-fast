@@ -356,16 +356,8 @@ func TestDevelopmentWorkerTimeline(t *testing.T) {
 	if f.Cropvolume_myl != CropAndPelletSizeREP("nectar", b.Weight_mg, bw.sp) || f.GlossaLength_mm != ProboscisLengthREP(b.Weight_mg, bw.sp) {
 		t.Errorf("crop %v, glossa %v", f.Cropvolume_myl, f.GlossaLength_mm)
 	}
-	_, _, n := bw.colony(b.ColonyID)
-	if n.TotalAdultsProduced != 12 {
-		t.Errorf("colony counters %+v", *n)
-	}
-	if bw.counters.TotalBeesEverProduced != 12 {
-		t.Errorf("global counters %+v", *bw.counters)
-	}
-	// [CHK-04] every egg is accounted for
-	if c := eggCheck(n); c != 0 {
-		t.Errorf("eggCheck = %v, want 0", c)
+	if bw.tally.queensEmerged != 0 {
+		t.Errorf("%v queens emerged, want 0", bw.tally.queensEmerged)
 	}
 }
 
@@ -386,9 +378,9 @@ func TestDevelopmentQueenTimeline(t *testing.T) {
 	if *th != thresholds(sitYoungQueen) || f.PollenPellets_g != CropAndPelletSizeREP("pollen", 980, bw.sp) {
 		t.Errorf("thresholds %+v, pollen load %v", *th, f.PollenPellets_g)
 	}
-	_, _, n := bw.colony(b.ColonyID)
-	if n.TotalAdultsProduced != 12 || bw.counters.TotalAdultQueensEverProduced != 12 {
-		t.Errorf("queen counters: colony %v, global %v", n.TotalAdultsProduced, bw.counters.TotalAdultQueensEverProduced)
+	// event.QueenEmerged for the output (obs.Counters.TotalAdultQueensEverProduced)
+	if bw.tally.queensEmerged != 12 {
+		t.Errorf("%v queens emerged, want 12", bw.tally.queensEmerged)
 	}
 }
 
@@ -433,8 +425,8 @@ func TestDevelopmentAdultMortality(t *testing.T) {
 			t.Errorf("%s: alive %v, want %v", tc.name, bw.w.Alive(tc.e), tc.alive)
 		}
 	}
-	if bw.counters.TotalBeesEverDied != 2 {
-		t.Errorf("TotalBeesEverDied %v, want 2", bw.counters.TotalBeesEverDied)
+	if bw.tally.beesDied != 2 {
+		t.Errorf("%v bees died, want 2", bw.tally.beesDied)
 	}
 	if b, _, _, _, _ := bw.bee(q); b.AdultAge != 601 {
 		t.Errorf("queen adultAge %v, want 601", b.AdultAge)
@@ -481,12 +473,12 @@ func TestDevelopmentBackgroundMortality(t *testing.T) {
 		bw.addBee(col, stage.Adult, caste.Worker, 1, 1)
 	}
 	bw.dev.Update(bw.w)
-	if bw.counters.TotalBeesEverDied != 0 {
-		t.Errorf("value 0: %v bees died", bw.counters.TotalBeesEverDied)
+	if bw.tally.beesDied != 0 {
+		t.Errorf("value 0: %v bees died", bw.tally.beesDied)
 	}
 	bw.constants.MortalityAdultsBackground_daily = 0.01
 	bw.dev.Update(bw.w)
-	if died := bw.counters.TotalBeesEverDied; died < 975 || died > 1000 {
+	if died := bw.tally.beesDied; died < 975 || died > 1000 {
 		t.Errorf("value 0.01: %v of 1000 bees died, want about 990", died)
 	}
 }
@@ -529,10 +521,8 @@ func TestMortalityBrood(t *testing.T) {
 			t.Errorf("%s: alive %v, want %v", tc.name, bw.w.Alive(tc.e), tc.alive)
 		}
 	}
-	_, _, n := bw.colony(col)
-	if n.EggDeathsIncubation != 12 || n.LarvaDeathsWeight != 3 || n.LarvaDeathsIncubation != 2 || n.PupaDeathsIncubation != 9 {
-		t.Errorf("death counters: eggs %v, larvae weight %v, larvae incubation %v, pupae %v; want 12, 3, 2, 9",
-			n.EggDeathsIncubation, n.LarvaDeathsWeight, n.LarvaDeathsIncubation, n.PupaDeathsIncubation)
+	if bw.tally.beesDied != 12+3+2+4+5 {
+		t.Errorf("%v bees died, want 26", bw.tally.beesDied)
 	}
 
 	// [MORB-02] assertion: a larva that would have pupated
@@ -555,8 +545,8 @@ func TestMortalityBroodCompetitionPoint(t *testing.T) {
 		t.Errorf("alive: egg after CP %v, larva after CP %v, egg on CP day %v; want false, true, true",
 			bw.w.Alive(eggAfter), bw.w.Alive(larvaAfter), bw.w.Alive(eggOnCP))
 	}
-	if _, _, n := bw.colony(after); n.BroodDeathsCP != 12 {
-		t.Errorf("broodDeathsCP %v, want 12", n.BroodDeathsCP)
+	if bw.tally.beesDied != 12 {
+		t.Errorf("%v bees died, want 12", bw.tally.beesDied)
 	}
 }
 
@@ -591,12 +581,9 @@ func TestEgglaying(t *testing.T) {
 	if *th != thresholds(sitEgg) || f.Cropvolume_myl != 0 || f.KnownMasterpatchesNectarList == nil || *d != (comp.Development{}) {
 		t.Errorf("egg thresholds %+v, forager %+v, development %+v", *th, *f, *d)
 	}
-	_, s, n := bw.colony(col)
+	_, s, _ := bw.colony(col)
 	if !almostEqual(s.PollenStore_g, 1-0.018) || !almostEqual(s.EnergyStore_kJ, 1-0.1116) {
 		t.Errorf("stores %v g, %v kJ; want 0.982, 0.8884", s.PollenStore_g, s.EnergyStore_kJ)
-	}
-	if n.TotalEggsProduced != 12 || bw.counters.TotalBeesEverProduced != 12 {
-		t.Errorf("totalEggsProduced %v, TotalBeesEverProduced %v; want 12", n.TotalEggsProduced, bw.counters.TotalBeesEverProduced)
 	}
 	// [EGG-03]
 	if qb, _, _, _, _ := bw.bee(queen); qb.PersonalTime_s != 1000+86400 || qb.EmergingDate != 120 {
@@ -673,11 +660,8 @@ func TestEgglayingOneCohort(t *testing.T) {
 	if b, _, _, _, _ := bw.bee(eggs[0]); b.Number != 12 {
 		t.Errorf("cohort of %v eggs, want 12", b.Number)
 	}
-	_, s, n := bw.colony(col)
+	_, s, _ := bw.colony(col)
 	if !almostEqual(s.PollenStore_g, 1-12*0.0015) || !almostEqual(s.EnergyStore_kJ, 1-12*0.0015*6.2) {
 		t.Errorf("stores %v g, %v kJ; want the cost of 12 eggs", s.PollenStore_g, s.EnergyStore_kJ)
-	}
-	if n.TotalEggsProduced != 12 || bw.counters.TotalBeesEverProduced != 12 {
-		t.Errorf("totalEggsProduced %v, TotalBeesEverProduced %v; want 12", n.TotalEggsProduced, bw.counters.TotalBeesEverProduced)
 	}
 }

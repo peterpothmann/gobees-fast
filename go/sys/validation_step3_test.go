@@ -7,7 +7,6 @@ import (
 	"gobees/comp"
 	"gobees/enum/activity"
 	"gobees/enum/caste"
-	"gobees/globals"
 	"gobees/validation"
 
 	"github.com/mlange-42/ark/ecs"
@@ -32,7 +31,11 @@ func step3Metrics(w *ecs.World) map[string]float64 {
 			m["nestsite_area"] = s.NestSiteArea
 		}
 	}
-	m["colonies_founded"] = ecs.GetResource[globals.Counters](w).TotalColoniesEverProduced
+	// TotalColoniesEverProduced: without UpdateColonies no colony dies, so the living colonies are all colonies
+	// founded (the counter is output only since step F4, obs.Counters)
+	cols := ecs.NewFilter1[comp.Colony](w).Query()
+	m["colonies_founded"] = float64(cols.Count())
+	cols.Close()
 
 	n, sumWeight, sumEmerging := 0.0, 0.0, 0.0
 	bees := ecs.NewFilter1[comp.Bee](w).Query()

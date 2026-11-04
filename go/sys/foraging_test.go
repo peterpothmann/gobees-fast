@@ -207,8 +207,8 @@ func TestForagingTripPollen(t *testing.T) {
 	if st := aw.state(p); !almostEqual(st.Pollen_g, 1000-0.01206) {
 		t.Errorf("foodsource: %v g", st.Pollen_g)
 	}
-	if fo.PollenLoadSquadron_g != 0 || ecs.GetResource[globals.Totals](aw.w).TotalForagingTripsToday != 1 {
-		t.Errorf("load %v, trips %v", fo.PollenLoadSquadron_g, ecs.GetResource[globals.Totals](aw.w).TotalForagingTripsToday)
+	if fo.PollenLoadSquadron_g != 0 || aw.tally.trips != 1 {
+		t.Errorf("load %v, trips %v", fo.PollenLoadSquadron_g, aw.tally.trips)
 	}
 	if !almostEqual(fo.Expectation_PollenTrip_s, (412.2+b.PersonalTime_s-165)/2) {
 		t.Errorf("expectation %v", fo.Expectation_PollenTrip_s)
@@ -300,12 +300,17 @@ func TestForagingMortality(t *testing.T) {
 		aw.active.List = append(aw.active.List, bee)
 		f.ForagingProc(aw.w, bee)
 	}
-	died := aw.counters.TotalBeesEverDied / float64(n)
+	died := aw.tally.beesDied / float64(n)
 	if want := 1 - math.Pow(1-1e-03, 500); math.Abs(died-want) > 0.03 {
 		t.Errorf("%v of the foragers died, want about %v", died, want)
 	}
-	if len(aw.active.List) != n-int(aw.counters.TotalBeesEverDied) {
+	if len(aw.active.List) != n-int(aw.tally.beesDied) {
 		t.Errorf("dead foragers still in the activity queue")
+	}
+	// event.DiedForaging for the output (obs.Counters.TotalForagersEverDiedForaging), event.ForagingTrip for each trip
+	if aw.tally.foragersDied != aw.tally.beesDied || aw.tally.trips != float64(n) {
+		t.Errorf("%v foragers died on a trip, %v bees died, %v trips; want equal and %d trips",
+			aw.tally.foragersDied, aw.tally.beesDied, aw.tally.trips, n)
 	}
 }
 

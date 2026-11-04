@@ -38,28 +38,26 @@ var netLogoSpecies = []string{"B_terrestris", "B_pascuorum", "B_lapidarius", "B_
 //   - ForagerDeathsToday: bees that died on a foraging trip today
 //   - TotalAdultQueensEverProduced: queens emerged from pupae since the start
 //   - MeanCompetitionPointDate: mean competition point date (ticks) of the living colonies that have one, 0 if none
+//
+// Update must run once at the end of every day (reporter.CSV calls it on every tick), for the counters.
 type DailyOutputExtended struct {
-	daily        DailyOutput
-	totals       ecs.Resource[globals.Totals]
-	counters     ecs.Resource[globals.Counters]
-	deadColonies ecs.Resource[globals.DeadColonies]
-	calendar     ecs.Resource[globals.Calendar]
-	bees         *ecs.Filter1[comp.Bee]
-	colonies     *ecs.Filter2[comp.Colony, comp.ColonyStores]
-	species      *ecs.Map1[comp.Species]
-	foodsources  *ecs.Filter1[comp.Foodsource]
-	stocks       *ecs.Filter1[comp.FoodsourceState]
-	badgers      *ecs.Filter1[comp.Badger]
-	values       []float64
+	daily       DailyOutput
+	counters    Counters
+	calendar    ecs.Resource[globals.Calendar]
+	bees        *ecs.Filter1[comp.Bee]
+	colonies    *ecs.Filter2[comp.Colony, comp.ColonyStores]
+	species     *ecs.Map1[comp.Species]
+	foodsources *ecs.Filter1[comp.Foodsource]
+	stocks      *ecs.Filter1[comp.FoodsourceState]
+	badgers     *ecs.Filter1[comp.Badger]
+	values      []float64
 	// lastForagerDeaths is the counter of foragers that died on a trip at the end of the previous day.
 	lastForagerDeaths float64
 }
 
 func (o *DailyOutputExtended) Initialize(w *ecs.World) {
 	o.daily.Initialize(w)
-	o.totals = ecs.NewResource[globals.Totals](w)
-	o.counters = ecs.NewResource[globals.Counters](w)
-	o.deadColonies = ecs.NewResource[globals.DeadColonies](w)
+	o.counters.Initialize(w)
 	o.calendar = ecs.NewResource[globals.Calendar](w)
 	o.bees = ecs.NewFilter1[comp.Bee](w)
 	o.colonies = ecs.NewFilter2[comp.Colony, comp.ColonyStores](w)
@@ -70,7 +68,9 @@ func (o *DailyOutputExtended) Initialize(w *ecs.World) {
 	o.values = make([]float64, len(o.Header()))
 }
 
-func (o *DailyOutputExtended) Update(w *ecs.World) {}
+func (o *DailyOutputExtended) Update(w *ecs.World) {
+	o.counters.Update(w)
+}
 
 func (o *DailyOutputExtended) Header() []string {
 	h := append(o.daily.Header(), NetLogoMetrics...)
@@ -151,14 +151,14 @@ func (o *DailyOutputExtended) Values(w *ecs.World) []float64 {
 	badgers := float64(badq.Count())
 	badq.Close()
 
-	counters := o.counters.Get()
+	counters := &o.counters
 	foragerDeaths := counters.TotalForagersEverDiedForaging - o.lastForagerDeaths
 	o.lastForagerDeaths = counters.TotalForagersEverDiedForaging
 
 	values := []float64{
-		colonies, float64(len(o.deadColonies.Get().List)), counters.TotalColoniesEverProduced,
+		colonies, float64(counters.DeadColonies), counters.TotalColoniesEverProduced,
 		eggs, larvae, pupae, workers, males, youngQueens, hibernating,
-		energy, pollen, o.totals.Get().TotalForagingTripsToday, nectar / 1000000, pollenLeft / 1000,
+		energy, pollen, counters.TotalForagingTripsToday, nectar / 1000000, pollenLeft / 1000,
 		badgers, foodsources, beeAgents, diploidMales,
 	}
 	values = append(values, perSpecies...)

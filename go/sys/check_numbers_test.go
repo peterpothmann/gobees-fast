@@ -8,21 +8,17 @@ import (
 	"gobees/enum/caste"
 	"gobees/enum/stage"
 	"gobees/globals"
+	"gobees/internal/check"
 	"gobees/params"
 
 	"github.com/mlange-42/ark/ecs"
 )
 
-// checkWorld is a colonyWorld with 2 initial queens (BeeSpeciesInitialQueensList [["B_terrestris" 2]]):
-// one hibernating without colony, one in a colony with brood, a worker and a male. Eggs, larvae, pupae, worker
-// and male (14 bees) were produced in the run. The colony statistics are set by one UpdateColonies morning.
+// checkWorld is a colonyWorld with a hibernating queen without colony and a colony with its queen, brood, a worker
+// and a male. The colony statistics are set by one UpdateColonies morning.
 func checkWorld(t *testing.T) (*colonyWorld, ecs.Entity) {
 	t.Helper()
 	cw := newColonyWorld(t, 1)
-	ecs.AddResource(cw.w, &globals.Derived{BeeSpeciesInitialQueensList: []globals.SpeciesQueens{{Species: "B_terrestris", Queens: 2}}})
-	cw.file.InitialQueensModifierBehaviorSpace = 1
-	cw.counters.TotalBeesEverProduced = 14
-
 	hibernating := cw.addBee(ecs.Entity{}, stage.Adult, caste.Queen, 1, 100)
 	_, _, b, _, _, _, _ := cw.beeMap.Get(hibernating)
 	b.Activity = activity.Hibernate
@@ -38,84 +34,54 @@ func checkWorld(t *testing.T) (*colonyWorld, ecs.Entity) {
 }
 
 func TestCheckNumbersTotals(t *testing.T) {
-	cw, _ := checkWorld(t)
-	s := &CheckNumbers{}
-	s.Initialize(cw.w)
-	got := ecs.GetResource[globals.Totals](cw.w)
-	got.TotalForagingTripsToday = 99
-	s.Update(cw.w)
-	// [CHK-02] finding 39 (see trans/netlogo-findings.md#finding-39)
-	want := globals.Totals{TotalEggs: 5, TotalLarvae: 4, TotalPupae: 3, TotalAdultWorkers: 1, TotalAdultMales: 1,
-		TotalForagingTripsToday: 0}
-	if *got != want {
-		t.Errorf("totals:\n got %+v\nwant %+v", *got, want)
-	}
-}
-
-func TestCheckNumbersAssertions(t *testing.T) {
-	// [CHK-01] a bee that is neither initial nor produced
 	cw, col := checkWorld(t)
 	s := &CheckNumbers{}
 	s.Initialize(cw.w)
-	cw.addBee(col, stage.Adult, caste.Worker, 1, 2)
-	expectPanic(t, "bee not produced", func() { s.Update(cw.w) })
-
-	// [CHK-03] colony statistics differ from the bees (an egg laid after the morning statistics)
-	cw, col = checkWorld(t)
-	s = &CheckNumbers{}
-	s.Initialize(cw.w)
+	got := ecs.GetResource[globals.Totals](cw.w)
+	// [CHK-02] the totals of the colonies of this morning, finding 39 (see trans/netlogo-findings.md#finding-39):
+	// an egg laid after the morning statistics is not counted
 	cw.addBee(col, stage.Egg, caste.Undefined, 2, 0)
-	cw.counters.TotalBeesEverProduced += 2
-	expectPanic(t, "colony statistics", func() { s.Update(cw.w) })
-}
-
-func TestCheckNumbersColonyCheck(t *testing.T) {
-	// [CHK-04] day 364: every colony ever produced must have died
-	for _, skip := range []bool{false, true} {
-		cw, _ := checkWorld(t)
-		cw.counters.TotalColoniesEverProduced = 1
-		s := &CheckNumbers{SkipColonyCheck: skip}
-		s.Initialize(cw.w) // Day 201
-		cw.cal.Day = 364
-		if skip {
-			s.Update(cw.w) // must not panic
-		} else {
-			expectPanic(t, "living colony on day 364", func() { s.Update(cw.w) })
-		}
+	s.Update(cw.w)
+	want := globals.Totals{TotalEggs: 5, TotalLarvae: 4, TotalPupae: 3}
+	if *got != want {
+		t.Errorf("totals:\n got %+v\nwant %+v", *got, want)
 	}
-	cw, _ := checkWorld(t)
-	cw.counters.TotalColoniesEverProduced = 3
-	cw.counters.ColonyDeathsEndSeason = 2
-	cw.counters.ColonyDeathsNoBees = 1
-	s := &CheckNumbers{}
-	s.Initialize(cw.w)
-	cw.cal.Day = 364
-	s.Update(cw.w) // all colonies accounted for
 }
 
 func TestMorningExampleFarm(t *testing.T) {
 	// The morning systems on the example farm for one year, with the queens of step 3. Without brood and
 	// foraging every colony consists of its queen only and keeps its start energy, so no colony dies.
 	a := newExampleFarmSetup(t, 1, &CreateInitialQueens{}, &Tick{}, &UpdateMorning{}, &UpdateFoodsources{},
-		&EmergenceNewQueens{}, &UpdateColonies{}, &CheckNumbers{SkipColonyCheck: true})
+		&EmergenceNewQueens{}, &UpdateColonies{}, &CheckNumbers{})
 	w := a.World
-	counters := ecs.GetResource[globals.Counters](w)
-	totals := ecs.GetResource[globals.Totals](w)
+	tally := newTally(w) // Setup kills no colony
 	cal := ecs.GetResource[globals.Calendar](w)
-	today := ecs.GetResource[globals.FoodsourcesToday](w)
-	if cal.Day != 0 || today.NectarAvailableTotalToday_l != 0 {
-		t.Fatalf("Setup: Day %v, nectar %v; want 0, 0", cal.Day, today.NectarAvailableTotalToday_l)
+	// the nectar of all foodsources (NetLogo: NectarAvailableTotalToday_l, removed in step F4). Without foraging the
+	// value of the morning stays until the evening.
+	states := ecs.NewFilter1[comp.FoodsourceState](w)
+	nectar := func() float64 {
+		sum := 0.0
+		q := states.Query()
+		for q.Next() {
+			sum += q.Get().Nectar_myl
+		}
+		return sum
+	}
+	if cal.Day != 0 || nectar() != 0 {
+		t.Fatalf("Setup: Day %v, nectar %v; want 0, 0", cal.Day, nectar())
 	}
 	filter := ecs.NewFilter3[comp.Colony, comp.ColonyCounts, comp.ColonyRange](w)
+	bees := ecs.NewFilter1[comp.Bee](w)
 	maxNectar, withLists := 0.0, 0
 	for range 400 {
-		a.Update() // panics on a failed assertion
-		maxNectar = max(maxNectar, today.NectarAvailableTotalToday_l)
-		colonies := 0
+		a.Update()
+		if err := check.Day(w, false); err != nil {
+			t.Fatalf("day %v: %v", cal.Day, err)
+		}
+		maxNectar = max(maxNectar, nectar())
 		q := filter.Query()
 		for q.Next() {
 			c, n, r := q.Get()
-			colonies++
 			if n.AllAdults != 1 || c.EusocialPhaseDate != params.NotSetHigh {
 				t.Fatalf("colony: allAdults %v, eusocialPhaseDate %v", n.AllAdults, c.EusocialPhaseDate)
 			}
@@ -124,15 +90,18 @@ func TestMorningExampleFarm(t *testing.T) {
 				withLists++
 			}
 		}
-		if float64(colonies) != counters.TotalColoniesEverProduced {
-			t.Fatalf("day %v: %d living colonies, %v founded", cal.Day, colonies, counters.TotalColoniesEverProduced)
+		if tally.coloniesDied != 0 {
+			t.Fatalf("day %v: %d colonies died", cal.Day, tally.coloniesDied)
 		}
-		if totals.TotalAdultWorkers != 0 || totals.TotalAdultMales != 0 {
-			t.Fatalf("day %v: %v adult workers, %v adult males; only queens exist", cal.Day, totals.TotalAdultWorkers,
-				totals.TotalAdultMales)
+		bq := bees.Query()
+		for bq.Next() {
+			if b := bq.Get(); b.Caste != caste.Queen {
+				bq.Close()
+				t.Fatalf("day %v: a bee of caste %v; only queens exist", cal.Day, b.Caste)
+			}
 		}
 	}
 	if maxNectar == 0 || withLists == 0 {
-		t.Errorf("max nectar %v l, colony days with foodsources in flower and range %d; want > 0", maxNectar, withLists)
+		t.Errorf("max nectar %v myl, colony days with foodsources in flower and range %d; want > 0", maxNectar, withLists)
 	}
 }

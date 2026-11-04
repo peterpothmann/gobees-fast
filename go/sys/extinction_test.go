@@ -6,7 +6,6 @@ import (
 	"gobees/comp"
 	"gobees/enum/caste"
 	"gobees/enum/stage"
-	"gobees/globals"
 	"gobees/params"
 
 	"github.com/mlange-42/ark-tools/resource"
@@ -14,8 +13,8 @@ import (
 )
 
 func TestExtinction(t *testing.T) {
-	// [GO-20] TimeToExtinction is the first day without colonies and bees, and the run stops only with
-	// StopExtinct?.
+	// [GO-20] the run stops on the first day without colonies and bees, only with StopExtinct?.
+	// TimeToExtinction: output, see obs.Counters.
 	for _, stop := range []bool{false, true} {
 		cw := newColonyWorld(t, 1)
 		cw.file.StopExtinct = stop
@@ -24,10 +23,6 @@ func TestExtinction(t *testing.T) {
 		ecs.AddResource(cw.w, &params.Termination{MaxTicks: 0})
 		s := &Extinction{}
 		s.Initialize(cw.w)
-		ext := ecs.GetResource[globals.Extinction](cw.w)
-		if ext.TimeToExtinction != 0 {
-			t.Fatalf("after Setup: TimeToExtinction %v, want 0", ext.TimeToExtinction)
-		}
 
 		// a hibernating queen alone keeps the population alive, a colony alone too
 		queen := cw.addHibernatingQueen(1)
@@ -37,18 +32,17 @@ func TestExtinction(t *testing.T) {
 		cw.w.RemoveEntity(queen)
 		cw.ticks.Ticks = 201
 		s.Update(cw.w)
-		if ext.TimeToExtinction != 0 || term.Terminate {
-			t.Fatalf("population alive: TimeToExtinction %v, terminate %v", ext.TimeToExtinction, term.Terminate)
+		if term.Terminate {
+			t.Fatal("population alive: terminate")
 		}
 
 		cw.w.RemoveEntity(col)
 		cw.ticks.Ticks = 202
 		s.Update(cw.w)
 		cw.ticks.Ticks = 203
-		s.Update(cw.w) // NetLogo with StopExtinct? = false runs on: the first day is kept
-		if ext.TimeToExtinction != 202 || term.Terminate != stop {
-			t.Errorf("StopExtinct? %v: TimeToExtinction %v, terminate %v; want 202, %v",
-				stop, ext.TimeToExtinction, term.Terminate, stop)
+		s.Update(cw.w) // NetLogo with StopExtinct? = false runs on
+		if term.Terminate != stop {
+			t.Errorf("StopExtinct? %v: terminate %v", stop, term.Terminate)
 		}
 	}
 }

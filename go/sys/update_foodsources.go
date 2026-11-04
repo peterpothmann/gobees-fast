@@ -37,13 +37,10 @@ func (s *UpdateFoodsources) Initialize(w *ecs.World) {
 
 func (s *UpdateFoodsources) Update(w *ecs.World) {
 	day := s.calendar.Day
-	// [UFS-01]
-	s.today.PollenAvailableTotalToday_kg = 0
-	s.today.NectarAvailableTotalToday_l = 0
+	// [UFS-01] pollenAvailableTotalToday_kg, nectarAvailableTotalToday_l: output only, removed in step F4
 	s.today.FoodsourcesInFlowerUpdate = false
 
-	// [UFS-02] ORDER: irrelevant for the state, each foodsource only changes itself. The totals are float sums,
-	// their last digits depend on the order.
+	// [UFS-02] ORDER: irrelevant, each foodsource only changes itself.
 	foodsources := []ecs.Entity{}
 	query := s.filter.Query()
 	for query.Next() {
@@ -66,8 +63,6 @@ func (s *UpdateFoodsources) Update(w *ecs.World) {
 			state.Nectar_myl = 0
 			state.Pollen_g = 0
 		}
-		s.today.NectarAvailableTotalToday_l += state.Nectar_myl / (1000 * 1000)
-		s.today.PollenAvailableTotalToday_kg += state.Pollen_g / 1000
 	}
 }
 
