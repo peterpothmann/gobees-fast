@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 # Builds the reference commit, the base commit and the current code as command line programs and runs the
-# comparisons of go/compare. The commits and the comparisons to run are in go/compare/commits.env.
+# comparisons of go/compare: every scenario against the reference, gobees and NetLogo, and the speed. The commits
+# and the phase are in go/compare/commits.env.
 #
 # Usage (anywhere in the repository, Linux or Git Bash):
 #   go/compare/run_compare.sh [further arguments of go test]
 #
 # The commits are checked out into temporary git worktrees, which are removed at the end. The current code is
-# the working tree, including uncommitted changes. Set COMPARE_CHECKS to a folder to get the results as files for
-# the pull request comment (the CI does), and COMPARE_THREADS to limit the runs at the same time.
+# the working tree, including uncommitted changes. The pull request comment is written to compare-comment.md in the
+# repository root (COMPARE_COMMENT to change it). Set COMPARE_REPORT_DIR to a folder to get the NetLogo report and
+# its plots (the CI uses go/validation), and COMPARE_THREADS to limit the runs at the same time.
 set -euo pipefail
 
 root=$(git rev-parse --show-toplevel)
@@ -56,6 +58,12 @@ COMPARE_CURRENT_BIN=$(native "$work/current.exe")
 
 COMPARE_REFERENCE_COMMIT=$REFERENCE_COMMIT
 COMPARE_BASE_COMMIT=$BASE_COMMIT
+COMPARE_PHASE=$PHASE
+COMPARE_COMMENT=$(native "${COMPARE_COMMENT:-$root/compare-comment.md}")
 export COMPARE_REFERENCE_BIN COMPARE_BASE_BIN COMPARE_CURRENT_BIN COMPARE_REFERENCE_COMMIT COMPARE_BASE_COMMIT
+export COMPARE_PHASE COMPARE_COMMENT
 
-go -C "$(native "$root/go")" test ./compare -count=1 -v -timeout 60m -run "$COMPARE_TESTS" "$@"
+status=0
+go -C "$(native "$root/go")" test ./compare -count=1 -v -timeout 60m -run 'Scenarios|Speed' "$@" || status=$?
+echo "comment written to $COMPARE_COMMENT"
+exit $status

@@ -1,14 +1,12 @@
-# Runs on every pull request and every push to main. Three jobs:
+# Runs on every pull request and every push to main. Two jobs:
 #
-#   - test: formatting, go vet and all Go tests of gobees-fast, incl. the comparison tests with NetLogo
-#     (go/sys/validation_*_test.go, go/model/validation_step*_test.go). They record the results of their runs
-#     (VALIDATION_DUMP_DIR).
-#   - compare: at the same time, the comparisons of go/compare: the current code against the reference commit
-#     (did the step change the results?) and against the base commit, gobees (drift, speed).
-#   - report: compares the results of the test job with NetLogo (go/validation/cmd/report), writes
-#     go/validation/validation-report.md with one plot per experiment, and writes one comment with the results of
-#     both jobs: in the pull request, updated on every run, and in the summary of the run. In a pull request it
-#     commits report and plots to the branch, if the tests passed, so that a squash merge brings them to main.
+#   - test: formatting, go vet and all Go tests of gobees-fast, incl. the comparisons of parts of the model with
+#     NetLogo (go/sys/validation_step*_test.go).
+#   - compare: at the same time, the check of the step (go/compare/run_compare.sh): every scenario of the full model
+#     against the previous step (reference commit), gobees and NetLogo, and the speed against gobees. It writes one
+#     comment with the results, in the pull request (updated on every run) and in the summary of the run, and the
+#     NetLogo report go/validation/validation-report.md with one plot per scenario. In a pull request it commits
+#     report and plots to the branch if all comparisons passed, so that a squash merge brings them to main.
 #
 # NetLogo itself does not run here: its results are embedded in go/validation, see go/validation/README.md.
 name: Tests
@@ -56,8 +54,6 @@ jobs:
         run: go install gotest.tools/gotestsum@v1.13.0
 
       - name: Test
-        env:
-          VALIDATION_DUMP_DIR: ${{ runner.temp }}/validation-fast
         run: gotestsum --format testname --junitfile ${{ github.workspace }}/test-results.xml -- -count=1 -timeout 30m ./...
 
       - name: Summary of all tests
@@ -66,22 +62,17 @@ jobs:
         with:
           paths: test-results.xml
 
-      - name: Upload the recorded results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: validation-fast
-          path: ${{ runner.temp }}/validation-fast/
-          if-no-files-found: ignore
-
-  # The comparisons of go/compare: the current code against the reference and the base commit of
-  # go/compare/commits.env. Each writes its result for the comment (COMPARE_CHECKS).
   compare:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # to commit the report to the branch of a pull request
+      pull-requests: write # to comment in the pull request
     steps:
-      # the full history: the reference and the base commit are checked out as worktrees
+      # In a pull request, the branch itself (not GitHub's merge commit), so that the report can be committed to it.
+      # The full history: the reference and the base commit are checked out as worktrees.
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.head_ref || github.ref }}
           fetch-depth: 0
 
       - uses: actions/setup-go@v5
@@ -89,62 +80,15 @@ jobs:
           go-version-file: go/go.mod
           cache-dependency-path: go/go.sum
 
-      - name: Compare with the reference and the base commit
+      # Writes comment.md and the report also if a comparison fails.
+      - name: Check the step
+        id: compare
         env:
-          COMPARE_CHECKS: ${{ runner.temp }}/checks
+          COMPARE_COMMENT: ${{ github.workspace }}/comment.md
+          COMPARE_REPORT_DIR: ${{ github.workspace }}/go/validation
+          COMPARE_REPORT_URL: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.head_ref || github.ref_name }}/go/validation/validation-report.md
+          COMPARE_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: bash go/compare/run_compare.sh
-
-      - name: Upload the results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: checks
-          path: ${{ runner.temp }}/checks/
-          if-no-files-found: ignore
-
-  report:
-    needs: [test, compare]
-    if: always() && needs.test.result != 'cancelled' && needs.compare.result != 'cancelled'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write # to commit the report to the branch of a pull request
-      pull-requests: write # to comment in the pull request
-    steps:
-      # In a pull request, check out the branch itself (not GitHub's merge commit), so that the report can be
-      # committed to it.
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref || github.ref }}
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go/go.mod
-          cache-dependency-path: go/go.sum
-
-      # A missing artifact (a job failed early) shows as a failed row in the comment.
-      - uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: validation-fast
-          path: ${{ runner.temp }}/validation-fast
-
-      - uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: checks
-          path: ${{ runner.temp }}/checks
-
-      # The report and the plots of the checkout are deleted first, so that they hold only the results of this run.
-      # The comment is written even if the validation results are missing (the command then fails after it).
-      - name: Report
-        working-directory: go
-        run: |
-          rm -f validation/validation-report.md
-          rm -rf validation/plots
-          go run ./validation/cmd/report -fast "$RUNNER_TEMP/validation-fast" -checks "$RUNNER_TEMP/checks" \
-            -out validation -comment "$GITHUB_WORKSPACE/comment.md" \
-            -url "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.head_ref || github.ref_name }}/go/validation/validation-report.md" \
-            -run "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
       - name: Summary
         if: always()
@@ -155,14 +99,6 @@ jobs:
               echo >> "$GITHUB_STEP_SUMMARY"
             fi
           done
-
-      - name: Upload the report
-        uses: actions/upload-artifact@v4
-        with:
-          name: validation-report
-          path: |
-            go/validation/validation-report.md
-            go/validation/plots/
 
       # One comment per pull request, updated on every run.
       - name: Comment on the pull request
@@ -183,12 +119,12 @@ jobs:
               await github.rest.issues.createComment({owner, repo, issue_number, body});
             }
 
-      # Only in a pull request from this repository and only if all tests passed. A commit pushed with the
+      # Only in a pull request from this repository and only if all comparisons passed. A commit pushed with the
       # GITHUB_TOKEN does not start a new workflow run. The runs use fixed seeds, so the report changes only when the
       # results change, and only then a commit is made. The Benchmark workflow may push its report to the same branch
       # at the same time, so the push is retried on top of the newest state of the branch.
       - name: Commit the report to the pull request
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && needs.test.result == 'success'
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && steps.compare.outcome == 'success'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

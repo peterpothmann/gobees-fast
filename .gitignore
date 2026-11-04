@@ -20,3 +20,6 @@ docs/plan.md
 docs/inventory.md
 docs/model-scope.md
 validation-results/
+
+# pull request comment of go/compare/run_compare.sh
+compare-comment.md

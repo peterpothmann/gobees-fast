@@ -134,6 +134,12 @@ func CompareSummaries(reference, current []Run, columns []string) []SummaryTest 
 		d, p := KolmogorovSmirnov(a, b)
 		tests = append(tests, SummaryTest{s, d, p, len(a), len(b)})
 	}
+	sortTests(tests)
+	return tests
+}
+
+// sortTests sorts tests by p, smallest first, then by D, largest first.
+func sortTests(tests []SummaryTest) {
 	slices.SortFunc(tests, func(x, y SummaryTest) int {
 		if x.P != y.P {
 			return compareFloat(x.P, y.P)
@@ -143,7 +149,6 @@ func CompareSummaries(reference, current []Run, columns []string) []SummaryTest 
 		}
 		return strings.Compare(x.String(), y.String())
 	})
-	return tests
 }
 
 func compareFloat(a, b float64) int {

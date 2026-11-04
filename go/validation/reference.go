@@ -20,49 +20,9 @@ var NetLogoStep4a string
 //go:embed reference/netlogo_step6.csv
 var NetLogoStep6 string
 
-// NetLogoStep7 is the reference of experiments/step7.xml.
-//
-//go:embed reference/netlogo_step7.csv
-var NetLogoStep7 string
-
-// NetLogoStep7Badgers is the reference of experiments/step7_badgers.xml.
-//
-//go:embed reference/netlogo_step7_badgers.csv
-var NetLogoStep7Badgers string
-
-// NetLogoStep7Crop is the reference of experiments/step7_crop.xml.
-//
-//go:embed reference/netlogo_step7_crop.csv
-var NetLogoStep7Crop string
-
-// NetLogoStep8IBM is the reference of experiments/step8_ibm.xml.
-//
-//go:embed reference/netlogo_step8_ibm.csv
-var NetLogoStep8IBM string
-
-// NetLogoStep8Genetics is the reference of experiments/step8_genetics.xml.
-//
-//go:embed reference/netlogo_step8_genetics.csv
-var NetLogoStep8Genetics string
-
-// NetLogoStep8Species is the reference of experiments/step8_species.xml.
-//
-//go:embed reference/netlogo_step8_species.csv
-var NetLogoStep8Species string
-
-// NetLogoStep8Weather is the reference of experiments/step8_weather.xml.
-//
-//go:embed reference/netlogo_step8_weather.csv
-var NetLogoStep8Weather string
-
-// NetLogoStep8Settings is the reference of experiments/step8_settings.xml.
-//
-//go:embed reference/netlogo_step8_settings.csv
-var NetLogoStep8Settings string
-
 // ParameterFiles holds the parameter files of the experiments that change parameters, e.g.
 // experiments/step8_ibm_Parameters.csv (written by scripts/parameter_files.py). NetLogo reads them through
-// MyParametersFile, the comparison tests parse the same files.
+// MyParametersFile, go/compare runs the scenarios with the same files.
 //
 //go:embed experiments/*_Parameters.csv
 var ParameterFiles embed.FS
@@ -73,8 +33,8 @@ var ParameterFiles embed.FS
 //go:embed reference
 var referenceFS embed.FS
 
-// NetLogoReference returns the NetLogo quantiles of an experiment and its run summaries. runs is empty if the
-// experiment has no run summaries yet (written by scripts/aggregate_netlogo.py since step F0c).
+// NetLogoReference returns the NetLogo quantiles of an experiment and its run summaries (ParseRuns). runs is empty
+// if the experiment has no run summaries.
 func NetLogoReference(experiment string) (quantiles, runs string, err error) {
 	q, err := referenceFS.ReadFile("reference/netlogo_" + experiment + ".csv")
 	if err != nil {

@@ -21,11 +21,10 @@ func exampleFarm(t testing.TB, seed float64) params.Params {
 	t.Helper()
 	dir := t.TempDir()
 	files := map[string]string{
-		"_SYSTEM_Habitats.csv":                  examplefiles.Habitats,
-		"_SYSTEM_Example_Farm_Foodsources.txt":  examplefiles.ExampleFarmFoodsources,
-		"Example_Farm_PlotTest_Foodsources.txt": examplefiles.ExampleFarmPlotTestFoodsources, // crop rotation (step 7)
-		"_SYSTEM_Flowerspecies.csv":             examplefiles.Flowerspecies,
-		"_SYSTEM_BumbleSpecies_UK_01.csv":       examplefiles.BumbleSpecies,
+		"_SYSTEM_Habitats.csv":                 examplefiles.Habitats,
+		"_SYSTEM_Example_Farm_Foodsources.txt": examplefiles.ExampleFarmFoodsources,
+		"_SYSTEM_Flowerspecies.csv":            examplefiles.Flowerspecies,
+		"_SYSTEM_BumbleSpecies_UK_01.csv":      examplefiles.BumbleSpecies,
 	}
 	for name, text := range files {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0o644); err != nil {
