@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"gobees/globals"
+	"gobees/input"
 	"gobees/internal/examplefiles"
 	"gobees/model"
 	"gobees/params"
@@ -58,9 +59,8 @@ func TestCLIDefaults(t *testing.T) {
 		t.Errorf("Dir = %q, want the folder netlogo", c.Dir)
 	}
 	defaults := params.Default()
-	if c.Map != defaults.Interface.MyMap || c.Seed != 0 || c.Days != defaults.Termination.MaxTicks {
-		t.Errorf("Map, Seed, Days = %q, %d, %d, want %q, 0, %d",
-			c.Map, c.Seed, c.Days, defaults.Interface.MyMap, defaults.Termination.MaxTicks)
+	if c.Seed != 0 || c.Days != defaults.Termination.MaxTicks {
+		t.Errorf("Seed, Days = %d, %d, want 0, %d", c.Seed, c.Days, defaults.Termination.MaxTicks)
 	}
 }
 
@@ -71,19 +71,19 @@ func TestParametersExampleFarm(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want, err := params.ParseParameterFile(strings.NewReader(examplefiles.ExampleFarmParameters))
+	want, err := input.ParseParameterFile(strings.NewReader(examplefiles.ExampleFarmParameters))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if p.File != want {
 		t.Errorf("File = %+v, want the example farm parameters %+v", p.File, want)
 	}
-	if p.WorkingDirectory.Path != dir {
-		t.Errorf("WorkingDirectory = %q, want %q", p.WorkingDirectory.Path, dir)
+	// the input files of --dir are read (input.Load), the map is the example farm [PAR-05]
+	if len(p.Input.Species) != 1 || len(p.Input.Foodsources[input.StartFoodsourcesFile].Patches) != 73 {
+		t.Errorf("Input: want B_terrestris and the 73 flower patches of the example farm from %s", dir)
 	}
-	if p.Interface.MyMap != "_SYSTEM_Example_Farm.png" || p.Interface.RAND_SEED != 0 || p.Termination.MaxTicks != 365 {
-		t.Errorf("MyMap, RAND_SEED, MaxTicks = %q, %v, %d, want _SYSTEM_Example_Farm.png, 0, 365",
-			p.Interface.MyMap, p.Interface.RAND_SEED, p.Termination.MaxTicks)
+	if p.Seed != 0 || p.Termination.MaxTicks != 365 {
+		t.Errorf("Seed, MaxTicks = %v, %d, want 0, 365", p.Seed, p.Termination.MaxTicks)
 	}
 }
 
@@ -100,7 +100,7 @@ func TestParametersImport(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c := parse(t, "-p", file, "-d", dir, "-m", "_SYSTEM_Example_Farm.png", "-s", "7", "--days", "1")
+	c := parse(t, "-p", file, "-d", dir, "-s", "7", "--days", "1")
 	p, err := c.parameters()
 	if err != nil {
 		t.Fatal(err)
@@ -109,8 +109,8 @@ func TestParametersImport(t *testing.T) {
 	if p.File.BeeSpeciesInitialQueensListAsString != species {
 		t.Errorf("BeeSpeciesInitialQueensListAsString = %q, want %q", p.File.BeeSpeciesInitialQueensListAsString, species)
 	}
-	if p.Interface.RAND_SEED != 7 || p.Termination.MaxTicks != 1 {
-		t.Errorf("RAND_SEED, MaxTicks = %v, %d, want 7, 1", p.Interface.RAND_SEED, p.Termination.MaxTicks)
+	if p.Seed != 7 || p.Termination.MaxTicks != 1 {
+		t.Errorf("Seed, MaxTicks = %v, %d, want 7, 1", p.Seed, p.Termination.MaxTicks)
 	}
 
 	a := model.Default(p, nil)
@@ -129,5 +129,17 @@ func TestParametersMissingFile(t *testing.T) {
 	c := parse(t, "-p", filepath.Join(dir, "missing_Parameters.csv"), "-d", dir)
 	if _, err := c.parameters(); err == nil {
 		t.Error("want an error for a missing parameter file")
+	}
+}
+
+func TestCLINoMapFlag(t *testing.T) {
+	// Step F6: -m (MyMap) is removed, every run starts on the example farm [PAR-05].
+	var c cli
+	parser, err := newParser(&c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := parser.Parse([]string{"-m", "_SYSTEM_Example_Farm.png"}); err == nil {
+		t.Error("want an error for the removed flag -m")
 	}
 }

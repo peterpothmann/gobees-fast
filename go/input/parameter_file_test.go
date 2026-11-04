@@ -1,4 +1,4 @@
-package params
+package input
 
 import (
 	"os"
@@ -7,72 +7,51 @@ import (
 	"testing"
 
 	"gobees/internal/examplefiles"
+	"gobees/params"
 )
 
-// wantExampleFarmParameters holds every value of _SYSTEM_Example_Farm_Parameters.csv [RPAR].
+// wantExampleFarmParameters holds every value of _SYSTEM_Example_Farm_Parameters.csv that the model reads [RPAR].
 // Strings are stored as """text""" in the file, """""" means an empty string.
-var wantExampleFarmParameters = ParameterFile{
+var wantExampleFarmParameters = params.ParameterFile{
 	AbundanceBoost:                      1,
 	BeeSpeciesInitialQueensListAsString: "B_terrestris 500",
-	Backgroundcolour:                    5,
-	BackgroundImage:                     "none",
-	Black_th:                            1,
 	CropRotationListAsString:            "",
 	CumulVisitsOnlyLastYear:             false,
 	FlowerspeciesFile:                   "_SYSTEM_Flowerspecies.csv", // column name "FlowerspeciesFile " with trailing blank
 	FoodSourceLimit:                     25,
 	ForagingMortalityFactor:             1,
 	ForagingMortalityModel:              "high",
-	Gridsize:                            500,
 	HabitatsFile:                        "_SYSTEM_Habitats.csv",
 	InitialQueensModifierBehaviorSpace:  1,
 	KeepDeadColonies:                    true,
 	Lambda_detectProb:                   -0.005,
 	MapAreaIncluded:                     "complete",
-	MasterSizeFactor:                    1,
 	MaxForagingRange_m:                  10000,
 	MaxHibernatingQueens:                10000,
-	MaxPatchRadius_m:                    500,
 	MergeHedges:                         true,
 	MinSizeFoodSources:                  true,
 	MyFarmlandPatches:                   "",
 	N_Badgers:                           0,
 	RemoveEmptyFoodSources:              true,
-	SatelliteFile:                       "No satellite image",
-	SetColour:                           "Magenta",
 	SexLocus:                            false,
-	ShowCohorts:                         true,
-	ShowDeadCols:                        false,
-	ShowFoodsources:                     true,
-	ShowGrid:                            false,
-	ShowInspectedColony:                 false,
-	ShowMasterpatchesOnly:               false,
-	ShowNests:                           true,
-	ShowPlots:                           true,
-	ShowQueens:                          true,
-	ShowSearchingQueens:                 true,
-	ShowWeather:                         true,
 	BeespeciesFile:                      "_SYSTEM_BumbleSpecies_UK_01.csv",
 	StopExtinct:                         true,
 	UnlimitedMales:                      true,
 	Weather:                             "Constant 8 hrs",
-	White_th:                            9,
 	WinterMortality:                     true,
 }
 
-// wantSystemParameters holds every value of _SYSTEM_Parameters.csv. It differs from the
-// example farm file only in SetColour (display only) and in the spelling TRUE/FALSE.
-func wantSystemParameters() ParameterFile {
-	p := wantExampleFarmParameters
-	p.SetColour = "Yellow"
-	return p
+// wantSystemParameters holds every value of _SYSTEM_Parameters.csv that the model reads. The file differs from the
+// example farm file only in SetColour (GUI only, ignored) and in the spelling TRUE/FALSE.
+func wantSystemParameters() params.ParameterFile {
+	return wantExampleFarmParameters
 }
 
 func TestParseParameterFileExamples(t *testing.T) {
 	cases := []struct {
 		name string
 		text string
-		want ParameterFile
+		want params.ParameterFile
 	}{
 		{"_SYSTEM_Parameters.csv", examplefiles.SystemParameters, wantSystemParameters()},
 		{"_SYSTEM_Example_Farm_Parameters.csv", examplefiles.ExampleFarmParameters, wantExampleFarmParameters},
@@ -142,5 +121,35 @@ func TestParseParameterFileFirstColumnWins(t *testing.T) {
 	}
 	if p.N_Badgers != 1 {
 		t.Errorf("N_Badgers = %v, want 1", p.N_Badgers)
+	}
+}
+
+func TestParseParameterFileIgnoredGUIParameter(t *testing.T) {
+	// Step F6: a GUI column is read, but neither stored nor checked. "Magenta" without quotes would be an error for
+	// a stored string.
+	p, err := ParseParameterFile(strings.NewReader("SetColour,ShowPlots?,N_Badgers\nMagenta,maybe,2\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p != (params.ParameterFile{N_Badgers: 2}) {
+		t.Errorf("got %+v, want only N_Badgers = 2", p)
+	}
+}
+
+func TestIgnoredParametersAreGUIColumns(t *testing.T) {
+	// Every ignored column is a column of the NetLogo parameter file and no parameter that the model reads.
+	header, _, _ := strings.Cut(examplefiles.ExampleFarmParameters, "\n")
+	columns := map[string]bool{}
+	for _, name := range strings.Split(header, ",") {
+		columns[strings.ToLower(strings.TrimSpace(name))] = true
+	}
+	fields := fieldsByName()
+	for name := range ignoredParameters {
+		if !columns[name] {
+			t.Errorf("ignored parameter %q is no column of _SYSTEM_Example_Farm_Parameters.csv", name)
+		}
+		if _, ok := fields[name]; ok {
+			t.Errorf("ignored parameter %q is a field of params.ParameterFile", name)
+		}
 	}
 }

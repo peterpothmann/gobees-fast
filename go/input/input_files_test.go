@@ -1,4 +1,4 @@
-package sys
+package input
 
 import (
 	"math"
@@ -25,7 +25,7 @@ func TestParseFoodsourcesFileExampleFarmPlotTest(t *testing.T) {
 	// Line 4: 73 "Crop_Cereals" 75 97.97 91.255 36500 [["Crop_Cereals" 1]] 940  "no info "
 	p := patches[0]
 	got := []any{p.Id_Beescout, p.PatchType, p.PatchColour, p.X, p.Y, p.Area_sqm, p.FlowerSpeciesList, p.Perimeter_m, p.PatchInfo}
-	want := []any{73.0, "Crop_Cereals", 75.0, 97.97, 91.255, 36500.0, []flowerEntry{{"Crop_Cereals", 1, true}}, 940.0, `  "no info " `}
+	want := []any{73.0, "Crop_Cereals", 75.0, 97.97, 91.255, 36500.0, []params.FlowerEntry{{Name: "Crop_Cereals", Value: 1, HasValue: true}}, 940.0, `  "no info " `}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("patch 0:\n got  %#v\n want %#v", got, want)
 	}
@@ -58,11 +58,11 @@ func TestParseFoodsourcesFileExampleFarm(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("patch 0:\n got  %#v\n want %#v", got, want)
 	}
-	wantEntries := map[int]flowerEntry{
-		0:  {"Average_Willow", 1.275, true},
-		1:  {"Birdsfoot_trefoil", 0.037, true},
-		2:  {"Blackthorn", 0.139, true},
-		32: {"Wild_teasel", 0.023, true},
+	wantEntries := map[int]params.FlowerEntry{
+		0:  {Name: "Average_Willow", Value: 1.275, HasValue: true},
+		1:  {Name: "Birdsfoot_trefoil", Value: 0.037, HasValue: true},
+		2:  {Name: "Blackthorn", Value: 0.139, HasValue: true},
+		32: {Name: "Wild_teasel", Value: 0.023, HasValue: true},
 	}
 	for i, e := range wantEntries {
 		if p.FlowerSpeciesList[i] != e {
@@ -73,7 +73,7 @@ func TestParseFoodsourcesFileExampleFarm(t *testing.T) {
 	// Line 5: 1 "Crop_Cereals" 75 125.948 141.856 105900 [["Crop_Cereals" 1]] 2080  "no info"
 	p = patches[1]
 	got = []any{p.Id_Beescout, p.PatchType, p.PatchColour, p.X, p.Y, p.Area_sqm, p.FlowerSpeciesList, p.Perimeter_m, p.PatchInfo}
-	want = []any{1.0, "Crop_Cereals", 75.0, 125.948, 141.856, 105900.0, []flowerEntry{{"Crop_Cereals", 1, true}}, 2080.0, `  "no info" `}
+	want = []any{1.0, "Crop_Cereals", 75.0, 125.948, 141.856, 105900.0, []params.FlowerEntry{{Name: "Crop_Cereals", Value: 1, HasValue: true}}, 2080.0, `  "no info" `}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("patch 1:\n got  %#v\n want %#v", got, want)
 	}
@@ -113,24 +113,24 @@ func TestParseFlowerspeciesFileExample(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(table.rows) != 79 {
-			t.Fatalf("got %d flower species, want 79", len(table.rows))
+		if len(table.Rows) != 79 {
+			t.Fatalf("got %d flower species, want 79", len(table.Rows))
 		}
 		// first line: """Alsike_clover""",0.0005,0.00046,0.2,0.7,181,242,10,0.6
-		want := flowerSpeciesData{"Alsike_clover", 0.0005, 0.00046, 0.2, 0.7, 181, 242, 10, 0.6}
-		if table.rows[0] != want {
-			t.Errorf("first row = %+v, want %+v", table.rows[0], want)
+		want := params.FlowerSpecies{Name: "Alsike_clover", Pollen_g_per_flower: 0.0005, Nectar_ml_per_flower: 0.00046, ProteinPollenProp: 0.2, Concentration_mol_per_l: 0.7, StartDay: 181, StopDay: 242, CorollaDepth_mm: 10, IntFlowerTime_s: 0.6}
+		if table.Rows[0] != want {
+			t.Errorf("first row = %+v, want %+v", table.Rows[0], want)
 		}
 		// """Average_Willow""",0.01,0.00261,0.25,1.13,59,119,0,0.6
-		got, err := table.get("Average_Willow")
-		if err != nil || *got != (flowerSpeciesData{"Average_Willow", 0.01, 0.00261, 0.25, 1.13, 59, 119, 0, 0.6}) {
+		got, err := table.Get("Average_Willow")
+		if err != nil || *got != (params.FlowerSpecies{Name: "Average_Willow", Pollen_g_per_flower: 0.01, Nectar_ml_per_flower: 0.00261, ProteinPollenProp: 0.25, Concentration_mol_per_l: 1.13, StartDay: 59, StopDay: 119, CorollaDepth_mm: 0, IntFlowerTime_s: 0.6}) {
 			t.Errorf("Average_Willow = %+v, %v", got, err)
 		}
 		// last line: """Yellow_rattle""",0.01,0.00025,0.2,0.917323,121,243,13,0.6
-		if table.rows[78] != (flowerSpeciesData{"Yellow_rattle", 0.01, 0.00025, 0.2, 0.917323, 121, 243, 13, 0.6}) {
-			t.Errorf("last row = %+v", table.rows[78])
+		if table.Rows[78] != (params.FlowerSpecies{Name: "Yellow_rattle", Pollen_g_per_flower: 0.01, Nectar_ml_per_flower: 0.00025, ProteinPollenProp: 0.2, Concentration_mol_per_l: 0.917323, StartDay: 121, StopDay: 243, CorollaDepth_mm: 13, IntFlowerTime_s: 0.6}) {
+			t.Errorf("last row = %+v", table.Rows[78])
 		}
-		if _, err := table.get("Not_a_flower"); err == nil {
+		if _, err := table.Get("Not_a_flower"); err == nil {
 			t.Error("expected an error for a flower species missing in the file")
 		}
 	}

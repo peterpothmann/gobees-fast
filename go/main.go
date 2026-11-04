@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"gobees/globals"
+	"gobees/input"
 	"gobees/model"
 	"gobees/obs"
 	"gobees/params"
@@ -30,33 +31,28 @@ const exampleFarmParameters = "_SYSTEM_Example_Farm_Parameters.csv"
 // cli holds the command-line flags.
 type cli struct {
 	Parameters string `short:"p" type:"path" placeholder:"PATH" help:"NetLogo parameter file (MyParametersFile). Default: ${example_farm_parameters} in --dir. A missing file is an error (NetLogo loads _SYSTEM_Parameters.csv instead [RPAR-01])."`
-	Map        string `short:"m" default:"${default_map}" placeholder:"NAME" help:"Map (MyMap). Only the name is used: the foodsources are read from <NAME without .png>_Foodsources.txt in --dir [PAR-05]."`
-	Dir        string `short:"d" type:"path" default:"${default_dir}" placeholder:"PATH" help:"Folder of the input files, the folder of the .nlogo in NetLogo. The map and the file names in the parameter file are relative to it."`
+	Dir        string `short:"d" type:"path" default:"${default_dir}" placeholder:"PATH" help:"Folder of the input files, the folder of the .nlogo in NetLogo. The file names in the parameter file are relative to it. The run starts on the map ${start_foodsources_file} in this folder [PAR-05]."`
 	Seed       int64  `short:"s" default:"0" help:"Random seed (RAND_SEED). 0 means a random seed [INIT-01]."`
 	Days       int    `default:"${default_days}" help:"Number of days (ticks) to run. 0 means no limit: the run only ends with StopExtinct? when the population is extinct [GO-20]."`
 	Output     bool   `short:"o" help:"Write the daily output (the totals of OutputDailyProc and further values, see obs.DailyOutputExtended) to ${default_output_file}, one row per tick, tab separated."`
 	OutputFile string `short:"f" type:"path" placeholder:"PATH" help:"Write the daily output to PATH instead (implies -o)."`
 }
 
-// parameters returns the model parameters for the flags. Without flags, these are the example farm parameters.
+// parameters returns the model parameters for the flags, with all input files read. Without flags, these are the
+// example farm parameters.
 func (c *cli) parameters() (params.Params, error) {
-	p := params.Default()
-	p.WorkingDirectory.Path = c.Dir
-	p.Interface.MyMap = c.Map
-	p.Interface.RAND_SEED = float64(c.Seed)
-	p.Termination.MaxTicks = c.Days
-
 	// [INIT-02] NetLogo chooses MyParametersFile from the interface settings. Here the file is given directly.
 	path := c.Parameters
 	if path == "" {
 		path = filepath.Join(c.Dir, exampleFarmParameters)
 	}
-	// [INIT-04]
-	file, err := params.ReadParameterFile(path)
+	// [INIT-04], [INIT-05]
+	p, err := input.Load(c.Dir, path)
 	if err != nil {
 		return p, err
 	}
-	p.File = file
+	p.Seed = c.Seed
+	p.Termination.MaxTicks = c.Days
 	return p, nil
 }
 
@@ -70,7 +66,7 @@ func newParser(c *cli) (*kong.Kong, error) {
 		kong.Vars{
 			"default_output_file":     defaultOutputFile,
 			"default_dir":             defaultDir,
-			"default_map":             defaults.Interface.MyMap,
+			"start_foodsources_file":  input.StartFoodsourcesFile,
 			"default_days":            strconv.Itoa(defaults.Termination.MaxTicks),
 			"example_farm_parameters": exampleFarmParameters,
 		},

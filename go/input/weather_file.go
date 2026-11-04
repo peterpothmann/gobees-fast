@@ -1,4 +1,4 @@
-package sys
+package input
 
 import (
 	"encoding/csv"
@@ -38,8 +38,8 @@ var constantForagingPeriods_s = map[string]float64{
 // values in seconds. The NetLogo name stays valid, so that the parameter files of NetLogo run unchanged (e.g. the
 // scenario step8_weather of go/compare, which all compared versions run with the same file).
 //
-// SIMPLIFY: the mapping belongs to the reading of NetLogo files. It moves with them into the package input (F6),
-// and with a new input format into the converter of the NetLogo files.
+// SIMPLIFY: the mapping belongs to the reading of NetLogo files. With a new input format it moves into the converter
+// of the NetLogo files.
 var netLogoWeatherFiles = map[string]string{
 	"foragingHoursExample": "_SYSTEM_Weather_foragingHoursExample.csv",
 }

@@ -11,6 +11,7 @@ import (
 
 	"gobees/comp"
 	"gobees/globals"
+	"gobees/input"
 	"gobees/internal/examplefiles"
 	"gobees/params"
 
@@ -47,11 +48,11 @@ func TestInsideMapArea(t *testing.T) {
 }
 
 func TestMergeHedgesProc(t *testing.T) {
-	field := &flowerPatch{PatchType: "Grassland", X: 0, Y: 0, Area_sqm: 10000}
-	small := &flowerPatch{PatchType: "Grassland", X: 1, Y: 0, Area_sqm: 1000} // below 6500 m2, never linked
-	big := &flowerPatch{PatchType: "Hedgerow", X: 100, Y: 0, Area_sqm: 500}
-	h1 := &flowerPatch{PatchType: "Hedgerow", X: 2, Y: 0, Area_sqm: 300}
-	h2 := &flowerPatch{PatchType: "Hedgerow", X: 3, Y: 0, Area_sqm: 200}
+	field := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Grassland", X: 0, Y: 0, Area_sqm: 10000}}
+	small := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Grassland", X: 1, Y: 0, Area_sqm: 1000}} // below 6500 m2, never linked
+	big := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 100, Y: 0, Area_sqm: 500}}
+	h1 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 2, Y: 0, Area_sqm: 300}}
+	h2 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 3, Y: 0, Area_sqm: 200}}
 	MergeHedgesProc([]*flowerPatch{field, small, h1, h2, big}, rand.New(rand.NewPCG(1, 2)))
 
 	// [HEDG-04] the largest hedge is the master hedge, it keeps its position and gets the area of the others.
@@ -71,9 +72,9 @@ func TestMergeHedgesEqualAreaIsRandom(t *testing.T) {
 	// Finding 14 (see trans/netlogo-findings.md#finding-14): sort-on breaks ties randomly, so either of two equally large hedges can be the master.
 	masters := map[string]int{}
 	for seed := range uint64(50) {
-		field := &flowerPatch{PatchType: "Woodland", X: 0, Y: 0, Area_sqm: 7000}
-		a := &flowerPatch{PatchType: "Hedgerow", X: 1, Y: 0, Area_sqm: 100}
-		b := &flowerPatch{PatchType: "Hedgerow", X: 2, Y: 0, Area_sqm: 100}
+		field := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Woodland", X: 0, Y: 0, Area_sqm: 7000}}
+		a := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 1, Y: 0, Area_sqm: 100}}
+		b := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 2, Y: 0, Area_sqm: 100}}
 		MergeHedgesProc([]*flowerPatch{field, a, b}, rand.New(rand.NewPCG(seed, 7)))
 		switch {
 		case a.Area_sqm == 200 && b.Area_sqm == 0:
@@ -93,10 +94,10 @@ func TestMergeHedgesEquallyNearFieldIsRandom(t *testing.T) {
 	// [HEDG-03] min-one-of picks a random one among equally near fields.
 	linked := map[string]int{}
 	for seed := range uint64(50) {
-		left := &flowerPatch{PatchType: "Woodland", X: -5, Y: 0, Area_sqm: 7000}
-		right := &flowerPatch{PatchType: "Woodland", X: 5, Y: 0, Area_sqm: 7000}
-		h1 := &flowerPatch{PatchType: "Hedgerow", X: 0, Y: 0, Area_sqm: 300}
-		h2 := &flowerPatch{PatchType: "Hedgerow", X: -4, Y: 0, Area_sqm: 100} // always linked to left
+		left := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Woodland", X: -5, Y: 0, Area_sqm: 7000}}
+		right := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Woodland", X: 5, Y: 0, Area_sqm: 7000}}
+		h1 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 0, Y: 0, Area_sqm: 300}}
+		h2 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: -4, Y: 0, Area_sqm: 100}} // always linked to left
 		MergeHedgesProc([]*flowerPatch{left, right, h1, h2}, rand.New(rand.NewPCG(seed, 3)))
 		if h2.Area_sqm == 0 {
 			linked["left"]++ // h1 and h2 share the field, h1 (larger) got the area
@@ -126,9 +127,9 @@ func testFlower(fs comp.Foodsource) string {
 func TestCreateLayersProc(t *testing.T) {
 	w := ecs.NewWorld()
 	who := &globals.WhoCounter{}
-	flowers := &flowerSpeciesTable{
-		names: []string{"A", "B", "C"},
-		rows: []flowerSpeciesData{
+	flowers := &params.FlowerSpeciesTable{
+		Names: []string{"A", "B", "C"},
+		Rows: []params.FlowerSpecies{
 			{Name: "A", Pollen_g_per_flower: 0.01, Nectar_ml_per_flower: 0.001, StartDay: 100, StopDay: 200},
 			{Name: "B", Pollen_g_per_flower: 0.0001, Nectar_ml_per_flower: 0.001},
 			{Name: "C", Pollen_g_per_flower: 0.01, Nectar_ml_per_flower: 0},
@@ -136,11 +137,12 @@ func TestCreateLayersProc(t *testing.T) {
 	}
 	file := &params.ParameterFile{AbundanceBoost: 1, FoodSourceLimit: 1, MinSizeFoodSources: true, RemoveEmptyFoodSources: true}
 	// limits [LAYR-01]: 180 microlitres nectar, 0.05 g pollen
-	p1 := &flowerPatch{who: who.Next(), PatchType: "Grassland", X: 10.2, Y: 20.4, Area_sqm: 100,
-		FlowerSpeciesList: []flowerEntry{{"A", 2, true}, {"Margin", 0, false}, {"B", 1, true}, {"C", 1, true}}}
-	p2 := &flowerPatch{who: who.Next(), PatchType: "Crop_Cereals", X: 10.4, Y: 19.6, Area_sqm: 100,
-		FlowerSpeciesList: []flowerEntry{{"B", 1, true}}}
-	p3 := &flowerPatch{who: who.Next(), PatchType: "Scrub", X: 50, Y: 50, Area_sqm: 400}
+	p1 := &flowerPatch{who: who.Next(), FlowerPatch: params.FlowerPatch{PatchType: "Grassland", X: 10.2, Y: 20.4,
+		Area_sqm: 100, FlowerSpeciesList: []params.FlowerEntry{{Name: "A", Value: 2, HasValue: true}, {Name: "Margin"},
+			{Name: "B", Value: 1, HasValue: true}, {Name: "C", Value: 1, HasValue: true}}}}
+	p2 := &flowerPatch{who: who.Next(), FlowerPatch: params.FlowerPatch{PatchType: "Crop_Cereals", X: 10.4, Y: 19.6,
+		Area_sqm: 100, FlowerSpeciesList: []params.FlowerEntry{{Name: "B", Value: 1, HasValue: true}}}}
+	p3 := &flowerPatch{who: who.Next(), FlowerPatch: params.FlowerPatch{PatchType: "Scrub", X: 50, Y: 50, Area_sqm: 400}}
 
 	if err := CreateLayersProc(w, []*flowerPatch{p1, p2, p3}, flowers, file, []string{"Margin", "Plot"}, who, rand.New(rand.NewPCG(1, 1))); err != nil {
 		t.Fatal(err)
@@ -231,27 +233,18 @@ func newExampleFarmSetupWithModifier(t *testing.T, modifier float64) *app.App {
 // newExampleFarmSetupWith is newExampleFarmSetup with a function that changes the parameters before the setup.
 func newExampleFarmSetupWith(t *testing.T, seed float64, change func(p *params.Params), extra ...app.System) *app.App {
 	t.Helper()
-	dir := t.TempDir()
-	files := map[string]string{
-		"_SYSTEM_Habitats.csv":                 examplefiles.Habitats,
-		"_SYSTEM_Example_Farm_Foodsources.txt": examplefiles.ExampleFarmFoodsources,
-		"_SYSTEM_Flowerspecies.csv":            examplefiles.Flowerspecies,
-		"_SYSTEM_BumbleSpecies_UK_01.csv":      examplefiles.BumbleSpecies,
-	}
-	for name, text := range files {
-		if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	file, err := params.ParseParameterFile(strings.NewReader(examplefiles.ExampleFarmParameters))
-	if err != nil {
-		t.Fatal(err)
-	}
-	p := params.Default()
-	p.WorkingDirectory.Path = dir
-	p.File = file
-	p.Interface.RAND_SEED = seed
-	change(&p)
+	return newExampleFarmSetupFiles(t, seed, nil, change, extra...)
+}
+
+// newExampleFarmSetupFiles is newExampleFarmSetupWith with further input files (name: content), e.g. maps of a crop
+// rotation.
+func newExampleFarmSetupFiles(t *testing.T, seed float64, files map[string]string, change func(p *params.Params),
+	extra ...app.System) *app.App {
+	t.Helper()
+	p := exampleFarmParams(t, files, func(p *params.Params) {
+		p.Seed = int64(seed)
+		change(p)
+	})
 
 	a := app.New()
 	p.Apply(a.World)
@@ -266,6 +259,39 @@ func newExampleFarmSetupWith(t *testing.T, seed float64, change func(p *params.P
 	}
 	a.Initialize()
 	return a
+}
+
+// exampleFarmParams writes the input files of the example farm (examplefiles) and the files in extra to a temporary
+// folder. It reads _SYSTEM_Example_Farm_Parameters.csv, lets change modify the parameters, and then reads the input
+// files that the parameters name with package input.
+func exampleFarmParams(t *testing.T, extra map[string]string, change func(p *params.Params)) params.Params {
+	t.Helper()
+	dir := t.TempDir()
+	files := map[string]string{
+		"_SYSTEM_Habitats.csv":                 examplefiles.Habitats,
+		"_SYSTEM_Example_Farm_Foodsources.txt": examplefiles.ExampleFarmFoodsources,
+		"_SYSTEM_Flowerspecies.csv":            examplefiles.Flowerspecies,
+		"_SYSTEM_BumbleSpecies_UK_01.csv":      examplefiles.BumbleSpecies,
+	}
+	for name, text := range extra {
+		files[name] = text
+	}
+	for name, text := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	file, err := input.ParseParameterFile(strings.NewReader(examplefiles.ExampleFarmParameters))
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := params.Default()
+	p.File = file
+	change(&p)
+	if p.Input, err = input.Read(dir, &p.File, &p.Constants); err != nil {
+		t.Fatal(err)
+	}
+	return p
 }
 
 func TestCreateFoodsourcesExampleFarm(t *testing.T) {

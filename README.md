@@ -48,7 +48,8 @@ The reference is written in NetLogo 5.3.1.
 | `go/sys`       | systems, one per NetLogo procedure                              |
 | `go/comp`      | components of the entities (bees, colonies, foodsources, ...)   |
 | `go/globals`   | global state of the model                                       |
-| `go/params`    | parameters and the reader for NetLogo parameter files           |
+| `go/params`    | parameters and the content of the input files                   |
+| `go/input`     | reader of the NetLogo input files, before the setup             |
 | `go/util`      | functions that mirror NetLogo reporters                         |
 | `go/obs`       | observers of the model output                                   |
 | `go/benchmark` | run time of NetLogo, gobees and gobees-fast                     |
@@ -70,14 +71,15 @@ go run .
 
 This runs the example farm (`netlogo/_SYSTEM_Example_Farm_Parameters.csv`) for 365 days and prints a short summary.
 
-Other scenarios use the NetLogo input files. The parameter file names the species, flower species and habitat files. The map gives the name of the foodsources file (`X.png` → `X_Foodsources.txt`). As in NetLogo, these names are relative to one folder (`--dir`, default `../netlogo`, the folder of the `.nlogo`). The parameter file itself can lie anywhere.
+Other scenarios use the NetLogo input files. The parameter file names the species, flower species and habitat files and the weather. As in NetLogo, these names are relative to one folder (`--dir`, default `../netlogo`, the folder of the `.nlogo`). The parameter file itself can lie anywhere. All files are read at the start (package `input`), also the maps of a crop rotation.
 
 ```shell
-go run . -p ../netlogo/_SYSTEM_Sussex1_Parameters.csv -m _SYSTEM_Sussex1.png   # Sussex instead of the example farm
-go run . -p my_Parameters.csv -d path/to/inputs -s 3 --days 730                # own files, seed 3, 2 years
+go run . -p my_Parameters.csv -d path/to/inputs -s 3 --days 730   # own files, seed 3, 2 years
 ```
 
-Unlike NetLogo, a missing parameter file is an error. NetLogo loads `_SYSTEM_Parameters.csv` instead.
+Every run starts on the map of the example farm, `_SYSTEM_Example_Farm_Foodsources.txt` in `--dir`. NetLogo takes the map from the interface (`MyMap`), which gobees-fast does not have. Other maps are reached only through a crop rotation (`CropRotationListAsString`) until gobees-fast has its own input format.
+
+Unlike NetLogo, a missing parameter file is an error. NetLogo loads `_SYSTEM_Parameters.csv` instead. A missing file that the parameter file names is an error at the start, also a map of the crop rotation (NetLogo: on its day 365).
 
 The parameter `Weather` is either one of NetLogo's constant options (`"Constant 8 hrs"`, ...) or the name of a weather file in the same folder: a CSV table with the columns `Day` (1 to 365) and `ForagingPeriod_s` (the foraging period in seconds, 0 to 86400), and optionally `Year` (1, 2, ...). A file without `Year` holds one year, which repeats every year. With `Year`, the years follow each other and then repeat. NetLogo's example year `"foragingHoursExample"`, a list in the NetLogo code, is the file [netlogo/_SYSTEM_Weather_foragingHoursExample.csv](netlogo/_SYSTEM_Weather_foragingHoursExample.csv). The NetLogo name `"foragingHoursExample"` reads this file, so NetLogo's parameter files run unchanged.
 
