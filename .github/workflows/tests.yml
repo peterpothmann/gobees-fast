@@ -1,7 +1,8 @@
 # Runs on every pull request and every push to main. Two jobs:
 #
 #   - test: formatting, go vet and all Go tests of gobees-fast, incl. the comparisons of parts of the model with
-#     NetLogo (go/sys/validation_step*_test.go).
+#     NetLogo (go/sys/validation_step*_test.go), and the same for the converter tools/netlogo2gobees, whose tests check
+#     that the run files in the repository are up to date.
 #   - compare: at the same time, the check of the step (go/compare/run_compare.sh): every scenario of the full model
 #     against the previous step (reference commit), gobees and NetLogo, and the speed against gobees. It writes one
 #     comment with the results, in the pull request (updated on every run) and in the summary of the run, and the
@@ -55,6 +56,19 @@ jobs:
 
       - name: Test
         run: gotestsum --format testname --junitfile ${{ github.workspace }}/test-results.xml -- -count=1 -timeout 30m ./...
+
+      # The converter is its own module (tools/netlogo2gobees/go.mod), go vet and go test of go/ do not reach it.
+      - name: Converter (tools/netlogo2gobees)
+        working-directory: tools/netlogo2gobees
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "Not formatted with gofmt:"
+            echo "$unformatted"
+            exit 1
+          fi
+          go vet ./...
+          go test -count=1 ./...
 
       - name: Summary of all tests
         if: always()

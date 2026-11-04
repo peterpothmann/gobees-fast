@@ -1,0 +1,440 @@
+metres_per_patch: 10
+patches:
+  - id: 0
+    patchType: Hedgerow
+    xcor: 130
+    ycor: 175
+    size_sqm: 200
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 1
+    patchType: Crop_Cereals
+    xcor: 125.948
+    ycor: 141.856
+    size_sqm: 105900
+    flowerSpeciesList: [[Crop_Cereals, 1]]
+  - id: 2
+    patchType: Hedgerow
+    xcor: 132
+    ycor: 170.5
+    size_sqm: 400
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 3
+    patchType: Hedgerow
+    xcor: 133
+    ycor: 167
+    size_sqm: 100
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 4
+    patchType: Hedgerow
+    xcor: 133
+    ycor: 162
+    size_sqm: 500
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 5
+    patchType: Hedgerow
+    xcor: 132
+    ycor: 155.5
+    size_sqm: 600
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 6
+    patchType: Crop_Cereals
+    xcor: 96
+    ycor: 124
+    size_sqm: 85700
+    flowerSpeciesList: [[Crop_Cereals, 1]]
+  - id: 7
+    patchType: Hedgerow
+    xcor: 131
+    ycor: 151
+    size_sqm: 100
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 8
+    patchType: Hedgerow
+    xcor: 107
+    ycor: 121
+    size_sqm: 11700
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 9
+    patchType: Hedgerow
+    xcor: 131.333
+    ycor: 147
+    size_sqm: 300
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 10
+    patchType: Crop_Cereals
+    xcor: 158.111
+    ycor: 130.564
+    size_sqm: 104600
+    flowerSpeciesList: [[Crop_Cereals, 1]]
+  - id: 11
+    patchType: Hedgerow
+    xcor: 179
+    ycor: 124
+    size_sqm: 18000
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 12
+    patchType: Hedgerow
+    xcor: 129
+    ycor: 132
+    size_sqm: 3700
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 13
+    patchType: Hedgerow
+    xcor: 181
+    ycor: 141
+    size_sqm: 100
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 14
+    patchType: Hedgerow
+    xcor: 184
+    ycor: 139
+    size_sqm: 300
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 15
+    patchType: Crop_Cereals
+    xcor: 196.446
+    ycor: 115.052
+    size_sqm: 28900
+    flowerSpeciesList: [[Crop_Cereals, 1]]
+  - id: 16
+    patchType: Scrub
+    xcor: 85.119
+    ycor: 122.903
+    size_sqm: 13400
+    flowerSpeciesList: [[Average_Willow, 1.208], [Birdsfoot_trefoil, 0.215], [Blackthorn, 1.292], [Bramble, 0.211], [Bugle, 0.509], [Burdock, 0.05], [Buttercup, 0.792], [Common_bluebell, 0.256], [Common_knapweed, 0.56], [Common_vetch, 0.011], [Dandelion, 0.113], [Dog_rose, 0.055], [Field_scabious, 0.023], [Foxglove, 0.086], [Giant_bindweed, 0.032], [Greater_knapweed, 0.029], [Ground_ivy, 0.095], [Hawthorn, 0.601], [Hedge_woundwort, 0.287], [Marsh_thistle, 0.016], [Oilseed_rape, 0.018], [Ragwort, 0.063], [Red_clover, 0.046], [Red_dead_nettle, 0.028], [Rosebay_willowherb, 0.043], [Selfheal, 0.06], [Spear_thistle, 0.006], [St_Johns_wort, 0.011], [Tufted_vetch, 0.026], [Vipers_bugloss, 0.5], [White_clover, 0.76], [White_dead_nettle, 0.171], [Wild_teasel, 0.037]]
+  - id: 17
+    patchType: Hedgerow
+    xcor: 194
+    ycor: 128
+    size_sqm: 100
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 18
+    patchType: Hedgerow
+    xcor: 203.578
+    ycor: 107.078
+    size_sqm: 11600
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 19
+    patchType: Grass_improved
+    xcor: 166.523
+    ycor: 104.438
+    size_sqm: 161300
+    flowerSpeciesList: [[Dandelion, 0.006], [White_clover, 0.47]]
+  - id: 20
+    patchType: Scrub
+    xcor: 202
+    ycor: 121.5
+    size_sqm: 3200
+    flowerSpeciesList: [[Average_Willow, 1.208], [Birdsfoot_trefoil, 0.215], [Blackthorn, 1.292], [Bramble, 0.211], [Bugle, 0.509], [Burdock, 0.05], [Buttercup, 0.792], [Common_bluebell, 0.256], [Common_knapweed, 0.56], [Common_vetch, 0.011], [Dandelion, 0.113], [Dog_rose, 0.055], [Field_scabious, 0.023], [Foxglove, 0.086], [Giant_bindweed, 0.032], [Greater_knapweed, 0.029], [Ground_ivy, 0.095], [Hawthorn, 0.601], [Hedge_woundwort, 0.287], [Marsh_thistle, 0.016], [Oilseed_rape, 0.018], [Ragwort, 0.063], [Red_clover, 0.046], [Red_dead_nettle, 0.028], [Rosebay_willowherb, 0.043], [Selfheal, 0.06], [Spear_thistle, 0.006], [St_Johns_wort, 0.011], [Tufted_vetch, 0.026], [Vipers_bugloss, 0.5], [White_clover, 0.76], [White_dead_nettle, 0.171], [Wild_teasel, 0.037]]
+  - id: 21
+    patchType: Woodland
+    xcor: 77.687
+    ycor: 106.287
+    size_sqm: 52700
+    flowerSpeciesList: [[Birdsfoot_trefoil, 0.036], [Blackthorn, 0.333], [Bramble, 0.419], [Bugle, 0.298], [Burdock, 0.104], [Buttercup, 0.724], [Common_bluebell, 0.599], [Common_knapweed, 0.008], [Common_vetch, 0.038], [Dandelion, 0.01], [Dog_rose, 0.042], [Field_scabious, 0.004], [Foxglove, 0.02], [Ground_ivy, 0.102], [Hawthorn, 2.733], [Hedge_woundwort, 0.038], [Marsh_thistle, 0.023], [Ragwort, 0.003], [Red_clover, 0.005], [Red_dead_nettle, 0.025], [Rosebay_willowherb, 0.02], [Selfheal, 0.08], [Spear_thistle, 0.007], [St_Johns_wort, 0.01], [Tufted_vetch, 0.002], [White_clover, 0.083], [White_dead_nettle, 0.008]]
+  - id: 22
+    patchType: Grassland
+    xcor: 111.035
+    ycor: 113.783
+    size_sqm: 11500
+    flowerSpeciesList: [[Birdsfoot_trefoil, 0.352], [Blackthorn, 0.225], [Bramble, 0.017], [Bugle, 0.028], [Burdock, 0.017], [Buttercup, 2.161], [Common_bluebell, 0.487], [Common_knapweed, 0.011], [Common_vetch, 0.034], [Dandelion, 0.121], [Field_scabious, 0.017], [Ground_ivy, 0.059], [Hawthorn, 0.617], [Hedge_woundwort, 0.004], [Ragwort, 0.023], [Red_clover, 0.253], [Red_dead_nettle, 0.026], [Selfheal, 0.113], [Spear_thistle, 0.005], [Tufted_vetch, 0.117], [White_clover, 1.667], [White_dead_nettle, 0.025]]
+  - id: 23
+    patchType: Crop_Cereals
+    xcor: 218.941
+    ycor: 97.295
+    size_sqm: 99000
+    flowerSpeciesList: [[Crop_Cereals, 1]]
+  - id: 24
+    patchType: Grass_improved
+    xcor: 133.548
+    ycor: 112.5
+    size_sqm: 4200
+    flowerSpeciesList: [[Dandelion, 0.006], [White_clover, 0.47]]
+  - id: 25
+    patchType: Hedgerow
+    xcor: 221.5
+    ycor: 117
+    size_sqm: 200
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 26
+    patchType: Woodland
+    xcor: 125.491
+    ycor: 100.888
+    size_sqm: 21400
+    flowerSpeciesList: [[Birdsfoot_trefoil, 0.036], [Blackthorn, 0.333], [Bramble, 0.419], [Bugle, 0.298], [Burdock, 0.104], [Buttercup, 0.724], [Common_bluebell, 0.599], [Common_knapweed, 0.008], [Common_vetch, 0.038], [Dandelion, 0.01], [Dog_rose, 0.042], [Field_scabious, 0.004], [Foxglove, 0.02], [Ground_ivy, 0.102], [Hawthorn, 2.733], [Hedge_woundwort, 0.038], [Marsh_thistle, 0.023], [Ragwort, 0.003], [Red_clover, 0.005], [Red_dead_nettle, 0.025], [Rosebay_willowherb, 0.02], [Selfheal, 0.08], [Spear_thistle, 0.007], [St_Johns_wort, 0.01], [Tufted_vetch, 0.002], [White_clover, 0.083], [White_dead_nettle, 0.008]]
+  - id: 27
+    patchType: Hedgerow
+    xcor: 238
+    ycor: 109
+    size_sqm: 300
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 28
+    patchType: Hedgerow
+    xcor: 145
+    ycor: 107
+    size_sqm: 7400
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 29
+    patchType: Hedgerow
+    xcor: 116
+    ycor: 105.5
+    size_sqm: 400
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 30
+    patchType: Crop_Cereals
+    xcor: 128.85
+    ycor: 83.948
+    size_sqm: 156200
+    flowerSpeciesList: [[Crop_Cereals, 1]]
+  - id: 31
+    patchType: Crop_Cereals
+    xcor: 97.97
+    ycor: 91.255
+    size_sqm: 36500
+    flowerSpeciesList: [[Crop_Cereals, 1]]
+  - id: 32
+    patchType: Hedgerow
+    xcor: 225
+    ycor: 100
+    size_sqm: 2900
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 33
+    patchType: Hedgerow
+    xcor: 121.786
+    ycor: 98
+    size_sqm: 1400
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 34
+    patchType: Grassland
+    xcor: 191.922
+    ycor: 86.398
+    size_sqm: 33200
+    flowerSpeciesList: [[Birdsfoot_trefoil, 0.352], [Blackthorn, 0.225], [Bramble, 0.017], [Bugle, 0.028], [Burdock, 0.017], [Buttercup, 2.161], [Common_bluebell, 0.487], [Common_knapweed, 0.011], [Common_vetch, 0.034], [Dandelion, 0.121], [Field_scabious, 0.017], [Ground_ivy, 0.059], [Hawthorn, 0.617], [Hedge_woundwort, 0.004], [Ragwort, 0.023], [Red_clover, 0.253], [Red_dead_nettle, 0.026], [Selfheal, 0.113], [Spear_thistle, 0.005], [Tufted_vetch, 0.117], [White_clover, 1.667], [White_dead_nettle, 0.025]]
+  - id: 35
+    patchType: Hedgerow
+    xcor: 235
+    ycor: 98
+    size_sqm: 100
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 36
+    patchType: Crop_Cereals
+    xcor: 124.333
+    ycor: 95.333
+    size_sqm: 300
+    flowerSpeciesList: [[Crop_Cereals, 1]]
+  - id: 37
+    patchType: Hedgerow
+    xcor: 208.5
+    ycor: 96
+    size_sqm: 200
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 38
+    patchType: Hedgerow
+    xcor: 167.643
+    ycor: 88.5
+    size_sqm: 1400
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 39
+    patchType: Hedgerow
+    xcor: 234
+    ycor: 94
+    size_sqm: 300
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 40
+    patchType: Hedgerow
+    xcor: 107.879
+    ycor: 90.606
+    size_sqm: 3300
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 41
+    patchType: Hedgerow
+    xcor: 184
+    ycor: 86
+    size_sqm: 1700
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 42
+    patchType: Hedgerow
+    xcor: 192.4
+    ycor: 92.4
+    size_sqm: 500
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 43
+    patchType: Hedgerow
+    xcor: 209
+    ycor: 89
+    size_sqm: 1200
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 44
+    patchType: Hedgerow
+    xcor: 233
+    ycor: 90
+    size_sqm: 100
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 45
+    patchType: Hedgerow
+    xcor: 232
+    ycor: 88
+    size_sqm: 100
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 46
+    patchType: Woodland
+    xcor: 219
+    ycor: 86
+    size_sqm: 100
+    flowerSpeciesList: [[Birdsfoot_trefoil, 0.036], [Blackthorn, 0.333], [Bramble, 0.419], [Bugle, 0.298], [Burdock, 0.104], [Buttercup, 0.724], [Common_bluebell, 0.599], [Common_knapweed, 0.008], [Common_vetch, 0.038], [Dandelion, 0.01], [Dog_rose, 0.042], [Field_scabious, 0.004], [Foxglove, 0.02], [Ground_ivy, 0.102], [Hawthorn, 2.733], [Hedge_woundwort, 0.038], [Marsh_thistle, 0.023], [Ragwort, 0.003], [Red_clover, 0.005], [Red_dead_nettle, 0.025], [Rosebay_willowherb, 0.02], [Selfheal, 0.08], [Spear_thistle, 0.007], [St_Johns_wort, 0.01], [Tufted_vetch, 0.002], [White_clover, 0.083], [White_dead_nettle, 0.008]]
+  - id: 47
+    patchType: Hedgerow
+    xcor: 221
+    ycor: 70
+    size_sqm: 6500
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 48
+    patchType: Woodland
+    xcor: 223.425
+    ycor: 65.636
+    size_sqm: 34100
+    flowerSpeciesList: [[Birdsfoot_trefoil, 0.036], [Blackthorn, 0.333], [Bramble, 0.419], [Bugle, 0.298], [Burdock, 0.104], [Buttercup, 0.724], [Common_bluebell, 0.599], [Common_knapweed, 0.008], [Common_vetch, 0.038], [Dandelion, 0.01], [Dog_rose, 0.042], [Field_scabious, 0.004], [Foxglove, 0.02], [Ground_ivy, 0.102], [Hawthorn, 2.733], [Hedge_woundwort, 0.038], [Marsh_thistle, 0.023], [Ragwort, 0.003], [Red_clover, 0.005], [Red_dead_nettle, 0.025], [Rosebay_willowherb, 0.02], [Selfheal, 0.08], [Spear_thistle, 0.007], [St_Johns_wort, 0.01], [Tufted_vetch, 0.002], [White_clover, 0.083], [White_dead_nettle, 0.008]]
+  - id: 49
+    patchType: Hedgerow
+    xcor: 230.875
+    ycor: 81.5
+    size_sqm: 800
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 50
+    patchType: Hedgerow
+    xcor: 97.462
+    ycor: 78.462
+    size_sqm: 1300
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 51
+    patchType: Grass_improved
+    xcor: 186.083
+    ycor: 61.441
+    size_sqm: 167700
+    flowerSpeciesList: [[Dandelion, 0.006], [White_clover, 0.47]]
+  - id: 52
+    patchType: Hedgerow
+    xcor: 146.8
+    ycor: 72.8
+    size_sqm: 2000
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 53
+    patchType: Hedgerow
+    xcor: 175
+    ycor: 67
+    size_sqm: 8300
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 54
+    patchType: Crop_Cereals
+    xcor: 202.412
+    ycor: 74.706
+    size_sqm: 1700
+    flowerSpeciesList: [[Crop_Cereals, 1]]
+  - id: 55
+    patchType: Woodland
+    xcor: 154
+    ycor: 58
+    size_sqm: 34500
+    flowerSpeciesList: [[Birdsfoot_trefoil, 0.036], [Blackthorn, 0.333], [Bramble, 0.419], [Bugle, 0.298], [Burdock, 0.104], [Buttercup, 0.724], [Common_bluebell, 0.599], [Common_knapweed, 0.008], [Common_vetch, 0.038], [Dandelion, 0.01], [Dog_rose, 0.042], [Field_scabious, 0.004], [Foxglove, 0.02], [Ground_ivy, 0.102], [Hawthorn, 2.733], [Hedge_woundwort, 0.038], [Marsh_thistle, 0.023], [Ragwort, 0.003], [Red_clover, 0.005], [Red_dead_nettle, 0.025], [Rosebay_willowherb, 0.02], [Selfheal, 0.08], [Spear_thistle, 0.007], [St_Johns_wort, 0.01], [Tufted_vetch, 0.002], [White_clover, 0.083], [White_dead_nettle, 0.008]]
+  - id: 56
+    patchType: Hedgerow
+    xcor: 206
+    ycor: 69
+    size_sqm: 2000
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 57
+    patchType: Woodland
+    xcor: 145
+    ycor: 70
+    size_sqm: 100
+    flowerSpeciesList: [[Birdsfoot_trefoil, 0.036], [Blackthorn, 0.333], [Bramble, 0.419], [Bugle, 0.298], [Burdock, 0.104], [Buttercup, 0.724], [Common_bluebell, 0.599], [Common_knapweed, 0.008], [Common_vetch, 0.038], [Dandelion, 0.01], [Dog_rose, 0.042], [Field_scabious, 0.004], [Foxglove, 0.02], [Ground_ivy, 0.102], [Hawthorn, 2.733], [Hedge_woundwort, 0.038], [Marsh_thistle, 0.023], [Ragwort, 0.003], [Red_clover, 0.005], [Red_dead_nettle, 0.025], [Rosebay_willowherb, 0.02], [Selfheal, 0.08], [Spear_thistle, 0.007], [St_Johns_wort, 0.01], [Tufted_vetch, 0.002], [White_clover, 0.083], [White_dead_nettle, 0.008]]
+  - id: 58
+    patchType: Crop_Cereals
+    xcor: 215.571
+    ycor: 67.971
+    size_sqm: 3500
+    flowerSpeciesList: [[Crop_Cereals, 1]]
+  - id: 59
+    patchType: Hedgerow
+    xcor: 135
+    ycor: 59.684
+    size_sqm: 1900
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 60
+    patchType: Woodland
+    xcor: 218
+    ycor: 64.333
+    size_sqm: 600
+    flowerSpeciesList: [[Birdsfoot_trefoil, 0.036], [Blackthorn, 0.333], [Bramble, 0.419], [Bugle, 0.298], [Burdock, 0.104], [Buttercup, 0.724], [Common_bluebell, 0.599], [Common_knapweed, 0.008], [Common_vetch, 0.038], [Dandelion, 0.01], [Dog_rose, 0.042], [Field_scabious, 0.004], [Foxglove, 0.02], [Ground_ivy, 0.102], [Hawthorn, 2.733], [Hedge_woundwort, 0.038], [Marsh_thistle, 0.023], [Ragwort, 0.003], [Red_clover, 0.005], [Red_dead_nettle, 0.025], [Rosebay_willowherb, 0.02], [Selfheal, 0.08], [Spear_thistle, 0.007], [St_Johns_wort, 0.01], [Tufted_vetch, 0.002], [White_clover, 0.083], [White_dead_nettle, 0.008]]
+  - id: 61
+    patchType: Grass_improved
+    xcor: 139.707
+    ycor: 51.725
+    size_sqm: 16700
+    flowerSpeciesList: [[Dandelion, 0.006], [White_clover, 0.47]]
+  - id: 62
+    patchType: Hedgerow
+    xcor: 142.5
+    ycor: 53.917
+    size_sqm: 1200
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 63
+    patchType: Crop_Cereals
+    xcor: 168.506
+    ycor: 51.552
+    size_sqm: 8700
+    flowerSpeciesList: [[Crop_Cereals, 1]]
+  - id: 64
+    patchType: Hedgerow
+    xcor: 179.143
+    ycor: 51
+    size_sqm: 700
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 65
+    patchType: Hedgerow
+    xcor: 153.5
+    ycor: 50
+    size_sqm: 800
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 66
+    patchType: Hedgerow
+    xcor: 146.5
+    ycor: 48.5
+    size_sqm: 200
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 67
+    patchType: Hedgerow
+    xcor: 160
+    ycor: 48
+    size_sqm: 300
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 68
+    patchType: Hedgerow
+    xcor: 145
+    ycor: 46
+    size_sqm: 100
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 69
+    patchType: Woodland
+    xcor: 197
+    ycor: 43
+    size_sqm: 5800
+    flowerSpeciesList: [[Birdsfoot_trefoil, 0.036], [Blackthorn, 0.333], [Bramble, 0.419], [Bugle, 0.298], [Burdock, 0.104], [Buttercup, 0.724], [Common_bluebell, 0.599], [Common_knapweed, 0.008], [Common_vetch, 0.038], [Dandelion, 0.01], [Dog_rose, 0.042], [Field_scabious, 0.004], [Foxglove, 0.02], [Ground_ivy, 0.102], [Hawthorn, 2.733], [Hedge_woundwort, 0.038], [Marsh_thistle, 0.023], [Ragwort, 0.003], [Red_clover, 0.005], [Red_dead_nettle, 0.025], [Rosebay_willowherb, 0.02], [Selfheal, 0.08], [Spear_thistle, 0.007], [St_Johns_wort, 0.01], [Tufted_vetch, 0.002], [White_clover, 0.083], [White_dead_nettle, 0.008]]
+  - id: 70
+    patchType: Hedgerow
+    xcor: 212.75
+    ycor: 39.083
+    size_sqm: 1200
+    flowerSpeciesList: [[Average_Willow, 1.275], [Birdsfoot_trefoil, 0.037], [Blackthorn, 0.139], [Bramble, 0.331], [Bugle, 0.119], [Burdock, 0.005], [Buttercup, 0.381], [Comfrey, 0.042], [Common_bluebell, 0.057], [Common_knapweed, 0.22], [Common_vetch, 0.132], [Dandelion, 0.11], [Dog_rose, 0.094], [Field_scabious, 0.008], [Foxglove, 0.065], [Giant_bindweed, 0.047], [Ground_ivy, 0.063], [Hawthorn, 0.696], [Hedge_bindweed, 0], [Hedge_woundwort, 0.043], [Marsh_thistle, 0.004], [Oilseed_rape, 0.052], [Ragwort, 0.017], [Red_clover, 0.046], [Red_dead_nettle, 0.1], [Rosebay_willowherb, 0.127], [Selfheal, 0.038], [Spear_thistle, 0.008], [St_Johns_wort, 0.002], [Tufted_vetch, 0.046], [White_clover, 0.395], [White_dead_nettle, 0.135], [Wild_teasel, 0.023]]
+  - id: 71
+    patchType: Grass_improved
+    xcor: 210.5
+    ycor: 37.833
+    size_sqm: 600
+    flowerSpeciesList: [[Dandelion, 0.006], [White_clover, 0.47]]
+  - id: 72
+    patchType: Woodland
+    xcor: 212.2
+    ycor: 34.4
+    size_sqm: 500
+    flowerSpeciesList: [[Birdsfoot_trefoil, 0.036], [Blackthorn, 0.333], [Bramble, 0.419], [Bugle, 0.298], [Burdock, 0.104], [Buttercup, 0.724], [Common_bluebell, 0.599], [Common_knapweed, 0.008], [Common_vetch, 0.038], [Dandelion, 0.01], [Dog_rose, 0.042], [Field_scabious, 0.004], [Foxglove, 0.02], [Ground_ivy, 0.102], [Hawthorn, 2.733], [Hedge_woundwort, 0.038], [Marsh_thistle, 0.023], [Ragwort, 0.003], [Red_clover, 0.005], [Red_dead_nettle, 0.025], [Rosebay_willowherb, 0.02], [Selfheal, 0.08], [Spear_thistle, 0.007], [St_Johns_wort, 0.01], [Tufted_vetch, 0.002], [White_clover, 0.083], [White_dead_nettle, 0.008]]

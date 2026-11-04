@@ -4,37 +4,15 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 	"testing"
 
 	"gobees/globals"
 	"gobees/input"
-	"gobees/internal/examplefiles"
 	"gobees/model"
 	"gobees/params"
-	"gobees/validation"
 
 	"github.com/mlange-42/ark/ecs"
 )
-
-// inputDir writes the input files of the example farm to a temporary directory, as the folder of the .nlogo.
-func inputDir(t *testing.T) string {
-	t.Helper()
-	dir := t.TempDir()
-	files := map[string]string{
-		exampleFarmParameters:                  examplefiles.ExampleFarmParameters,
-		"_SYSTEM_Habitats.csv":                 examplefiles.Habitats,
-		"_SYSTEM_Example_Farm_Foodsources.txt": examplefiles.ExampleFarmFoodsources,
-		"_SYSTEM_Flowerspecies.csv":            examplefiles.Flowerspecies,
-		"_SYSTEM_BumbleSpecies_UK_01.csv":      examplefiles.BumbleSpecies,
-	}
-	for name, text := range files {
-		if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	return dir
-}
 
 // parse parses the command-line flags args.
 func parse(t *testing.T, args ...string) cli {
@@ -52,11 +30,8 @@ func parse(t *testing.T, args ...string) cli {
 
 func TestCLIDefaults(t *testing.T) {
 	c := parse(t)
-	if c.Parameters != "" {
-		t.Errorf("Parameters = %q, want empty (example farm)", c.Parameters)
-	}
-	if filepath.Base(c.Dir) != "netlogo" {
-		t.Errorf("Dir = %q, want the folder netlogo", c.Dir)
+	if c.Config != "" {
+		t.Errorf("Config = %q, want empty (example farm)", c.Config)
 	}
 	defaults := params.Default()
 	if c.Seed != 0 || c.Days != defaults.Termination.MaxTicks {
@@ -65,49 +40,54 @@ func TestCLIDefaults(t *testing.T) {
 }
 
 func TestParametersExampleFarm(t *testing.T) {
-	dir := inputDir(t)
-	c := parse(t, "-d", dir)
+	// Without a run file: the example farm built into package input.
+	c := parse(t)
 	p, err := c.parameters()
 	if err != nil {
 		t.Fatal(err)
 	}
-	want, err := input.ParseParameterFile(strings.NewReader(examplefiles.ExampleFarmParameters))
-	if err != nil {
-		t.Fatal(err)
+	want := input.ExampleFarm()
+	if p.File != want.File {
+		t.Errorf("File = %+v, want the example farm parameters %+v", p.File, want.File)
 	}
-	if p.File != want {
-		t.Errorf("File = %+v, want the example farm parameters %+v", p.File, want)
-	}
-	// the input files of --dir are read (input.Load), the map is the example farm [PAR-05]
-	if len(p.Input.Species) != 1 || len(p.Input.Foodsources[input.StartFoodsourcesFile].Patches) != 73 {
-		t.Errorf("Input: want B_terrestris and the 73 flower patches of the example farm from %s", dir)
+	if len(p.Input.Species) != 1 || len(p.Input.Foodsources[p.Input.Derived.FoodsourcesFile].Patches) != 73 {
+		t.Errorf("Input: want B_terrestris and the 73 flower patches of the example farm")
 	}
 	if p.Seed != 0 || p.Termination.MaxTicks != 365 {
 		t.Errorf("Seed, MaxTicks = %v, %d, want 0, 365", p.Seed, p.Termination.MaxTicks)
 	}
 }
 
-func TestParametersImport(t *testing.T) {
-	// The parameter file lies outside --dir, as in the validation experiments. The files it names (species,
-	// flowers, habitats) and the map are read from --dir, as NetLogo reads them from the folder of the .nlogo.
-	dir := inputDir(t)
-	text, err := validation.ParameterFiles.ReadFile("experiments/step8_species_Parameters.csv")
-	if err != nil {
-		t.Fatal(err)
-	}
-	file := filepath.Join(t.TempDir(), "species_Parameters.csv")
-	if err := os.WriteFile(file, text, 0o644); err != nil {
-		t.Fatal(err)
-	}
+func TestParametersRunFile(t *testing.T) {
+	// A run file with all 7 species. Its landscape file lies in a subfolder, relative to the run file.
+	c, landscapes := input.ExampleFarmConfig()
+	c.InitialQueens = []globals.SpeciesQueens{{Species: "B_terrestris", Queens: 150}, {Species: "B_pascuorum", Queens: 150},
+		{Species: "B_lapidarius", Queens: 150}, {Species: "B_hortorum", Queens: 150}, {Species: "B_pratorum", Queens: 150},
+		{Species: "B_hypnorum", Queens: 150}, {Species: "Psithyrus", Queens: 100}}
+	landscape := landscapes[c.Landscape]
+	c.Landscape = "maps/farm.yaml"
 
-	c := parse(t, "-p", file, "-d", dir, "-s", "7", "--days", "1")
-	p, err := c.parameters()
-	if err != nil {
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, "maps"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	const species = "B_terrestris 150 B_pascuorum 150 B_lapidarius 150 B_hortorum 150 B_pratorum 150 B_hypnorum 150 Psithyrus 100"
-	if p.File.BeeSpeciesInitialQueensListAsString != species {
-		t.Errorf("BeeSpeciesInitialQueensListAsString = %q, want %q", p.File.BeeSpeciesInitialQueensListAsString, species)
+	write := func(name string, w func(*os.File) error) {
+		f, err := os.Create(filepath.Join(dir, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer f.Close()
+		if err := w(f); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("run.yaml", func(f *os.File) error { return input.WriteConfig(f, c) })
+	write(filepath.Join("maps", "farm.yaml"), func(f *os.File) error { return input.WriteLandscape(f, landscape) })
+
+	cli := parse(t, "-c", filepath.Join(dir, "run.yaml"), "-s", "7", "--days", "1")
+	p, err := cli.parameters()
+	if err != nil {
+		t.Fatal(err)
 	}
 	if p.Seed != 7 || p.Termination.MaxTicks != 1 {
 		t.Errorf("Seed, MaxTicks = %v, %d, want 7, 1", p.Seed, p.Termination.MaxTicks)
@@ -123,23 +103,24 @@ func TestParametersImport(t *testing.T) {
 }
 
 func TestParametersMissingFile(t *testing.T) {
-	// NetLogo loads _SYSTEM_Parameters.csv instead [RPAR-01]. gobees stops, so that a wrong path does not run
-	// silently with other parameters.
-	dir := inputDir(t)
-	c := parse(t, "-p", filepath.Join(dir, "missing_Parameters.csv"), "-d", dir)
+	// NetLogo loads _SYSTEM_Parameters.csv instead of a missing parameter file [RPAR-01]. gobees-fast stops, so that
+	// a wrong path does not run silently with other parameters.
+	c := parse(t, "-c", filepath.Join(t.TempDir(), "missing.yaml"))
 	if _, err := c.parameters(); err == nil {
-		t.Error("want an error for a missing parameter file")
+		t.Error("want an error for a missing run file")
 	}
 }
 
-func TestCLINoMapFlag(t *testing.T) {
-	// Step F6: -m (MyMap) is removed, every run starts on the example farm [PAR-05].
-	var c cli
-	parser, err := newParser(&c)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := parser.Parse([]string{"-m", "_SYSTEM_Example_Farm.png"}); err == nil {
-		t.Error("want an error for the removed flag -m")
+func TestCLIRemovedFlags(t *testing.T) {
+	// -m (MyMap) is removed in step F6, -p and -d (NetLogo files) in step F7. The landscape is in the run file.
+	for _, args := range [][]string{{"-m", "_SYSTEM_Example_Farm.png"}, {"-p", "x.csv"}, {"-d", "."}} {
+		var c cli
+		parser, err := newParser(&c)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := parser.Parse(args); err == nil {
+			t.Errorf("want an error for the removed flag %s", args[0])
+		}
 	}
 }

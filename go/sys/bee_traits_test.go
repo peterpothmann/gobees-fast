@@ -5,13 +5,14 @@ import (
 	"testing"
 
 	"gobees/comp"
+	"gobees/input"
 	"gobees/params"
 )
 
 // terrestris returns B_terrestris as read from the example species file.
 func terrestris(t *testing.T) *comp.Species {
 	t.Helper()
-	p := exampleFarmParams(t, nil, func(p *params.Params) {}) // the example farm has only B_terrestris
+	p := exampleFarmParams(t, nil, func(c *input.Config) {}) // the example farm has only B_terrestris
 	return &p.Input.Species[0]
 }
 

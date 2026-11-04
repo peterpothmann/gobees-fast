@@ -29,22 +29,21 @@ type Termination struct {
 
 // Params contains all parameters of the model.
 //
-// Of the NetLogo interface settings, only RAND_SEED (Seed) and the world size (World) remain. MyMap gives the
-// foodsources file of the start, which is fixed to the example farm until gobees-fast has its own input format
-// (input.StartFoodsourcesFile).
+// Of the NetLogo interface settings, only RAND_SEED (Seed) and the world size (World) remain. The landscape of the
+// start (NetLogo: MyMap) is in the run file.
 type Params struct {
 	Seed        int64 // Random seed (RAND_SEED). 0 means a random seed [INIT-01].
 	World       World
-	File        ParameterFile // Read with input.ReadParameterFile [INIT-04].
-	Input       Input         // The input files that File names, read with input.Read.
+	File        ParameterFile // The parameters of the run file, read with input.Load [INIT-04].
+	Input       Input         // The other content of the run file and its landscape files, read with input.Load.
 	Constants   Constants
 	Termination Termination
 }
 
 // Default returns the default parameters. Seed and World are the values stored in the .nlogo file.
 //
-// File and Input are left empty. input.Load reads both. With the default interface settings,
-// NetLogo reads _SYSTEM_Example_Farm_Parameters.csv (MyParametersFile, see [INIT-02]).
+// File and Input are left empty. input.Load reads both from a run file, input.ExampleFarm returns the example farm
+// (NetLogo: _SYSTEM_Example_Farm_Parameters.csv with the default interface settings, MyParametersFile [INIT-02]).
 func Default() Params {
 	return Params{
 		Seed:      0,

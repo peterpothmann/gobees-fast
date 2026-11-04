@@ -3,11 +3,14 @@ package sys
 import (
 	"math"
 	"math/rand/v2"
+	"strconv"
+	"strings"
 	"testing"
 
 	"gobees/comp"
+	"gobees/examplefiles"
 	"gobees/globals"
-	"gobees/internal/examplefiles"
+	"gobees/input"
 	"gobees/params"
 	"gobees/util"
 
@@ -32,26 +35,44 @@ func TestDayOfYear(t *testing.T) {
 	}
 }
 
-// weatherExampleFile is the file name of the example weather year (examplefiles.WeatherForagingHoursExample).
-const weatherExampleFile = "_SYSTEM_Weather_foragingHoursExample.csv"
+// exampleWeatherYear returns the example weather year (examplefiles.WeatherForagingHoursExample, the columns Day and
+// ForagingPeriod_s), the foraging periods of step8_weather.
+func exampleWeatherYear(t *testing.T) input.Year {
+	t.Helper()
+	year := make(input.Year, 365)
+	lines := strings.Split(strings.TrimSpace(examplefiles.WeatherForagingHoursExample), "\n")
+	for _, line := range lines[1:] {
+		day, period, _ := strings.Cut(strings.TrimSpace(line), ",")
+		d, err1 := strconv.Atoi(day)
+		v, err2 := strconv.ParseFloat(period, 64)
+		if err1 != nil || err2 != nil {
+			t.Fatalf("example weather year: line %q", line)
+		}
+		year[d-1] = v
+	}
+	return year
+}
 
-// morningWorld is a world with the resources of the morning systems, without foodsources and bees. weather is the
-// parameter Weather: a "Constant N hrs" option or weatherExampleFile.
-func morningWorld(t *testing.T, weather string) (*ecs.World, *globals.Ticks) {
+// morningWorld is a world with the resources of the morning systems, without foodsources and bees. years are the
+// foraging periods of the run file, nil for those of the example farm (8 hours on every day).
+func morningWorld(t *testing.T, years []input.Year) (*ecs.World, *globals.Ticks) {
 	t.Helper()
 	w := ecs.NewWorld()
 	ecs.AddResource(w, &resource.Rand{Source: rand.NewPCG(1, 2)})
-	ecs.AddResource(w, &params.ParameterFile{Weather: weather})
+	ecs.AddResource(w, &params.ParameterFile{})
 	ticks := &globals.Ticks{}
 	ecs.AddResource(w, ticks)
-	p := exampleFarmParams(t, map[string]string{weatherExampleFile: examplefiles.WeatherForagingHoursExample},
-		func(p *params.Params) { p.File.Weather = weather })
+	p := exampleFarmParams(t, nil, func(c *input.Config) {
+		if years != nil {
+			c.ForagingPeriod_s = years
+		}
+	})
 	ecs.AddResource(w, &p.Input.Weather)
 	return w, ticks
 }
 
 func TestUpdateMorningForagingPeriod(t *testing.T) {
-	w, ticks := morningWorld(t, "Constant 8 hrs")
+	w, ticks := morningWorld(t, nil)
 	s := &UpdateMorning{}
 	s.Initialize(w) // Setup, ticks = 0 [INIT-10]
 	cal := ecs.GetResource[globals.Calendar](w)
@@ -74,7 +95,7 @@ func TestUpdateMorningForagingPeriod(t *testing.T) {
 func TestUpdateMorningForagingHoursExample(t *testing.T) {
 	// [MORN-04] with the example weather year, day 43 is the ".5" of the NetLogo list (finding 1, see
 	// trans/netlogo-findings.md#finding-1)
-	w, ticks := morningWorld(t, weatherExampleFile)
+	w, ticks := morningWorld(t, []input.Year{exampleWeatherYear(t)})
 	s := &UpdateMorning{}
 	s.Initialize(w)
 	ticks.Ticks = 365 + 43 // second year: a file of one year repeats, read by Day, not by ticks
@@ -87,7 +108,7 @@ func TestUpdateMorningForagingHoursExample(t *testing.T) {
 // flowerPeriods returns startDay and stopDay of flower species from the example FlowerspeciesFile.
 func flowerPeriods(t *testing.T, names ...string) map[string][2]float64 {
 	t.Helper()
-	table := exampleFarmParams(t, nil, func(p *params.Params) {}).Input.Flowers
+	table := exampleFarmParams(t, nil, func(c *input.Config) {}).Input.Flowers
 	result := map[string][2]float64{}
 	for _, n := range names {
 		row, err := table.Get(n)
@@ -106,7 +127,7 @@ func TestUpdateFoodsources(t *testing.T) {
 		t.Fatalf("periods from the example file: %v", periods)
 	}
 
-	w, ticks := morningWorld(t, "Constant 8 hrs")
+	w, ticks := morningWorld(t, nil)
 	fsMap := ecs.NewMap2[comp.Foodsource, comp.FoodsourceState](w)
 	names := []string{"Dandelion", "Daisy", "Crop_Cereals"}
 	entities := map[string]ecs.Entity{}

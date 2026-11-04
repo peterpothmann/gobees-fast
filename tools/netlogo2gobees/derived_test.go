@@ -1,4 +1,4 @@
-package input
+package main
 
 import (
 	"os"
@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
+	"gobees/examplefiles"
 	"gobees/globals"
-	"gobees/internal/examplefiles"
-	"gobees/params"
+	"gobees/input"
 )
 
 // wantCSOList are the stewardship option names in _SYSTEM_Habitats.csv, in file order [CSO].
@@ -39,7 +39,7 @@ func exampleFarmDir(t *testing.T, extra map[string]string) string {
 }
 
 // exampleFarmFile returns the parameters of _SYSTEM_Example_Farm_Parameters.csv.
-func exampleFarmFile(t *testing.T) params.ParameterFile {
+func exampleFarmFile(t *testing.T) netLogoParameters {
 	t.Helper()
 	file, err := ParseParameterFile(strings.NewReader(examplefiles.ExampleFarmParameters))
 	if err != nil {
@@ -48,97 +48,98 @@ func exampleFarmFile(t *testing.T) params.ParameterFile {
 	return file
 }
 
-func TestLoadExampleFarm(t *testing.T) {
+func TestConvertExampleFarm(t *testing.T) {
 	dir := exampleFarmDir(t, nil)
-	p, err := Load(dir, filepath.Join(dir, "_SYSTEM_Example_Farm_Parameters.csv"))
+	conv, err := Convert(dir, filepath.Join(dir, "_SYSTEM_Example_Farm_Parameters.csv"), DefaultMap)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p.File != wantExampleFarmParameters {
-		t.Errorf("File:\n got  %+v\n want %+v", p.File, wantExampleFarmParameters)
+	c := conv.Config
+	if c.Parameters != wantExampleFarmParameters.ParameterFile {
+		t.Errorf("Parameters:\n got  %+v\n want %+v", c.Parameters, wantExampleFarmParameters.ParameterFile)
 	}
-	// the other values of params.Default
-	def := params.Default()
-	if p.Seed != def.Seed || p.World != def.World || p.Constants != def.Constants || p.Termination != def.Termination {
-		t.Errorf("Seed, World, Constants or Termination differ from params.Default")
+	// [QINI] "B_terrestris 500"
+	if !reflect.DeepEqual(c.InitialQueens, []globals.SpeciesQueens{{Species: "B_terrestris", Queens: 500}}) {
+		t.Errorf("InitialQueens = %+v", c.InitialQueens)
 	}
-
-	in := p.Input
-	// [PAR-01], [PAR-04] to [PAR-07]
-	want := globals.Derived{
-		BeeSpeciesInitialQueensList: []globals.SpeciesQueens{{Species: "B_terrestris", Queens: 500}},
-		SpeciesList:                 []string{"B_terrestris"},
-		MortalityForager_per_s:      1.0e-05,
-		FoodsourcesFile:             "_SYSTEM_Example_Farm_Foodsources.txt",
-		CSS_OptionsList:             wantCSOList,
-		CropRotationList:            []string{""}, // finding 3 (see trans/netlogo-findings.md#finding-3): length 1, no crop rotation
+	if !reflect.DeepEqual(c.StewardshipOptions, wantCSOList) {
+		t.Errorf("StewardshipOptions = %q, want %q", c.StewardshipOptions, wantCSOList)
 	}
-	if !reflect.DeepEqual(in.Derived, want) {
-		t.Errorf("Derived:\n got  %+v\n want %+v", in.Derived, want)
+	// [FPER] "Constant 8 hrs"
+	if len(c.ForagingPeriod_s) != 1 || len(c.ForagingPeriod_s[0]) != 365 || c.ForagingPeriod_s[0][100] != 28800 {
+		t.Errorf("ForagingPeriod_s: want one year of 28800 s")
 	}
-	// [FPER] Weather "Constant 8 hrs"
-	if in.Weather.Constant_s != 28800 || in.Weather.Years_s != nil {
-		t.Errorf("Weather = %+v, want a constant 28800 s", in.Weather)
+	// all rows of the species and flower files; their values are checked in TestParseSpeciesFileExample and
+	// TestParseFlowerspeciesFileExample
+	if len(c.Species) != 7 || len(c.Flowers) != 79 {
+		t.Errorf("%d species and %d flower species, want 7 and 79", len(c.Species), len(c.Flowers))
 	}
-	// [SPEC-01] only the species of SpeciesList; the values are checked in TestParseSpeciesFileExample
-	if len(in.Species) != 1 || in.Species[0].Name != "B_terrestris" {
-		t.Errorf("Species = %d, want B_terrestris only", len(in.Species))
+	// [PAR-05] MyMap _SYSTEM_Example_Farm.png -> _SYSTEM_Example_Farm_Foodsources.txt, as a landscape file
+	l, ok := conv.Landscapes[c.Landscape]
+	if c.Landscape != "_SYSTEM_Example_Farm_Foodsources.yaml" || len(conv.Landscapes) != 1 || !ok ||
+		l.MetresPerPatch != 10 || len(l.Patches) != 73 || c.CropRotation != nil {
+		t.Errorf("Landscape %q, %d landscape files, crop rotation %q", c.Landscape, len(conv.Landscapes), c.CropRotation)
 	}
-	// [FSRC-12], [LAYR-02]; the rows are checked in TestParseFlowerspeciesFileExample
-	if in.Flowers == nil || len(in.Flowers.Rows) != 79 {
-		t.Errorf("Flowers: want the 79 rows of _SYSTEM_Flowerspecies.csv")
-	}
-	// [FSRC-02] to [FSRC-04] only the start map, without crop rotation; the lines are checked in
-	// TestParseFoodsourcesFileExampleFarm
-	fs, ok := in.Foodsources[StartFoodsourcesFile]
-	if len(in.Foodsources) != 1 || !ok || fs.MetresPerPatch != 10 || len(fs.Patches) != 73 {
-		t.Errorf("Foodsources: want only %s with 10 m per patch and 73 flower patches, got %d files",
-			StartFoodsourcesFile, len(in.Foodsources))
+	// Line 4: 0 "Hedgerow" 105 130 175 200 [["Average_Willow" 1.275] ...] 20  "no info": colour, perimeter and info
+	// are not converted
+	p := l.Patches[0]
+	if p.Id != 0 || p.PatchType != "Hedgerow" || p.X != 130 || p.Y != 175 || p.Area_sqm != 200 ||
+		len(p.FlowerSpeciesList) != 33 || p.FlowerSpeciesList[0] != (input.FlowerEntry{Name: "Average_Willow", Value: 1.275, HasValue: true}) {
+		t.Errorf("first flower patch = %+v", p)
 	}
 }
 
-func TestReadCropRotationFiles(t *testing.T) {
-	// [CROP-01] every file of the crop rotation is read before the setup, each file once.
+func TestConvertCropRotation(t *testing.T) {
+	// [CROP-01] every file of the crop rotation is converted, each once.
 	dir := exampleFarmDir(t, map[string]string{"Example_Farm_PlotTest_Foodsources.txt": examplefiles.ExampleFarmPlotTestFoodsources})
 	file := exampleFarmFile(t)
 	file.CropRotationListAsString = "_SYSTEM_Example_Farm_Foodsources.txt Example_Farm_PlotTest_Foodsources.txt Example_Farm_PlotTest_Foodsources.txt"
-	constants := params.DefaultConstants()
-	in, err := Read(dir, &file, &constants)
+	conv, err := convert(dir, &file, DefaultMap)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(in.Foodsources) != 2 || len(in.Foodsources["Example_Farm_PlotTest_Foodsources.txt"].Patches) != 36 ||
-		len(in.Foodsources[StartFoodsourcesFile].Patches) != 73 {
-		t.Errorf("want the start map (73 flower patches) and the PlotTest map (36), got %d files", len(in.Foodsources))
+	want := []string{"_SYSTEM_Example_Farm_Foodsources.yaml", "Example_Farm_PlotTest_Foodsources.yaml", "Example_Farm_PlotTest_Foodsources.yaml"}
+	if !reflect.DeepEqual(conv.Config.CropRotation, want) || len(conv.Landscapes) != 2 ||
+		len(conv.Landscapes["Example_Farm_PlotTest_Foodsources.yaml"].Patches) != 36 {
+		t.Errorf("CropRotation %q, %d landscape files", conv.Config.CropRotation, len(conv.Landscapes))
 	}
 
-	// A missing file of the crop rotation is an error before the setup (NetLogo: on Day 365).
+	// A missing file of the crop rotation is an error.
 	file.CropRotationListAsString = "_SYSTEM_Example_Farm_Foodsources.txt missing_Foodsources.txt"
-	if _, err := Read(dir, &file, &constants); err == nil {
+	if _, err := convert(dir, &file, DefaultMap); err == nil {
 		t.Error("expected an error for a missing file of the crop rotation")
 	}
-	// Without crop rotation (one item), the item is not read: "" is no file (finding 3).
+	// Without crop rotation (one item), the item is not converted: "" is no file (finding 3).
 	file.CropRotationListAsString = "missing_Foodsources.txt"
-	if _, err := Read(dir, &file, &constants); err != nil {
-		t.Errorf("a crop rotation list with one item must not be read: %v", err)
+	if conv, err := convert(dir, &file, DefaultMap); err != nil || conv.Config.CropRotation != nil {
+		t.Errorf("a crop rotation list with one item must not be converted: %v", err)
 	}
 }
 
-func TestReadNoFlowerspeciesFile(t *testing.T) {
-	// [FSRC-12] "No Input File": no table, no error.
+func TestConvertOtherMap(t *testing.T) {
+	// MyMap gives the foodsources file of the start [PAR-05].
+	dir := exampleFarmDir(t, map[string]string{"Example_Farm_PlotTest_Foodsources.txt": examplefiles.ExampleFarmPlotTestFoodsources})
+	file := exampleFarmFile(t)
+	conv, err := convert(dir, &file, "Example_Farm_PlotTest.png")
+	if err != nil || conv.Config.Landscape != "Example_Farm_PlotTest_Foodsources.yaml" ||
+		len(conv.Landscapes[conv.Config.Landscape].Patches) != 36 {
+		t.Errorf("Landscape %q, %v", conv.Config.Landscape, err)
+	}
+}
+
+func TestConvertNoFlowerspeciesFile(t *testing.T) {
+	// [FSRC-12] "No Input File": no flower species, no error.
 	dir := exampleFarmDir(t, nil)
 	file := exampleFarmFile(t)
 	file.FlowerspeciesFile = "No Input File"
-	constants := params.DefaultConstants()
-	in, err := Read(dir, &file, &constants)
-	if err != nil || in.Flowers != nil {
-		t.Errorf("Flowers = %v, %v, want nil without error", in.Flowers, err)
+	conv, err := convert(dir, &file, DefaultMap)
+	if err != nil || conv.Config.Flowers != nil {
+		t.Errorf("Flowers = %v, %v, want none without error", conv.Config.Flowers, err)
 	}
 }
 
-func TestReadMissingFiles(t *testing.T) {
-	// Every missing input file is an error of Read, before the setup.
-	constants := params.DefaultConstants()
+func TestConvertMissingFiles(t *testing.T) {
+	// Every missing input file is an error.
 	for _, name := range []string{"_SYSTEM_Habitats.csv", "_SYSTEM_Example_Farm_Foodsources.txt",
 		"_SYSTEM_Flowerspecies.csv", "_SYSTEM_BumbleSpecies_UK_01.csv"} {
 		dir := exampleFarmDir(t, nil)
@@ -146,11 +147,11 @@ func TestReadMissingFiles(t *testing.T) {
 			t.Fatal(err)
 		}
 		file := exampleFarmFile(t)
-		if _, err := Read(dir, &file, &constants); err == nil {
+		if _, err := convert(dir, &file, DefaultMap); err == nil {
 			t.Errorf("expected an error without %s", name)
 		}
 	}
-	if _, err := Load(t.TempDir(), "missing.csv"); err == nil {
+	if _, err := Convert(t.TempDir(), "missing.csv", DefaultMap); err == nil {
 		t.Error("expected an error for a missing parameter file")
 	}
 }
@@ -172,19 +173,6 @@ func TestAllCSOListMissingFile(t *testing.T) {
 	// NetLogo shows a message and continues with an empty list. gobees stops with an error.
 	if _, err := AllCSOlistREP(filepath.Join(t.TempDir(), "missing.csv")); err == nil {
 		t.Error("expected an error for a missing HabitatsFile")
-	}
-}
-
-func TestMortalityForagerUnknownModel(t *testing.T) {
-	// Finding 5 (see trans/netlogo-findings.md#finding-5), fixed in step F5: case-sensitive, any other value is an
-	// error (NetLogo: 0).
-	for _, m := range []string{"High", "medium", ""} {
-		if got, err := mortalityForager(m); err == nil {
-			t.Errorf("mortalityForager(%q) = %v, want an error", m, got)
-		}
-	}
-	if got, err := mortalityForager("high"); err != nil || got != 1.0e-05 {
-		t.Errorf("mortalityForager(\"high\") = %v, %v, want 1e-05", got, err)
 	}
 }
 

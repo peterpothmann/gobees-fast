@@ -1,4 +1,4 @@
-package input
+package main
 
 import (
 	"fmt"
@@ -8,13 +8,26 @@ import (
 	"gobees/params"
 )
 
+// netLogoPatch is one data line of a NetLogo foodsources file, with all columns. patchColour, perimeter_m and info
+// are only for the NetLogo GUI and are not converted.
+type netLogoPatch struct {
+	Id_Beescout       float64
+	PatchType         string
+	PatchColour       float64 // GUI only
+	X, Y              float64
+	Area_sqm          float64
+	FlowerSpeciesList []params.FlowerEntry
+	Perimeter_m       float64 // GUI only
+	PatchInfo         string  // GUI only
+}
+
 // parseFoodsourcesFile reads a foodsources file [FSRC-02] to [FSRC-04].
 //
 // Returns the metres per NetLogo patch from line 1 and one flower patch per data line, in file order.
 // Header handling as in NetLogo (finding 21, see trans/netlogo-findings.md#finding-21): line 2 is skipped, and line 3 too if line 2 has at most 10 characters.
 // Every data line: id patchType patchColour xcor ycor size_sqm flowerSpeciesList perimeter_m info,
 // columns 1-8 as NetLogo values, column 9 is the raw rest of the line.
-func parseFoodsourcesFile(r io.Reader) (float64, []params.FlowerPatch, error) {
+func parseFoodsourcesFile(r io.Reader) (float64, []netLogoPatch, error) {
 	data, err := io.ReadAll(r)
 	if err != nil {
 		return 0, nil, err
@@ -41,7 +54,7 @@ func parseFoodsourcesFile(r io.Reader) (float64, []params.FlowerPatch, error) {
 	}
 
 	// [FSRC-04] data lines. file-read skips white space incl. line breaks, so blank lines are skipped.
-	patches := []params.FlowerPatch{}
+	patches := []netLogoPatch{}
 	for i := first; i < len(lines); i++ {
 		if strings.TrimSpace(lines[i]) == "" {
 			continue
@@ -55,8 +68,8 @@ func parseFoodsourcesFile(r io.Reader) (float64, []params.FlowerPatch, error) {
 	return metresPerPatch, patches, nil
 }
 
-func parseFlowerPatch(line string) (params.FlowerPatch, error) {
-	p := params.FlowerPatch{}
+func parseFlowerPatch(line string) (netLogoPatch, error) {
+	p := netLogoPatch{}
 	pos := 0
 	numbers := []*float64{&p.Id_Beescout, nil, &p.PatchColour, &p.X, &p.Y, &p.Area_sqm, nil, &p.Perimeter_m}
 	for col := range 8 {

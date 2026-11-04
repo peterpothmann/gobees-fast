@@ -9,11 +9,12 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
 
-	"gobees/internal/examplefiles"
+	"gobees/examplefiles"
 )
 
 // Run is the run time of one model run.
@@ -99,22 +100,28 @@ func runAll(seeds []float64, threads int, run func(seed float64) (Run, error)) (
 // all programs simulate the same days.
 //
 // The same command line in gobees and gobees-fast makes the two comparable: both are timed the same way, also
-// though the code of the base commit cannot time its setup and days separately.
+// though the code of the base commit cannot time its setup and days separately. netLogoInput: the program reads the
+// NetLogo input files of the example farm (-d, gobees). Otherwise it runs its built-in example farm (gobees-fast
+// from step F7 on, which reads run files). Both include reading the input in the time.
 //
 // Before the timed runs, the program runs once with the first seed, untimed. Without it, the first runs of a newly
 // built program took up to 1.7 times as long as the others (local run, Windows).
-func RunPrograms(bin string, seeds []float64, days, threads int) ([]Run, error) {
+func RunPrograms(bin string, netLogoInput bool, seeds []float64, days, threads int) ([]Run, error) {
 	dir, err := writeInputFiles()
 	if err != nil {
 		return nil, err
 	}
 	defer os.RemoveAll(dir)
+	input := []string{}
+	if netLogoInput {
+		input = []string{"-d", dir}
+	}
 	if len(seeds) > 0 {
-		if _, err := runProgram(bin, dir, seeds[0], days); err != nil {
+		if _, err := runProgram(bin, input, seeds[0], days); err != nil {
 			return nil, err
 		}
 	}
-	return runAll(seeds, threads, func(seed float64) (Run, error) { return runProgram(bin, dir, seed, days) })
+	return runAll(seeds, threads, func(seed float64) (Run, error) { return runProgram(bin, input, seed, days) })
 }
 
 // Lines of the summary that go/main.go prints at the end of a run.
@@ -123,9 +130,10 @@ var (
 	daysLine     = regexp.MustCompile(`(?m)^finished after (\d+) days`)
 )
 
-// runProgram runs the program once, with the input files in dir.
-func runProgram(bin, dir string, seed float64, days int) (Run, error) {
-	cmd := exec.Command(bin, "-d", dir, "-s", strconv.FormatInt(int64(seed), 10), "--days", strconv.Itoa(days))
+// runProgram runs the program once, with the input arguments input.
+func runProgram(bin string, input []string, seed float64, days int) (Run, error) {
+	args := append(slices.Clone(input), "-s", strconv.FormatInt(int64(seed), 10), "--days", strconv.Itoa(days))
+	cmd := exec.Command(bin, args...)
 	start := time.Now()
 	out, err := cmd.CombinedOutput()
 	wall := time.Since(start)

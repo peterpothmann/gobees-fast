@@ -17,6 +17,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"io/fs"
 	"math"
 	"os"
 	"os/exec"
@@ -27,7 +28,7 @@ import (
 	"sync"
 	"time"
 
-	"gobees/internal/examplefiles"
+	"gobees/examplefiles"
 )
 
 // Table is the daily output of one run: one row per day, the columns of Header.
@@ -136,14 +137,47 @@ type Run struct {
 	Duration time.Duration // wall time of the program, incl. reading the input files
 }
 
-// RunProgram runs the gobees program bin once with the input files in dir and the parameter file parameters (a
-// path, empty for the example farm file in dir). With output, it returns the daily output in Run.Table, otherwise
-// the program writes none (for timing).
-func RunProgram(bin, dir, parameters string, seed int64, days int, output bool) (Run, error) {
-	args := []string{"-d", dir, "-s", strconv.FormatInt(seed, 10), "--days", strconv.Itoa(days)}
-	if parameters != "" {
-		args = append(args, "-p", parameters)
+// Input is the input format of a program.
+type Input string
+
+const (
+	// NetLogoInput: the NetLogo input files, with -d and -p (gobees, and gobees-fast before step F7).
+	NetLogoInput Input = "netlogo"
+	// YAMLInput: a run file, with --config (gobees-fast from step F7 on).
+	YAMLInput Input = "yaml"
+)
+
+// ParseInput returns the input format of s, NetLogoInput if s is empty.
+func ParseInput(s string) (Input, error) {
+	switch Input(s) {
+	case "", NetLogoInput:
+		return NetLogoInput, nil
+	case YAMLInput:
+		return YAMLInput, nil
 	}
+	return "", fmt.Errorf("unknown input format %q, expected %q or %q", s, NetLogoInput, YAMLInput)
+}
+
+// Args returns the command line arguments of the input files of scenario s (nil: the example farm) in dir, which
+// holds the files of WriteInputFiles.
+func (in Input) Args(dir string, s *Scenario) []string {
+	if in == YAMLInput {
+		if s == nil {
+			return nil // the example farm is built in
+		}
+		return []string{"--config", filepath.Join(dir, scenariosDir, s.ConfigFile())}
+	}
+	args := []string{"-d", dir}
+	if s != nil {
+		args = append(args, "-p", filepath.Join(dir, s.ParameterFileName()))
+	}
+	return args
+}
+
+// RunProgram runs the gobees program bin once with the input arguments input (Input.Args). With output, it returns
+// the daily output in Run.Table, otherwise the program writes none (for timing).
+func RunProgram(bin string, input []string, seed int64, days int, output bool) (Run, error) {
+	args := append(slices.Clone(input), "-s", strconv.FormatInt(seed, 10), "--days", strconv.Itoa(days))
 	out := ""
 	if output {
 		f, err := os.CreateTemp("", "gobees-compare-*.csv")
@@ -178,7 +212,7 @@ func RunProgram(bin, dir, parameters string, seed int64, days int, output bool) 
 
 // RunPrograms runs the program once per seed (RunProgram), with threads runs at the same time. The runs are in the
 // order of the seeds.
-func RunPrograms(bin, dir, parameters string, seeds []int64, days, threads int, output bool) ([]Run, error) {
+func RunPrograms(bin string, input []string, seeds []int64, days, threads int, output bool) ([]Run, error) {
 	runs := make([]Run, len(seeds))
 	errs := make([]error, len(seeds))
 	next := make(chan int)
@@ -186,7 +220,7 @@ func RunPrograms(bin, dir, parameters string, seeds []int64, days, threads int, 
 	for range threads {
 		wg.Go(func() {
 			for i := range next {
-				runs[i], errs[i] = RunProgram(bin, dir, parameters, seeds[i], days, output)
+				runs[i], errs[i] = RunProgram(bin, input, seeds[i], days, output)
 			}
 		})
 	}
@@ -203,8 +237,10 @@ func RunPrograms(bin, dir, parameters string, seeds []int64, days, threads int, 
 	return runs, nil
 }
 
-// WriteInputFiles writes the input files of the example farm into dir, as the command line reads them with -d
-// and the default flags, and the second map of the crop rotation scenario. All versions read the same files.
+// WriteInputFiles writes into dir the input files of the example farm, as the command line reads them with -d and
+// the default flags, the second map of the crop rotation scenario and the parameter files of the scenarios
+// (ParameterFileName). All versions with NetLogo input read the same files. The run files of the scenarios
+// (ScenarioFiles) go into the subfolder scenarios.
 func WriteInputFiles(dir string) error {
 	files := map[string]string{
 		"_SYSTEM_Example_Farm_Parameters.csv":   examplefiles.ExampleFarmParameters,
@@ -216,12 +252,31 @@ func WriteInputFiles(dir string) error {
 		// Weather = "foragingHoursExample" of step8_weather (versions from step F2 on; the others ignore it)
 		"_SYSTEM_Weather_foragingHoursExample.csv": examplefiles.WeatherForagingHoursExample,
 	}
+	for _, s := range Scenarios {
+		text, err := s.ParameterFile()
+		if err != nil {
+			return err
+		}
+		files[s.ParameterFileName()] = text
+	}
 	for name, text := range files {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0o644); err != nil {
 			return err
 		}
 	}
-	return nil
+	if err := os.MkdirAll(filepath.Join(dir, scenariosDir), 0o755); err != nil {
+		return err
+	}
+	return fs.WalkDir(ScenarioFiles, scenariosDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		b, err := ScenarioFiles.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(filepath.Join(dir, filepath.FromSlash(path)), b, 0o644)
+	})
 }
 
 // Seeds returns the seeds 1 to n.

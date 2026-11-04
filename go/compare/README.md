@@ -31,7 +31,9 @@ random numbers, and gobees shuffles before every `ask`, so a change of the order
 
 A scenario is a setting of the full model ([scenario.go](scenario.go)): the example farm with the parameters of a
 NetLogo experiment in `go/validation/experiments`, and the same name. Its parameter file is that of the experiment
-(or of the example farm) with `StopExtinct? = false`, as in all experiments, so that every run has all days.
+(or of the example farm) with `StopExtinct? = false`, as in all experiments, so that every run has all days. Its run
+file in [scenarios](scenarios) is the conversion of this parameter file (`go run . generate` in `tools/netlogo2gobees`,
+whose tests check that the run files are up to date).
 
 | Scenario | Days | Setting |
 | --- | ---: | --- |
@@ -48,8 +50,10 @@ The experiments of parts of the model (`step3`, `step4a`, `step6`) cannot run as
 
 ## The comparisons
 
-Every version runs as a command line program (`go/main.go`) with `-s <seed> --days <days> -p <parameter file>
--f <file>`, with seeds 1 to 100, and is compared on its daily output (`obs.DailyOutputExtended`) from day 1 on (the
+Every version runs as a command line program (`go/main.go`) with `-s <seed> --days <days> -f <file>` and its input:
+gobees (`BASE_COMMIT`) the NetLogo files (`-d <folder> -p <parameter file>`), the current code the run file of the
+scenario (`--config`, converted with `tools/netlogo2gobees` into [scenarios](scenarios)), the reference the format of
+`REFERENCE_INPUT` in `commits.env`. The programs run with seeds 1 to 100, and is compared on its daily output (`obs.DailyOutputExtended`) from day 1 on (the
 programs write no row for the setup). The columns are matched by name. Columns only the current code has are listed
 in the comment and not compared. A column of the other version that the current code no longer has is an error, unless
 it is listed in `REMOVED_COLUMNS`: a column is removed only together with its model branch.

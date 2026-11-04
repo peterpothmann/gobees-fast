@@ -1,138 +1,107 @@
-// Package input reads the NetLogo input files of a run into params.Params before the setup [INIT-04], [INIT-05].
-// No system opens a file afterwards.
+// Package input reads a run file (YAML) and its landscape files into params.Params before the setup [INIT-04],
+// [INIT-05]. No system opens a file afterwards.
 //
-// The files keep the NetLogo format, so that NetLogo, gobees and gobees-fast read the same files (validation,
-// benchmark, comparisons).
+// The tool tools/netlogo2gobees converts the NetLogo input files into run files. gobees-fast reads no NetLogo files
+// since step F7.
 package input
 
 import (
+	"embed"
 	"fmt"
+	"io"
 	"os"
+	"path"
 	"path/filepath"
 
-	"gobees/globals"
 	"gobees/params"
 )
 
-// StartFoodsourcesFile is the foodsources file of the start [PAR-05].
+// exampleFarm holds the example farm as run file and landscape file, converted from the NetLogo files with
+// tools/netlogo2gobees (the tool's tests check that the files are up to date).
 //
-// NetLogo derives it from the interface setting MyMap ("X.png" -> "X_Foodsources.txt"), and the .nlogo stores
-// MyMap = "_SYSTEM_Example_Farm.png". gobees-fast has no MyMap since step F6, so every run starts on the example farm
-// until gobees-fast has its own input format. Other maps are only reached through the crop rotation [CROP-01].
-const StartFoodsourcesFile = "_SYSTEM_Example_Farm_Foodsources.txt"
+//go:embed all:examplefarm
+var exampleFarm embed.FS
 
-// noFlowerspeciesFile is the value of FlowerspeciesFile without a file [FSRC-12].
-const noFlowerspeciesFile = "No Input File"
+// ExampleFarmFile is the run file of the example farm in exampleFarm.
+const ExampleFarmFile = "run.yaml"
 
-// Load reads the parameter file at path [INIT-04] and all input files it names (Read). dir is the folder of the
-// input files, the folder of the .nlogo in NetLogo. The other values are the ones of params.Default.
-func Load(dir, path string) (params.Params, error) {
-	p := params.Default()
-	file, err := ReadParameterFile(path)
-	if err != nil {
-		return p, err
-	}
-	p.File = file
-	if p.Input, err = Read(dir, &p.File, &p.Constants); err != nil {
-		return p, err
-	}
-	return p, nil
+// Load reads the run file at path and its landscape files, relative to the folder of the run file, and returns the
+// parameters of the run (Build).
+func Load(path string) (params.Params, error) {
+	dir := filepath.Dir(path)
+	return load(path, func(name string) (io.ReadCloser, error) {
+		if !filepath.IsAbs(name) {
+			name = filepath.Join(dir, name)
+		}
+		return os.Open(name)
+	})
 }
 
-// Read reads all input files that file names, relative to dir, and derives the values of ParametersProc
-// [INIT-05]. A missing or invalid file is an error.
-func Read(dir string, file *params.ParameterFile, constants *params.Constants) (params.Input, error) {
-	in := params.Input{}
-
-	// [PAR-01]
-	queens, species, err := QueensInitialProc(file.BeeSpeciesInitialQueensListAsString)
+// ExampleFarm returns the parameters of the example farm, the run without a run file. NetLogo reads
+// _SYSTEM_Example_Farm_Parameters.csv with the default interface settings [INIT-02].
+func ExampleFarm() params.Params {
+	p, err := load(ExampleFarmFile, openExampleFarm)
 	if err != nil {
-		return in, err
+		panic(err) // the embedded files are checked by the tests
 	}
-	// [PAR-06]
-	cso, err := AllCSOlistREP(filepath.Join(dir, file.HabitatsFile))
+	return p
+}
+
+// ExampleFarmConfig returns the run file of the example farm and its landscape files by name, e.g. for tests that
+// change them before Build.
+func ExampleFarmConfig() (Config, map[string]Landscape) {
+	c, landscapes, err := readAll(ExampleFarmFile, openExampleFarm)
 	if err != nil {
-		return in, err
+		panic(err)
 	}
-	// [FPER] NetLogo: Foraging_periodREP every morning
-	if in.Weather, err = weatherFromParameter(file.Weather, dir); err != nil {
-		return in, err
-	}
-	// [PAR-04]
-	mortality, err := mortalityForager(file.ForagingMortalityModel)
+	return c, landscapes
+}
+
+func openExampleFarm(name string) (io.ReadCloser, error) {
+	return exampleFarm.Open(path.Join("examplefarm", name))
+}
+
+func load(name string, open func(string) (io.ReadCloser, error)) (params.Params, error) {
+	c, landscapes, err := readAll(name, open)
 	if err != nil {
-		return in, err
+		return params.Params{}, err
 	}
-	in.Derived = globals.Derived{
-		BeeSpeciesInitialQueensList: queens,
-		SpeciesList:                 species,
-		MortalityForager_per_s:      mortality,
-		FoodsourcesFile:             StartFoodsourcesFile, // [PAR-05]
-		CSS_OptionsList:             cso,
-		CropRotationList:            ListFromStringREP(file.CropRotationListAsString), // [PAR-07]
-	}
+	return Build(c, landscapes)
+}
 
-	// [SPEC-01] to [SPEC-03], [SPEC-05], [SPEC-07]
-	if in.Species, err = readSpeciesFile(filepath.Join(dir, file.BeespeciesFile), species, constants); err != nil {
-		return in, err
+// readAll reads the run file name and the landscape files it names (the start and, with a crop rotation, every file
+// of the crop rotation, each once).
+func readAll(name string, open func(string) (io.ReadCloser, error)) (Config, map[string]Landscape, error) {
+	c := Config{}
+	if err := readFile(name, open, func(r io.Reader) (err error) { c, err = ReadConfig(r); return }); err != nil {
+		return c, nil, err
 	}
-
-	// [FSRC-12] NetLogo reads the file in every CreateFoodsourcesProc, i.e. again in each crop rotation.
-	if file.FlowerspeciesFile != noFlowerspeciesFile {
-		t, err := readFlowerspeciesFile(filepath.Join(dir, file.FlowerspeciesFile))
-		if err != nil {
-			return in, err
-		}
-		in.Flowers = &t
+	names := []string{c.Landscape}
+	if len(c.CropRotation) > 1 {
+		names = append(names, c.CropRotation...)
 	}
-
-	// [FSRC-02] to [FSRC-04] the start map and, if the crop rotation runs (more than one file [MORN-09]), every file
-	// of the crop rotation [CROP-01]. NetLogo reads a file of the crop rotation only on its Day 365, so a missing one
-	// stops the run there instead of in Setup.
-	names := []string{StartFoodsourcesFile}
-	if len(in.Derived.CropRotationList) > 1 {
-		names = append(names, in.Derived.CropRotationList...)
-	}
-	in.Foodsources = map[string]params.Foodsources{}
-	for _, name := range names {
-		if _, ok := in.Foodsources[name]; ok {
+	landscapes := map[string]Landscape{}
+	for _, n := range names {
+		if _, ok := landscapes[n]; ok {
 			continue
 		}
-		fs, err := readFoodsourcesFile(filepath.Join(dir, name))
-		if err != nil {
-			return in, err
+		var l Landscape
+		if err := readFile(n, open, func(r io.Reader) (err error) { l, err = ReadLandscape(r); return }); err != nil {
+			return c, nil, err
 		}
-		in.Foodsources[name] = fs
+		landscapes[n] = l
 	}
-	return in, nil
+	return c, landscapes, nil
 }
 
-// readFoodsourcesFile reads a foodsources file [FSRC-02] to [FSRC-04]. NetLogo shows a message and Setup continues
-// without foodsources [FSRC-09]. Here it is an error.
-func readFoodsourcesFile(path string) (params.Foodsources, error) {
-	f, err := os.Open(path)
+func readFile(name string, open func(string) (io.ReadCloser, error), read func(io.Reader) error) error {
+	f, err := open(name)
 	if err != nil {
-		return params.Foodsources{}, fmt.Errorf("FoodsourcesFile: %w", err)
+		return err
 	}
 	defer f.Close()
-	m, p, err := parseFoodsourcesFile(f)
-	if err != nil {
-		return params.Foodsources{}, fmt.Errorf("FoodsourcesFile %s: %w", path, err)
+	if err := read(f); err != nil {
+		return fmt.Errorf("%s: %w", name, err)
 	}
-	return params.Foodsources{MetresPerPatch: m, Patches: p}, nil
-}
-
-// readFlowerspeciesFile reads the FlowerspeciesFile [LAYR-02]. NetLogo shows a message and creates no layers.
-// Here it is an error.
-func readFlowerspeciesFile(path string) (params.FlowerSpeciesTable, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return params.FlowerSpeciesTable{}, fmt.Errorf("FlowerspeciesFile: %w", err)
-	}
-	defer f.Close()
-	t, err := parseFlowerspeciesFile(f)
-	if err != nil {
-		return t, fmt.Errorf("FlowerspeciesFile %s: %w", path, err)
-	}
-	return t, nil
+	return nil
 }

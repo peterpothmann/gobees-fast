@@ -1,36 +1,44 @@
 package compare
 
 import (
-	"strings"
+	"path/filepath"
+	"slices"
 	"testing"
 
 	"gobees/input"
 	"gobees/params"
 )
 
-func TestScenarioParameterFiles(t *testing.T) {
-	files := map[string]params.ParameterFile{}
+func TestScenarioRunFiles(t *testing.T) {
+	// The run files of ScenarioFiles, as gobees-fast reads them. tools/netlogo2gobees checks that they are the
+	// conversion of the parameter files (ParameterFile).
+	dir := t.TempDir()
+	if err := WriteInputFiles(dir); err != nil {
+		t.Fatal(err)
+	}
+	runs := map[string]params.Params{}
 	for _, s := range Scenarios {
-		text, err := s.ParameterFile()
+		p, err := input.Load(filepath.Join(dir, scenariosDir, s.ConfigFile()))
 		if err != nil {
-			t.Fatal(err)
-		}
-		if files[s.Name], err = input.ParseParameterFile(strings.NewReader(text)); err != nil {
 			t.Fatalf("%s: %v", s.Name, err)
 		}
-		if files[s.Name].StopExtinct {
+		if p.File.StopExtinct {
 			t.Errorf("%s: StopExtinct? must be false", s.Name)
 		}
+		runs[s.Name] = p
 	}
-	if got := files["step7_badgers"].N_Badgers; got != 2 {
+	if got := runs["step7_badgers"].File.N_Badgers; got != 2 {
 		t.Errorf("badgers: N_Badgers = %v, want 2", got)
 	}
-	want := "_SYSTEM_Example_Farm_Foodsources.txt Example_Farm_PlotTest_Foodsources.txt"
-	if got := files["step7_crop"].CropRotationListAsString; got != want {
-		t.Errorf("crop rotation: CropRotationListAsString = %q, want %q", got, want)
+	want := []string{"_SYSTEM_Example_Farm_Foodsources.yaml", "Example_Farm_PlotTest_Foodsources.yaml"}
+	if got := runs["step7_crop"].Input.Derived.CropRotationList; !slices.Equal(got, want) {
+		t.Errorf("crop rotation: CropRotationList = %q, want %q", got, want)
 	}
-	if got := files["step7"].CropRotationListAsString; got != "" {
-		t.Errorf("example farm: CropRotationListAsString = %q, want none", got)
+	if got := runs["step7"].Input.Derived.CropRotationList; len(got) != 0 {
+		t.Errorf("example farm: CropRotationList = %q, want none", got)
+	}
+	if got := len(runs["step8_species"].Input.Species); got != 7 {
+		t.Errorf("several species: %d species, want 7", got)
 	}
 }
 

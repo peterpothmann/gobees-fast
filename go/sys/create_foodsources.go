@@ -60,10 +60,11 @@ func CreateFoodsourcesProc(w *ecs.World, foodsourcesFile string, landscape *glob
 	who := ecs.GetResource[globals.WhoCounter](w)
 	rng := rand.New(ecs.GetResource[resource.Rand](w))
 
-	// [FSRC-02] to [FSRC-04] read by package input, which reads the start map and every map of the crop rotation.
+	// [FSRC-02] to [FSRC-04] read by package input, which reads the landscape of the start and every landscape of the
+	// crop rotation.
 	read, ok := in.Foodsources[foodsourcesFile]
 	if !ok {
-		panic(fmt.Errorf("foodsources file %q was not read by package input", foodsourcesFile))
+		panic(fmt.Errorf("landscape file %q was not read by package input", foodsourcesFile))
 	}
 	landscape.Scaling_NLpatches_per_m = precision(1/read.MetresPerPatch, 8)
 	// copies, because the setup changes them (who, radius, merged hedges), and a crop rotation can use a file twice

@@ -8,30 +8,35 @@ import (
 
 	"gobees/comp"
 	"gobees/globals"
-	"gobees/params"
+	"gobees/input"
 
 	"github.com/mlange-42/ark-tools/app"
 	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
 )
 
-// smallFoodsources is a foodsources file made by hand for the crop rotation tests, in the format of
-// netlogo/_SYSTEM_Example_Farm_Foodsources.txt: two flower patches with large areas, so that their layers are not
-// removed as too small [LAYR-06], [LAYR-07].
-const smallFoodsources = `10
-2
-id patchType patchColour xcor ycor size_sqm flowerSpeciesList perimeter_m info
-0 "Scrub" 125 50 50 100000 [["Bramble" 0.211] ["Dandelion" 0.113]] 1200  "no info"
-1 "Garden" 45 120 80 50000 [["Dandelion" 0.5]] 900  "no info"
-`
+// smallLandscape is a landscape file made by hand for the crop rotation tests: two flower patches with large areas,
+// so that their layers are not removed as too small [LAYR-06], [LAYR-07].
+var smallLandscape = input.Landscape{MetresPerPatch: 10, Patches: []input.Patch{
+	{Id: 0, PatchType: "Scrub", X: 50, Y: 50, Area_sqm: 100000, FlowerSpeciesList: []input.FlowerEntry{
+		{Name: "Bramble", Value: 0.211, HasValue: true}, {Name: "Dandelion", Value: 0.113, HasValue: true}}},
+	{Id: 1, PatchType: "Garden", X: 120, Y: 80, Area_sqm: 50000, FlowerSpeciesList: []input.FlowerEntry{
+		{Name: "Dandelion", Value: 0.5, HasValue: true}}},
+}}
 
-// cropWorld runs the example farm setup with the crop rotation list "_SYSTEM_Example_Farm_Foodsources.txt
-// small_Foodsources.txt" and the file small_Foodsources.txt among the input files.
-func cropWorld(t *testing.T, list string) (*app.App, *CropRotation) {
+// Landscape files of the crop rotation tests: the example farm (exampleLandscape, the landscape of the run file
+// built into package input) and smallLandscape (smallLandscapeFile).
+const (
+	exampleLandscape   = "_SYSTEM_Example_Farm_Foodsources.yaml"
+	smallLandscapeFile = "small_Foodsources.yaml"
+)
+
+// cropWorld runs the example farm setup with the crop rotation list and smallLandscape among the landscape files.
+func cropWorld(t *testing.T, list []string) (*app.App, *CropRotation) {
 	t.Helper()
 	cr := &CropRotation{}
-	a := newExampleFarmSetupFiles(t, 1, map[string]string{"small_Foodsources.txt": smallFoodsources},
-		func(p *params.Params) { p.File.CropRotationListAsString = list },
+	a := newExampleFarmSetupFiles(t, 1, map[string]input.Landscape{smallLandscapeFile: smallLandscape},
+		func(c *input.Config) { c.CropRotation = list },
 		&Tick{}, &UpdateMorning{}, &CreateInitialQueens{}, cr)
 	return a, cr
 }
@@ -59,7 +64,7 @@ func setDay(w *ecs.World, ticks int64) {
 }
 
 func TestCropRotation(t *testing.T) {
-	a, cr := cropWorld(t, "_SYSTEM_Example_Farm_Foodsources.txt small_Foodsources.txt")
+	a, cr := cropWorld(t, []string{exampleLandscape, smallLandscapeFile})
 	w := a.World
 	derived := ecs.GetResource[globals.Derived](w)
 	nBefore, _, maxWhoBefore := foodsourceSummary(w)
@@ -88,15 +93,15 @@ func TestCropRotation(t *testing.T) {
 	// [MORN-09] only on Day 365
 	setDay(w, 364)
 	cr.Update(w)
-	if derived.FoodsourcesFile != "_SYSTEM_Example_Farm_Foodsources.txt" {
+	if derived.FoodsourcesFile != exampleLandscape {
 		t.Fatalf("crop rotation on day 364")
 	}
 
 	// [CROP-01] ticks 365: year 1, item 1
 	setDay(w, 365)
 	cr.Update(w)
-	if derived.FoodsourcesFile != "small_Foodsources.txt" {
-		t.Errorf("FoodsourcesFile %q, want small_Foodsources.txt", derived.FoodsourcesFile)
+	if derived.FoodsourcesFile != smallLandscapeFile {
+		t.Errorf("FoodsourcesFile %q, want %s", derived.FoodsourcesFile, smallLandscapeFile)
 	}
 	// [CROP-03] only the foodsources of the new file, with new who numbers
 	n, masters, _ := foodsourceSummary(w)
@@ -153,14 +158,14 @@ func TestCropRotation(t *testing.T) {
 	// ticks 730: year 2, item 0, the example farm again
 	setDay(w, 730)
 	cr.Update(w)
-	if n, _, _ := foodsourceSummary(w); derived.FoodsourcesFile != "_SYSTEM_Example_Farm_Foodsources.txt" || n != nBefore {
+	if n, _, _ := foodsourceSummary(w); derived.FoodsourcesFile != exampleLandscape || n != nBefore {
 		t.Errorf("year 2: FoodsourcesFile %q with %d foodsources, want the example farm with %d", derived.FoodsourcesFile, n, nBefore)
 	}
 }
 
 func TestCropRotationDefaultList(t *testing.T) {
-	// finding 3 (see trans/netlogo-findings.md#finding-3): "" gives [""] with length 1, so no crop rotation
-	a, cr := cropWorld(t, "")
+	// without crop rotation (NetLogo: "" gives [""] with length 1, finding 3, see trans/netlogo-findings.md#finding-3)
+	a, cr := cropWorld(t, nil)
 	w := a.World
 	nBefore, _, maxWho := foodsourceSummary(w)
 	setDay(w, 365)
