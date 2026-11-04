@@ -68,6 +68,14 @@ median. The fork point `40dc301` wrote only the 15 columns of `obs.DailyOutput` 
 The program writes the metrics of the NetLogo experiments as columns under their NetLogo names
 (`obs.NetLogoMetrics`), so all three comparisons read the same output.
 
+**Rounded columns.** The columns in `RoundedColumns` ([compare.go](compare.go)) are rounded to whole numbers in the
+output of every version, before every comparison. At the moment this is only `foraging_period_s`. NetLogo and the
+versions before step F2 compute the foraging period as hours × 3600, so on 15 of the 365 days of the example weather
+year the value misses the whole second in the last bit (e.g. 2.2 × 3600 = 7920.000000000001). From step F2 on,
+gobees-fast reads whole seconds from the weather file (`step8_weather`). The model gives the same results, only this
+column differs. Without the rounding, `step8_weather` would fail exactly against the previous step and, with a band
+of width 0, against gobees.
+
 **Why the Kolmogorov-Smirnov tests are needed.** The daily band alone is a weak check. Tested with the current
 code against itself with a higher foraging mortality (`ForagingMortalityFactor` in the parameter file, 100 seeds,
 3 years, 2026-11-01):

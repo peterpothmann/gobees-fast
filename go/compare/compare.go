@@ -17,6 +17,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -35,7 +36,17 @@ type Table struct {
 	Rows   [][]float64
 }
 
-// ReadTable reads a tab-separated table with a header line, as written by reporter.CSV.
+// RoundedColumns are rounded to whole numbers when a table is read (ReadTable), in the output of every version, so
+// every comparison sees the rounded values.
+//
+// foraging_period_s: NetLogo and the versions before step F2 compute the foraging period as hours * 3600, which
+// misses whole seconds in the last bit on 15 of the 365 days of the example weather year (e.g. 2.2 * 3600 =
+// 7920.000000000001). From step F2 on, gobees-fast reads whole seconds from the weather file (Weather =
+// "foragingHoursExample", scenario step8_weather). The model gives the same results, only this column differs.
+var RoundedColumns = []string{"foraging_period_s"}
+
+// ReadTable reads a tab-separated table with a header line, as written by reporter.CSV. The values of
+// RoundedColumns are rounded to whole numbers.
 func ReadTable(r io.Reader) (Table, error) {
 	t := Table{}
 	scanner := bufio.NewScanner(r)
@@ -58,6 +69,9 @@ func ReadTable(r io.Reader) (Table, error) {
 			v, err := strconv.ParseFloat(f, 64)
 			if err != nil {
 				return t, fmt.Errorf("row %d, column %s: %w", len(t.Rows)+1, t.Header[i], err)
+			}
+			if slices.Contains(RoundedColumns, t.Header[i]) {
+				v = math.Round(v)
 			}
 			row[i] = v
 		}
@@ -199,6 +213,8 @@ func WriteInputFiles(dir string) error {
 		"Example_Farm_PlotTest_Foodsources.txt": examplefiles.ExampleFarmPlotTestFoodsources,
 		"_SYSTEM_Flowerspecies.csv":             examplefiles.Flowerspecies,
 		"_SYSTEM_BumbleSpecies_UK_01.csv":       examplefiles.BumbleSpecies,
+		// Weather = "foragingHoursExample" of step8_weather (versions from step F2 on; the others ignore it)
+		"_SYSTEM_Weather_foragingHoursExample.csv": examplefiles.WeatherForagingHoursExample,
 	}
 	for name, text := range files {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0o644); err != nil {

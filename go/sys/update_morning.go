@@ -4,8 +4,6 @@ import (
 	"fmt"
 
 	"gobees/globals"
-	"gobees/params"
-	"gobees/util"
 
 	"github.com/mlange-42/ark/ecs"
 )
@@ -22,13 +20,13 @@ import (
 // NetLogo: UpdateMorning_Proc.
 type UpdateMorning struct {
 	ticks    *globals.Ticks
-	file     *params.ParameterFile
+	weather  *globals.Weather
 	calendar globals.Calendar
 }
 
 func (s *UpdateMorning) Initialize(w *ecs.World) {
 	s.ticks = ecs.GetResource[globals.Ticks](w)
-	s.file = ecs.GetResource[params.ParameterFile](w)
+	s.weather = ecs.GetResource[globals.Weather](w)
 	ecs.AddResource(w, &s.calendar)
 	s.Update(w) // run at ticks = 0, i.e. Day = 0 [INIT-10]
 }
@@ -42,7 +40,9 @@ func (s *UpdateMorning) Update(w *ecs.World) {
 	// [MORN-04] finding 4, no foraging period on Day 0 (see trans/netlogo-findings.md#finding-4)
 	// Update the calender with today's foraging period and the Day of the year.
 	if s.calendar.Day > 0 {
-		s.calendar.DailyForagingPeriod_s = util.Foraging_periodREP(s.file.Weather, int(s.calendar.Day))
+		// [FPER] year of the run: 1 for ticks 1 to 365, 2 for 366 to 730, ...
+		year := int((s.ticks.Ticks-1)/365) + 1
+		s.calendar.DailyForagingPeriod_s = s.weather.ForagingPeriod_s(year, int(s.calendar.Day))
 	}
 }
 

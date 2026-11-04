@@ -3,6 +3,8 @@ package sys
 import (
 	"math"
 	"math/rand/v2"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -33,7 +35,11 @@ func TestDayOfYear(t *testing.T) {
 	}
 }
 
-// morningWorld is a world with the resources of the morning systems, without foodsources and bees.
+// weatherExampleFile is the file name of the example weather year (examplefiles.WeatherForagingHoursExample).
+const weatherExampleFile = "_SYSTEM_Weather_foragingHoursExample.csv"
+
+// morningWorld is a world with the resources of the morning systems, without foodsources and bees. weather is the
+// parameter Weather: a "Constant N hrs" option or weatherExampleFile.
 func morningWorld(t *testing.T, weather string) (*ecs.World, *globals.Ticks) {
 	t.Helper()
 	w := ecs.NewWorld()
@@ -43,6 +49,15 @@ func morningWorld(t *testing.T, weather string) (*ecs.World, *globals.Ticks) {
 	ecs.AddResource(w, &p.File)
 	ticks := &globals.Ticks{}
 	ecs.AddResource(w, ticks)
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, weatherExampleFile), []byte(examplefiles.WeatherForagingHoursExample), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	weatherResource, err := weatherFromParameter(weather, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ecs.AddResource(w, &weatherResource)
 	return w, ticks
 }
 
@@ -68,11 +83,12 @@ func TestUpdateMorningForagingPeriod(t *testing.T) {
 }
 
 func TestUpdateMorningForagingHoursExample(t *testing.T) {
-	// [MORN-04] with the weather list, day 43 is the ".5" (finding 1, see trans/netlogo-findings.md#finding-1)
-	w, ticks := morningWorld(t, "foragingHoursExample")
+	// [MORN-04] with the example weather year, day 43 is the ".5" of the NetLogo list (finding 1, see
+	// trans/netlogo-findings.md#finding-1)
+	w, ticks := morningWorld(t, weatherExampleFile)
 	s := &UpdateMorning{}
 	s.Initialize(w)
-	ticks.Ticks = 365 + 43 // second year: the list is read by Day, not by ticks
+	ticks.Ticks = 365 + 43 // second year: a file of one year repeats, read by Day, not by ticks
 	s.Update(w)
 	if got := ecs.GetResource[globals.Calendar](w).DailyForagingPeriod_s; got != 0.5*3600 {
 		t.Errorf("ticks %d (Day 43): DailyForagingPeriod_s %v, want 1800", ticks.Ticks, got)

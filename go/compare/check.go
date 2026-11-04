@@ -26,8 +26,8 @@ type ScenarioResult struct {
 	ReferenceColumns, BaseColumns []string
 	NotInReference, NotInBase     []string
 	// Removed are the columns the current code removes on purpose (REMOVED_COLUMNS of commits.env), not compared.
-	Removed []string
-	NetLogoResult                 NetLogoResult
+	Removed       []string
+	NetLogoResult NetLogoResult
 }
 
 // ExactCell compares the runs value by value (Exact): passed if every run is equal on the columns.

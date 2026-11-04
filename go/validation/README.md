@@ -82,7 +82,7 @@ written by `scripts/parameter_files.py`, each the example farm file with a few v
 | --- | --- | --- |
 | `step8_genetics.xml` | `SexLocus?` = true, `UnlimitedMales?` = false | 730 |
 | `step8_species.xml` | `BeeSpeciesInitialQueensListAsString` = all 7 species: 150 queens of each Bombus species, 100 Psithyrus | 730 |
-| `step8_weather.xml` | `Weather` = `"foragingHoursExample"`, `ForagingMortalityModel` = `"low"` | 730 |
+| `step8_weather.xml` | `Weather` = `"foragingHoursExample"` (gobees-fast reads it from the weather file `_SYSTEM_Weather_foragingHoursExample.csv` with the same values), `ForagingMortalityModel` = `"low"` | 730 |
 | `step8_settings.xml` | `WinterMortality?`, `MergeHedges?`, `MinSizeFoodSources?`, `RemoveEmptyFoodSources?`, `KeepDeadColonies?` = false, `MaxHibernatingQueens` = 150 (takes effect on every 1 January, also on the first day of the run) | 730 |
 
 NetLogo reads these files through `MyParametersFile` (set in the experiment, with `ProjectsOwnParameterFile?` =

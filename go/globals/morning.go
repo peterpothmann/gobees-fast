@@ -6,6 +6,22 @@ type Calendar struct {
 	DailyForagingPeriod_s float64 // length of today's foraging period [s], 0 until day 1 (finding 4)
 }
 
+// Weather holds the daily foraging period of the parameter Weather [FPER], set in Setup (sys.Parameters): one value
+// for every day ("Constant N hrs"), or the period per day of the year from a weather file, for one or more years.
+type Weather struct {
+	Constant_s float64     // foraging period of every day [s], used when Years_s is nil
+	Years_s    [][]float64 // foraging period [year-1][day-1] of a weather file [s], nil for a constant
+}
+
+// ForagingPeriod_s returns the foraging period [s] of the day of the year day (1 to 365) in the year year of the run
+// (1, 2, ...). The years of a weather file repeat.
+func (w *Weather) ForagingPeriod_s(year, day int) float64 {
+	if w.Years_s == nil {
+		return w.Constant_s
+	}
+	return w.Years_s[(year-1)%len(w.Years_s)][day-1]
+}
+
 // FoodsourcesToday holds the globals that UpdateFoodsourcesProc sets [UFS].
 type FoodsourcesToday struct {
 	NectarAvailableTotalToday_l  float64 // output only

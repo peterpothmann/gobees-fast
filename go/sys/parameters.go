@@ -27,6 +27,7 @@ import (
 // NetLogo: ParametersProc.
 type Parameters struct {
 	derived globals.Derived
+	weather globals.Weather
 }
 
 func (s *Parameters) Initialize(w *ecs.World) {
@@ -44,6 +45,14 @@ func (s *Parameters) Initialize(w *ecs.World) {
 	if err != nil {
 		panic(err)
 	}
+
+	// [FPER] the weather, read once (NetLogo: Foraging_periodREP every morning)
+	weather, err := weatherFromParameter(file.Weather, dir.Path)
+	if err != nil {
+		panic(err)
+	}
+	s.weather = weather
+	ecs.AddResource(w, &s.weather)
 
 	s.derived = globals.Derived{
 		BeeSpeciesInitialQueensList: queens,
