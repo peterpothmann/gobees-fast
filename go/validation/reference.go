@@ -66,3 +66,23 @@ var NetLogoStep8Settings string
 //
 //go:embed experiments/*_Parameters.csv
 var ParameterFiles embed.FS
+
+// referenceFS holds all NetLogo reference files: netlogo_<experiment>.csv (quantiles per step and metric) and
+// netlogo_<experiment>_runs.csv (run summaries, see RunSummaries).
+//
+//go:embed reference
+var referenceFS embed.FS
+
+// NetLogoReference returns the NetLogo quantiles of an experiment and its run summaries. runs is empty if the
+// experiment has no run summaries yet (written by scripts/aggregate_netlogo.py since step F0c).
+func NetLogoReference(experiment string) (quantiles, runs string, err error) {
+	q, err := referenceFS.ReadFile("reference/netlogo_" + experiment + ".csv")
+	if err != nil {
+		return "", "", err
+	}
+	r, err := referenceFS.ReadFile("reference/netlogo_" + experiment + "_runs.csv")
+	if err != nil {
+		return string(q), "", nil
+	}
+	return string(q), string(r), nil
+}

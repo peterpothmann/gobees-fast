@@ -77,7 +77,7 @@ func TestValidationStep4aAgainstNetLogo(t *testing.T) {
 		Description: "Experiment `go/validation/experiments/step4a.xml`: example farm, 400 days. Day of the year, nectar and " +
 			"pollen available in the landscape. These values depend only on the landscape, so the NetLogo band is " +
 			"widened by a relative tolerance of 1e-9 (float sums in random order).",
-		Runs: runs, Rows: rows})
+		Runs: runs, Rows: rows, Values: values})
 	if err != nil {
 		t.Fatal(err)
 	}

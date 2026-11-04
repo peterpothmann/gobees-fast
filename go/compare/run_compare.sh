@@ -6,8 +6,8 @@
 #   go/compare/run_compare.sh [further arguments of go test]
 #
 # The commits are checked out into temporary git worktrees, which are removed at the end. The current code is
-# the working tree, including uncommitted changes. Set COMPARE_REPORT to a file to get the results as Markdown
-# (the CI uses $GITHUB_STEP_SUMMARY), and COMPARE_THREADS to limit the runs at the same time.
+# the working tree, including uncommitted changes. Set COMPARE_CHECKS to a folder to get the results as files for
+# the pull request comment (the CI does), and COMPARE_THREADS to limit the runs at the same time.
 set -euo pipefail
 
 root=$(git rev-parse --show-toplevel)
@@ -43,16 +43,19 @@ echo "reference: $reference"
 echo "base:      $base"
 
 build "$reference" reference
+COMPARE_REFERENCE_BIN=$(native "$work/reference.exe")
+# The same program for the same commit: the tests run each program only once.
 if [ "$base" = "$reference" ]; then
-    cp "$work/reference.exe" "$work/base.exe"
+    COMPARE_BASE_BIN=$COMPARE_REFERENCE_BIN
 else
     build "$base" base
+    COMPARE_BASE_BIN=$(native "$work/base.exe")
 fi
 go -C "$(native "$root/go")" build -o "$(native "$work/current.exe")" .
-
-COMPARE_REFERENCE_BIN=$(native "$work/reference.exe")
-COMPARE_BASE_BIN=$(native "$work/base.exe")
 COMPARE_CURRENT_BIN=$(native "$work/current.exe")
-export COMPARE_REFERENCE_BIN COMPARE_BASE_BIN COMPARE_CURRENT_BIN
+
+COMPARE_REFERENCE_COMMIT=$REFERENCE_COMMIT
+COMPARE_BASE_COMMIT=$BASE_COMMIT
+export COMPARE_REFERENCE_BIN COMPARE_BASE_BIN COMPARE_CURRENT_BIN COMPARE_REFERENCE_COMMIT COMPARE_BASE_COMMIT
 
 go -C "$(native "$root/go")" test ./compare -count=1 -v -timeout 60m -run "$COMPARE_TESTS" "$@"
