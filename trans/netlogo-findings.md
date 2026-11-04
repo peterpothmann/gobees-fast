@@ -77,6 +77,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Consequence for gobees:** keep the behaviour. In Go a `float64` also starts at 0, so a `switch` without `default` reproduces it exactly. A warning when reading the parameters (e.g. "unknown ForagingMortalityModel, foraging mortality is 0") would not change the dynamics, helps against typos and should be implemented.
 - **Second Check**: 23-10-2026, PP
 - **Implemented:** `mortalityForager` in `sys/parameters.go`, with the warning. Test: `sys/parameters_test.go` (`"High"`, `"medium"` and `""` give 0).
+- **gobees-fast:** fixed in step F5. An unknown `ForagingMortalityModel` is an error in Setup (`mortalityForager` returns an error), no warning. Test: `TestMortalityForagerUnknownModel` (`"High"`, `"medium"` and `""` give an error).
 
 <a id="finding-6"></a>
 
@@ -135,6 +136,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Consequence for gobees:** compute the list by patch cell exactly as NetLogo does (rounded coordinates, see the patch cells in `trans/data-model.md`), not by masterpatch. Translate the assertion, so that gobees stops in the same situation.
 - **Second Check**: 23.10.2026, PP
 - **Implemented:** `setLayersInPatchList` in `sys/create_foodsources.go`, grouped by `util.Pcor`. Test: `TestCreateLayers` (two flower patches in cell (10, 20) share one list). The assertion in `Foraging_PatchChoiceProc` comes with step 6. Step 6: the assertion in `forager.Foraging_PatchChoiceProc` (`sys/foraging.go`, `[PCH-03]`) panics. `Foraging_bestLayerREP` reads `LayersInPatchList`.
+- **gobees-fast:** fixed in step F5. `setLayersInPatchList` groups by `MasterpatchID`: the list holds the layers of the same flower patch, sorted by `who`. The assertion in [PCH-03] stays as a check of the state. Same lists as before for the example farm and `Example_Farm_PlotTest` (no patch cell with two flower patches). Test: `TestCreateLayersProc` (two flower patches in cell (10, 20) get two lists).
 
 <a id="finding-16"></a>
 
@@ -236,6 +238,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Consequence for gobees:** reproduce the random choice among the patch centres within the circle (strict `<`, distance in patch units). Translate the runtime error as an error. This also corrects finding 24.
 - **Second Check**: 24.10.2026, PP
 - **Implemented:** `NestSitesSearchingProc` in `sys/emergence_new_queens.go` with `util.PatchCentresWithin` (strict `<`). No patch centre: panic. Tests: `TestNestSearchFoundsColonies` (colonies at patch centres, the 100 m2 hedge only at (50, 50)), `TestPatchCentresWithin`.
+- **gobees-fast:** edge case fixed in step F5. Without a patch centre in the circle, the colony is placed at the centre of the patch cell of the foodsource (`util.Pcor`), without a random number. Test: `TestNestSearchNoPatchCentre` (the 100 m² hedge at (133.548, 112.5): colony at (134, 113)).
 
 <a id="finding-26"></a>
 
@@ -256,6 +259,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Consequence for gobees:** reproduce the loop. Running past the end is an error, as in NetLogo.
 - **Second Check**: 24.10.2026, PP 
 - **Implemented:** `NestSiteFoodSourceREP` in `sys/emergence_new_queens.go`: running past the end of the list panics.
+- **gobees-fast:** fixed in step F5. When the loop runs past the end, the last site of the (shuffled) list is chosen, without an extra random number. Test: `TestNestSiteChoicePastEnd` (one site with share 0.5, 100 draws).
 
 <a id="finding-28"></a>
 
@@ -442,6 +446,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Consequence for gobees:** translate as it is, without a species check. A test checks that a Psithyrus queen in a host colony with workers gets the social-phase thresholds. The effect on egg laying is tested with `ActivityProc` in step 5.
 - **Second Check**: 24.10.2026
 - **Implemented:** `Development_Mortality_AdultsProc` in `sys/development.go`, without species check. Test: `TestDevelopmentSocialPhaseThresholds` (host queen and Psithyrus queen get the social-phase thresholds, a queen without workers keeps hers). The effect on egg laying follows with `ActivityProc` in step 5. Step 5: `TestActivityProcChoice` (a Psithyrus queen with the social-phase thresholds rests while the host brood needs heat, and lays eggs once it is warm).
+- **gobees-fast:** not fixed in step F5, planned with the fixes that change the dynamics. The fix would be one condition in [MORA-02]: a Psithyrus queen keeps her `"Psith"` thresholds and lays eggs at the first opportunity. It changes only `step8_species`, the default run has no Psithyrus. Measured on 2 November 2026 (`step8_species`, 100 runs): Psithyrus bees on day 150, median 501.5 without and 621 with the fix (24 % more), NetLogo 548.5 (5-95 %: 207 to 1048). Both stay within the NetLogo band. The effect runs through finding 11, so it is measured after a fix of 46 and 11.
 
 ## Findings from step 5 (daily activity queue)
 
@@ -493,6 +498,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Consequence for gobees:** create all badgers at (0, 0) first, then place them one by one in random order, as NetLogo does. A test with 2 badgers and a Scrub patch near the corner checks the exclusion.
 - **Second Check**: 25.10.2026, PP 
 - **Implemented:** `CreateBadgersProc` in `sys/create_badgers.go`: all badgers are created at (0, 0), then placed in random order, the candidates are recomputed with all living badgers. Test: `TestCreateBadgersOriginBlocks` (Scrub patch 140 m from the corner and two far ones, 2 badgers: the near patch is occupied in about 1/3 of 3000 runs, without the blocking it would be 2/3).
+- **gobees-fast:** fixed in step F5. The candidates are recomputed with the badgers placed so far, the badgers still at the origin block nothing. Same placement as before for the example farm (the nearest Scrub patch lies 1495 m from the origin). Test: `TestCreateBadgersNearOrigin` (the near patch is occupied in about 2/3 of 3000 runs).
 
 ## Findings from the model map and from `Go`
 

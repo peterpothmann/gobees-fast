@@ -280,7 +280,7 @@ func log10(x float64) float64 {
 	return math.Log(x) / math.Log(10)
 }
 
-// Foraging_bestLayerREP returns the best layer for the bee e among the foodsources on the NetLogo patch cell of
+// Foraging_bestLayerREP returns the best layer for the bee e among the layers of the flower patch of
 // myCurrentFoodsource, or the zero entity if none has the bee's forage [BLYR].
 func (f *forager) Foraging_bestLayerREP(e ecs.Entity, myCurrentFoodsource ecs.Entity) ecs.Entity {
 	_, _, b, _, _, fo, _ := f.beeMap.Get(e)
@@ -341,12 +341,14 @@ func (f *forager) Foraging_PatchChoiceProc(e ecs.Entity, currentTripDuration_s f
 		// [PCH-02]
 		gotoNewLayergroup = true
 	} else {
-		// [PCH-03] finding 15 (see trans/netlogo-findings.md#finding-15)
+		// [PCH-03] Since step F5 the best layer always belongs to the known flower patch, so the masterpatch is
+		// always found. NetLogo fails here if two flower patches lie in the same patch cell (finding 15, see
+		// trans/netlogo-findings.md#finding-15).
 		_, _, _, layer := f.foodsourceMap.Get(fo.CurrentFoodsource)
 		myMasterpatchID := layer.MasterpatchID
 		position := slices.Index(myKnownMasterpatchesList, myMasterpatchID)
 		if position < 0 {
-			panic("No number for myMasterpatchID (Foraging_PatchChoiceProc) Possible reason: 2 flower patches (masterpatches, not just layers) at same location?")
+			panic("No number for myMasterpatchID (Foraging_PatchChoiceProc): the current foodsource belongs to no known flower patch")
 		}
 		myCurrentPatchPosition = float64(position)
 		unhappyProb := (currentTripDuration_s - myExpectation_s) / currentTripDuration_s

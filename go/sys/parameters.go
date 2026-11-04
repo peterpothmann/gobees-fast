@@ -4,7 +4,6 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"slices"
@@ -54,10 +53,16 @@ func (s *Parameters) Initialize(w *ecs.World) {
 	s.weather = weather
 	ecs.AddResource(w, &s.weather)
 
+	// [PAR-04]
+	mortality, err := mortalityForager(file.ForagingMortalityModel)
+	if err != nil {
+		panic(err)
+	}
+
 	s.derived = globals.Derived{
 		BeeSpeciesInitialQueensList: queens,
 		SpeciesList:                 species,
-		MortalityForager_per_s:      mortalityForager(file.ForagingMortalityModel),                    // [PAR-04]
+		MortalityForager_per_s:      mortality,
 		FoodsourcesFile:             strings.ReplaceAll(iface.MyMap, ".png", "") + "_Foodsources.txt", // [PAR-05]
 		CSS_OptionsList:             cso,
 		CropRotationList:            util.ListFromStringREP(file.CropRotationListAsString), // [PAR-07]
@@ -70,19 +75,18 @@ func (s *Parameters) Update(w *ecs.World) {}
 func (s *Parameters) Finalize(w *ecs.World) {}
 
 // mortalityForager returns the foraging mortality per second [PAR-04].
-// Any other model name gives 0, the value after clear-all (finding 5, see trans/netlogo-findings.md#finding-5).
-// NetLogo gives no message. The warning here does not change the dynamics.
-func mortalityForager(model string) float64 {
+// Any other model name is an error. NetLogo gives no message and keeps the 0 of clear-all, so foragers and
+// queens searching a nest never die (finding 5, see trans/netlogo-findings.md#finding-5). Fixed in step F5.
+func mortalityForager(model string) (float64, error) {
 	switch model {
 	case "high":
-		return 1.0e-05 // BEEHAVE value, Visscher & Dukas 1997
+		return 1.0e-05, nil // BEEHAVE value, Visscher & Dukas 1997
 	case "intermediate":
-		return 2.14e-06 // Schmid-Hempel & Heeb 1991
+		return 2.14e-06, nil // Schmid-Hempel & Heeb 1991
 	case "low":
-		return 2.75e-07 // Stelzer et al. 2010
+		return 2.75e-07, nil // Stelzer et al. 2010
 	}
-	log.Printf("warning: unknown ForagingMortalityModel %q (expected \"high\", \"intermediate\" or \"low\"), foraging mortality is 0 as in NetLogo", model)
-	return 0
+	return 0, fmt.Errorf("unknown ForagingMortalityModel %q (expected \"high\", \"intermediate\" or \"low\")", model)
 }
 
 // QueensInitialProc parses BeeSpeciesInitialQueensListAsString, e.g. "B_hortorum 100 B_terrestris 500" [QINI].

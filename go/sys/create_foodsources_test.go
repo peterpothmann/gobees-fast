@@ -189,15 +189,16 @@ func TestCreateLayersProc(t *testing.T) {
 		scrub.fs.StartDay != 0 || scrub.fs.StopDay != 0 {
 		t.Errorf("scrub = %+v %+v", scrub.fs, scrub.l)
 	}
-	// [LAYR-10] finding 15 (see trans/netlogo-findings.md#finding-15): A, C and the crop layer lie in the same patch cell (10, 20), sorted by who
-	want := []ecs.Entity{a.e, c.e, crop.e}
-	slices.SortFunc(want, func(x, y ecs.Entity) int {
-		return int(byWho(byKey, x) - byWho(byKey, y))
-	})
-	for _, l := range []testLayer{a, c, crop} {
-		if !slices.Equal(l.l.LayersInPatchList, want) {
+	// [LAYR-10] finding 15 (see trans/netlogo-findings.md#finding-15), fixed in step F5: A, C and the crop layer lie
+	// in the same patch cell (10, 20). A and C share the list of the grassland, sorted by who (A before C, see the
+	// gap above). The crop layer has its own list (NetLogo: one list of all three).
+	for _, l := range []testLayer{a, c} {
+		if want := []ecs.Entity{a.e, c.e}; !slices.Equal(l.l.LayersInPatchList, want) {
 			t.Errorf("%s/%s: layersInPatchList %v, want %v", l.fs.PatchType, testFlower(l.fs), l.l.LayersInPatchList, want)
 		}
+	}
+	if !slices.Equal(crop.l.LayersInPatchList, []ecs.Entity{crop.e}) {
+		t.Errorf("crop: layersInPatchList %v, want %v", crop.l.LayersInPatchList, []ecs.Entity{crop.e})
 	}
 	if !slices.Equal(scrub.l.LayersInPatchList, []ecs.Entity{scrub.e}) {
 		t.Errorf("scrub: layersInPatchList %v", scrub.l.LayersInPatchList)
@@ -210,15 +211,6 @@ type testLayer struct {
 	who int64
 	fs  comp.Foodsource
 	l   comp.Layer
-}
-
-func byWho(m map[string]testLayer, e ecs.Entity) int64 {
-	for _, v := range m {
-		if v.e == e {
-			return v.who
-		}
-	}
-	return -1
 }
 
 // newExampleFarmSetup writes the example input files to a temporary directory and runs the initialisation

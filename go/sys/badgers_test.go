@@ -30,10 +30,11 @@ func badgerPositions(w *ecs.World) []comp.Position {
 	return result
 }
 
-func TestCreateBadgersOriginBlocks(t *testing.T) {
-	// [BADC-01] finding 48 (see trans/netlogo-findings.md#finding-48): the badgers that have not moved yet sit at the
-	// origin and exclude the Scrub patches within 300 m of it. Scrub A lies 14 patches (140 m) from the origin, so
-	// only the first badger can choose it: P(A occupied) = 1/3. Without the blocking it would be 1/3 + 2/3 * 1/2 = 2/3.
+func TestCreateBadgersNearOrigin(t *testing.T) {
+	// [BADC-01] finding 48 (see trans/netlogo-findings.md#finding-48), fixed in step F5: the badgers that have not
+	// moved yet sit at the origin, but only the placed badgers exclude Scrub patches. Scrub A lies 14 patches (140 m)
+	// from the origin, so both badgers can choose it: P(A occupied) = 1/3 + 2/3 * 1/2 = 2/3, sd 0.009. NetLogo: only
+	// the first badger can choose it, P = 1/3.
 	const runs = 3000
 	occupiedA := 0
 	for seed := range uint64(runs) {
@@ -58,8 +59,8 @@ func TestCreateBadgersOriginBlocks(t *testing.T) {
 			}
 		}
 	}
-	if f := float64(occupiedA) / runs; f < 0.30 || f > 0.37 {
-		t.Errorf("Scrub A occupied in %.3f of the runs, want about 1/3", f)
+	if f := float64(occupiedA) / runs; f < 0.63 || f > 0.70 {
+		t.Errorf("Scrub A occupied in %.3f of the runs, want about 2/3", f)
 	}
 }
 
