@@ -41,16 +41,16 @@ var netLogoSpecies = []string{"B_terrestris", "B_pascuorum", "B_lapidarius", "B_
 //
 // Update must run once at the end of every day (reporter.CSV calls it on every tick), for the counters.
 type DailyOutputExtended struct {
-	daily        DailyOutput
-	counters     Counters
-	calendar     ecs.Resource[globals.Calendar]
-	bees         *ecs.Filter1[comp.Bee]
-	colonies     *ecs.Filter2[comp.Colony, comp.ColonyStores]
-	species      *ecs.Map1[comp.Species]
-	foodsources  *ecs.Filter1[comp.Foodsource]
-	stocks       *ecs.Filter1[comp.FoodsourceState]
-	badgers      *ecs.Filter1[comp.Badger]
-	values       []float64
+	daily       DailyOutput
+	counters    Counters
+	calendar    ecs.Resource[globals.Calendar]
+	bees        *ecs.Filter1[comp.Bee]
+	colonies    *ecs.Filter2[comp.Colony, comp.ColonyStores]
+	species     *ecs.Map1[comp.Species]
+	foodsources *ecs.Filter1[comp.Foodsource]
+	stocks      *ecs.Filter1[comp.FoodsourceState]
+	badgers     *ecs.Filter1[comp.Badger]
+	values      []float64
 	// lastForagerDeaths is the counter of foragers that died on a trip at the end of the previous day.
 	lastForagerDeaths float64
 }
