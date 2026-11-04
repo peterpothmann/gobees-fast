@@ -157,6 +157,16 @@ func setField(v reflect.Value, literal string) error {
 			return fmt.Errorf("expected a number, got %s", literal)
 		}
 		v.SetFloat(x)
+	case reflect.Int: // counts, e.g. MaxHibernatingQueens
+		x, err := strconv.ParseFloat(literal, 64)
+		if err != nil {
+			return fmt.Errorf("expected a number, got %s", literal)
+		}
+		n, ok := whole(x)
+		if !ok {
+			return fmt.Errorf("expected a whole number, got %s", literal)
+		}
+		v.SetInt(int64(n))
 	case reflect.Bool:
 		switch strings.ToLower(literal) {
 		case "true":

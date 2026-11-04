@@ -91,7 +91,7 @@ func (s *UpdateSeasonalEvents) Update(w *ecs.World) {
 
 		// the limit of hibernating queens, with TotalHibernatingQueens of the previous evening [OUT-01]
 		// totalHibernatingQueensEverRemoved (the planned number): output only, computed by the observers (step F4)
-		queensToKill := float64(totalHibernatingQueens) - s.file.MaxHibernatingQueens
+		queensToKill := totalHibernatingQueens - s.file.MaxHibernatingQueens
 		// ORDER: the random choice of the queens matters only through the random numbers.
 		// NetLogo: one-of the hibernating queens per round. Removing the chosen one from the list gives the same
 		// distribution. A cohort can remove more queens than needed.
@@ -111,7 +111,7 @@ func (s *UpdateSeasonalEvents) Update(w *ecs.World) {
 			e := hibernating[i]
 			hibernating[i] = hibernating[len(hibernating)-1]
 			hibernating = hibernating[:len(hibernating)-1]
-			queensToKill -= float64(s.beeMap.Get(e).Number)
+			queensToKill -= s.beeMap.Get(e).Number
 			s.death.DieProc(w, e, "max. number of hibernating queens")
 		}
 		// reset of the visit counters with CumulVisitsOnlyLastYear?: the counters are never read, removed in step F3

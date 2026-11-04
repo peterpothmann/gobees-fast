@@ -16,7 +16,7 @@ type ParameterFile struct {
 	KeepDeadColonies                   bool    `yaml:"KeepDeadColonies?"`                  // Keep dead colonies until 1 January.
 	Lambda_detectProb                  float64 `yaml:"Lambda_detectProb"`                  // Decay of the detection probability with distance.
 	MapAreaIncluded                    string  `yaml:"MapAreaIncluded"`                    // Part of the map that is simulated, e.g. "complete".
-	MaxHibernatingQueens               float64 `yaml:"MaxHibernatingQueens"`               // Maximum number of hibernating queens on 1 January.
+	MaxHibernatingQueens               int     `yaml:"MaxHibernatingQueens"`               // Maximum number of hibernating queens on 1 January.
 	MergeHedges                        bool    `yaml:"MergeHedges?"`                       // Merge small hedge patches.
 	MinSizeFoodSources                 bool    `yaml:"MinSizeFoodSources?"`                // Set small nectar or pollen amounts to 0.
 	N_Badgers                          float64 `yaml:"N_Badgers"`                          // Number of badgers.
