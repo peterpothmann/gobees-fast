@@ -3,9 +3,6 @@ package sys
 import (
 	"math"
 	"math/rand/v2"
-	"os"
-	"path/filepath"
-	"strings"
 	"testing"
 
 	"gobees/comp"
@@ -44,20 +41,12 @@ func morningWorld(t *testing.T, weather string) (*ecs.World, *globals.Ticks) {
 	t.Helper()
 	w := ecs.NewWorld()
 	ecs.AddResource(w, &resource.Rand{Source: rand.NewPCG(1, 2)})
-	p := params.Default()
-	p.File.Weather = weather
-	ecs.AddResource(w, &p.File)
+	ecs.AddResource(w, &params.ParameterFile{Weather: weather})
 	ticks := &globals.Ticks{}
 	ecs.AddResource(w, ticks)
-	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, weatherExampleFile), []byte(examplefiles.WeatherForagingHoursExample), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	weatherResource, err := weatherFromParameter(weather, dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ecs.AddResource(w, &weatherResource)
+	p := exampleFarmParams(t, map[string]string{weatherExampleFile: examplefiles.WeatherForagingHoursExample},
+		func(p *params.Params) { p.File.Weather = weather })
+	ecs.AddResource(w, &p.Input.Weather)
 	return w, ticks
 }
 
@@ -98,13 +87,10 @@ func TestUpdateMorningForagingHoursExample(t *testing.T) {
 // flowerPeriods returns startDay and stopDay of flower species from the example FlowerspeciesFile.
 func flowerPeriods(t *testing.T, names ...string) map[string][2]float64 {
 	t.Helper()
-	table, err := parseFlowerspeciesFile(strings.NewReader(examplefiles.Flowerspecies))
-	if err != nil {
-		t.Fatal(err)
-	}
+	table := exampleFarmParams(t, nil, func(p *params.Params) {}).Input.Flowers
 	result := map[string][2]float64{}
 	for _, n := range names {
-		row, err := table.get(n)
+		row, err := table.Get(n)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -3,8 +3,6 @@ package sys
 import (
 	"maps"
 	"math/rand/v2"
-	"os"
-	"path/filepath"
 	"slices"
 	"testing"
 
@@ -28,16 +26,13 @@ id patchType patchColour xcor ycor size_sqm flowerSpeciesList perimeter_m info
 `
 
 // cropWorld runs the example farm setup with the crop rotation list "_SYSTEM_Example_Farm_Foodsources.txt
-// small_Foodsources.txt" and writes small_Foodsources.txt into the working directory.
+// small_Foodsources.txt" and the file small_Foodsources.txt among the input files.
 func cropWorld(t *testing.T, list string) (*app.App, *CropRotation) {
 	t.Helper()
 	cr := &CropRotation{}
-	a := newExampleFarmSetupWith(t, 1, func(p *params.Params) { p.File.CropRotationListAsString = list },
+	a := newExampleFarmSetupFiles(t, 1, map[string]string{"small_Foodsources.txt": smallFoodsources},
+		func(p *params.Params) { p.File.CropRotationListAsString = list },
 		&Tick{}, &UpdateMorning{}, &CreateInitialQueens{}, cr)
-	dir := ecs.GetResource[params.WorkingDirectory](a.World).Path
-	if err := os.WriteFile(filepath.Join(dir, "small_Foodsources.txt"), []byte(smallFoodsources), 0o644); err != nil {
-		t.Fatal(err)
-	}
 	return a, cr
 }
 

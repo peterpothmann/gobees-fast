@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"math"
 	"math/rand/v2"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 
@@ -56,18 +54,23 @@ func (s *CreateFoodsources) Finalize(w *ecs.World) {}
 // [FSRC]. Called in Setup [INIT-06] and by CropRotationProc [CROP-03].
 func CreateFoodsourcesProc(w *ecs.World, foodsourcesFile string, landscape *globals.Landscape) {
 	file := ecs.GetResource[params.ParameterFile](w)
-	dir := ecs.GetResource[params.WorkingDirectory](w)
+	in := ecs.GetResource[params.Input](w)
 	world := ecs.GetResource[params.World](w)
 	derived := ecs.GetResource[globals.Derived](w)
 	who := ecs.GetResource[globals.WhoCounter](w)
 	rng := rand.New(ecs.GetResource[resource.Rand](w))
 
-	// [FSRC-02] to [FSRC-04]
-	metresPerPatch, patches, err := readFoodsourcesFile(filepath.Join(dir.Path, foodsourcesFile))
-	if err != nil {
-		panic(err) // [FSRC-09] NetLogo: message and Setup continues without foodsources
+	// [FSRC-02] to [FSRC-04] read by package input, which reads the start map and every map of the crop rotation.
+	read, ok := in.Foodsources[foodsourcesFile]
+	if !ok {
+		panic(fmt.Errorf("foodsources file %q was not read by package input", foodsourcesFile))
 	}
-	landscape.Scaling_NLpatches_per_m = precision(1/metresPerPatch, 8)
+	landscape.Scaling_NLpatches_per_m = precision(1/read.MetresPerPatch, 8)
+	// copies, because the setup changes them (who, radius, merged hedges), and a crop rotation can use a file twice
+	patches := make([]flowerPatch, len(read.Patches))
+	for i := range read.Patches {
+		patches[i] = flowerPatch{FlowerPatch: read.Patches[i]}
+	}
 
 	// [FSRC-04] to [FSRC-08] every flower patch is created and gets a who number, also if it dies right after.
 	kept := make([]*flowerPatch, 0, len(patches))
@@ -86,45 +89,22 @@ func CreateFoodsourcesProc(w *ecs.World, foodsourcesFile string, landscape *glob
 		MergeHedgesProc(kept, rng)
 	}
 
-	// [FSRC-12]
-	var flowers *flowerSpeciesTable
-	if file.FlowerspeciesFile != "No Input File" {
-		t, err := readFlowerspeciesFile(filepath.Join(dir.Path, file.FlowerspeciesFile))
-		if err != nil {
-			panic(err) // NetLogo: message, no layers are created
-		}
-		flowers = &t
-	}
-	if err := CreateLayersProc(w, kept, flowers, file, derived.CSS_OptionsList, who, rng); err != nil {
+	// [FSRC-12] in.Flowers is nil if FlowerspeciesFile is "No Input File".
+	if err := CreateLayersProc(w, kept, in.Flowers, file, derived.CSS_OptionsList, who, rng); err != nil {
 		panic(err)
 	}
 	// [FSRC-13] TotalFoodSources: output only, never read, removed in step F3.
 }
 
-func readFoodsourcesFile(path string) (float64, []flowerPatch, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return 0, nil, fmt.Errorf("FoodsourcesFile: %w", err)
-	}
-	defer f.Close()
-	m, p, err := parseFoodsourcesFile(f)
-	if err != nil {
-		return 0, nil, fmt.Errorf("FoodsourcesFile %s: %w", path, err)
-	}
-	return m, p, nil
-}
-
-func readFlowerspeciesFile(path string) (flowerSpeciesTable, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return flowerSpeciesTable{}, fmt.Errorf("FlowerspeciesFile: %w", err)
-	}
-	defer f.Close()
-	t, err := parseFlowerspeciesFile(f)
-	if err != nil {
-		return t, fmt.Errorf("FlowerspeciesFile %s: %w", path, err)
-	}
-	return t, nil
+// flowerPatch is a flower patch of a foodsources file during the setup. In NetLogo it is a foodsource turtle that
+// dies in CreateLayersProc [LAYR-09]. gobees keeps it as a plain struct during setup and creates entities only for the
+// layers (and for flower patches with an empty list).
+type flowerPatch struct {
+	params.FlowerPatch         // the line of the file [FSRC-04]
+	who                int64   // who number, used up at creation [FSRC-04]
+	Radius_m           float64 // [FSRC-05], [HEDG-05]
+	NectarMax_myl      float64 // 0 until CreateLayersProc, see [HEDG-04]
+	PollenMax_g        float64 // 0 until CreateLayersProc, see [HEDG-04]
 }
 
 // precision rounds x to the given number of decimals. NetLogo: precision.
@@ -245,7 +225,7 @@ func removeDuplicates[T comparable](list []T) []T {
 }
 
 // CreateLayersProc splits every flower patch into one foodsource per flower species [LAYR].
-func CreateLayersProc(w *ecs.World, patches []*flowerPatch, flowers *flowerSpeciesTable, file *params.ParameterFile,
+func CreateLayersProc(w *ecs.World, patches []*flowerPatch, flowers *params.FlowerSpeciesTable, file *params.ParameterFile,
 	cssOptions []string, who *globals.WhoCounter, rng *rand.Rand) error {
 
 	mapper := ecs.NewMap5[comp.Who, comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](w)
@@ -279,7 +259,7 @@ func CreateLayersProc(w *ecs.World, patches []*flowerPatch, flowers *flowerSpeci
 			}
 			// [LAYR-05] hatch: a new who number, all values of the flower patch, then the flower data.
 			whoNum := who.Next()
-			data, err := flowers.get(e.Name)
+			data, err := flowers.Get(e.Name)
 			if err != nil {
 				return err
 			}

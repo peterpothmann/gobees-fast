@@ -3,13 +3,13 @@ package model
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"gobees/comp"
 	"gobees/enum/activity"
 	"gobees/enum/caste"
 	"gobees/globals"
+	"gobees/input"
 	"gobees/internal/check"
 	"gobees/internal/examplefiles"
 	"gobees/params"
@@ -17,12 +17,13 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// exampleFarm returns the parameters of the example farm, with the input files written to a temporary directory
-// (also the second map of the crop rotation experiment).
+// exampleFarm returns the parameters of the example farm, read with package input from the input files written to a
+// temporary directory.
 func exampleFarm(t testing.TB, seed float64) params.Params {
 	t.Helper()
 	dir := t.TempDir()
 	files := map[string]string{
+		"_SYSTEM_Example_Farm_Parameters.csv":  examplefiles.ExampleFarmParameters,
 		"_SYSTEM_Habitats.csv":                 examplefiles.Habitats,
 		"_SYSTEM_Example_Farm_Foodsources.txt": examplefiles.ExampleFarmFoodsources,
 		"_SYSTEM_Flowerspecies.csv":            examplefiles.Flowerspecies,
@@ -33,14 +34,11 @@ func exampleFarm(t testing.TB, seed float64) params.Params {
 			t.Fatal(err)
 		}
 	}
-	file, err := params.ParseParameterFile(strings.NewReader(examplefiles.ExampleFarmParameters))
+	p, err := input.Load(dir, filepath.Join(dir, "_SYSTEM_Example_Farm_Parameters.csv"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	p := params.Default()
-	p.WorkingDirectory.Path = dir
-	p.File = file
-	p.Interface.RAND_SEED = seed
+	p.Seed = int64(seed)
 	return p
 }
 

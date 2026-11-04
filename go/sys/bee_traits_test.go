@@ -2,23 +2,17 @@ package sys
 
 import (
 	"math"
-	"strings"
 	"testing"
 
 	"gobees/comp"
-	"gobees/internal/examplefiles"
 	"gobees/params"
 )
 
 // terrestris returns B_terrestris as read from the example species file.
 func terrestris(t *testing.T) *comp.Species {
 	t.Helper()
-	constants := params.DefaultConstants()
-	species, err := parseSpeciesFile(strings.NewReader(examplefiles.BumbleSpecies), []string{"B_terrestris"}, &constants)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return &species[0]
+	p := exampleFarmParams(t, nil, func(p *params.Params) {}) // the example farm has only B_terrestris
+	return &p.Input.Species[0]
 }
 
 func almostEqual(a, b float64) bool {

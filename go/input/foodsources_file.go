@@ -1,45 +1,20 @@
-package sys
+package input
 
 import (
 	"fmt"
 	"io"
 	"strings"
 
-	"gobees/util"
+	"gobees/params"
 )
-
-// flowerPatch is one line of the foodsources file: a whole flower patch before it is split into layers.
-// In NetLogo it is a foodsource turtle that dies in CreateLayersProc [LAYR-09]. gobees keeps it as a plain
-// struct during setup and creates entities only for the layers (and for flower patches with an empty list).
-type flowerPatch struct {
-	who               int64 // who number, used up at creation [FSRC-04]
-	Id_Beescout       float64
-	PatchType         string
-	PatchColour       float64 // GUI only
-	X, Y              float64
-	Area_sqm          float64
-	FlowerSpeciesList []flowerEntry
-	Perimeter_m       float64 // GUI only
-	PatchInfo         string
-	Radius_m          float64
-	NectarMax_myl     float64 // 0 until CreateLayersProc, see [HEDG-04]
-	PollenMax_g       float64 // 0 until CreateLayersProc, see [HEDG-04]
-}
-
-// flowerEntry is one item of a flowerSpeciesList, e.g. ["Bramble" 0.331] or ["Margin"].
-type flowerEntry struct {
-	Name     string
-	Value    float64
-	HasValue bool
-}
 
 // parseFoodsourcesFile reads a foodsources file [FSRC-02] to [FSRC-04].
 //
-// Returns the metres per NetLogo patch from line 1 and one flowerPatch per data line, in file order.
+// Returns the metres per NetLogo patch from line 1 and one flower patch per data line, in file order.
 // Header handling as in NetLogo (finding 21, see trans/netlogo-findings.md#finding-21): line 2 is skipped, and line 3 too if line 2 has at most 10 characters.
 // Every data line: id patchType patchColour xcor ycor size_sqm flowerSpeciesList perimeter_m info,
 // columns 1-8 as NetLogo values, column 9 is the raw rest of the line.
-func parseFoodsourcesFile(r io.Reader) (float64, []flowerPatch, error) {
+func parseFoodsourcesFile(r io.Reader) (float64, []params.FlowerPatch, error) {
 	data, err := io.ReadAll(r)
 	if err != nil {
 		return 0, nil, err
@@ -50,7 +25,7 @@ func parseFoodsourcesFile(r io.Reader) (float64, []flowerPatch, error) {
 	}
 
 	// [FSRC-02] line 1: metres per NetLogo patch
-	v, _, err := util.ReadValue(lines[0], 0)
+	v, _, err := ReadValue(lines[0], 0)
 	if err != nil {
 		return 0, nil, fmt.Errorf("line 1: %w", err)
 	}
@@ -66,7 +41,7 @@ func parseFoodsourcesFile(r io.Reader) (float64, []flowerPatch, error) {
 	}
 
 	// [FSRC-04] data lines. file-read skips white space incl. line breaks, so blank lines are skipped.
-	patches := []flowerPatch{}
+	patches := []params.FlowerPatch{}
 	for i := first; i < len(lines); i++ {
 		if strings.TrimSpace(lines[i]) == "" {
 			continue
@@ -80,12 +55,12 @@ func parseFoodsourcesFile(r io.Reader) (float64, []flowerPatch, error) {
 	return metresPerPatch, patches, nil
 }
 
-func parseFlowerPatch(line string) (flowerPatch, error) {
-	p := flowerPatch{}
+func parseFlowerPatch(line string) (params.FlowerPatch, error) {
+	p := params.FlowerPatch{}
 	pos := 0
 	numbers := []*float64{&p.Id_Beescout, nil, &p.PatchColour, &p.X, &p.Y, &p.Area_sqm, nil, &p.Perimeter_m}
 	for col := range 8 {
-		v, next, err := util.ReadValue(line, pos)
+		v, next, err := ReadValue(line, pos)
 		if err != nil {
 			return p, fmt.Errorf("column %d: %w", col+1, err)
 		}
@@ -115,12 +90,12 @@ func parseFlowerPatch(line string) (flowerPatch, error) {
 	return p, nil
 }
 
-func toFlowerSpeciesList(v any) ([]flowerEntry, error) {
+func toFlowerSpeciesList(v any) ([]params.FlowerEntry, error) {
 	list, ok := v.([]any)
 	if !ok {
 		return nil, fmt.Errorf("expected a list")
 	}
-	entries := make([]flowerEntry, 0, len(list))
+	entries := make([]params.FlowerEntry, 0, len(list))
 	for _, item := range list {
 		sub, ok := item.([]any)
 		if !ok || len(sub) == 0 {
@@ -130,7 +105,7 @@ func toFlowerSpeciesList(v any) ([]flowerEntry, error) {
 		if !ok {
 			return nil, fmt.Errorf("expected a name as first item")
 		}
-		e := flowerEntry{Name: name}
+		e := params.FlowerEntry{Name: name}
 		if len(sub) > 1 {
 			x, ok := sub[1].(float64)
 			if !ok {

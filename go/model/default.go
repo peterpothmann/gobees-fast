@@ -35,7 +35,8 @@ func Default(p params.Params, a *app.App) *app.App {
 	ecs.AddResource(a.World, &daytime)
 	// [INIT-02] choice of the parameter file: GUI logic, the caller passes the file.
 	// [INIT-03] PanelSettingProc: GUI only, not translated.
-	// [INIT-04] ReadAllParametersProc: params.ReadParameterFile, before calling Default.
+	// [INIT-04] ReadAllParametersProc: input.Load, before calling Default. It also reads all files that the parameter
+	// file names, so no system opens a file.
 	a.AddSystem(&sys.Parameters{})          // [INIT-05] ParametersProc
 	a.AddSystem(&sys.CreateFoodsources{})   // [INIT-06] CreateFoodsourcesProc
 	a.AddSystem(&sys.CreateSpecies{})       // [INIT-07] CreateSpeciesProc

@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"gobees/input"
 	"gobees/params"
 )
 
@@ -14,7 +15,7 @@ func TestScenarioParameterFiles(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if files[s.Name], err = params.ParseParameterFile(strings.NewReader(text)); err != nil {
+		if files[s.Name], err = input.ParseParameterFile(strings.NewReader(text)); err != nil {
 			t.Fatalf("%s: %v", s.Name, err)
 		}
 		if files[s.Name].StopExtinct {
