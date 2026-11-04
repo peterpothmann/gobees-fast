@@ -41,12 +41,12 @@ func step3Metrics(w *ecs.World) map[string]float64 {
 	bees := ecs.NewFilter1[comp.Bee](w).Query()
 	for bees.Next() {
 		b := bees.Get()
-		if b.Caste != caste.Queen || b.EmergingDate <= 0 || b.EmergingDate >= 365 {
+		if b.Caste != caste.Queen || !b.EmergingDate.IsSet() || b.EmergingDate.Day() <= 0 || b.EmergingDate.Day() >= 365 {
 			continue
 		}
 		n++
 		sumWeight += b.Weight_mg
-		sumEmerging += b.EmergingDate
+		sumEmerging += float64(b.EmergingDate.Day())
 		if b.Activity == activity.Hibernate {
 			m["queens_hibernating"]++
 		} else if b.ColonyID.IsZero() {

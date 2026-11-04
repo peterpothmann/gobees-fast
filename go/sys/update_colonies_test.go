@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"gobees/comp"
+	"gobees/day"
 	"gobees/enum/activity"
 	"gobees/enum/caste"
 	"gobees/enum/stage"
@@ -67,8 +68,7 @@ func newColonyWorld(t *testing.T, seed uint64) *colonyWorld {
 
 // addColony adds a colony with the start values of CreateColoniesProc [CCOL-04]. change may modify them.
 func (cw *colonyWorld) addColony(change func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts)) ecs.Entity {
-	c := comp.Colony{SpeciesIDcolony: cw.species, QueenProductionDate: params.NotSetHigh, SwitchPointDate: params.NotSetHigh,
-		CompetitionPointDate: params.NotSetHigh, EusocialPhaseDate: params.NotSetHigh}
+	c := comp.Colony{SpeciesIDcolony: cw.species} // the four dates unset
 	s := comp.ColonyStores{EnergyStore_kJ: 0.873}
 	n := comp.ColonyCounts{}
 	if change != nil {
@@ -78,7 +78,7 @@ func (cw *colonyWorld) addColony(change func(c *comp.Colony, s *comp.ColonyStore
 }
 
 // addBee adds a bee or cohort to a colony. Adult queens are mated.
-func (cw *colonyWorld) addBee(col ecs.Entity, st stage.Stage, c caste.Caste, number, adultAge float64) ecs.Entity {
+func (cw *colonyWorld) addBee(col ecs.Entity, st stage.Stage, c caste.Caste, number, adultAge int) ecs.Entity {
 	b := comp.Bee{Number: number, Stage: st, Brood: st != stage.Adult, Caste: c, Activity: activity.Resting,
 		ColonyID: col, SpeciesID: cw.species, SpeciesName: "B_terrestris", AdultAge: adultAge, Weight_mg: 100,
 		Mated: st == stage.Adult && c == caste.Queen}
@@ -127,12 +127,12 @@ func TestUpdateColoniesStatistics(t *testing.T) {
 		t.Errorf("[UCOL-05] summedIncubationToday_kJ = %v, want 0", s.SummedIncubationToday_kJ)
 	}
 	// [UCOL-07] the first adult worker starts the eusocial phase
-	if c.EusocialPhaseDate != 201 {
+	if c.EusocialPhaseDate != day.At(201) {
 		t.Errorf("eusocialPhaseDate %v, want 201", c.EusocialPhaseDate)
 	}
 	c, _, n = cw.colony(empty)
-	if n.LarvaWorkerRatio != params.NotSetHigh || c.EusocialPhaseDate != params.NotSetHigh {
-		t.Errorf("colony without workers: larvaWorkerRatio %v, eusocialPhaseDate %v; want NotSetHigh", n.LarvaWorkerRatio, c.EusocialPhaseDate)
+	if n.LarvaWorkerRatio != params.NotSetHigh || c.EusocialPhaseDate.IsSet() {
+		t.Errorf("colony without workers: larvaWorkerRatio %v, eusocialPhaseDate %v; want NotSetHigh, unset", n.LarvaWorkerRatio, c.EusocialPhaseDate)
 	}
 }
 
@@ -140,7 +140,7 @@ func TestUpdateColoniesDeathAfterCP(t *testing.T) {
 	// [UCOL-02] finding 37 (see trans/netlogo-findings.md#finding-37) and finding 38 (see trans/netlogo-findings.md#finding-38)
 	cw := newColonyWorld(t, 1)
 	col := cw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) {
-		c.CompetitionPointDate = 150
+		c.CompetitionPointDate = day.At(150)
 		n.AllPupae = 4 // counted on the previous morning, the pupae have emerged since
 	})
 	queen := cw.addBee(col, stage.Adult, caste.Queen, 1, 400)
@@ -233,27 +233,27 @@ func TestUpdateColoniesSwitchPoint(t *testing.T) {
 	cw.nextMorning()
 	switched := 0
 	for _, e := range cols {
-		if c, _, _ := cw.colony(e); c.SwitchPointDate == 201 {
+		if c, _, _ := cw.colony(e); c.SwitchPointDate == day.At(201) {
 			switched++
-		} else if c.SwitchPointDate != params.NotSetHigh {
+		} else if c.SwitchPointDate.IsSet() {
 			t.Fatalf("switchPointDate %v", c.SwitchPointDate)
 		}
 	}
 	if p := float64(switched) / n; math.Abs(p-0.13) > 0.03 {
 		t.Errorf("switched %d of %d colonies (%.3f), want about 0.13", switched, n, p)
 	}
-	if c, _, _ := cw.colony(highRatio); c.SwitchPointDate != params.NotSetHigh {
+	if c, _, _ := cw.colony(highRatio); c.SwitchPointDate.IsSet() {
 		t.Error("larvaWorkerRatio 3 must not switch")
 	}
 	// a switch point is set only once
-	date := map[ecs.Entity]float64{}
+	date := map[ecs.Entity]day.Date{}
 	for _, e := range cols {
 		c, _, _ := cw.colony(e)
 		date[e] = c.SwitchPointDate
 	}
 	cw.nextMorning()
 	for _, e := range cols {
-		if c, _, _ := cw.colony(e); date[e] != params.NotSetHigh && c.SwitchPointDate != date[e] {
+		if c, _, _ := cw.colony(e); date[e].IsSet() && c.SwitchPointDate != date[e] {
 			t.Fatal("switch point changed after it was set")
 		}
 	}
@@ -261,7 +261,7 @@ func TestUpdateColoniesSwitchPoint(t *testing.T) {
 
 func TestCompetitionPointDateREP(t *testing.T) {
 	// [CPD-01] worked examples of the annotation, and the bounds
-	cases := []struct{ eus, qpd, want float64 }{
+	cases := []struct{ eus, qpd, want day.Abs }{
 		{120, 130, 143}, // y = 22.5, round 142.5 = 143
 		{120, 180, 165}, // 178 - 120 = 58 > 45
 		{120, 115, 132}, // x = -5: y = 12
@@ -270,7 +270,7 @@ func TestCompetitionPointDateREP(t *testing.T) {
 		{120, 163, 165}, // x = 43: y = 45.6, round 165.6 = 166 > 165
 	}
 	for _, c := range cases {
-		col := comp.Colony{EusocialPhaseDate: c.eus, QueenProductionDate: c.qpd}
+		col := comp.Colony{EusocialPhaseDate: day.At(c.eus), QueenProductionDate: day.At(c.qpd)}
 		if got := CompetitionPointDateREP(&col); got != c.want {
 			t.Errorf("CompetitionPointDateREP(eus %v, qpd %v) = %v, want %v", c.eus, c.qpd, got, c.want)
 		}
@@ -279,18 +279,18 @@ func TestCompetitionPointDateREP(t *testing.T) {
 	// [UCOL-09] set once both dates are set
 	cw := newColonyWorld(t, 1)
 	set := cw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) {
-		c.EusocialPhaseDate, c.QueenProductionDate = 120, 130
+		c.EusocialPhaseDate, c.QueenProductionDate = day.At(120), day.At(130)
 	})
-	unset := cw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) { c.EusocialPhaseDate = 120 })
+	unset := cw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) { c.EusocialPhaseDate = day.At(120) })
 	for _, e := range []ecs.Entity{set, unset} {
 		cw.addBee(e, stage.Adult, caste.Queen, 1, 300)
 	}
 	cw.nextMorning()
-	if c, _, _ := cw.colony(set); c.CompetitionPointDate != 143 {
+	if c, _, _ := cw.colony(set); c.CompetitionPointDate != day.At(143) {
 		t.Errorf("competitionPointDate %v, want 143", c.CompetitionPointDate)
 	}
-	if c, _, _ := cw.colony(unset); c.CompetitionPointDate != params.NotSetHigh {
-		t.Errorf("without queenProductionDate: competitionPointDate %v, want NotSetHigh", c.CompetitionPointDate)
+	if c, _, _ := cw.colony(unset); c.CompetitionPointDate.IsSet() {
+		t.Errorf("without queenProductionDate: competitionPointDate %v, want unset", c.CompetitionPointDate)
 	}
 }
 

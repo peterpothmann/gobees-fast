@@ -80,13 +80,10 @@ func (c *colonyFounder) CreateColoniesProc(w *ecs.World) {
 		// [CCOL-05] not translated: gobees-fast has only cohort-based colonies (finding 30, see
 		// trans/netlogo-findings.md#finding-30).
 		// [CCOL-04]
+		// The four dates start unset (NetLogo: NotSetHigh), the zero value of day.Date.
 		colony := comp.Colony{
-			SpeciesIDcolony:      speciesID,
-			QueenProduction:      false,
-			QueenProductionDate:  params.NotSetHigh,
-			SwitchPointDate:      params.NotSetHigh,
-			CompetitionPointDate: params.NotSetHigh,
-			EusocialPhaseDate:    params.NotSetHigh,
+			SpeciesIDcolony: speciesID,
+			QueenProduction: false,
 		}
 		stores := comp.ColonyStores{EnergyStore_kJ: 100 * c.constants.EnergySucrose_kJ_per_mymol * 1.5}
 		counts := comp.ColonyCounts{}

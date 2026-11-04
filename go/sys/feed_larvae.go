@@ -98,7 +98,7 @@ func (s *FeedLarvae) feedColony(col ecs.Entity, myLarvae []ecs.Entity) {
 		if b.Weight_mg < oldWeight_mg {
 			panic("BUG in FeedPOLLENProc: WeightLoss")
 		}
-		totalPollenFedToday_g = totalPollenFedToday_g + (b.Number * pollenReceivedToday_mg / 1000)
+		totalPollenFedToday_g = totalPollenFedToday_g + (float64(b.Number) * pollenReceivedToday_mg / 1000)
 	}
 
 	// [FEED-03]

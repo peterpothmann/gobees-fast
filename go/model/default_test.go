@@ -47,7 +47,7 @@ func TestDefaultYearCycle(t *testing.T) {
 			q := colonies.Query()
 			nColonies := q.Count()
 			q.Close()
-			active, males, hibernating := 0, 0.0, 0.0
+			active, males, hibernating := 0, 0, 0
 			bq := bees.Query()
 			for bq.Next() {
 				b := bq.Get()
@@ -62,7 +62,7 @@ func TestDefaultYearCycle(t *testing.T) {
 				}
 			}
 			if nColonies != 0 || active != 0 || males != 0 {
-				t.Fatalf("seed %v, step %d (Day %v): %d colonies, %d bees that do not hibernate, %v males; want 0",
+				t.Fatalf("seed %v, step %d (Day %v): %d colonies, %d bees that do not hibernate, %d males; want 0",
 					seed, step, calendar.Day, nColonies, active, males)
 			}
 			if calendar.Day == 365 {

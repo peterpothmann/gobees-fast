@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"gobees/comp"
+	"gobees/day"
 	"gobees/globals"
 )
 
@@ -57,15 +58,15 @@ type FlowerEntry struct {
 // FlowerSpecies is the data per flower of one flower species [LAYR-02] (NetLogo: one row of the FlowerspeciesFile).
 // The keys of the run file (tag `yaml`) are the column names of the NetLogo FlowerspeciesFile.
 type FlowerSpecies struct {
-	Name                    string  `yaml:"Flowerspecies"`
-	Pollen_g_per_flower     float64 `yaml:"pollen_g/flower"`
-	Nectar_ml_per_flower    float64 `yaml:"nectar_ml/flower"`
-	ProteinPollenProp       float64 `yaml:"proteinPollenProp"`
-	Concentration_mol_per_l float64 `yaml:"concentration_mol/l"`
-	StartDay                float64 `yaml:"startDay"`
-	StopDay                 float64 `yaml:"stopDay"`
-	CorollaDepth_mm         float64 `yaml:"corollaDepth_mm"`
-	IntFlowerTime_s         float64 `yaml:"intFlowerTime_s"`
+	Name                    string     `yaml:"Flowerspecies"`
+	Pollen_g_per_flower     float64    `yaml:"pollen_g/flower"`
+	Nectar_ml_per_flower    float64    `yaml:"nectar_ml/flower"`
+	ProteinPollenProp       float64    `yaml:"proteinPollenProp"`
+	Concentration_mol_per_l float64    `yaml:"concentration_mol/l"`
+	StartDay                day.OfYear `yaml:"startDay"`
+	StopDay                 day.OfYear `yaml:"stopDay"`
+	CorollaDepth_mm         float64    `yaml:"corollaDepth_mm"`
+	IntFlowerTime_s         float64    `yaml:"intFlowerTime_s"`
 }
 
 // FlowerSpeciesTable holds all flower species of the run file in file order.

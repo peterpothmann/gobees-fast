@@ -1,6 +1,7 @@
 package comp
 
 import (
+	"gobees/day"
 	"gobees/enum/activity"
 	"gobees/enum/caste"
 	"gobees/enum/stage"
@@ -14,7 +15,7 @@ import (
 
 // Bee holds the state of a bee or cohort.
 type Bee struct {
-	Number         float64           // bees in this agent: 1, or the cohort size
+	Number         int               // bees in this agent: 1, or the cohort size
 	Stage          stage.Stage       // egg, larva, pupa, adult (decision A)
 	Brood          bool              // brood? true for egg, larva, pupa
 	Caste          caste.Caste       // undefined, queen, worker, male
@@ -24,9 +25,9 @@ type Bee struct {
 	SpeciesName    string            // name of the species
 	Mated          bool              // mated?
 	Ploidy         float64           // 1: haploid male, 2: diploid female or diploid male
-	AdultAge       float64           // [d]
-	BroodAge       float64           // [d]
-	EmergingDate   float64           // tick of emergence from hibernation (absolute, compared with ticks)
+	AdultAge       int               // [d]
+	BroodAge       int               // [d]
+	EmergingDate   day.Date          // day of emergence from hibernation, unset for brood (NetLogo: NotSetLow)
 	PersonalTime_s float64           // the bee's own time of day, used by the daily activity queue
 	Weight_mg      float64
 }
@@ -66,5 +67,5 @@ type Forager struct {
 // Development holds the brood development state of a bee (translated in step 4).
 type Development struct {
 	CumulIncubationReceived_kJ float64
-	CumulTimeLarva_d           float64
+	CumulTimeLarva_d           int
 }

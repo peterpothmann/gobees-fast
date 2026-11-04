@@ -39,7 +39,7 @@ func TestValidationStep4aAgainstNetLogo(t *testing.T) {
 			if step > 0 {
 				a.Update()
 			}
-			values["day"][step] = append(values["day"][step], cal.Day)
+			values["day"][step] = append(values["day"][step], float64(cal.Day))
 			values["nectar_l"][step] = append(values["nectar_l"][step], today.nectar_l)
 			values["pollen_kg"][step] = append(values["pollen_kg"][step], today.pollen_kg)
 		}

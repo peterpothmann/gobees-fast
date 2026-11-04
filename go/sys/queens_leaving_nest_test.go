@@ -23,7 +23,7 @@ func qlnWorld(t *testing.T, unlimitedMales bool) (*colonyWorld, *QueensLeavingNe
 }
 
 // addYoungQueen adds an unmated adult queen with the "youngQueen" thresholds [DEVP-04] to a colony.
-func (cw *colonyWorld) addYoungQueen(col ecs.Entity, number float64) ecs.Entity {
+func (cw *colonyWorld) addYoungQueen(col ecs.Entity, number int) ecs.Entity {
 	e := cw.addBee(col, stage.Adult, caste.Queen, number, 0)
 	_, _, b, _, th, _, _ := cw.beeMap.Get(e)
 	b.Mated = false

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"gobees/comp"
+	"gobees/day"
 	"gobees/examplefiles"
 	"gobees/globals"
 	"gobees/input"
@@ -20,16 +21,16 @@ import (
 
 func TestDayOfYear(t *testing.T) {
 	// [MORN-02] finding 36 (see trans/netlogo-findings.md#finding-36): the worked examples of the annotation
-	cases := map[int64]float64{0: 0, 1: 1, 364: 364, 365: 365, 366: 1, 730: 365, 731: 1}
+	cases := map[day.Abs]day.OfYear{0: 0, 1: 1, 364: 364, 365: 365, 366: 1, 730: 365, 731: 1}
 	for ticks, want := range cases {
 		if got := dayOfYear(ticks); got != want {
 			t.Errorf("dayOfYear(%d) = %v, want %v", ticks, got, want)
 		}
 	}
 	// the integer formula equals the NetLogo formula round (ticks mod 365.00000001) for 100 years
-	for ticks := int64(0); ticks <= 100*365; ticks++ {
+	for ticks := day.Abs(0); ticks <= 100*365; ticks++ {
 		netlogo := util.Round(math.Mod(float64(ticks), 365.00000001))
-		if got := dayOfYear(ticks); got != netlogo {
+		if got := dayOfYear(ticks); float64(got) != netlogo {
 			t.Fatalf("ticks %d: dayOfYear %v, NetLogo formula %v", ticks, got, netlogo)
 		}
 	}
@@ -106,16 +107,16 @@ func TestUpdateMorningForagingHoursExample(t *testing.T) {
 }
 
 // flowerPeriods returns startDay and stopDay of flower species from the example FlowerspeciesFile.
-func flowerPeriods(t *testing.T, names ...string) map[string][2]float64 {
+func flowerPeriods(t *testing.T, names ...string) map[string][2]day.OfYear {
 	t.Helper()
 	table := exampleFarmParams(t, nil, func(c *input.Config) {}).Input.Flowers
-	result := map[string][2]float64{}
+	result := map[string][2]day.OfYear{}
 	for _, n := range names {
 		row, err := table.Get(n)
 		if err != nil {
 			t.Fatal(err)
 		}
-		result[n] = [2]float64{row.StartDay, row.StopDay}
+		result[n] = [2]day.OfYear{row.StartDay, row.StopDay}
 	}
 	return result
 }
@@ -123,7 +124,7 @@ func flowerPeriods(t *testing.T, names ...string) map[string][2]float64 {
 func TestUpdateFoodsources(t *testing.T) {
 	// [UFS-02] worked examples of the annotation from netlogo/_SYSTEM_Flowerspecies.csv, columns startDay, stopDay
 	periods := flowerPeriods(t, "Dandelion", "Daisy", "Crop_Cereals")
-	if periods["Dandelion"] != [2]float64{1, 364} || periods["Daisy"] != [2]float64{1, 365} || periods["Crop_Cereals"] != [2]float64{0, 0} {
+	if periods["Dandelion"] != [2]day.OfYear{1, 364} || periods["Daisy"] != [2]day.OfYear{1, 365} || periods["Crop_Cereals"] != [2]day.OfYear{0, 0} {
 		t.Fatalf("periods from the example file: %v", periods)
 	}
 
@@ -153,7 +154,7 @@ func TestUpdateFoodsources(t *testing.T) {
 		return full
 	}
 	cases := []struct {
-		ticks                    int64
+		ticks                    day.Abs
 		dandelion, daisy, cereal bool
 		update                   bool
 	}{

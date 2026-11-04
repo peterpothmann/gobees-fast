@@ -116,7 +116,7 @@ func (s *CropRotation) CropRotationProc(w *ecs.World) {
 	for _, e := range species {
 		sp := s.speciesMap.Get(e)
 		sp.NestsiteFoodsourceList, sp.NestSiteArea = nestSites(sp.NestHabitatsList, masterpatches)
-		sp.MinPollenStore_g = 0.5 * 0.001 * sp.DevWeightPupationMin_mg * sp.Batchsize / sp.PollenToBodymassFactor
+		sp.MinPollenStore_g = 0.5 * 0.001 * sp.DevWeightPupationMin_mg * float64(sp.Batchsize) / sp.PollenToBodymassFactor
 		if len(sp.NestsiteFoodsourceList) == 0 && sp.Name != "Psithyrus" {
 			log.Printf("%s has no suitable nesting habitat", sp.Name)
 		}

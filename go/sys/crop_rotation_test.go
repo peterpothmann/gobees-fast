@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"gobees/comp"
+	"gobees/day"
 	"gobees/globals"
 	"gobees/input"
 
@@ -58,7 +59,7 @@ func foodsourceSummary(w *ecs.World) (int, map[string]int, int64) {
 }
 
 // setDay sets ticks and Day.
-func setDay(w *ecs.World, ticks int64) {
+func setDay(w *ecs.World, ticks day.Abs) {
 	ecs.GetResource[globals.Ticks](w).Ticks = ticks
 	ecs.GetResource[globals.Calendar](w).Day = dayOfYear(ticks)
 }
@@ -150,7 +151,7 @@ func TestCropRotation(t *testing.T) {
 		if len(sp.NestsiteFoodsourceList) != 2 || sp.NestSiteArea != 150000 {
 			t.Errorf("%s: %d nest sites, area %v; want 2 and 150000", sp.Name, len(sp.NestsiteFoodsourceList), sp.NestSiteArea)
 		}
-		if want := 0.5 * 0.001 * sp.DevWeightPupationMin_mg * sp.Batchsize / sp.PollenToBodymassFactor; sp.MinPollenStore_g != want {
+		if want := 0.5 * 0.001 * sp.DevWeightPupationMin_mg * float64(sp.Batchsize) / sp.PollenToBodymassFactor; sp.MinPollenStore_g != want {
 			t.Errorf("minPollenStore_g %v, want %v", sp.MinPollenStore_g, want)
 		}
 	}

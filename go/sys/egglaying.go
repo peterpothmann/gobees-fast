@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"gobees/comp"
+	"gobees/day"
 	"gobees/enum/activity"
 	"gobees/enum/caste"
 	"gobees/enum/stage"
@@ -56,7 +57,7 @@ func (l *eggLayer) EgglayingProc(e ecs.Entity) []ecs.Entity {
 	// cohorts of 1 egg in NetLogo (findings 30, 43, see trans/netlogo-findings.md#finding-43).
 	motherCaste := mother.Caste
 	beesInCohort := sp.Batchsize
-	pollenCost_g := beesInCohort * sp.DevWeightEgg_mg * sp.PollenToBodymassFactor / 1000
+	pollenCost_g := float64(beesInCohort) * sp.DevWeightEgg_mg * sp.PollenToBodymassFactor / 1000
 	energyCost_kJ := pollenCost_g * l.constants.EnergyRequiredForPollenAssimilation_kJ_per_g
 
 	// [EGG-02]
@@ -69,7 +70,7 @@ func (l *eggLayer) EgglayingProc(e ecs.Entity) []ecs.Entity {
 		colony, _ := l.colonyMap.Get(colonyID)
 		_, _, b, _, _, _, _ := l.beeMap.Get(egg)
 		if motherCaste == caste.Queen {
-			if float64(l.ticks.Ticks) > colony.SwitchPointDate {
+			if colony.SwitchPointDate.Before(l.ticks.Ticks) {
 				b.Ploidy = 1
 			} else {
 				b.Ploidy = 2
@@ -103,7 +104,7 @@ func (l *eggLayer) hatch(e ecs.Entity) ecs.Entity {
 
 // EggsParameterSettingProc sets the alleles, the caste and the start values of a new egg (cohort) [EGGP]. The egg
 // still holds all values of its mother, and its ploidy is set.
-func (l *eggLayer) EggsParameterSettingProc(e ecs.Entity, beesInCohort float64) {
+func (l *eggLayer) EggsParameterSettingProc(e ecs.Entity, beesInCohort int) {
 	_, _, b, g, th, f, dev := l.beeMap.Get(e)
 	sp := l.speciesMap.Get(b.SpeciesID)
 
@@ -144,7 +145,7 @@ func (l *eggLayer) EggsParameterSettingProc(e ecs.Entity, beesInCohort float64) 
 	f.KnownMasterpatchesPollenList = []ecs.Entity{}
 	b.Weight_mg = sp.DevWeightEgg_mg
 	dev.CumulIncubationReceived_kJ = 0
-	b.EmergingDate = params.NotSetLow
+	b.EmergingDate = day.Date{} // unset (NetLogo: NotSetLow), drawn when the queen emerges [DEVP-04]
 	f.Expectation_NectarTrip_s = 0
 	f.Expectation_PollenTrip_s = 0
 	f.GlossaLength_mm = 0

@@ -45,7 +45,7 @@ func TestCreateInitialQueensExampleFarm(t *testing.T) {
 			t.Fatalf("personalTime_s = %v", b.PersonalTime_s)
 		}
 		// [IQUE-07] whole days, > 0 and < seasonStop (305)
-		if b.EmergingDate <= 0 || b.EmergingDate >= 305 || b.EmergingDate != math.Trunc(b.EmergingDate) {
+		if !b.EmergingDate.IsSet() || b.EmergingDate.Day() <= 0 || b.EmergingDate.Day() >= 305 {
 			t.Fatalf("emergingDate = %v", b.EmergingDate)
 		}
 		// [IQUE-09]
@@ -57,7 +57,7 @@ func TestCreateInitialQueensExampleFarm(t *testing.T) {
 			t.Fatalf("forager: %+v", f)
 		}
 		sumWeight += b.Weight_mg
-		sumEmergence += b.EmergingDate
+		sumEmergence += float64(b.EmergingDate.Day())
 	}
 	if n != 500 || len(whos) != 500 {
 		t.Fatalf("got %d queens with %d who numbers, want 500 (\"B_terrestris 500\")", n, len(whos))

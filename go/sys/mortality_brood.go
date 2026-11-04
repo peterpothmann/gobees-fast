@@ -41,7 +41,7 @@ func (s *MortalityBrood) Initialize(w *ecs.World) {
 }
 
 func (s *MortalityBrood) Update(w *ecs.World) {
-	ticks := float64(s.ticks.Ticks)
+	ticks := s.ticks.Ticks
 	// [MORB-01] to [MORB-04] in this order for each bee. ORDER of the bees: irrelevant, each bee changes only
 	// itself and the counters of its colony (sums). Shuffled (decision C).
 	// DieProc ends the bee's code (finding 28, see trans/netlogo-findings.md#finding-28): continue after it.
@@ -53,15 +53,15 @@ func (s *MortalityBrood) Update(w *ecs.World) {
 		// removed in step F4. The assertion of [MORB-02] stays.
 
 		// [MORB-01]
-		if b.Stage == stage.Egg && b.BroodAge > sp.DevAgeHatchingMax_d {
+		if b.Stage == stage.Egg && float64(b.BroodAge) > sp.DevAgeHatchingMax_d {
 			s.death.DieProc(w, e, "Egg: broodAge > devAgeHatchingMax_d")
 			continue
 		}
 
 		// [MORB-02]
 		if b.Stage == stage.Larva {
-			if ((b.Caste == caste.Worker || b.Caste == caste.Male || b.Caste == caste.Undefined) && b.BroodAge > sp.DevAgePupationMax_d) ||
-				(b.Caste == caste.Queen && b.BroodAge > sp.DevAge_Q_PupationMax_d) {
+			if ((b.Caste == caste.Worker || b.Caste == caste.Male || b.Caste == caste.Undefined) && float64(b.BroodAge) > sp.DevAgePupationMax_d) ||
+				(b.Caste == caste.Queen && float64(b.BroodAge) > sp.DevAge_Q_PupationMax_d) {
 				var relativeIncub, relativeWeight float64
 				if b.Caste == caste.Queen {
 					relativeWeight = b.Weight_mg / sp.DevWeight_Q_PupationMin_mg
@@ -83,8 +83,8 @@ func (s *MortalityBrood) Update(w *ecs.World) {
 			if b.Caste == caste.Undefined {
 				panic("Pupa with undefined caste (MortalityProc)!")
 			}
-			if ((b.Caste == caste.Worker || b.Caste == caste.Male) && b.BroodAge > sp.DevAgeEmergingMax_d) ||
-				(b.Caste == caste.Queen && b.BroodAge > sp.DevAge_Q_EmergingMax_d) {
+			if ((b.Caste == caste.Worker || b.Caste == caste.Male) && float64(b.BroodAge) > sp.DevAgeEmergingMax_d) ||
+				(b.Caste == caste.Queen && float64(b.BroodAge) > sp.DevAge_Q_EmergingMax_d) {
 				s.death.DieProc(w, e, "Pupa: broodAge > max. emerging age")
 				continue
 			}
@@ -92,7 +92,7 @@ func (s *MortalityBrood) Update(w *ecs.World) {
 
 		// [MORB-04] adults without colony are skipped
 		if !b.ColonyID.IsZero() {
-			if colony := s.colonyMap.Get(b.ColonyID); ticks > colony.CompetitionPointDate {
+			if colony := s.colonyMap.Get(b.ColonyID); colony.CompetitionPointDate.Before(ticks) {
 				if b.Stage == stage.Egg {
 					s.death.DieProc(w, e, "Egg: CP!")
 				}

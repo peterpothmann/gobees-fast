@@ -55,7 +55,7 @@ func (aw *activityWorld) state(e ecs.Entity) *comp.FoodsourceState {
 
 // worker adds a forager of 100 mg of B_terrestris: glossa 7.072 mm [PROB], crop 40.2 microlitres, pollen load
 // 0.01206 g [LOAD].
-func (aw *activityWorld) worker(col ecs.Entity, number float64) ecs.Entity {
+func (aw *activityWorld) worker(col ecs.Entity, number int) ecs.Entity {
 	e := aw.adult(col, caste.Worker, number, 100, sitWorker)
 	_, _, _, fo, _ := aw.bee(e)
 	fo.GlossaLength_mm = ProboscisLengthREP(100, aw.sp)
@@ -300,15 +300,15 @@ func TestForagingMortality(t *testing.T) {
 		aw.active.List = append(aw.active.List, bee)
 		f.ForagingProc(aw.w, bee)
 	}
-	died := aw.tally.beesDied / float64(n)
+	died := float64(aw.tally.beesDied) / float64(n)
 	if want := 1 - math.Pow(1-1e-03, 500); math.Abs(died-want) > 0.03 {
 		t.Errorf("%v of the foragers died, want about %v", died, want)
 	}
-	if len(aw.active.List) != n-int(aw.tally.beesDied) {
+	if len(aw.active.List) != n-aw.tally.beesDied {
 		t.Errorf("dead foragers still in the activity queue")
 	}
 	// event.DiedForaging for the output (obs.Counters.TotalForagersEverDiedForaging), event.ForagingTrip for each trip
-	if aw.tally.foragersDied != aw.tally.beesDied || aw.tally.trips != float64(n) {
+	if aw.tally.foragersDied != aw.tally.beesDied || aw.tally.trips != n {
 		t.Errorf("%v foragers died on a trip, %v bees died, %v trips; want equal and %d trips",
 			aw.tally.foragersDied, aw.tally.beesDied, aw.tally.trips, n)
 	}

@@ -1,6 +1,10 @@
 package comp
 
-import "github.com/mlange-42/ark/ecs"
+import (
+	"gobees/day"
+
+	"github.com/mlange-42/ark/ecs"
+)
 
 // A colony entity has the components Who, Position, Colony, ColonyStores, ColonyStimuli, ColonyCounts and
 // ColonyRange. NetLogo: colonies-own (56 variables), split by topic (trans/data-model.md).
@@ -9,11 +13,11 @@ import "github.com/mlange-42/ark/ecs"
 // Colony holds identity, phenology and flags of a colony.
 type Colony struct {
 	SpeciesIDcolony      ecs.Entity
-	QueenProduction      bool    // queenProduction?
-	QueenProductionDate  float64 // NotSetHigh until set
-	SwitchPointDate      float64 // NotSetHigh until set
-	CompetitionPointDate float64 // NotSetHigh until set
-	EusocialPhaseDate    float64 // NotSetHigh until set
+	QueenProduction      bool     // queenProduction?
+	QueenProductionDate  day.Date // unset until set (NetLogo: NotSetHigh)
+	SwitchPointDate      day.Date // unset until set (NetLogo: NotSetHigh)
+	CompetitionPointDate day.Date // unset until set (NetLogo: NotSetHigh)
+	EusocialPhaseDate    day.Date // unset until set (NetLogo: NotSetHigh)
 }
 
 // ColonyStores holds the stores and the daily needs of a colony.
@@ -41,11 +45,11 @@ type ColonyStimuli struct {
 // step F4 together with the checks.
 type ColonyCounts struct {
 	LarvaWorkerRatio float64
-	AllEggs          float64
-	AllLarvae        float64
-	AllPupae         float64
-	AllAdults        float64
-	AllAdultWorkers  float64
+	AllEggs          int
+	AllLarvae        int
+	AllPupae         int
+	AllAdults        int
+	AllAdultWorkers  int
 }
 
 // ColonyRange holds the foodsources within the foraging range of a colony [PRNG], [FRNG].

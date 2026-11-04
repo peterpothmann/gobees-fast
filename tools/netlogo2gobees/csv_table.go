@@ -54,3 +54,23 @@ func (t *csvTable) number(row []string, name string) (float64, error) {
 	}
 	return x, nil
 }
+
+// wholeNumber returns the value of column name in row as a whole number. gobees-fast holds counts and days as
+// whole numbers, so a fraction is an error.
+func (t *csvTable) wholeNumber(row []string, name string) (int, error) {
+	x, err := t.number(row, name)
+	if err != nil {
+		return 0, err
+	}
+	n, ok := whole(x)
+	if !ok {
+		return 0, fmt.Errorf("column %q in row %q: expected a whole number, got %v", name, row[0], x)
+	}
+	return n, nil
+}
+
+// whole returns x as an int and true if x is a whole number.
+func whole(x float64) (int, bool) {
+	n := int(x)
+	return n, float64(n) == x
+}

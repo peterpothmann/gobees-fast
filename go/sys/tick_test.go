@@ -3,6 +3,7 @@ package sys
 import (
 	"testing"
 
+	"gobees/day"
 	"gobees/globals"
 
 	"github.com/mlange-42/ark-tools/app"
@@ -19,10 +20,10 @@ func TestTickMatchesNetLogo(t *testing.T) {
 		t.Fatalf("after Setup: ticks = %d, NetLogo has 0", ticks.Ticks)
 	}
 
-	for day := int64(1); day <= 3; day++ {
+	for d := day.Abs(1); d <= 3; d++ {
 		a.Update()
-		if ticks.Ticks != day {
-			t.Fatalf("during Go call %d: ticks = %d, NetLogo has %d", day, ticks.Ticks, day)
+		if ticks.Ticks != d {
+			t.Fatalf("during Go call %d: ticks = %d, NetLogo has %d", d, ticks.Ticks, d)
 		}
 	}
 }

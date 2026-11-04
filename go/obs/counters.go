@@ -58,7 +58,7 @@ func (c *Counters) Initialize(w *ecs.World) {
 	c.colonyFilter = ecs.NewFilter1[comp.Colony](w)
 
 	ecs.Observe1[comp.Bee](ecs.OnRemoveEntity).
-		Do(func(e ecs.Entity, b *comp.Bee) { c.TotalBeesEverDied += b.Number }).
+		Do(func(e ecs.Entity, b *comp.Bee) { c.TotalBeesEverDied += float64(b.Number) }).
 		Register(w)
 	ecs.Observe(ecs.OnCreateEntity).With(ecs.C[comp.Colony]()).
 		Do(func(e ecs.Entity) { c.TotalColoniesEverProduced++ }).
@@ -67,13 +67,13 @@ func (c *Counters) Initialize(w *ecs.World) {
 		Do(func(e ecs.Entity) { c.deadColoniesToday++ }).
 		Register(w)
 	ecs.Observe1[comp.Bee](event.ForagingTrip).
-		Do(func(e ecs.Entity, b *comp.Bee) { c.tripsToday += b.Number }).
+		Do(func(e ecs.Entity, b *comp.Bee) { c.tripsToday += float64(b.Number) }).
 		Register(w)
 	ecs.Observe1[comp.Bee](event.DiedForaging).
-		Do(func(e ecs.Entity, b *comp.Bee) { c.TotalForagersEverDiedForaging += b.Number }).
+		Do(func(e ecs.Entity, b *comp.Bee) { c.TotalForagersEverDiedForaging += float64(b.Number) }).
 		Register(w)
 	ecs.Observe1[comp.Bee](event.QueenEmerged).
-		Do(func(e ecs.Entity, b *comp.Bee) { c.TotalAdultQueensEverProduced += b.Number }).
+		Do(func(e ecs.Entity, b *comp.Bee) { c.TotalAdultQueensEverProduced += float64(b.Number) }).
 		Register(w)
 
 	c.planQueenRemoval() // Setup is the evening before day 1 of the first year
@@ -122,7 +122,7 @@ func (c *Counters) planQueenRemoval() {
 	query := c.beeFilter.Query()
 	for query.Next() {
 		if b := query.Get(); b.Activity == activity.Hibernate {
-			hibernating += b.Number
+			hibernating += float64(b.Number)
 		}
 	}
 	c.queensToBeRemoved = max(0, hibernating-c.file.MaxHibernatingQueens)

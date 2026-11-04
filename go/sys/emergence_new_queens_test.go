@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"gobees/comp"
+	"gobees/day"
 	"gobees/enum/activity"
 	"gobees/enum/caste"
 	"gobees/enum/stage"
@@ -73,9 +74,9 @@ func newEmergenceWorld(t *testing.T, seed uint64) *emergenceWorld {
 }
 
 // addQueen adds a hibernating queen that emerges at the given tick.
-func (ew *emergenceWorld) addQueen(emergingDate, number, weight float64) ecs.Entity {
+func (ew *emergenceWorld) addQueen(emergingDate day.Abs, number int, weight float64) ecs.Entity {
 	bee := comp.Bee{Number: number, Stage: stage.Adult, Caste: caste.Queen, Activity: activity.Hibernate, Mated: true,
-		Ploidy: 2, SpeciesID: ew.species, SpeciesName: ew.sp.Name, EmergingDate: emergingDate, Weight_mg: weight}
+		Ploidy: 2, SpeciesID: ew.species, SpeciesName: ew.sp.Name, EmergingDate: day.At(emergingDate), Weight_mg: weight}
 	gen := comp.Genetics{AllelesList: []float64{1, 2}, SpermathecaList: []float64{3}}
 	return newBeeMapper(ew.w).NewEntity(&comp.Who{Who: ecs.GetResource[globals.WhoCounter](ew.w).Next()}, &comp.Position{},
 		&bee, &gen, &comp.Thresholds{}, &comp.Forager{}, &comp.Development{})
@@ -104,7 +105,7 @@ func TestEmergenceSplitsCohort(t *testing.T) {
 	emerged := 0
 	whos := map[int64]bool{}
 	for e, b := range ew.bees() {
-		if b.EmergingDate != 10 {
+		if b.EmergingDate != day.At(10) {
 			if b.Activity != activity.Hibernate {
 				t.Error("the queen of tomorrow must still hibernate")
 			}
@@ -146,7 +147,7 @@ func TestEmergenceWinterMortality(t *testing.T) {
 	if math.Abs(float64(survivors)-640) > 4*20.9 {
 		t.Errorf("%d of %d queens survived, want about 640", survivors, n)
 	}
-	if ew.tally.beesDied != float64(n-survivors) {
+	if ew.tally.beesDied != n-survivors {
 		t.Errorf("%v bees died, want %d", ew.tally.beesDied, n-survivors)
 	}
 }
@@ -186,7 +187,7 @@ func TestNestSearchFoundsColonies(t *testing.T) {
 			t.Errorf("colony at %v outside the circle of the grassland", *cPos)
 		}
 		// [CCOL-04]
-		if col.QueenProduction || col.SwitchPointDate != params.NotSetHigh ||
+		if col.QueenProduction || col.SwitchPointDate.IsSet() ||
 			col.SpeciesIDcolony != ew.species || !almostEqual(stores.EnergyStore_kJ, 0.873) {
 			t.Fatalf("colony %+v %+v", col, stores)
 		}
@@ -350,7 +351,7 @@ func TestExampleFarmFirstYear(t *testing.T) {
 	}
 	// without UpdateColonies no colony dies: the living colonies are all colonies founded
 	colonies := ecs.NewFilter1[comp.Colony](w).Query()
-	founded := float64(colonies.Count())
+	founded := colonies.Count()
 	colonies.Close()
 	searching, hibernating := 0, 0
 	query := ecs.NewFilter1[comp.Bee](w).Query()
@@ -365,7 +366,7 @@ func TestExampleFarmFirstYear(t *testing.T) {
 	}
 	died := tally.beesDied
 	t.Logf("founded %v, died %v, still searching %d, hibernating %d", founded, died, searching, hibernating)
-	if founded+died+float64(searching+hibernating) != 500 {
+	if founded+died+searching+hibernating != 500 {
 		t.Errorf("founded %v + died %v + searching %d + hibernating %d != 500", founded, died, searching, hibernating)
 	}
 	// findings 26 and 33: about 60 % survive the winter, about 56 % of them found a colony

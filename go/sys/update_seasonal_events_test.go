@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"gobees/comp"
+	"gobees/day"
 	"gobees/enum/activity"
 	"gobees/enum/caste"
 	"gobees/enum/stage"
@@ -14,11 +15,11 @@ import (
 
 // seasWorld is a colonyWorld with the brood totals of the previous morning (CheckNumbers), set by hand, and the
 // UpdateSeasonalEvents system. The totals of the previous evening (OutputDailyProc) are counted from the bees.
-func seasWorld(t *testing.T, day float64) (*colonyWorld, *UpdateSeasonalEvents, *globals.Totals) {
+func seasWorld(t *testing.T, d day.OfYear) (*colonyWorld, *UpdateSeasonalEvents, *globals.Totals) {
 	t.Helper()
 	cw := newColonyWorld(t, 1)
-	cw.ticks.Ticks = int64(day)
-	cw.cal.Day = day
+	cw.ticks.Ticks = day.Abs(d) // the first year
+	cw.cal.Day = d
 	totals := &globals.Totals{}
 	ecs.AddResource(cw.w, totals)
 	s := &UpdateSeasonalEvents{}
@@ -27,7 +28,7 @@ func seasWorld(t *testing.T, day float64) (*colonyWorld, *UpdateSeasonalEvents, 
 }
 
 // addHibernatingQueen adds a mated, hibernating queen (cohort) without colony.
-func (cw *colonyWorld) addHibernatingQueen(number float64) ecs.Entity {
+func (cw *colonyWorld) addHibernatingQueen(number int) ecs.Entity {
 	e := cw.addBee(ecs.Entity{}, stage.Adult, caste.Queen, number, 0)
 	_, _, b, _, _, _, _ := cw.beeMap.Get(e)
 	b.Activity = activity.Hibernate
@@ -36,8 +37,8 @@ func (cw *colonyWorld) addHibernatingQueen(number float64) ecs.Entity {
 
 func TestSeasonalEventsSeasonStop(t *testing.T) {
 	// [SEAS-01] on Day seasonStop (305 for B_terrestris) every bee of the species that does not hibernate dies
-	for _, day := range []float64{304, 305} {
-		cw, s, _ := seasWorld(t, day)
+	for _, d := range []day.OfYear{304, 305} {
+		cw, s, _ := seasWorld(t, d)
 		col := cw.addColony(nil)
 		cw.addBee(col, stage.Adult, caste.Queen, 1, 60)
 		cw.addBee(col, stage.Adult, caste.Worker, 10, 5)
@@ -50,7 +51,7 @@ func TestSeasonalEventsSeasonStop(t *testing.T) {
 
 		s.Update(cw.w)
 		alive := countEntities(ecs.NewFilter1[comp.Bee](cw.w))
-		if day == 304 {
+		if d == 304 {
 			if alive != 8 {
 				t.Errorf("day 304: %d bee agents, want 8", alive)
 			}
@@ -88,7 +89,7 @@ func TestSeasonalEventsMalesDie(t *testing.T) {
 		name                string
 		activeQueen         bool // a queen that does not hibernate
 		males               bool
-		eggs, larvae, pupae float64
+		eggs, larvae, pupae int
 		die                 bool
 	}{
 		{"all queens hibernate", false, true, 0, 0, 0, true},

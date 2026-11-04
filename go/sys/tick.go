@@ -1,6 +1,7 @@
 package sys
 
 import (
+	"gobees/day"
 	"gobees/globals"
 
 	"github.com/mlange-42/ark-tools/resource"
@@ -22,7 +23,7 @@ func (s *Tick) Initialize(w *ecs.World) {
 }
 
 func (s *Tick) Update(w *ecs.World) {
-	s.ticks.Ticks = s.tick.Tick + 1
+	s.ticks.Ticks = day.Abs(s.tick.Tick + 1)
 }
 
 func (s *Tick) Finalize(w *ecs.World) {}

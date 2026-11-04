@@ -2,6 +2,7 @@ package sys
 
 import (
 	"gobees/comp"
+	"gobees/day"
 	"gobees/globals"
 	"gobees/params"
 
@@ -49,7 +50,7 @@ func (s *Extinction) Update(w *ecs.World) {
 		s.termRes.Terminate = true
 	}
 	// not NetLogo: the run length of the "Run for period" button or BehaviorSpace
-	if s.termParams.MaxTicks > 0 && s.ticks.Ticks >= int64(s.termParams.MaxTicks) {
+	if s.termParams.MaxTicks > 0 && s.ticks.Ticks >= day.Abs(s.termParams.MaxTicks) {
 		s.termRes.Terminate = true
 	}
 }

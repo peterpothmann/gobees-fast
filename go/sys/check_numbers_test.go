@@ -9,7 +9,6 @@ import (
 	"gobees/enum/stage"
 	"gobees/globals"
 	"gobees/internal/check"
-	"gobees/params"
 
 	"github.com/mlange-42/ark/ecs"
 )
@@ -82,7 +81,7 @@ func TestMorningExampleFarm(t *testing.T) {
 		q := filter.Query()
 		for q.Next() {
 			c, n, r := q.Get()
-			if n.AllAdults != 1 || c.EusocialPhaseDate != params.NotSetHigh {
+			if n.AllAdults != 1 || c.EusocialPhaseDate.IsSet() {
 				t.Fatalf("colony: allAdults %v, eusocialPhaseDate %v", n.AllAdults, c.EusocialPhaseDate)
 			}
 			if len(r.MasterpatchesWithPollenlayersInFlowerAndRangeList)+

@@ -134,17 +134,17 @@ func (o *DailyOutput) update() {
 		d.TotalBeeAgents++
 		switch b.Caste {
 		case caste.Queen:
-			d.TotalQueens += b.Number
+			d.TotalQueens += float64(b.Number)
 			if b.Mated {
-				d.TotalMatedQueens += b.Number
+				d.TotalMatedQueens += float64(b.Number)
 			} else {
-				d.TotalUnmatedQueens += b.Number
+				d.TotalUnmatedQueens += float64(b.Number)
 			}
 		case caste.Male:
-			d.TotalMales += b.Number
+			d.TotalMales += float64(b.Number)
 		}
 		if b.Activity == activity.Hibernate {
-			d.TotalHibernatingQueens += b.Number
+			d.TotalHibernatingQueens += float64(b.Number)
 		}
 		if !b.Brood {
 			adults++
