@@ -352,37 +352,38 @@ func CreateLayersProc(w *ecs.World, patches []*flowerPatch, flowers *flowerSpeci
 	return nil
 }
 
-// setLayersInPatchList sets layersInPatchList of EVERY foodsource to all foodsources on the same NetLogo
-// patch cell, sorted by who [LAYR-10], finding 15 (see trans/netlogo-findings.md#finding-15). ORDER: irrelevant, each foodsource only changes itself.
+// setLayersInPatchList sets layersInPatchList of EVERY foodsource to all layers of its flower patch (the same
+// masterpatchID), sorted by who [LAYR-10]. NetLogo takes all foodsources on the same NetLogo patch cell, also the
+// layers of another flower patch in this cell (finding 15, see trans/netlogo-findings.md#finding-15). Fixed in step
+// F5. The same lists as NetLogo's if no patch cell holds two flower patches, as in the example farm.
+// ORDER: irrelevant, each foodsource only changes itself.
 func setLayersInPatchList(w *ecs.World) {
-	type cell struct{ x, y int }
 	type item struct {
 		e   ecs.Entity
 		who int64
 	}
-	byCell := map[cell][]item{}
+	byMasterpatch := map[ecs.Entity][]item{}
 
-	filter := ecs.NewFilter3[comp.Who, comp.Position, comp.Layer](w)
+	filter := ecs.NewFilter2[comp.Who, comp.Layer](w)
 	query := filter.Query()
 	for query.Next() {
-		who, pos, _ := query.Get()
-		c := cell{util.Pcor(pos.X), util.Pcor(pos.Y)}
-		byCell[c] = append(byCell[c], item{query.Entity(), who.Who})
+		who, layer := query.Get()
+		byMasterpatch[layer.MasterpatchID] = append(byMasterpatch[layer.MasterpatchID], item{query.Entity(), who.Who})
 	}
 
-	lists := map[cell][]ecs.Entity{}
-	for c, items := range byCell {
+	lists := map[ecs.Entity][]ecs.Entity{}
+	for m, items := range byMasterpatch {
 		slices.SortFunc(items, func(a, b item) int { return int(a.who - b.who) })
 		list := make([]ecs.Entity, len(items))
 		for i, it := range items {
 			list[i] = it.e
 		}
-		lists[c] = list
+		lists[m] = list
 	}
 
 	query = filter.Query()
 	for query.Next() {
-		_, pos, layer := query.Get()
-		layer.LayersInPatchList = lists[cell{util.Pcor(pos.X), util.Pcor(pos.Y)}]
+		_, layer := query.Get()
+		layer.LayersInPatchList = lists[layer.MasterpatchID]
 	}
 }

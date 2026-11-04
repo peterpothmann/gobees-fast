@@ -72,11 +72,15 @@ func TestAllCSOListMissingFile(t *testing.T) {
 }
 
 func TestMortalityForagerUnknownModel(t *testing.T) {
-	// Finding 5 (see trans/netlogo-findings.md#finding-5): case-sensitive, any other value gives 0.
+	// Finding 5 (see trans/netlogo-findings.md#finding-5), fixed in step F5: case-sensitive, any other value is an
+	// error (NetLogo: 0).
 	for _, m := range []string{"High", "medium", ""} {
-		if got := mortalityForager(m); got != 0 {
-			t.Errorf("mortalityForager(%q) = %v, want 0", m, got)
+		if got, err := mortalityForager(m); err == nil {
+			t.Errorf("mortalityForager(%q) = %v, want an error", m, got)
 		}
+	}
+	if got, err := mortalityForager("high"); err != nil || got != 1.0e-05 {
+		t.Errorf("mortalityForager(\"high\") = %v, %v, want 1e-05", got, err)
 	}
 }
 

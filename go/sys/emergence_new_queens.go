@@ -171,11 +171,12 @@ func (s *EmergenceNewQueens) NestSitesSearchingProc(w *ecs.World, e ecs.Entity, 
 		// [NEST-03] a random patch centre within the circle, finding 25 (see trans/netlogo-findings.md#finding-25)
 		candidates := util.PatchCentresWithin(fsPos.X, fsPos.Y, fs.Radius_m*s.landscape.Scaling_NLpatches_per_m,
 			int(s.world.MinPxcor), int(s.world.MaxPxcor), int(s.world.MinPycor), int(s.world.MaxPycor))
-		if len(candidates) == 0 {
-			panic(fmt.Sprintf("no patch centre within the nest-site foodsource at (%v, %v), radius %v m (NetLogo: runtime error)",
-				fsPos.X, fsPos.Y, fs.Radius_m))
+		// No patch centre within the circle: the nearest patch centre, the one of the patch cell of the
+		// foodsource, without a random number. NetLogo: runtime error. Fixed in step F5.
+		c := [2]int{util.Pcor(fsPos.X), util.Pcor(fsPos.Y)}
+		if len(candidates) > 0 {
+			c = candidates[s.rng.IntN(len(candidates))]
 		}
-		c := candidates[s.rng.IntN(len(candidates))]
 		// [NEST-04]
 		_, pos, bee, _, _, _, _ := s.beeMap.Get(e)
 		pos.X, pos.Y = float64(c[0]), float64(c[1])
@@ -207,8 +208,9 @@ func (s *EmergenceNewQueens) NestSiteFoodSourceREP(sp *comp.Species) ecs.Entity 
 			return e
 		}
 	}
-	// finding 27 (see trans/netlogo-findings.md#finding-27)
-	panic(fmt.Sprintf("NestSiteFoodSourceREP ran past the end of the list (sum %v <= p %v), NetLogo: runtime error", probsSummedUp, p))
+	// The sum ended below p by rounding (finding 27, see trans/netlogo-findings.md#finding-27): the last site.
+	// NetLogo: runtime error. Fixed in step F5.
+	return list[len(list)-1]
 }
 
 // PsithyrusNestSearchProc lets a cuckoo bee search a host colony for one day [PSI].

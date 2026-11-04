@@ -55,7 +55,7 @@ type FoodsourceState struct {
 type Layer struct {
 	Masterpatch       bool         // true for the first surviving layer of a flower patch [LAYR-08]
 	MasterpatchID     ecs.Entity   // the masterpatch of this layer's flower patch, itself for a masterpatch
-	LayersInPatchList []ecs.Entity // all foodsources on the same NetLogo patch CELL, sorted by who [LAYR-10], finding 15 (see trans/netlogo-findings.md#finding-15)
+	LayersInPatchList []ecs.Entity // all layers of the same flower patch, sorted by who [LAYR-10], finding 15 (see trans/netlogo-findings.md#finding-15), fixed in step F5
 }
 
 // Species holds the parameters of one bee species.

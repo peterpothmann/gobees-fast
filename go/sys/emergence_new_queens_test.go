@@ -229,6 +229,45 @@ func TestNestSearchWithoutNestSites(t *testing.T) {
 	}
 }
 
+func TestNestSearchNoPatchCentre(t *testing.T) {
+	// [NEST-03] finding 25, fixed in step F5: the hedge of TestPatchCentresWithin, 100 m2 at (133.548, 112.5), has
+	// no patch centre in its circle (radius 0.564 patches). The colony is placed at the centre of the patch cell of
+	// the foodsource. y = 112.5 lies on the border between two cells, NetLogo rounds .5 up: (134, 113).
+	ew := newEmergenceWorld(t, 6)
+	hedge := ecs.NewMap5[comp.Who, comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](ew.w).NewEntity(
+		&comp.Who{Who: 3}, &comp.Position{X: 133.548, Y: 112.5},
+		&comp.Foodsource{PatchType: "Hedgerow", Area_sqm: 100, Radius_m: math.Sqrt(100 / math.Pi)},
+		&comp.FoodsourceState{}, &comp.Layer{Masterpatch: true})
+	ew.sp.NestsiteFoodsourceList = []ecs.Entity{hedge}
+	ew.sp.NestSiteArea = 100
+	ew.sp.ChanceFindNest = 1
+	ew.addQueen(10, 1, 700)
+	ew.sys.Update(ew.w)
+
+	colonyMap := ecs.NewMap1[comp.Position](ew.w)
+	for _, b := range ew.bees() {
+		if b.ColonyID.IsZero() {
+			t.Fatalf("queen without colony: %+v", b)
+		}
+		if pos := colonyMap.Get(b.ColonyID); *pos != (comp.Position{X: 134, Y: 113}) {
+			t.Errorf("colony at %v, want (134, 113)", *pos)
+		}
+	}
+}
+
+func TestNestSiteChoicePastEnd(t *testing.T) {
+	// [NSFS-01] finding 27, fixed in step F5: the shares sum to 0.5, so p lies above the sum in about half of the
+	// draws. The loop runs past the end and the last site of the list is chosen (NetLogo: runtime error).
+	ew := newEmergenceWorld(t, 7)
+	ew.sp.NestsiteFoodsourceList = []ecs.Entity{ew.bigSite}
+	ew.sp.NestSiteArea = 20000
+	for range 100 {
+		if got := ew.sys.NestSiteFoodSourceREP(ew.sp); got != ew.bigSite {
+			t.Fatalf("NestSiteFoodSourceREP = %v, want the grassland %v", got, ew.bigSite)
+		}
+	}
+}
+
 func TestDieRemovesFromActiveBees(t *testing.T) {
 	ew := newEmergenceWorld(t, 6)
 	a := ew.addQueen(0, 5, 700)

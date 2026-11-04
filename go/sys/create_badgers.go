@@ -62,7 +62,7 @@ func CreateBadgersProc(w *ecs.World, n int, scaling_NLpatches_per_m float64, who
 	for i := range badgers {
 		badgers[i] = badgerMap.NewEntity(&comp.Who{Who: who.Next()}, &comp.Position{}, &comp.Badger{})
 	}
-	alive := slices.Clone(badgers)
+	placed := []ecs.Entity{}
 	util.Shuffle(rng, badgers)
 
 	// burrowFsSet before the badgers were created: every Scrub masterpatch
@@ -70,20 +70,21 @@ func CreateBadgersProc(w *ecs.World, n int, scaling_NLpatches_per_m float64, who
 	for _, b := range badgers {
 		if len(burrowFsSet) == 0 {
 			badgerDeath{}.DieProc(w, b, "Badger: not enough habitat!")
-			alive = slices.DeleteFunc(alive, func(x ecs.Entity) bool { return x == b })
 			continue
 		}
 		chosenFs := burrowFsSet[rng.IntN(len(burrowFsSet))]
 		// the badger moves to the centre of the patch cell of the foodsource (pxcor, pycor)
 		_, pos, _ := badgerMap.Get(b)
 		pos.X, pos.Y = float64(util.Pcor(chosenFs.pos.X)), float64(util.Pcor(chosenFs.pos.Y))
+		placed = append(placed, b)
 
-		// recomputed with ALL living badgers, also the ones that still sit at the origin (finding 48):
-		// no badger on the patch cell of the foodsource (badgers-here) and none within distance_patches (in-radius: <=)
+		// recomputed with the badgers placed so far: no badger on the patch cell of the foodsource (badgers-here)
+		// and none within distance_patches (in-radius: <=). NetLogo also counts the badgers that still sit at the
+		// origin, which blocks the Scrub patches near the origin (finding 48). Fixed in step F5.
 		burrowFsSet = burrowFsSet[:0]
 		for _, site := range sites {
 			free := true
-			for _, other := range alive {
+			for _, other := range placed {
 				_, p, _ := badgerMap.Get(other)
 				samePatch := util.Pcor(p.X) == util.Pcor(site.pos.X) && util.Pcor(p.Y) == util.Pcor(site.pos.Y)
 				if samePatch || util.Distance(site.pos.X, site.pos.Y, p.X, p.Y) <= distance_patches {
