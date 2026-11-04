@@ -38,7 +38,6 @@ NetLogo experiment in `go/validation/experiments`, and the same name. Its parame
 | `step7` | 1095 | the example farm |
 | `step7_badgers` | 1095 | 2 badgers |
 | `step7_crop` | 1095 | a crop rotation of two maps |
-| `step8_ibm` | 730 | 10 individual-based colonies |
 | `step8_genetics` | 730 | diploid males, no unlimited males |
 | `step8_species` | 730 | all 7 species |
 | `step8_weather` | 730 | foraging hours per day of the year, low foraging mortality |
@@ -52,8 +51,8 @@ The experiments of parts of the model (`step3`, `step4a`, `step6`) cannot run as
 Every version runs as a command line program (`go/main.go`) with `-s <seed> --days <days> -p <parameter file>
 -f <file>`, with seeds 1 to 100, and is compared on its daily output (`obs.DailyOutputExtended`) from day 1 on (the
 programs write no row for the setup). The columns are matched by name. Columns only the current code has are listed
-in the comment and not compared. A column of the other version that the current code no longer has is an error: the
-column names stay the same in all steps.
+in the comment and not compared. A column of the other version that the current code no longer has is an error, unless
+it is listed in `REMOVED_COLUMNS`: a column is removed only together with its model branch.
 
 gobees writes the same columns (its `obs.DailyOutput`) except `ForagerDeathsToday`, which it does not
 count. The drift is therefore compared on all other columns, and the plots of the NetLogo report show the gobees
@@ -85,15 +84,17 @@ differs from NetLogo in some of them.
 
 [commits.env](commits.env) holds:
 
-- `REFERENCE_COMMIT`: the previous step. It moves at the end of each phase, and in phase 3 after each fix. Until the
-  steps F0 are merged, it is the base commit, i.e. gobees, and shares its program. After the merge it is set to the
-  merge commit.
+- `REFERENCE_COMMIT`: the previous step. It moves at the end of each phase, and in phase 3 after each fix. In phase 1
+  it is the merge commit of step F0d.
 - `BASE_COMMIT`: gobees. Not the fork point `40dc301`, but `ff06b97`, the later commit of gobees that writes the
   NetLogo metrics (its `obs.DailyOutput`). Between the two, only the output and the validation tests of gobees
   changed, not the model. The commit is not in the history of gobees-fast. It is in this repository as the tag
   `gobees-base`, which the CI gets with the full history (`fetch-depth: 0`). The tag is pushed once from the remote
   `upstream` (gobees): `git fetch upstream` and `git push origin ff06b97:refs/tags/gobees-base`. It stays fixed.
 - `PHASE`: 1 compares exactly with the previous step, 2 and 3 statistically.
+- `REMOVED_COLUMNS`: columns of the other versions that the current code removes on purpose, e.g. `TotalIBMColonies`
+  and `ibm_colonies` with the individual-based colonies in step F1. They are not compared and are listed in the
+  comment. gobees keeps them, so the list only grows.
 
 ## Running the comparisons
 

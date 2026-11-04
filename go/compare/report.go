@@ -130,8 +130,11 @@ func count[T any](items []T, ran bool) string {
 // notCompared lists the columns of the current code that the other versions do not write, once for both if they
 // are the same. The columns are the same in all scenarios.
 func notCompared(b *strings.Builder, results []ScenarioResult) {
-	var reference, base []string
+	var reference, base, removed []string
 	for _, r := range results {
+		if removed == nil {
+			removed = r.Removed
+		}
 		if r.Changed.Ran && reference == nil {
 			reference = r.NotInReference
 		}
@@ -144,6 +147,10 @@ func notCompared(b *strings.Builder, results []ScenarioResult) {
 			fmt.Fprintf(b, "\nNot compared with %s: %d columns it does not write (%s).\n", who, len(columns),
 				strings.Join(columns, ", "))
 		}
+	}
+	if len(removed) > 0 {
+		fmt.Fprintf(b, "\nRemoved on purpose with their model branch (`REMOVED_COLUMNS`): %s.\n",
+			strings.Join(removed, ", "))
 	}
 	if slices.Equal(reference, base) {
 		line("the previous step and gobees", reference)

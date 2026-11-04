@@ -12,7 +12,6 @@ type Colony struct {
 	SpeciesNameColony    string
 	ColonyFoundationDay  float64 // ticks
 	ColonyAge            float64
-	CohortBased          bool    // cohortBased? false: individual-based colony [CCOL-05]
 	Queenright           bool    // queenright?
 	QueenProduction      bool    // queenProduction?
 	QueenProductionDate  float64 // NotSetHigh until set

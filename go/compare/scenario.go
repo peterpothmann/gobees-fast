@@ -38,9 +38,6 @@ var Scenarios = []Scenario{
 			"year 2 runs on `Example_Farm_PlotTest_Foodsources.txt` (36 flower patches), year 3 on the example farm " +
 			"again. NetLogo sets CropRotationList after Setup, gobees-fast reads CropRotationListAsString, which gives " +
 			"the same list [PAR-07]."},
-	{Name: "step8_ibm", Title: "Individual-based colonies", Days: 730,
-		Parameters:  "experiments/step8_ibm_Parameters.csv",
-		Description: "COLONIES_IBM = 10: the first 10 colonies are individual-based [CCOL-05]."},
 	{Name: "step8_genetics", Title: "Genetics", Days: 730, Parameters: "experiments/step8_genetics_Parameters.csv",
 		Description: "SexLocus? = true (diploid males), UnlimitedMales? = false (a queen without a male dies)."},
 	{Name: "step8_species", Title: "Several species", Days: 730, Parameters: "experiments/step8_species_Parameters.csv",

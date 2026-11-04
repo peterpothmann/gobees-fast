@@ -21,7 +21,7 @@ var NetLogoStep4a string
 var NetLogoStep6 string
 
 // ParameterFiles holds the parameter files of the experiments that change parameters, e.g.
-// experiments/step8_ibm_Parameters.csv (written by scripts/parameter_files.py). NetLogo reads them through
+// experiments/step8_genetics_Parameters.csv (written by scripts/parameter_files.py). NetLogo reads them through
 // MyParametersFile, go/compare runs the scenarios with the same files.
 //
 //go:embed experiments/*_Parameters.csv

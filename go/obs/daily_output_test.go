@@ -33,11 +33,12 @@ func TestDailyOutputCSV(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "t\tticks\tTotalIBMColonies\tTotalQueens\tTotalMatedQueens\tTotalUnmatedQueens\tTotalHibernatingQueens\t" +
+	// TotalIBMColonies of NetLogo is not written: gobees-fast has no individual-based colonies (step F1)
+	want := "t\tticks\tTotalQueens\tTotalMatedQueens\tTotalUnmatedQueens\tTotalHibernatingQueens\t" +
 		"TotalColonies\tTotalBeeAgents\tTotalMales\tTotalActiveBees\tMeanWorkerWeight_mg\tMeanQueenWeight_mg\t" +
 		"MeanAdultWeight_mg\tTotalMapArea_km2\tColonyDensity_km2\n" +
-		"0\t1\t0\t500\t0\t0\t500\t0\t0\t0\t0\t0\t0\t0\t1.25\t0\n" +
-		"1\t2\t0\t500\t0\t0\t498\t2\t0\t0\t0\t0\t600.5\t0\t1.25\t1.6\n"
+		"0\t1\t500\t0\t0\t500\t0\t0\t0\t0\t0\t0\t0\t1.25\t0\n" +
+		"1\t2\t500\t0\t0\t498\t2\t0\t0\t0\t0\t600.5\t0\t1.25\t1.6\n"
 	if got := string(b); got != want {
 		t.Errorf("got\n%s\nwant\n%s", got, want)
 	}

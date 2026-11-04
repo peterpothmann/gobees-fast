@@ -6,7 +6,6 @@ package globals
 // UpdateSeasonalEventsProc [SEAS-02] (TotalHibernatingQueens also in [SEAS-03]). The others are output only.
 // SIMPLIFY: the output-only totals are not needed for the model.
 type DailyOutput struct {
-	TotalIBMColonies       float64 // colonies with cohortBased? = false
 	TotalQueens            float64 // all queens, all stages (queen brood too)
 	TotalMatedQueens       float64
 	TotalUnmatedQueens     float64

@@ -16,9 +16,6 @@ SOURCE = 'netlogo/_SYSTEM_Example_Farm_Parameters.csv'
 # Values as they appear in the CSV file: strings in NetLogo quotes inside CSV quotes ("""text"""), booleans as
 # true/false, numbers as they are.
 VARIANTS = {
-    'step8_ibm': {
-        'COLONIES_IBM': '10',
-    },
     'step8_genetics': {
         'SexLocus?': 'true',
         'UnlimitedMales?': 'false',

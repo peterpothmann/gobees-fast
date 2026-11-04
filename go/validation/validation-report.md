@@ -12,7 +12,6 @@ The experiments of parts of the model (step3, step4a, step6) are tests in go/sys
 | Example farm, 3 years (`step7`) | ✅ 15 of 15 | ✅ 0 of 90 |
 | Badgers (`step7_badgers`) | ✅ 16 of 16 | ✅ 0 of 96 |
 | Crop rotation (`step7_crop`) | ✅ 16 of 16 | ✅ 0 of 96 |
-| Individual-based colonies (`step8_ibm`) | ✅ 17 of 17 | ✅ 0 of 0 |
 | Genetics (`step8_genetics`) | ✅ 16 of 16 | ✅ 0 of 64 |
 | Several species (`step8_species`) | ✅ 22 of 22 | ✅ 0 of 88 |
 | Weather and foraging mortality (`step8_weather`) | ✅ 16 of 16 | ✅ 0 of 64 |
@@ -91,32 +90,6 @@ As the example farm, with a crop rotation of two maps: on day 365 the landscape 
 | foodsources | ✅ 1095 of 1095 | ✅ 0 of 6 |
 
 ![step7_crop](plots/step7_crop.png)
-
-## Individual-based colonies (`step8_ibm`)
-
-COLONIES_IBM = 10: the first 10 colonies are individual-based [CCOL-05]. 730 days.
-
-| Metric | Band: days inside | KS |
-| --- | --- | --- |
-| colonies | ✅ 730 of 730 | – no data |
-| dead_colonies | ✅ 730 of 730 | – no data |
-| colonies_founded | ✅ 730 of 730 | – no data |
-| eggs | ✅ 730 of 730 | – no data |
-| larvae | ✅ 730 of 730 | – no data |
-| pupae | ✅ 730 of 730 | – no data |
-| workers | ✅ 730 of 730 | – no data |
-| males | ✅ 730 of 730 | – no data |
-| young_queens | ✅ 730 of 730 | – no data |
-| hibernating_queens | ✅ 730 of 730 | – no data |
-| energy_kJ | ✅ 730 of 730 | – no data |
-| pollen_g | ✅ 730 of 730 | – no data |
-| trips | ✅ 730 of 730 | – no data |
-| nectar_left_l | ✅ 730 of 730 | – no data |
-| pollen_left_kg | ✅ 730 of 730 | – no data |
-| ibm_colonies | ✅ 730 of 730 | – no data |
-| bee_agents | ✅ 730 of 730 | – no data |
-
-![step8_ibm](plots/step8_ibm.png)
 
 ## Genetics (`step8_genetics`)
 

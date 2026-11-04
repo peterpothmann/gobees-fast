@@ -34,7 +34,6 @@ type colonyFounder struct {
 	who       *globals.WhoCounter
 
 	beeFilter        *ecs.Filter1[comp.Bee]
-	colonyFilter     *ecs.Filter1[comp.Colony]
 	foodsourceFilter *ecs.Filter2[comp.Position, comp.Foodsource]
 	beeMap           *ecs.Map2[comp.Position, comp.Bee]
 	colonyMap        *colonyMapper
@@ -53,7 +52,6 @@ func newColonyFounder(w *ecs.World, rng *rand.Rand) colonyFounder {
 		counters:         ecs.GetResource[globals.Counters](w),
 		who:              ecs.GetResource[globals.WhoCounter](w),
 		beeFilter:        ecs.NewFilter1[comp.Bee](w),
-		colonyFilter:     ecs.NewFilter1[comp.Colony](w),
 		foodsourceFilter: ecs.NewFilter2[comp.Position, comp.Foodsource](w),
 		beeMap:           ecs.NewMap2[comp.Position, comp.Bee](w),
 		colonyMap:        ecs.NewMap7[comp.Who, comp.Position, comp.Colony, comp.ColonyStores, comp.ColonyStimuli, comp.ColonyCounts, comp.ColonyRange](w),
@@ -81,17 +79,13 @@ func (c *colonyFounder) CreateColoniesProc(w *ecs.World) {
 		pos := *qPos
 		speciesID, speciesName := qBee.SpeciesID, qBee.SpeciesName
 
-		// [CCOL-05] finding 30 (see trans/netlogo-findings.md#finding-30)
-		cohortBased := true
-		if float64(c.countIBMColonies()) < c.file.COLONIES_IBM {
-			cohortBased = false
-		}
+		// [CCOL-05] not translated: gobees-fast has only cohort-based colonies (finding 30, see
+		// trans/netlogo-findings.md#finding-30).
 		// [CCOL-04]
 		colony := comp.Colony{
 			SpeciesIDcolony:      speciesID,
 			SpeciesNameColony:    speciesName,
 			ColonyFoundationDay:  float64(c.ticks.Ticks),
-			CohortBased:          cohortBased,
 			Queenright:           true,
 			QueenProduction:      false,
 			QueenProductionDate:  params.NotSetHigh,
@@ -115,18 +109,6 @@ func (c *colonyFounder) CreateColoniesProc(w *ecs.World) {
 		// [CCOL-08]
 		c.counters.TotalColoniesEverProduced++
 	}
-}
-
-// countIBMColonies counts the living individual-based colonies.
-func (c *colonyFounder) countIBMColonies() int {
-	n := 0
-	query := c.colonyFilter.Query()
-	for query.Next() {
-		if !query.Get().CohortBased {
-			n++
-		}
-	}
-	return n
 }
 
 // PatchesInRangeProc sets allPatchesInRangeList of a colony: all foodsources (every layer) within ForagingRangeMax_m [PRNG].

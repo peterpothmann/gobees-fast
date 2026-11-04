@@ -661,11 +661,11 @@ func TestEgglayingPloidy(t *testing.T) {
 	}
 }
 
-func TestEgglayingIndividualBased(t *testing.T) {
-	// finding 43 (see trans/netlogo-findings.md#finding-43): 12 cohorts of 1 egg for the cost of 1 egg
+func TestEgglayingOneCohort(t *testing.T) {
+	// [EGG-01] one cohort of batchsize (12) eggs for the cost of 12 eggs (0.0015 g pollen each). gobees-fast has
+	// no individual-based colonies, which in NetLogo lay 12 cohorts of 1 egg for the cost of 1 egg (finding 43).
 	bw := newBroodWorld(t, 1)
 	col := bw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) {
-		c.CohortBased = false
 		s.PollenStore_g, s.EnergyStore_kJ = 1, 1
 	})
 	queen := bw.addBee(col, stage.Adult, caste.Queen, 1, 30)
@@ -673,17 +673,15 @@ func TestEgglayingIndividualBased(t *testing.T) {
 	g.AllelesList, g.SpermathecaList = []float64{10, 20}, []float64{30}
 	bw.eggs.EgglayingProc(queen)
 	eggs := bw.eggsOf(col)
-	if len(eggs) != 12 {
-		t.Fatalf("%d egg cohorts, want 12", len(eggs))
+	if len(eggs) != 1 {
+		t.Fatalf("%d egg cohorts, want 1", len(eggs))
 	}
-	for _, e := range eggs {
-		if b, _, _, _, _ := bw.bee(e); b.Number != 1 {
-			t.Errorf("cohort of %v eggs, want 1", b.Number)
-		}
+	if b, _, _, _, _ := bw.bee(eggs[0]); b.Number != 12 {
+		t.Errorf("cohort of %v eggs, want 12", b.Number)
 	}
 	_, s, n := bw.colony(col)
-	if !almostEqual(s.PollenStore_g, 1-0.0015) || !almostEqual(s.EnergyStore_kJ, 1-0.0015*6.2) {
-		t.Errorf("stores %v g, %v kJ; want the cost of one egg", s.PollenStore_g, s.EnergyStore_kJ)
+	if !almostEqual(s.PollenStore_g, 1-12*0.0015) || !almostEqual(s.EnergyStore_kJ, 1-12*0.0015*6.2) {
+		t.Errorf("stores %v g, %v kJ; want the cost of 12 eggs", s.PollenStore_g, s.EnergyStore_kJ)
 	}
 	if n.TotalEggsProduced != 12 || bw.counters.TotalBeesEverProduced != 12 {
 		t.Errorf("totalEggsProduced %v, TotalBeesEverProduced %v; want 12", n.TotalEggsProduced, bw.counters.TotalBeesEverProduced)
