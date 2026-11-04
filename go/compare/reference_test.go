@@ -3,7 +3,6 @@ package compare
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"runtime"
 	"slices"
 	"strconv"
@@ -27,6 +26,7 @@ const (
 	reportURLEnv       = "COMPARE_REPORT_URL"       // link to the NetLogo report in the comment, may be empty
 	runURLEnv          = "COMPARE_RUN_URL"          // link to the workflow run in the comment, may be empty
 	removedEnv         = "COMPARE_REMOVED_COLUMNS"  // REMOVED_COLUMNS of commits.env, space-separated
+	referenceInputEnv  = "COMPARE_REFERENCE_INPUT"  // REFERENCE_INPUT of commits.env: netlogo (default) or yaml
 )
 
 const (
@@ -113,25 +113,18 @@ func TestScenarios(t *testing.T) {
 // runScenario runs the scenario with the programs and compares the current code with the others.
 func runScenario(t *testing.T, s Scenario, dir, cur, ref, base string, phase int) ScenarioResult {
 	t.Helper()
-	text, err := s.ParameterFile()
-	if err != nil {
-		t.Fatal(err)
-	}
-	parameters := filepath.Join(dir, s.Name+"_Parameters.csv")
-	if err := os.WriteFile(parameters, []byte(text), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	run := func(bin string) []Run {
-		runs, err := RunPrograms(bin, dir, parameters, Seeds(seeds), s.Days, threads(t), true)
+	run := func(bin string, in Input) []Run {
+		runs, err := RunPrograms(bin, in.Args(dir, &s), Seeds(seeds), s.Days, threads(t), true)
 		if err != nil {
 			t.Fatal(err)
 		}
 		return runs
 	}
-	current, reference := run(cur), run(ref)
+	// gobees (base) reads the NetLogo files, the current code its run files, the reference its REFERENCE_INPUT.
+	current, reference := run(cur, YAMLInput), run(ref, referenceInput(t))
 	baseRuns := reference // run_compare.sh passes the same program for the same commit
 	if base != ref {
-		baseRuns = run(base)
+		baseRuns = run(base, NetLogoInput)
 	}
 
 	r := ScenarioResult{Scenario: s, Removed: strings.Fields(os.Getenv(removedEnv))}
@@ -156,6 +149,7 @@ func runScenario(t *testing.T, s Scenario, dir, cur, ref, base string, phase int
 		r.Drift = StatisticalCell(baseRuns, current, common)
 	}
 
+	var err error
 	if r.NetLogoResult, err = CompareNetLogo(s, current, baseRuns); err != nil {
 		r.NetLogo = Cell{Ran: true, Text: err.Error()}
 	} else {
@@ -185,11 +179,11 @@ func TestSpeedAgainstBase(t *testing.T) {
 	dir := inputDir(t)
 	var baseRuns, curRuns []Run
 	for _, seed := range Seeds(speedSeeds) {
-		b, err := RunProgram(base, dir, "", seed, speedDays, false)
+		b, err := RunProgram(base, NetLogoInput.Args(dir, nil), seed, speedDays, false)
 		if err != nil {
 			t.Fatal(err)
 		}
-		c, err := RunProgram(cur, dir, "", seed, speedDays, false)
+		c, err := RunProgram(cur, YAMLInput.Args(dir, nil), seed, speedDays, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -215,7 +209,17 @@ func phase() (int, error) {
 	return p, nil
 }
 
-// inputDir returns a temporary folder with the input files of the example farm.
+// referenceInput returns the input format of the reference program (COMPARE_REFERENCE_INPUT).
+func referenceInput(t *testing.T) Input {
+	t.Helper()
+	in, err := ParseInput(os.Getenv(referenceInputEnv))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return in
+}
+
+// inputDir returns a temporary folder with the input files of WriteInputFiles.
 func inputDir(t *testing.T) string {
 	t.Helper()
 	dir, err := os.MkdirTemp("", "gobees-compare-input")

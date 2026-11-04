@@ -11,7 +11,7 @@ type Constants struct {
 	EnergyFactorOnFlower                         float64 // Energy factor while on a flower (Kacelnik et al. 1986).
 	EnergyRequiredForPollenAssimilation_kJ_per_g float64 // [kJ/g] (Hrassnig & Crailsheim 2005).
 	EnergySucrose_kJ_per_mymol                   float64 // [kJ/micromol] (from BEEHAVE).
-	ForagingRangeMax_m                           float64 // Foraging range [m] (Knight et al. 2005). MaxForagingRange_m from the file is NOT used.
+	ForagingRangeMax_m                           float64 // Foraging range [m] (Knight et al. 2005). NetLogo never reads MaxForagingRange_m of the parameter file.
 	GetUpTime_s                                  float64 // Beginning of the working day [s].
 	LarvaWorkerRatioTH                           float64 // Threshold larva:worker ratio (Duchateau & Velthuis 1988).
 	MaxLifespanMales                             float64 // [d] adult age (Duchateau & Marien 1995).

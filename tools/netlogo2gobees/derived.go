@@ -1,4 +1,4 @@
-package input
+package main
 
 import (
 	"encoding/csv"
@@ -11,21 +11,6 @@ import (
 
 	"gobees/globals"
 )
-
-// mortalityForager returns the foraging mortality per second [PAR-04].
-// Any other model name is an error. NetLogo gives no message and keeps the 0 of clear-all, so foragers and
-// queens searching a nest never die (finding 5, see trans/netlogo-findings.md#finding-5). Fixed in step F5.
-func mortalityForager(model string) (float64, error) {
-	switch model {
-	case "high":
-		return 1.0e-05, nil // BEEHAVE value, Visscher & Dukas 1997
-	case "intermediate":
-		return 2.14e-06, nil // Schmid-Hempel & Heeb 1991
-	case "low":
-		return 2.75e-07, nil // Stelzer et al. 2010
-	}
-	return 0, fmt.Errorf("unknown ForagingMortalityModel %q (expected \"high\", \"intermediate\" or \"low\")", model)
-}
 
 // QueensInitialProc parses BeeSpeciesInitialQueensListAsString, e.g. "B_hortorum 100 B_terrestris 500" [QINI].
 //

@@ -3,16 +3,12 @@ package sys
 import (
 	"math"
 	"math/rand/v2"
-	"os"
-	"path/filepath"
 	"slices"
-	"strings"
 	"testing"
 
 	"gobees/comp"
 	"gobees/globals"
 	"gobees/input"
-	"gobees/internal/examplefiles"
 	"gobees/params"
 
 	"github.com/mlange-42/ark-tools/app"
@@ -215,36 +211,34 @@ type testLayer struct {
 	l   comp.Layer
 }
 
-// newExampleFarmSetup writes the example input files to a temporary directory and runs the initialisation
-// systems of steps 1 and 2 with the given seed, followed by the extra systems.
+// newExampleFarmSetup runs the initialisation systems of steps 1 and 2 on the example farm (the run file built into
+// package input) with the given seed, followed by the extra systems.
 func newExampleFarmSetup(t *testing.T, seed float64, extra ...app.System) *app.App {
 	t.Helper()
-	return newExampleFarmSetupWith(t, seed, func(p *params.Params) {}, extra...)
+	return newExampleFarmSetupWith(t, seed, func(c *input.Config) {}, extra...)
 }
 
 // newExampleFarmSetupWithModifier runs the setup incl. CreateInitialQueens with the given
 // InitialQueensModifierBehaviorSpace.
 func newExampleFarmSetupWithModifier(t *testing.T, modifier float64) *app.App {
 	t.Helper()
-	return newExampleFarmSetupWith(t, 1, func(p *params.Params) { p.File.InitialQueensModifierBehaviorSpace = modifier },
-		&CreateInitialQueens{})
+	return newExampleFarmSetupWith(t, 1,
+		func(c *input.Config) { c.Parameters.InitialQueensModifierBehaviorSpace = modifier }, &CreateInitialQueens{})
 }
 
-// newExampleFarmSetupWith is newExampleFarmSetup with a function that changes the parameters before the setup.
-func newExampleFarmSetupWith(t *testing.T, seed float64, change func(p *params.Params), extra ...app.System) *app.App {
+// newExampleFarmSetupWith is newExampleFarmSetup with a function that changes the run file before the setup.
+func newExampleFarmSetupWith(t *testing.T, seed float64, change func(c *input.Config), extra ...app.System) *app.App {
 	t.Helper()
 	return newExampleFarmSetupFiles(t, seed, nil, change, extra...)
 }
 
-// newExampleFarmSetupFiles is newExampleFarmSetupWith with further input files (name: content), e.g. maps of a crop
-// rotation.
-func newExampleFarmSetupFiles(t *testing.T, seed float64, files map[string]string, change func(p *params.Params),
-	extra ...app.System) *app.App {
+// newExampleFarmSetupFiles is newExampleFarmSetupWith with further landscape files (name: content), e.g. maps of a
+// crop rotation.
+func newExampleFarmSetupFiles(t *testing.T, seed float64, landscapes map[string]input.Landscape,
+	change func(c *input.Config), extra ...app.System) *app.App {
 	t.Helper()
-	p := exampleFarmParams(t, files, func(p *params.Params) {
-		p.Seed = int64(seed)
-		change(p)
-	})
+	p := exampleFarmParams(t, landscapes, change)
+	p.Seed = int64(seed)
 
 	a := app.New()
 	p.Apply(a.World)
@@ -261,34 +255,17 @@ func newExampleFarmSetupFiles(t *testing.T, seed float64, files map[string]strin
 	return a
 }
 
-// exampleFarmParams writes the input files of the example farm (examplefiles) and the files in extra to a temporary
-// folder. It reads _SYSTEM_Example_Farm_Parameters.csv, lets change modify the parameters, and then reads the input
-// files that the parameters name with package input.
-func exampleFarmParams(t *testing.T, extra map[string]string, change func(p *params.Params)) params.Params {
+// exampleFarmParams returns the parameters of the example farm (the run file built into package input), after
+// change has changed the run file, with the further landscape files.
+func exampleFarmParams(t *testing.T, landscapes map[string]input.Landscape, change func(c *input.Config)) params.Params {
 	t.Helper()
-	dir := t.TempDir()
-	files := map[string]string{
-		"_SYSTEM_Habitats.csv":                 examplefiles.Habitats,
-		"_SYSTEM_Example_Farm_Foodsources.txt": examplefiles.ExampleFarmFoodsources,
-		"_SYSTEM_Flowerspecies.csv":            examplefiles.Flowerspecies,
-		"_SYSTEM_BumbleSpecies_UK_01.csv":      examplefiles.BumbleSpecies,
+	c, all := input.ExampleFarmConfig()
+	for name, l := range landscapes {
+		all[name] = l
 	}
-	for name, text := range extra {
-		files[name] = text
-	}
-	for name, text := range files {
-		if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	file, err := input.ParseParameterFile(strings.NewReader(examplefiles.ExampleFarmParameters))
+	change(&c)
+	p, err := input.Build(c, all)
 	if err != nil {
-		t.Fatal(err)
-	}
-	p := params.Default()
-	p.File = file
-	change(&p)
-	if p.Input, err = input.Read(dir, &p.File, &p.Constants); err != nil {
 		t.Fatal(err)
 	}
 	return p

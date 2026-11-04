@@ -56,11 +56,11 @@ func TestCompareWithNetLogo(t *testing.T) {
 	for i, run := range netlogo.Runs {
 		seeds[i] = run.Seed
 	}
-	base, err := RunPrograms(baseBin, seeds, netlogo.Days, threads)
+	base, err := RunPrograms(baseBin, true, seeds, netlogo.Days, threads)
 	if err != nil {
 		t.Fatal(err)
 	}
-	current, err := RunPrograms(currentBin, seeds, netlogo.Days, threads)
+	current, err := RunPrograms(currentBin, false, seeds, netlogo.Days, threads)
 	if err != nil {
 		t.Fatal(err)
 	}

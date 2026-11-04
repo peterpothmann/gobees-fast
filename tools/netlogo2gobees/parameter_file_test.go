@@ -1,4 +1,4 @@
-package input
+package main
 
 import (
 	"os"
@@ -6,44 +6,43 @@ import (
 	"strings"
 	"testing"
 
-	"gobees/internal/examplefiles"
+	"gobees/examplefiles"
 	"gobees/params"
 )
 
 // wantExampleFarmParameters holds every value of _SYSTEM_Example_Farm_Parameters.csv that the model reads [RPAR].
 // Strings are stored as """text""" in the file, """""" means an empty string.
-var wantExampleFarmParameters = params.ParameterFile{
-	AbundanceBoost:                      1,
+var wantExampleFarmParameters = netLogoParameters{
+	ParameterFile: params.ParameterFile{
+		AbundanceBoost:                     1,
+		FoodSourceLimit:                    25,
+		ForagingMortalityFactor:            1,
+		ForagingMortalityModel:             "high",
+		InitialQueensModifierBehaviorSpace: 1,
+		KeepDeadColonies:                   true,
+		Lambda_detectProb:                  -0.005,
+		MapAreaIncluded:                    "complete",
+		MaxHibernatingQueens:               10000,
+		MergeHedges:                        true,
+		MinSizeFoodSources:                 true,
+		N_Badgers:                          0,
+		RemoveEmptyFoodSources:             true,
+		SexLocus:                           false,
+		StopExtinct:                        true,
+		UnlimitedMales:                     true,
+		WinterMortality:                    true,
+	},
 	BeeSpeciesInitialQueensListAsString: "B_terrestris 500",
-	CropRotationListAsString:            "",
-	CumulVisitsOnlyLastYear:             false,
-	FlowerspeciesFile:                   "_SYSTEM_Flowerspecies.csv", // column name "FlowerspeciesFile " with trailing blank
-	FoodSourceLimit:                     25,
-	ForagingMortalityFactor:             1,
-	ForagingMortalityModel:              "high",
-	HabitatsFile:                        "_SYSTEM_Habitats.csv",
-	InitialQueensModifierBehaviorSpace:  1,
-	KeepDeadColonies:                    true,
-	Lambda_detectProb:                   -0.005,
-	MapAreaIncluded:                     "complete",
-	MaxForagingRange_m:                  10000,
-	MaxHibernatingQueens:                10000,
-	MergeHedges:                         true,
-	MinSizeFoodSources:                  true,
-	MyFarmlandPatches:                   "",
-	N_Badgers:                           0,
-	RemoveEmptyFoodSources:              true,
-	SexLocus:                            false,
 	BeespeciesFile:                      "_SYSTEM_BumbleSpecies_UK_01.csv",
-	StopExtinct:                         true,
-	UnlimitedMales:                      true,
+	CropRotationListAsString:            "",
+	FlowerspeciesFile:                   "_SYSTEM_Flowerspecies.csv", // column name "FlowerspeciesFile " with trailing blank
+	HabitatsFile:                        "_SYSTEM_Habitats.csv",
 	Weather:                             "Constant 8 hrs",
-	WinterMortality:                     true,
 }
 
 // wantSystemParameters holds every value of _SYSTEM_Parameters.csv that the model reads. The file differs from the
 // example farm file only in SetColour (GUI only, ignored) and in the spelling TRUE/FALSE.
-func wantSystemParameters() params.ParameterFile {
+func wantSystemParameters() netLogoParameters {
 	return wantExampleFarmParameters
 }
 
@@ -51,7 +50,7 @@ func TestParseParameterFileExamples(t *testing.T) {
 	cases := []struct {
 		name string
 		text string
-		want params.ParameterFile
+		want netLogoParameters
 	}{
 		{"_SYSTEM_Parameters.csv", examplefiles.SystemParameters, wantSystemParameters()},
 		{"_SYSTEM_Example_Farm_Parameters.csv", examplefiles.ExampleFarmParameters, wantExampleFarmParameters},
@@ -131,25 +130,34 @@ func TestParseParameterFileIgnoredGUIParameter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p != (params.ParameterFile{N_Badgers: 2}) {
+	if p != (netLogoParameters{ParameterFile: params.ParameterFile{N_Badgers: 2}}) {
 		t.Errorf("got %+v, want only N_Badgers = 2", p)
 	}
 }
 
 func TestIgnoredParametersAreGUIColumns(t *testing.T) {
-	// Every ignored column is a column of the NetLogo parameter file and no parameter that the model reads.
+	// Every ignored column (GUI or without effect) is a column of the NetLogo parameter file and no parameter of the
+	// run file.
 	header, _, _ := strings.Cut(examplefiles.ExampleFarmParameters, "\n")
 	columns := map[string]bool{}
 	for _, name := range strings.Split(header, ",") {
 		columns[strings.ToLower(strings.TrimSpace(name))] = true
 	}
 	fields := fieldsByName()
+	for name := range noEffectParameters {
+		if !columns[name] {
+			t.Errorf("parameter without effect %q is no column of _SYSTEM_Example_Farm_Parameters.csv", name)
+		}
+		if _, ok := fields[name]; ok {
+			t.Errorf("parameter without effect %q is a parameter of the run file", name)
+		}
+	}
 	for name := range ignoredParameters {
 		if !columns[name] {
 			t.Errorf("ignored parameter %q is no column of _SYSTEM_Example_Farm_Parameters.csv", name)
 		}
 		if _, ok := fields[name]; ok {
-			t.Errorf("ignored parameter %q is a field of params.ParameterFile", name)
+			t.Errorf("ignored parameter %q is a parameter of the run file", name)
 		}
 	}
 }

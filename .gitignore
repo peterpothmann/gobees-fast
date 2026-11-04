@@ -23,3 +23,7 @@ validation-results/
 
 # pull request comment of go/compare/run_compare.sh
 compare-comment.md
+
+# program of go build in tools/netlogo2gobees
+tools/netlogo2gobees/netlogo2gobees
+tools/netlogo2gobees/netlogo2gobees.exe

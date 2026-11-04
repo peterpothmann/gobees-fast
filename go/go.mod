@@ -6,6 +6,7 @@ require (
 	github.com/alecthomas/kong v1.14.0
 	github.com/mlange-42/ark v0.8.3
 	github.com/mlange-42/ark-tools v0.3.1
+	go.yaml.in/yaml/v3 v3.0.4
 	gonum.org/v1/plot v0.16.0
 )
 

@@ -1,4 +1,4 @@
-package input
+package main
 
 import (
 	"encoding/csv"
@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-
-	"gobees/globals"
 )
 
 // constantForagingPeriods_s are the "Constant N hrs" options of Weather [FPER-03], in seconds.
@@ -34,22 +32,24 @@ var constantForagingPeriods_s = map[string]float64{
 // netLogoWeatherFiles are the weather files of the NetLogo options of Weather whose values NetLogo has in the code.
 //
 // NetLogo has the daily foraging hours of one year in the code (Weather = "foragingHoursExample", [FPER-02]).
-// gobees-fast reads them from a file instead: netlogo/_SYSTEM_Weather_foragingHoursExample.csv holds the same
-// values in seconds. The NetLogo name stays valid, so that the parameter files of NetLogo run unchanged (e.g. the
-// scenario step8_weather of go/compare, which all compared versions run with the same file).
-//
-// SIMPLIFY: the mapping belongs to the reading of NetLogo files. With a new input format it moves into the converter
-// of the NetLogo files.
+// The converter reads them from a file instead: netlogo/_SYSTEM_Weather_foragingHoursExample.csv holds the same
+// values in seconds. The NetLogo name stays valid, so that the parameter files of NetLogo convert unchanged (e.g. the
+// scenario step8_weather of go/compare). gobees-fast from step F2 to F6 read the same file.
 var netLogoWeatherFiles = map[string]string{
 	"foragingHoursExample": "_SYSTEM_Weather_foragingHoursExample.csv",
 }
 
-// weatherFromParameter returns the weather of the parameter Weather [FPER]: one of the "Constant N hrs" options, a
-// NetLogo option with a weather file (netLogoWeatherFiles), or otherwise the name of a weather file in dir
-// (readWeatherFile). An unknown Weather is an error, NetLogo gives a foraging period of -1 [FPER-01].
-func weatherFromParameter(weather, dir string) (globals.Weather, error) {
+// weatherFromParameter returns the foraging period per year and day [s] of the parameter Weather [FPER]: one of
+// the "Constant N hrs" options (365 equal values), a NetLogo option with a weather file (netLogoWeatherFiles), or
+// otherwise the name of a weather file in dir (readWeatherFile). An unknown Weather is an error, NetLogo gives a
+// foraging period of -1 [FPER-01].
+func weatherFromParameter(weather, dir string) ([][]float64, error) {
 	if period_s, ok := constantForagingPeriods_s[weather]; ok {
-		return globals.Weather{Constant_s: period_s}, nil
+		year := make([]float64, 365)
+		for d := range year {
+			year[d] = period_s
+		}
+		return [][]float64{year}, nil
 	}
 	if file, ok := netLogoWeatherFiles[weather]; ok {
 		weather = file
@@ -63,17 +63,17 @@ func weatherFromParameter(weather, dir string) (globals.Weather, error) {
 // optionally Year (1, 2, ...). Without Year, the file holds one year, which repeats in every year of the run. With
 // Year, the years of the file follow each other and then repeat. Every year needs every day 1 to 365 once, in any
 // order.
-func readWeatherFile(path string) (globals.Weather, error) {
+func readWeatherFile(path string) ([][]float64, error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return globals.Weather{}, fmt.Errorf("weather file: %w", err)
+		return nil, fmt.Errorf("weather file: %w", err)
 	}
 	defer f.Close()
 	years, err := parseWeatherFile(f)
 	if err != nil {
-		return globals.Weather{}, fmt.Errorf("weather file %s: %w", path, err)
+		return nil, fmt.Errorf("weather file %s: %w", path, err)
 	}
-	return globals.Weather{Years_s: years}, nil
+	return years, nil
 }
 
 // parseWeatherFile parses a weather file (readWeatherFile) and returns the foraging period [s] per year and day,

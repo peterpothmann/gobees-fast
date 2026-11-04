@@ -1,10 +1,11 @@
 package compare
 
 import (
+	"embed"
 	"fmt"
 	"strings"
 
-	"gobees/internal/examplefiles"
+	"gobees/examplefiles"
 	"gobees/validation"
 )
 
@@ -48,6 +49,27 @@ var Scenarios = []Scenario{
 	{Name: "step8_settings", Title: "Other settings", Days: 730, Parameters: "experiments/step8_settings_Parameters.csv",
 		Description: "WinterMortality?, MergeHedges?, MinSizeFoodSources?, RemoveEmptyFoodSources?, KeepDeadColonies? " +
 			"= false, MaxHibernatingQueens = 150 (the limit takes effect on every 1 January, also on the first day)."},
+}
+
+// scenariosDir is the folder of the run files of the scenarios, in this package and in the folder of
+// WriteInputFiles.
+const scenariosDir = "scenarios"
+
+// ScenarioFiles are the run files of the scenarios and their landscape files, converted from the parameter files
+// (ParameterFile) with tools/netlogo2gobees (go run . generate). The tool's tests check that they are up to date.
+//
+//go:embed all:scenarios
+var ScenarioFiles embed.FS
+
+// ConfigFile returns the name of the run file of the scenario in ScenarioFiles.
+func (s Scenario) ConfigFile() string {
+	return s.Name + ".yaml"
+}
+
+// ParameterFileName returns the name of the NetLogo parameter file of the scenario in the folder of
+// WriteInputFiles.
+func (s Scenario) ParameterFileName() string {
+	return s.Name + "_Parameters.csv"
 }
 
 // ParameterFile returns the parameter file of the scenario: that of its experiment (or of the example farm) with

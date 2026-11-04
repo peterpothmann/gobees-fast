@@ -1,4 +1,4 @@
-package input
+package main
 
 import (
 	"fmt"
@@ -9,8 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"gobees/globals"
-	"gobees/internal/examplefiles"
+	"gobees/examplefiles"
 )
 
 // netLogoForagingHoursExample returns the list foragingHoursExample of Foraging_periodREP [FPER-02] from the NetLogo
@@ -132,15 +131,15 @@ func TestWeatherFromParameter(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "weather.csv"), []byte(examplefiles.WeatherForagingHoursExample), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	// [FPER-03] a constant option
-	w, err := weatherFromParameter("Constant 8 hrs", dir)
-	if err != nil || w.Years_s != nil || w.ForagingPeriod_s(1, 1) != 8*3600 || w.ForagingPeriod_s(5, 365) != 8*3600 {
-		t.Errorf("Constant 8 hrs: %+v, %v", w, err)
+	// [FPER-03] a constant option: one year of 365 equal values
+	years, err := weatherFromParameter("Constant 8 hrs", dir)
+	if err != nil || len(years) != 1 || len(years[0]) != 365 || years[0][0] != 8*3600 || years[0][364] != 8*3600 {
+		t.Errorf("Constant 8 hrs: %d years, %v", len(years), err)
 	}
-	// a weather file of one year: the same in every year
-	w, err = weatherFromParameter("weather.csv", dir)
-	if err != nil || w.ForagingPeriod_s(1, 43) != 0.5*3600 || w.ForagingPeriod_s(3, 43) != 0.5*3600 {
-		t.Errorf("weather file: day 43 %v s, %v", w.ForagingPeriod_s(1, 43), err)
+	// a weather file of one year
+	years, err = weatherFromParameter("weather.csv", dir)
+	if err != nil || len(years) != 1 || years[0][42] != 0.5*3600 {
+		t.Errorf("weather file: day 43, %v", err)
 	}
 	// an unknown Weather is an error ([FPER-01] gives -1), also NetLogo's name of the list without its file
 	for _, weather := range []string{"foragingHoursExample", "Constant 13 hrs", ""} {
@@ -153,23 +152,8 @@ func TestWeatherFromParameter(t *testing.T) {
 	if err := os.WriteFile(file, []byte(examplefiles.WeatherForagingHoursExample), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	w, err = weatherFromParameter("foragingHoursExample", dir)
-	if err != nil || w.ForagingPeriod_s(1, 43) != 0.5*3600 {
-		t.Errorf("foragingHoursExample: day 43 %v s, %v", w.ForagingPeriod_s(1, 43), err)
-	}
-}
-
-func TestWeatherYearsRepeat(t *testing.T) {
-	// [FPER] the years of a weather file follow each other and then repeat
-	years, err := parseWeatherFile(strings.NewReader(weatherFile("Year,Day,ForagingPeriod_s", 2,
-		func(year, _ int) float64 { return float64(year) })))
-	if err != nil {
-		t.Fatal(err)
-	}
-	w := globals.Weather{Years_s: years}
-	for year, want := range map[int]float64{1: 1, 2: 2, 3: 1, 4: 2} {
-		if got := w.ForagingPeriod_s(year, 100); got != want {
-			t.Errorf("year %d: %v s, want %v s", year, got, want)
-		}
+	years, err = weatherFromParameter("foragingHoursExample", dir)
+	if err != nil || years[0][42] != 0.5*3600 {
+		t.Errorf("foragingHoursExample: day 43, %v", err)
 	}
 }
