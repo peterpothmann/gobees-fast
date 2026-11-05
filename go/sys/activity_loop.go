@@ -67,7 +67,7 @@ func (s *ActivityLoop) Initialize(w *ecs.World) {
 }
 
 func (s *ActivityLoop) Update(w *ecs.World) {
-	s.broodOf = beesByColony(s.beeFilter, func(b *comp.Bee) bool { return b.Stage != stage.Adult })
+	s.broodOf = beesByColony(s.broodOf, s.beeFilter, func(b *comp.Bee) bool { return b.Stage != stage.Adult })
 
 	// [GO-06] the queue holds exactly the active adult workers and queens ([NEXT-01]): all of them were put
 	// into it in [MORN-08], no bee becomes one during the day, and DieProc removes dying bees from it. Its
@@ -157,16 +157,17 @@ func (s *ActivityLoop) NextActiveBeeREP() ecs.Entity {
 	} else {
 		endList = endList[1:]
 	}
-	// [NEXT-04] a new slice: beginningList and endList share the memory of the old list.
+	// [NEXT-04] in place, without a new list (step F10): beginningList moves one position to the front into the place
+	// of activeBee, endList stays where it is. Same order as NetLogo's sentence.
 	// SIMPLIFY: a priority queue (trans/data-model.md).
-	newList := make([]ecs.Entity, 0, len(list))
 	if len(endList) == 1 && persTime_activeBee > time(endList[0]) {
-		newList = append(append(append(newList, beginningList...), endList...), activeBee)
+		copy(list, list[1:])
+		list[len(list)-1] = activeBee
 	} else {
-		newList = append(append(append(newList, beginningList...), activeBee), endList...)
+		copy(list, beginningList)
+		list[len(beginningList)] = activeBee
 	}
-	s.active.List = newList
-	return newList[0]
+	return list[0]
 }
 
 // ActivityProc lets the bee e choose one task and do it [ACT].

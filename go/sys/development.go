@@ -36,6 +36,8 @@ type Development struct {
 	beeMap     *beeMapper
 	colonyMap  *ecs.Map2[comp.Colony, comp.ColonyCounts]
 	speciesMap *ecs.Map1[comp.Species]
+
+	bees []ecs.Entity // buffer of askAllBees
 }
 
 func (s *Development) Initialize(w *ecs.World) {
@@ -54,7 +56,8 @@ func (s *Development) Initialize(w *ecs.World) {
 func (s *Development) Update(w *ecs.World) {
 	// [DEV-01] ALL bees. ORDER: irrelevant for the state, see the annotation. Shuffled (decision C).
 	// A bee dies only in its own turn [MORA], so every bee of the list is alive when its turn comes.
-	for _, e := range askAllBees(s.beeFilter, s.rng) {
+	s.bees = askAllBees(s.bees, s.beeFilter, s.rng)
+	for _, e := range s.bees {
 		_, _, bee, _, _, _, _ := s.beeMap.Get(e)
 		whoCol := bee.ColonyID
 		if bee.Stage == stage.Adult {

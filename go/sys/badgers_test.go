@@ -126,7 +126,7 @@ func TestBadgersDigUpColony(t *testing.T) {
 	if st.EnergyStore_kJ != 0 || st.PollenStore_g != 0 {
 		t.Fatalf("near colony: energy %v, pollen %v; want 0, 0", st.EnergyStore_kJ, st.PollenStore_g)
 	}
-	if left := len(beesByColony(ecs.NewFilter1[comp.Bee](cw.w), func(b *comp.Bee) bool { return true })[near]); left != 0 {
+	if left := len(beesByColony(nil, ecs.NewFilter1[comp.Bee](cw.w), func(b *comp.Bee) bool { return true })[near]); left != 0 {
 		t.Errorf("%d bee agents left in the dug-up colony", left)
 	}
 	if !cw.w.Alive(near) || !cw.w.Alive(farQueen) || !cw.w.Alive(hibernating) {

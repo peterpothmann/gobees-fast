@@ -22,6 +22,8 @@ type EndOfDayResting struct {
 	rng       *rand.Rand
 	beeFilter *ecs.Filter1[comp.Bee]
 	beeMap    *ecs.Map1[comp.Bee]
+
+	bees []ecs.Entity // buffer of askBees
 }
 
 func (s *EndOfDayResting) Initialize(w *ecs.World) {
@@ -32,9 +34,10 @@ func (s *EndOfDayResting) Initialize(w *ecs.World) {
 
 func (s *EndOfDayResting) Update(w *ecs.World) {
 	// [GO-11] ORDER: irrelevant, each bee only sets itself. Shuffled (decision C).
-	for _, e := range askBees(s.beeFilter, s.rng, func(b *comp.Bee) bool {
+	s.bees = askBees(s.bees, s.beeFilter, s.rng, func(b *comp.Bee) bool {
 		return b.Stage == stage.Adult && b.Activity != activity.Hibernate && b.Caste != caste.Male
-	}) {
+	})
+	for _, e := range s.bees {
 		s.beeMap.Get(e).Activity = activity.Resting
 	}
 }

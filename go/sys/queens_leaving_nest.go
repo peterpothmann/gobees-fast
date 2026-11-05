@@ -32,6 +32,8 @@ type QueensLeavingNest struct {
 
 	beeFilter *ecs.Filter1[comp.Bee]
 	beeMap    *ecs.Map3[comp.Bee, comp.Genetics, comp.Thresholds]
+
+	queens []ecs.Entity // buffer of askBees
 }
 
 func (s *QueensLeavingNest) Initialize(w *ecs.World) {
@@ -45,10 +47,10 @@ func (s *QueensLeavingNest) Initialize(w *ecs.World) {
 
 func (s *QueensLeavingNest) Update(w *ecs.World) {
 	// [QLN-01] ORDER: irrelevant. Each queen only changes herself, and mating does not use up the male.
-	queens := askBees(s.beeFilter, s.rng, func(b *comp.Bee) bool {
+	s.queens = askBees(s.queens, s.beeFilter, s.rng, func(b *comp.Bee) bool {
 		return b.Stage == stage.Adult && b.Caste == caste.Queen && !b.Mated && !b.ColonyID.IsZero()
 	})
-	if len(queens) == 0 {
+	if len(s.queens) == 0 {
 		return
 	}
 	// [QLN-02] the adult males per species, anywhere in the landscape. Collected once: no male is created or dies
@@ -61,7 +63,7 @@ func (s *QueensLeavingNest) Update(w *ecs.World) {
 		}
 	}
 
-	for _, e := range queens {
+	for _, e := range s.queens {
 		bee, gen, th := s.beeMap.Get(e)
 		// [QLN-02]
 		if candidates := males[bee.SpeciesID]; len(candidates) > 0 {

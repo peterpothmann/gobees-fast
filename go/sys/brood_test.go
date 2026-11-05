@@ -2,6 +2,7 @@ package sys
 
 import (
 	"math"
+	"slices"
 	"testing"
 
 	"gobees/comp"
@@ -129,6 +130,24 @@ func TestNeedNectarPollenLarvaeToday(t *testing.T) {
 	_, s, _ = bw.colony(other)
 	if !almostEqual(s.PollenNeedLarvaeToday_g, 0.088) {
 		t.Errorf("other colony: pollen need %v g, want 0.088", s.PollenNeedLarvaeToday_g)
+	}
+}
+
+func TestBeesByColonyReusesGroups(t *testing.T) {
+	// step F10: the second call empties the groups of the first and drops the colony without larvae
+	bw := newBroodWorld(t, 1)
+	col := bw.addColony(nil)
+	other := bw.addColony(nil)
+	a := bw.addBrood(col, stage.Larva, caste.Undefined, 1, 6, 10, 0)
+	b := bw.addBrood(other, stage.Larva, caste.Undefined, 1, 6, 10, 0)
+	isLarva := func(x *comp.Bee) bool { return x.Stage == stage.Larva }
+	groups := beesByColony(nil, bw.beeFilter(), isLarva)
+	bw.w.RemoveEntity(b)
+	c := bw.addBrood(col, stage.Larva, caste.Undefined, 1, 6, 10, 0)
+	groups = beesByColony(groups, bw.beeFilter(), isLarva)
+	if _, ok := groups[other]; ok || len(groups) != 1 || len(groups[col]) != 2 ||
+		!slices.Contains(groups[col], a) || !slices.Contains(groups[col], c) {
+		t.Errorf("groups %v, want only colony %v with %v and %v", groups, col, a, c)
 	}
 }
 
