@@ -26,7 +26,7 @@ type MortalityBrood struct {
 	beeFilter  *ecs.Filter1[comp.Bee]
 	beeMap     *ecs.Map2[comp.Bee, comp.Development]
 	colonyMap  *ecs.Map1[comp.Colony]
-	speciesMap *ecs.Map1[comp.Species]
+	speciesMap *speciesTable
 
 	bees []ecs.Entity // buffer of askAllBees
 }
@@ -39,7 +39,7 @@ func (s *MortalityBrood) Initialize(w *ecs.World) {
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
 	s.beeMap = ecs.NewMap2[comp.Bee, comp.Development](w)
 	s.colonyMap = ecs.NewMap1[comp.Colony](w)
-	s.speciesMap = ecs.NewMap1[comp.Species](w)
+	s.speciesMap = newSpeciesTable(w)
 }
 
 func (s *MortalityBrood) Update(w *ecs.World) {

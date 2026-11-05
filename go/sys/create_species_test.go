@@ -5,8 +5,8 @@ import (
 	"slices"
 	"testing"
 
-	"gobees/comp"
 	"gobees/globals"
+	"gobees/params"
 
 	"github.com/mlange-42/ark/ecs"
 )
@@ -50,34 +50,20 @@ func TestCreateSpeciesExampleFarm(t *testing.T) {
 	a := newExampleFarmSetup(t, 1)
 	w := a.World
 
-	query := ecs.NewFilter2[comp.Who, comp.Species](w).Query()
-	species := []comp.Species{}
-	whos := []int64{}
-	for query.Next() {
-		who, sp := query.Get()
-		species = append(species, *sp)
-		whos = append(whos, who.Who)
-	}
 	// The example farm parameter file simulates "B_terrestris 500" only.
+	species := ecs.GetResource[params.Input](w).Species
 	if len(species) != 1 || species[0].Name != "B_terrestris" {
 		t.Fatalf("species = %v, want only B_terrestris", species)
 	}
-	sp := species[0]
-
-	// Species are created after all foodsources, so their who number is larger than every foodsource's.
-	maxFoodsourceWho := int64(-1)
-	fq := ecs.NewFilter2[comp.Who, comp.Foodsource](w).Query()
-	for fq.Next() {
-		who, _ := fq.Get()
-		maxFoodsourceWho = max(maxFoodsourceWho, who.Who)
+	nestSites := ecs.GetResource[globals.NestSites](w).BySpecies
+	if len(nestSites) != 1 {
+		t.Fatalf("nest sites of %d species, want 1", len(nestSites))
 	}
-	if whos[0] <= maxFoodsourceWho {
-		t.Errorf("species who %d, largest foodsource who %d", whos[0], maxFoodsourceWho)
-	}
+	ns := nestSites[0]
 
 	// [SPEC-04] the example farm has the habitat types Crop_Cereals, Grass_improved, Grassland, Hedgerow, Scrub,
 	// Woodland. "Grassland*" matches only "Grassland" ("Grass_improved" does not contain "Grassland").
-	gotHabitats := slices.Clone(sp.NestHabitatsList)
+	gotHabitats := slices.Clone(ns.NestHabitatsList)
 	slices.Sort(gotHabitats)
 	wantHabitats := []string{"Garden", "Grassland", "Hedgerow", "Nestboxes", "Scrub", "Woodland"}
 	if !slices.Equal(gotHabitats, wantHabitats) {
@@ -93,13 +79,11 @@ func TestCreateSpeciesExampleFarm(t *testing.T) {
 			wantArea += m.area_sqm
 		}
 	}
-	if len(wantSites) == 0 || !slices.Equal(sp.NestsiteFoodsourceList, wantSites) || sp.NestSiteArea != wantArea {
-		t.Errorf("nest sites: %d with %v m2, want %d with %v m2", len(sp.NestsiteFoodsourceList), sp.NestSiteArea, len(wantSites), wantArea)
+	if len(wantSites) == 0 || !slices.Equal(ns.NestsiteFoodsourceList, wantSites) || ns.NestSiteArea != wantArea {
+		t.Errorf("nest sites: %d with %v m2, want %d with %v m2", len(ns.NestsiteFoodsourceList), ns.NestSiteArea, len(wantSites), wantArea)
 	}
-
-	// the who counter has been advanced for the species
-	who := ecs.GetResource[globals.WhoCounter](w)
-	if next := who.Next(); next != whos[0]+1 {
-		t.Errorf("next who %d, want %d", next, whos[0]+1)
+	// the species keep the list of the run file
+	if slices.Equal(species[0].NestHabitatsList, ns.NestHabitatsList) {
+		t.Errorf("params.Input.Species holds the expanded list %q", species[0].NestHabitatsList)
 	}
 }

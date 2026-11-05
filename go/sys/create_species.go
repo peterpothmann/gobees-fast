@@ -15,45 +15,72 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// CreateSpecies creates one species entity per simulated species [INIT-07].
-// Runs after CreateFoodsources, because the nest sites are foodsources.
+// CreateSpecies finds the nest sites of each simulated species [INIT-07] and adds them as the resource
+// globals.NestSites. Runs after CreateFoodsources, because the nest sites are foodsources.
 //
 // NetLogo: CreateSpeciesProc, NestHabitatsListREP.
-type CreateSpecies struct{}
+type CreateSpecies struct {
+	nestSites globals.NestSites
+}
 
 func (s *CreateSpecies) Initialize(w *ecs.World) {
 	in := ecs.GetResource[params.Input](w)
-	who := ecs.GetResource[globals.WhoCounter](w)
 	rng := rand.New(ecs.GetResource[resource.Rand](w))
 
-	// [SPEC-01] one species entity per species in speciesList, in FILE order of the BeespeciesFile. Package input
-	// has read the rows and set the derived values [SPEC-02], [SPEC-03], [SPEC-05], [SPEC-07].
-	species := slices.Clone(in.Species)
+	// [SPEC-01] one species per species in speciesList, in FILE order of the BeespeciesFile. Package input has read
+	// the rows into params.Input.Species and set the derived values [SPEC-02], [SPEC-03], [SPEC-05], [SPEC-07]. Since
+	// step F11 the species are no agents: bees and colonies hold the index of their species, and the species take no
+	// who number (who is only compared among foodsources, which exist before the species).
 
 	// Collect all masterpatches, sorted by who, to expand the nest habitats list and find the nest sites.
 	masterpatches := collectMasterpatches(w)
-	mapper := ecs.NewMap2[comp.Who, comp.Species](w)
-	for i := range species {
-		sp := &species[i]
+	s.nestSites.BySpecies = make([]globals.SpeciesNestSites, len(in.Species))
+	for i := range in.Species {
+		sp := &in.Species[i]
+		ns := &s.nestSites.BySpecies[i]
 		// [SPEC-04]
 		expanded, err := NestHabitatsListREP(sp.NestHabitatsList, masterpatches, rng)
 		if err != nil {
 			panic(err)
 		}
-		sp.NestHabitatsList = expanded
+		ns.NestHabitatsList = expanded
 		// [SPEC-06]
-		sp.NestsiteFoodsourceList, sp.NestSiteArea = nestSites(sp.NestHabitatsList, masterpatches)
+		ns.NestsiteFoodsourceList, ns.NestSiteArea = nestSites(ns.NestHabitatsList, masterpatches)
 		// [SPEC-08] message only
-		if len(sp.NestsiteFoodsourceList) == 0 && !sp.Parasitic {
+		if len(ns.NestsiteFoodsourceList) == 0 && !sp.Parasitic {
 			log.Printf("%s has no suitable nesting foodsources. No colonies will form", sp.Name)
 		}
-		mapper.NewEntity(&comp.Who{Who: who.Next()}, sp)
 	}
+	ecs.AddResource(w, &s.nestSites)
 }
 
 func (s *CreateSpecies) Update(w *ecs.World) {}
 
 func (s *CreateSpecies) Finalize(w *ecs.World) {}
+
+// speciesTable gives a species by its index, the SpeciesID of bees and SpeciesIDcolony of colonies (step F11).
+// It reads params.Input.Species at each call, so species added later (tests) are found too.
+type speciesTable struct {
+	in *params.Input
+}
+
+func newSpeciesTable(w *ecs.World) *speciesTable {
+	return &speciesTable{in: ecs.GetResource[params.Input](w)}
+}
+
+// Get returns the species with index i.
+func (t *speciesTable) Get(i int) *comp.Species {
+	return &t.in.Species[i]
+}
+
+// all returns the indices of all species in file order. NetLogo: ask species (shuffled by the caller).
+func (t *speciesTable) all() []int {
+	result := make([]int, len(t.in.Species))
+	for i := range result {
+		result[i] = i
+	}
+	return result
+}
 
 // masterpatch is a masterpatch foodsource with the values NestHabitatsListREP and the nest sites need.
 type masterpatch struct {

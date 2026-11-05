@@ -28,7 +28,8 @@ type colonyWorld struct {
 	constants *params.Constants
 	tally     *tally
 	sys       *UpdateColonies
-	species   ecs.Entity
+	input     *params.Input // the species
+	species   int           // index of B_terrestris
 	colonyMap *colonyMapper
 	beeMap    *beeMapper
 	who       *globals.WhoCounter
@@ -56,8 +57,9 @@ func newColonyWorld(t *testing.T, seed uint64) *colonyWorld {
 	ecs.AddResource(w, &globals.ActiveBees{})
 	ecs.AddResource(w, &globals.Daytime{})
 
-	sp := *terrestris(t) // seasonStop 305
-	cw.species = ecs.NewMap2[comp.Who, comp.Species](w).NewEntity(&comp.Who{Who: cw.who.Next()}, &sp)
+	cw.input = &params.Input{Species: []comp.Species{*terrestris(t)}} // seasonStop 305
+	ecs.AddResource(w, cw.input)
+	cw.species = 0
 	cw.colonyMap = ecs.NewMap7[comp.Who, comp.Position, comp.Colony, comp.ColonyStores, comp.ColonyStimuli, comp.ColonyCounts, comp.ColonyRange](w)
 	cw.beeMap = newBeeMapper(w)
 

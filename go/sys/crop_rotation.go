@@ -27,14 +27,14 @@ type CropRotation struct {
 	calendar  *globals.Calendar
 	derived   *globals.Derived
 	landscape *globals.Landscape
+	nestSites *globals.NestSites
 
-	fsFilter      *ecs.Filter1[comp.Foodsource]
-	beeFilter     *ecs.Filter1[comp.Bee]
-	colonyFilter  *ecs.Filter1[comp.Colony]
-	speciesFilter *ecs.Filter1[comp.Species]
-	foragerMap    *ecs.Map1[comp.Forager]
-	rangeMap      *ecs.Map1[comp.ColonyRange]
-	speciesMap    *ecs.Map1[comp.Species]
+	fsFilter     *ecs.Filter1[comp.Foodsource]
+	beeFilter    *ecs.Filter1[comp.Bee]
+	colonyFilter *ecs.Filter1[comp.Colony]
+	foragerMap   *ecs.Map1[comp.Forager]
+	rangeMap     *ecs.Map1[comp.ColonyRange]
+	speciesMap   *speciesTable
 
 	bees []ecs.Entity // buffer of askAllBees
 }
@@ -45,13 +45,13 @@ func (s *CropRotation) Initialize(w *ecs.World) {
 	s.calendar = ecs.GetResource[globals.Calendar](w)
 	s.derived = ecs.GetResource[globals.Derived](w)
 	s.landscape = ecs.GetResource[globals.Landscape](w)
+	s.nestSites = ecs.GetResource[globals.NestSites](w)
 	s.fsFilter = ecs.NewFilter1[comp.Foodsource](w)
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
 	s.colonyFilter = ecs.NewFilter1[comp.Colony](w)
-	s.speciesFilter = ecs.NewFilter1[comp.Species](w)
 	s.foragerMap = ecs.NewMap1[comp.Forager](w)
 	s.rangeMap = ecs.NewMap1[comp.ColonyRange](w)
-	s.speciesMap = ecs.NewMap1[comp.Species](w)
+	s.speciesMap = newSpeciesTable(w)
 }
 
 func (s *CropRotation) Update(w *ecs.World) {
@@ -106,21 +106,18 @@ func (s *CropRotation) CropRotationProc(w *ecs.World) {
 	// [CROP-03] the new landscape: new who numbers, random numbers for the hedges and layers
 	CreateFoodsourcesProc(w, s.derived.FoodsourcesFile, s.landscape)
 
-	// per species the nest sites and their area as in [SPEC-06], minPollenStore_g as in [SPEC-07].
+	// per species the nest sites and their area as in [SPEC-06].
 	// nestHabitatsList is NOT expanded again [SPEC-04]: it keeps the habitat types of the first landscape.
+	// minPollenStore_g as in [SPEC-07]: not computed again (step F11), the formula reads only species values, which
+	// do not change.
 	// ORDER: irrelevant, each species only changes itself. Shuffled (decision C).
-	species := []ecs.Entity{}
-	spQuery := s.speciesFilter.Query()
-	for spQuery.Next() {
-		species = append(species, spQuery.Entity())
-	}
+	species := s.speciesMap.all()
 	util.Shuffle(s.rng, species)
 	masterpatches := collectMasterpatches(w)
-	for _, e := range species {
-		sp := s.speciesMap.Get(e)
-		sp.NestsiteFoodsourceList, sp.NestSiteArea = nestSites(sp.NestHabitatsList, masterpatches)
-		sp.MinPollenStore_g = 0.5 * 0.001 * sp.DevWeightPupationMin_mg * float64(sp.Batchsize) / sp.PollenToBodymassFactor
-		if len(sp.NestsiteFoodsourceList) == 0 && !sp.Parasitic {
+	for _, i := range species {
+		ns := &s.nestSites.BySpecies[i]
+		ns.NestsiteFoodsourceList, ns.NestSiteArea = nestSites(ns.NestHabitatsList, masterpatches)
+		if sp := s.speciesMap.Get(i); len(ns.NestsiteFoodsourceList) == 0 && !sp.Parasitic {
 			log.Printf("%s has no suitable nesting habitat", sp.Name)
 		}
 	}

@@ -36,7 +36,7 @@ type forager struct {
 	beeMap        *beeMapper
 	colonyMap     *ecs.Map4[comp.Position, comp.Colony, comp.ColonyStores, comp.ColonyRange]
 	foodsourceMap *ecs.Map4[comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer]
-	speciesMap    *ecs.Map1[comp.Species]
+	speciesMap    *speciesTable
 }
 
 func newForager(w *ecs.World, rng *rand.Rand) forager {
@@ -52,7 +52,7 @@ func newForager(w *ecs.World, rng *rand.Rand) forager {
 		beeMap:        newBeeMapper(w),
 		colonyMap:     ecs.NewMap4[comp.Position, comp.Colony, comp.ColonyStores, comp.ColonyRange](w),
 		foodsourceMap: ecs.NewMap4[comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](w),
-		speciesMap:    ecs.NewMap1[comp.Species](w),
+		speciesMap:    newSpeciesTable(w),
 	}
 }
 

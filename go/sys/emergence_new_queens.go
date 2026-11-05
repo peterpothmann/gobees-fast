@@ -32,6 +32,7 @@ type EmergenceNewQueens struct {
 	constants *params.Constants
 	derived   *globals.Derived
 	landscape *globals.Landscape
+	nestSites *globals.NestSites
 	world     *params.World
 	who       *globals.WhoCounter
 	death     beeDeath
@@ -40,7 +41,7 @@ type EmergenceNewQueens struct {
 	beeFilter     *ecs.Filter1[comp.Bee]
 	colonyFilter  *ecs.Filter2[comp.Position, comp.Colony]
 	beeMap        *beeMapper
-	speciesMap    *ecs.Map1[comp.Species]
+	speciesMap    *speciesTable
 	foodsourceMap *ecs.Map2[comp.Position, comp.Foodsource]
 }
 
@@ -51,6 +52,7 @@ func (s *EmergenceNewQueens) Initialize(w *ecs.World) {
 	s.constants = ecs.GetResource[params.Constants](w)
 	s.derived = ecs.GetResource[globals.Derived](w)
 	s.landscape = ecs.GetResource[globals.Landscape](w)
+	s.nestSites = ecs.GetResource[globals.NestSites](w)
 	s.world = ecs.GetResource[params.World](w)
 	s.who = ecs.GetResource[globals.WhoCounter](w)
 	s.death = newBeeDeath(w)
@@ -59,7 +61,7 @@ func (s *EmergenceNewQueens) Initialize(w *ecs.World) {
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
 	s.colonyFilter = ecs.NewFilter2[comp.Position, comp.Colony](w)
 	s.beeMap = newBeeMapper(w)
-	s.speciesMap = ecs.NewMap1[comp.Species](w)
+	s.speciesMap = newSpeciesTable(w)
 	s.foodsourceMap = ecs.NewMap2[comp.Position, comp.Foodsource](w)
 }
 
@@ -107,12 +109,13 @@ func (s *EmergenceNewQueens) Update(w *ecs.World) {
 		}
 		_, _, bee, _, _, _, _ := s.beeMap.Get(e)
 		sp := s.speciesMap.Get(bee.SpeciesID)
-		if len(sp.NestsiteFoodsourceList) == 0 {
+		ns := &s.nestSites.BySpecies[bee.SpeciesID]
+		if len(ns.NestsiteFoodsourceList) == 0 {
 			s.death.DieProc(w, e, "no suitable foodsources for nesting exist for "+sp.Name)
 			continue
 		}
 		if !sp.Parasitic { // speciesName != "Psithyrus" (step F9)
-			s.NestSitesSearchingProc(w, e, sp)
+			s.NestSitesSearchingProc(w, e, sp, ns)
 		} else {
 			s.PsithyrusNestSearchProc(w, e)
 		}
@@ -162,11 +165,11 @@ func (s *EmergenceNewQueens) copyBee(e ecs.Entity, n int) {
 }
 
 // NestSitesSearchingProc lets a queen search a nest site for one day [NEST].
-func (s *EmergenceNewQueens) NestSitesSearchingProc(w *ecs.World, e ecs.Entity, sp *comp.Species) {
+func (s *EmergenceNewQueens) NestSitesSearchingProc(w *ecs.World, e ecs.Entity, sp *comp.Species, ns *globals.SpeciesNestSites) {
 	// [NEST-01]
 	if s.rng.Float64() <= sp.ChanceFindNest {
 		// [NEST-02]
-		fsE := s.NestSiteFoodSourceREP(sp)
+		fsE := s.NestSiteFoodSourceREP(ns)
 		fsPos, fs := s.foodsourceMap.Get(fsE)
 		// [NEST-03] a random patch centre within the circle, finding 25 (see trans/netlogo-findings.md#finding-25)
 		candidates := util.PatchCentresWithin(fsPos.X, fsPos.Y, fs.Radius_m*s.landscape.Scaling_NLpatches_per_m,
@@ -195,15 +198,15 @@ func (s *EmergenceNewQueens) searchMortality() float64 {
 }
 
 // NestSiteFoodSourceREP chooses a nest site, weighted by area [NSFS].
-func (s *EmergenceNewQueens) NestSiteFoodSourceREP(sp *comp.Species) ecs.Entity {
+func (s *EmergenceNewQueens) NestSiteFoodSourceREP(ns *globals.SpeciesNestSites) ecs.Entity {
 	// [NSFS-01] NestsiteFoodsourceList is sorted by who. SIMPLIFY: shuffle not needed for the distribution.
-	list := slices.Clone(sp.NestsiteFoodsourceList)
+	list := slices.Clone(ns.NestsiteFoodsourceList)
 	util.Shuffle(s.rng, list)
 	p := s.rng.Float64()
 	probsSummedUp := 0.0
 	for _, e := range list {
 		_, fs := s.foodsourceMap.Get(e)
-		probsSummedUp += fs.Area_sqm / sp.NestSiteArea
+		probsSummedUp += fs.Area_sqm / ns.NestSiteArea
 		if probsSummedUp > p {
 			return e
 		}

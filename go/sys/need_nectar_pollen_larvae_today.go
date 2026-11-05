@@ -28,7 +28,7 @@ type NeedNectarPollenLarvaeToday struct {
 	beeFilter    *ecs.Filter1[comp.Bee]
 	storesMap    *ecs.Map1[comp.ColonyStores]
 	beeMap       *ecs.Map1[comp.Bee]
-	speciesMap   *ecs.Map1[comp.Species]
+	speciesMap   *speciesTable
 
 	larvae map[ecs.Entity][]ecs.Entity // buffer of beesByColony
 }
@@ -41,7 +41,7 @@ func (s *NeedNectarPollenLarvaeToday) Initialize(w *ecs.World) {
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
 	s.storesMap = ecs.NewMap1[comp.ColonyStores](w)
 	s.beeMap = ecs.NewMap1[comp.Bee](w)
-	s.speciesMap = ecs.NewMap1[comp.Species](w)
+	s.speciesMap = newSpeciesTable(w)
 }
 
 func (s *NeedNectarPollenLarvaeToday) Update(w *ecs.World) {

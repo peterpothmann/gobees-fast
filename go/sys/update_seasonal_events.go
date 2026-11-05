@@ -32,10 +32,9 @@ type UpdateSeasonalEvents struct {
 	totals   ecs.Resource[globals.Totals] // set by CheckNumbers
 	death    beeDeath
 
-	speciesFilter *ecs.Filter1[comp.Species]
-	beeFilter     *ecs.Filter1[comp.Bee]
-	speciesMap    *ecs.Map1[comp.Species]
-	beeMap        *ecs.Map1[comp.Bee]
+	beeFilter  *ecs.Filter1[comp.Bee]
+	speciesMap *speciesTable
+	beeMap     *ecs.Map1[comp.Bee]
 
 	bees []ecs.Entity // buffer of askBees, for one call after the other
 }
@@ -46,9 +45,8 @@ func (s *UpdateSeasonalEvents) Initialize(w *ecs.World) {
 	s.file = ecs.GetResource[params.ParameterFile](w)
 	s.totals = ecs.NewResource[globals.Totals](w)
 	s.death = newBeeDeath(w)
-	s.speciesFilter = ecs.NewFilter1[comp.Species](w)
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
-	s.speciesMap = ecs.NewMap1[comp.Species](w)
+	s.speciesMap = newSpeciesTable(w)
 	s.beeMap = ecs.NewMap1[comp.Bee](w)
 }
 
@@ -59,11 +57,7 @@ func (s *UpdateSeasonalEvents) Update(w *ecs.World) {
 	totalQueens, totalHibernatingQueens, totalMales := s.dailyTotals()
 
 	// [SEAS-01] ORDER: irrelevant, each bee dies independently, the colony counters are sums.
-	species := []ecs.Entity{}
-	speciesQuery := s.speciesFilter.Query()
-	for speciesQuery.Next() {
-		species = append(species, speciesQuery.Entity())
-	}
+	species := s.speciesMap.all()
 	util.Shuffle(s.rng, species)
 	for _, sp := range species {
 		if s.calendar.Day != s.speciesMap.Get(sp).SeasonStop {

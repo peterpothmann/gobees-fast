@@ -4,7 +4,6 @@ import (
 	"slices"
 	"testing"
 
-	"gobees/comp"
 	"gobees/enum/activity"
 	"gobees/enum/caste"
 	"gobees/enum/stage"
@@ -87,7 +86,7 @@ func TestQueensLeavingNestNoMale(t *testing.T) {
 	// [QLN-02] no adult male of her species: with UnlimitedMales? = false she dies. A male of another species and
 	// male brood of her species do not count.
 	cw, s := qlnWorld(t, false)
-	other := cw.speciesEntityNamed(t, "B_pascuorum")
+	other := cw.speciesNamed(t, "B_pascuorum")
 	col := cw.addColony(nil)
 	young := cw.addYoungQueen(col, 2)
 	foreign := cw.addMale(col, 5)
@@ -142,10 +141,11 @@ func TestQueensLeavingNestDiploidMale(t *testing.T) {
 	}
 }
 
-// speciesEntityNamed adds a second species with the values of B_terrestris and the given name.
-func (cw *colonyWorld) speciesEntityNamed(t *testing.T, name string) ecs.Entity {
+// speciesNamed adds a further species with the values of B_terrestris and the given name and returns its index.
+func (cw *colonyWorld) speciesNamed(t *testing.T, name string) int {
 	t.Helper()
 	sp := *terrestris(t)
 	sp.Name = name
-	return ecs.NewMap2[comp.Who, comp.Species](cw.w).NewEntity(&comp.Who{Who: cw.who.Next()}, &sp)
+	cw.input.Species = append(cw.input.Species, sp)
+	return len(cw.input.Species) - 1
 }

@@ -8,6 +8,7 @@ import (
 	"gobees/enum/caste"
 	"gobees/enum/stage"
 	"gobees/globals"
+	"gobees/params"
 
 	"github.com/mlange-42/ark/ecs"
 )
@@ -47,8 +48,7 @@ type DailyOutputExtended struct {
 	calendar    ecs.Resource[globals.Calendar]
 	bees        *ecs.Filter2[comp.Bee, comp.Genetics]
 	colonies    *ecs.Filter2[comp.Colony, comp.ColonyStores]
-	species     *ecs.Map1[comp.Species]
-	allSpecies  *ecs.Filter1[comp.Species]
+	input       ecs.Resource[params.Input] // the species (step F11)
 	foodsources *ecs.Filter1[comp.Foodsource]
 	stocks      *ecs.Filter1[comp.FoodsourceState]
 	badgers     *ecs.Filter1[comp.Badger]
@@ -63,8 +63,7 @@ func (o *DailyOutputExtended) Initialize(w *ecs.World) {
 	o.calendar = ecs.NewResource[globals.Calendar](w)
 	o.bees = ecs.NewFilter2[comp.Bee, comp.Genetics](w)
 	o.colonies = ecs.NewFilter2[comp.Colony, comp.ColonyStores](w)
-	o.species = ecs.NewMap1[comp.Species](w)
-	o.allSpecies = ecs.NewFilter1[comp.Species](w)
+	o.input = ecs.NewResource[params.Input](w)
 	o.foodsources = ecs.NewFilter1[comp.Foodsource](w)
 	o.stocks = ecs.NewFilter1[comp.FoodsourceState](w)
 	o.badgers = ecs.NewFilter1[comp.Badger](w)
@@ -84,11 +83,11 @@ func (o *DailyOutputExtended) Values(w *ecs.World) []float64 {
 	n := copy(o.values, o.daily.Values(w))
 
 	// the species with Parasitic (Psithyrus), usually 0 or 1
-	var parasitic []ecs.Entity
-	spq := o.allSpecies.Query()
-	for spq.Next() {
-		if spq.Get().Parasitic {
-			parasitic = append(parasitic, spq.Entity())
+	species := o.input.Get().Species
+	var parasitic []int
+	for i := range species {
+		if species[i].Parasitic {
+			parasitic = append(parasitic, i)
 		}
 	}
 
@@ -133,7 +132,7 @@ func (o *DailyOutputExtended) Values(w *ecs.World) []float64 {
 	for cq.Next() {
 		colony, stores := cq.Get()
 		colonies++
-		name := o.species.Get(colony.SpeciesIDcolony).Name
+		name := species[colony.SpeciesIDcolony].Name
 		for i, s := range netLogoSpecies {
 			if name == s {
 				perSpecies[i]++

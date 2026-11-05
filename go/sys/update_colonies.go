@@ -38,7 +38,7 @@ type UpdateColonies struct {
 	beeFilter    *ecs.Filter1[comp.Bee]
 	colonyMap    *ecs.Map3[comp.Colony, comp.ColonyStores, comp.ColonyCounts]
 	beeMap       *ecs.Map1[comp.Bee]
-	speciesMap   *ecs.Map1[comp.Species]
+	speciesMap   *speciesTable
 
 	beesOf map[ecs.Entity][]ecs.Entity // buffer of beesByColony
 }
@@ -57,7 +57,7 @@ func (s *UpdateColonies) Initialize(w *ecs.World) {
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
 	s.colonyMap = ecs.NewMap3[comp.Colony, comp.ColonyStores, comp.ColonyCounts](w)
 	s.beeMap = ecs.NewMap1[comp.Bee](w)
-	s.speciesMap = ecs.NewMap1[comp.Species](w)
+	s.speciesMap = newSpeciesTable(w)
 	s.Update(w)
 }
 

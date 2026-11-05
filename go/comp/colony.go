@@ -12,7 +12,7 @@ import (
 
 // Colony holds identity, phenology and flags of a colony.
 type Colony struct {
-	SpeciesIDcolony      ecs.Entity
+	SpeciesIDcolony      int      // index in params.Input.Species (step F11)
 	QueenProduction      bool     // queenProduction?
 	QueenProductionDate  day.Date // unset until set (NetLogo: NotSetHigh)
 	SwitchPointDate      day.Date // unset until set (NetLogo: NotSetHigh)

@@ -9,6 +9,7 @@ import (
 	"gobees/day"
 	"gobees/enum/caste"
 	"gobees/enum/stage"
+	"gobees/params"
 
 	"github.com/mlange-42/ark/ecs"
 )
@@ -37,19 +38,17 @@ func newBroodWorld(t *testing.T, seed uint64) *broodWorld {
 	bw.dev.Initialize(bw.w)
 	bw.morb.Initialize(bw.w)
 	bw.eggs = newEggLayer(bw.w, bw.dev.rng)
-	bw.sp = bw.speciesMap(bw.species)
+	bw.sp = &bw.input.Species[bw.species] // read only: addParasiticSpecies may move the slice
 	return bw
 }
 
-func (bw *broodWorld) speciesMap(e ecs.Entity) *comp.Species {
-	return bw.sys.speciesMap.Get(e)
-}
-
-// addParasiticSpecies adds a copy of the species sp named Psithyrus with Parasitic set and returns its entity.
-func addParasiticSpecies(w *ecs.World, sp *comp.Species) ecs.Entity {
+// addParasiticSpecies adds a copy of the species sp named Psithyrus with Parasitic set and returns its index.
+func addParasiticSpecies(w *ecs.World, sp *comp.Species) int {
 	psith := *sp
 	psith.Name, psith.Parasitic = "Psithyrus", true
-	return ecs.NewMap1[comp.Species](w).NewEntity(&psith)
+	in := ecs.GetResource[params.Input](w)
+	in.Species = append(in.Species, psith)
+	return len(in.Species) - 1
 }
 
 func (bw *broodWorld) beeFilter() *ecs.Filter1[comp.Bee] {

@@ -71,8 +71,8 @@ func TestSeasonalEventsSeasonStop(t *testing.T) {
 func TestSeasonalEventsSeasonStopOtherSpecies(t *testing.T) {
 	// [SEAS-01] per species: a species with a later seasonStop keeps its bees
 	cw, s, _ := seasWorld(t, 305)
-	other := cw.speciesEntityNamed(t, "late")
-	ecs.NewMap1[comp.Species](cw.w).Get(other).SeasonStop = 330
+	other := cw.speciesNamed(t, "late")
+	cw.input.Species[other].SeasonStop = 330
 	e := cw.addBee(ecs.Entity{}, stage.Adult, caste.Queen, 1, 0)
 	_, _, b, _, _, _, _ := cw.beeMap.Get(e)
 	b.SpeciesID = other
@@ -125,8 +125,8 @@ func TestSeasonalEventsTotalsBeforeSeasonStop(t *testing.T) {
 	// [SEAS-02] uses the totals of the previous evening [OUT-01]: a queen that dies on Day seasonStop in [SEAS-01]
 	// still counts as not hibernating, so the males survive this morning.
 	cw, s, _ := seasWorld(t, 305)
-	other := cw.speciesEntityNamed(t, "late")
-	ecs.NewMap1[comp.Species](cw.w).Get(other).SeasonStop = 330
+	other := cw.speciesNamed(t, "late")
+	cw.input.Species[other].SeasonStop = 330
 	male := cw.addMale(ecs.Entity{}, 2)
 	_, _, b, _, _, _, _ := cw.beeMap.Get(male)
 	b.SpeciesID = other // survives [SEAS-01]

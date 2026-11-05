@@ -30,7 +30,7 @@ type eggLayer struct {
 
 	beeMap     *beeMapper
 	colonyMap  *ecs.Map2[comp.Colony, comp.ColonyStores]
-	speciesMap *ecs.Map1[comp.Species]
+	speciesMap *speciesTable
 }
 
 func newEggLayer(w *ecs.World, rng *rand.Rand) eggLayer {
@@ -42,7 +42,7 @@ func newEggLayer(w *ecs.World, rng *rand.Rand) eggLayer {
 		who:        ecs.GetResource[globals.WhoCounter](w),
 		beeMap:     newBeeMapper(w),
 		colonyMap:  ecs.NewMap2[comp.Colony, comp.ColonyStores](w),
-		speciesMap: ecs.NewMap1[comp.Species](w),
+		speciesMap: newSpeciesTable(w),
 	}
 }
 

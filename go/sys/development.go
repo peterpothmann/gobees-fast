@@ -35,7 +35,7 @@ type Development struct {
 	beeFilter  *ecs.Filter1[comp.Bee]
 	beeMap     *beeMapper
 	colonyMap  *ecs.Map2[comp.Colony, comp.ColonyCounts]
-	speciesMap *ecs.Map1[comp.Species]
+	speciesMap *speciesTable
 
 	bees []ecs.Entity // buffer of askAllBees
 }
@@ -50,7 +50,7 @@ func (s *Development) Initialize(w *ecs.World) {
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
 	s.beeMap = newBeeMapper(w)
 	s.colonyMap = ecs.NewMap2[comp.Colony, comp.ColonyCounts](w)
-	s.speciesMap = ecs.NewMap1[comp.Species](w)
+	s.speciesMap = newSpeciesTable(w)
 }
 
 func (s *Development) Update(w *ecs.World) {
