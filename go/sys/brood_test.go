@@ -44,6 +44,13 @@ func (bw *broodWorld) speciesMap(e ecs.Entity) *comp.Species {
 	return bw.sys.speciesMap.Get(e)
 }
 
+// addParasiticSpecies adds a copy of the species sp named Psithyrus with Parasitic set and returns its entity.
+func addParasiticSpecies(w *ecs.World, sp *comp.Species) ecs.Entity {
+	psith := *sp
+	psith.Name, psith.Parasitic = "Psithyrus", true
+	return ecs.NewMap1[comp.Species](w).NewEntity(&psith)
+}
+
 func (bw *broodWorld) beeFilter() *ecs.Filter1[comp.Bee] {
 	return ecs.NewFilter1[comp.Bee](bw.w)
 }
@@ -349,8 +356,8 @@ func TestDevelopmentWorkerTimeline(t *testing.T) {
 		}
 	}
 	b, _, th, f, _ := bw.bee(e)
-	if b.Brood || b.Number != 12 || b.AdultAge != 0 || *th != thresholds(sitWorker) {
-		t.Errorf("new workers: brood %v, number %v, adultAge %v, thresholds %+v", b.Brood, b.Number, b.AdultAge, *th)
+	if b.Stage != stage.Adult || b.Number != 12 || b.AdultAge != 0 || *th != thresholds(sitWorker) {
+		t.Errorf("new workers: stage %v, number %v, adultAge %v, thresholds %+v", b.Stage, b.Number, b.AdultAge, *th)
 	}
 	if f.Cropvolume_myl != CropAndPelletSizeREP("nectar", b.Weight_mg, bw.sp) || f.GlossaLength_mm != ProboscisLengthREP(b.Weight_mg, bw.sp) {
 		t.Errorf("crop %v, glossa %v", f.Cropvolume_myl, f.GlossaLength_mm)
@@ -444,8 +451,9 @@ func TestDevelopmentSocialPhaseThresholds(t *testing.T) {
 	host := bw.addBee(social, stage.Adult, caste.Queen, 1, 30)
 	psith := bw.addBee(social, stage.Adult, caste.Queen, 1, 30)
 	alone := bw.addBee(founding, stage.Adult, caste.Queen, 1, 30)
+	psithSpecies := addParasiticSpecies(bw.w, bw.sp)
 	b, _, th, _, _ := bw.bee(psith)
-	b.SpeciesName = "Psithyrus"
+	b.SpeciesID = psithSpecies
 	*th = thresholds(sitPsith)
 	for _, e := range []ecs.Entity{host, alone} {
 		_, _, th, _, _ := bw.bee(e)
@@ -568,7 +576,7 @@ func TestEgglaying(t *testing.T) {
 		t.Fatalf("%d egg cohorts, want 1", len(eggs))
 	}
 	b, g, th, f, d := bw.bee(eggs[0])
-	if b.Number != 12 || b.Stage != stage.Egg || !b.Brood || b.Caste != caste.Undefined || b.Ploidy != 2 ||
+	if b.Number != 12 || b.Stage != stage.Egg || b.Caste != caste.Undefined ||
 		b.ColonyID != col || b.SpeciesID != bw.species || b.Weight_mg != 1.5 || b.EmergingDate.IsSet() ||
 		b.AdultAge != 0 || b.BroodAge != 0 || b.PersonalTime_s != 0 || b.Mated {
 		t.Errorf("egg %+v", *b)
@@ -610,18 +618,18 @@ func TestEgglayingNotEnoughStores(t *testing.T) {
 }
 
 func TestEgglayingPloidy(t *testing.T) {
-	// [EGG-02] haploid eggs only after the switch point day. SexLocus? with equal alleles: diploid male [EGGP-01]
+	// [EGG-02] haploid eggs only after the switch point day. SexLocus? with equal alleles: diploid male [EGGP-01].
+	// The ploidy is the number of alleles (step F9).
 	for _, tc := range []struct {
 		name      string
 		switchDay day.Date
 		sexLocus  bool
-		ploidy    float64
 		caste     caste.Caste
 		alleles   int
 	}{
-		{"on switch point day", day.At(200), false, 2, caste.Undefined, 2},
-		{"after switch point", day.At(199), false, 1, caste.Male, 1},
-		{"sex locus, homozygous", day.Date{}, true, 2, caste.Male, 2},
+		{"on switch point day", day.At(200), false, caste.Undefined, 2},
+		{"after switch point", day.At(199), false, caste.Male, 1},
+		{"sex locus, homozygous", day.Date{}, true, caste.Male, 2},
 	} {
 		bw := newBroodWorld(t, 1)
 		bw.file.SexLocus = tc.sexLocus
@@ -634,9 +642,8 @@ func TestEgglayingPloidy(t *testing.T) {
 		g.AllelesList, g.SpermathecaList = []float64{5, 5}, []float64{5}
 		bw.eggs.EgglayingProc(queen)
 		b, g, _, _, _ := bw.bee(bw.eggsOf(col)[0])
-		if b.Ploidy != tc.ploidy || b.Caste != tc.caste || len(g.AllelesList) != tc.alleles {
-			t.Errorf("%s: ploidy %v, caste %v, alleles %v; want %v, %v, %d alleles",
-				tc.name, b.Ploidy, b.Caste, g.AllelesList, tc.ploidy, tc.caste, tc.alleles)
+		if b.Caste != tc.caste || len(g.AllelesList) != tc.alleles {
+			t.Errorf("%s: caste %v, alleles %v; want %v, %d alleles", tc.name, b.Caste, g.AllelesList, tc.caste, tc.alleles)
 		}
 	}
 }

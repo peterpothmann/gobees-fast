@@ -108,10 +108,10 @@ func (s *EmergenceNewQueens) Update(w *ecs.World) {
 		_, _, bee, _, _, _, _ := s.beeMap.Get(e)
 		sp := s.speciesMap.Get(bee.SpeciesID)
 		if len(sp.NestsiteFoodsourceList) == 0 {
-			s.death.DieProc(w, e, "no suitable foodsources for nesting exist for "+bee.SpeciesName)
+			s.death.DieProc(w, e, "no suitable foodsources for nesting exist for "+sp.Name)
 			continue
 		}
-		if bee.SpeciesName != "Psithyrus" {
+		if !sp.Parasitic { // speciesName != "Psithyrus" (step F9)
 			s.NestSitesSearchingProc(w, e, sp)
 		} else {
 			s.PsithyrusNestSearchProc(w, e)

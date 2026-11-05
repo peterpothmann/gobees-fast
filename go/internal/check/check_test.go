@@ -22,9 +22,9 @@ func world() (*ecs.World, *globals.Calendar, ecs.Entity) {
 	bees := ecs.NewMap1[comp.Bee](w)
 	for _, b := range []comp.Bee{
 		{Stage: stage.Adult, Caste: caste.Queen, ColonyID: col, Activity: activity.Egglaying},
-		{Stage: stage.Egg, Caste: caste.Undefined, ColonyID: col, Brood: true},
-		{Stage: stage.Larva, Caste: caste.Queen, ColonyID: col, Brood: true},
-		{Stage: stage.Pupa, Caste: caste.Male, ColonyID: col, Brood: true},
+		{Stage: stage.Egg, Caste: caste.Undefined, ColonyID: col},
+		{Stage: stage.Larva, Caste: caste.Queen, ColonyID: col},
+		{Stage: stage.Pupa, Caste: caste.Male, ColonyID: col},
 		{Stage: stage.Adult, Caste: caste.Worker, ColonyID: col},
 		{Stage: stage.Adult, Caste: caste.Male, ColonyID: col},
 		{Stage: stage.Adult, Caste: caste.Queen, Activity: activity.Hibernate},
@@ -47,7 +47,7 @@ func TestDayMembers(t *testing.T) {
 	for _, b := range []comp.Bee{
 		{Stage: stage.Adult, Caste: caste.Worker},
 		{Stage: stage.Adult, Caste: caste.Male},
-		{Stage: stage.Egg, Caste: caste.Undefined, Brood: true},
+		{Stage: stage.Egg, Caste: caste.Undefined},
 	} {
 		w, _, _ := world()
 		ecs.NewMap1[comp.Bee](w).NewEntity(&b)

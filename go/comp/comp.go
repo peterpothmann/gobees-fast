@@ -66,7 +66,11 @@ type Layer struct {
 //
 // NetLogo: species-own (oneSpecies agents), created in CreateSpeciesProc [SPEC].
 type Species struct {
-	Name                               string
+	Name string
+	// Parasitic is true for the cuckoo bumblebees (Psithyrus): they rest instead of nursing and foraging [ACT-04]
+	// and take over a host colony [EMER-04], [PSI]. NetLogo compares the name with "Psithyrus" at these places.
+	// Derived from the name in input.deriveSpecies (step F9).
+	Parasitic                          bool
 	MaxLifespanWorkers                 int
 	EmergingDay_mean                   float64
 	EmergingDay_sd                     float64 // rounded [SPEC-03]

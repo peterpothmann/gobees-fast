@@ -28,9 +28,9 @@ func TestCreateInitialQueensExampleFarm(t *testing.T) {
 		n++
 		whos[who.Who] = true
 		// [IQUE-03], [IQUE-04]
-		if b.Caste != caste.Queen || b.Stage != stage.Adult || b.Activity != activity.Hibernate || !b.Mated || b.Brood ||
-			b.Number != 1 || b.Ploidy != 2 || b.AdultAge != 180 || b.BroodAge != 36 || !b.ColonyID.IsZero() ||
-			b.SpeciesID != speciesE || b.SpeciesName != "B_terrestris" {
+		// brood? false: stage adult, ploidy 2: 2 alleles (below), speciesName: the species (step F9)
+		if b.Caste != caste.Queen || b.Stage != stage.Adult || b.Activity != activity.Hibernate || !b.Mated ||
+			b.Number != 1 || b.AdultAge != 180 || b.BroodAge != 36 || !b.ColonyID.IsZero() || b.SpeciesID != speciesE {
 			t.Fatalf("queen state: %+v", b)
 		}
 		if len(g.AllelesList) != 2 || len(g.SpermathecaList) != 1 || g.MtDNA < 0 || g.MtDNA >= 139.9 {

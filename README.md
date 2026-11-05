@@ -1,10 +1,6 @@
 <div align="center">
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/logo/gobees-fast-logo-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="docs/logo/gobees-fast-logo-light.svg">
-  <img alt="gobees-fast" src="docs/logo/gobees-fast-logo-light.svg" width="720">
-</picture>
+<img alt="gobees-fast" src="docs/logo/gobees-fast-logo-dark.svg" width="720">
 
 [![Tests](https://github.com/peterpothmann/gobees-fast/actions/workflows/tests.yml/badge.svg)](https://github.com/peterpothmann/gobees-fast/actions/workflows/tests.yml)
 

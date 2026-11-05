@@ -44,7 +44,7 @@ func (s *CreateSpecies) Initialize(w *ecs.World) {
 		// [SPEC-06]
 		sp.NestsiteFoodsourceList, sp.NestSiteArea = nestSites(sp.NestHabitatsList, masterpatches)
 		// [SPEC-08] message only
-		if len(sp.NestsiteFoodsourceList) == 0 && sp.Name != "Psithyrus" {
+		if len(sp.NestsiteFoodsourceList) == 0 && !sp.Parasitic {
 			log.Printf("%s has no suitable nesting foodsources. No colonies will form", sp.Name)
 		}
 		mapper.NewEntity(&comp.Who{Who: who.Next()}, sp)

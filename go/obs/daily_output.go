@@ -9,6 +9,7 @@ import (
 	"gobees/comp"
 	"gobees/enum/activity"
 	"gobees/enum/caste"
+	"gobees/enum/stage"
 	"gobees/globals"
 	"gobees/params"
 
@@ -146,7 +147,7 @@ func (o *DailyOutput) update() {
 		if b.Activity == activity.Hibernate {
 			d.TotalHibernatingQueens += float64(b.Number)
 		}
-		if !b.Brood {
+		if b.Stage == stage.Adult { // brood? = false
 			adults++
 			adultWeight += b.Weight_mg
 			switch b.Caste {
