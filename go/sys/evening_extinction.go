@@ -10,7 +10,7 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// Extinction checks whether the population is extinct and ends the run [GO-20].
+// extinction checks whether the population is extinct and ends the run [GO-20].
 //
 // Stops when no colonies and no bees are left and StopExtinct? is true,
 // or after params.Termination.MaxTicks days (replaces the "Run for period" button).
@@ -19,7 +19,7 @@ import (
 // removed in step F3.
 //
 // NetLogo: end of Go.
-type Extinction struct {
+type extinction struct {
 	termRes    *resource.Termination
 	termParams *params.Termination
 	file       *params.ParameterFile
@@ -29,7 +29,7 @@ type Extinction struct {
 	beeFilter    *ecs.Filter1[comp.Bee]
 }
 
-func (s *Extinction) Initialize(w *ecs.World) {
+func (s *extinction) Initialize(w *ecs.World) {
 	s.termRes = ecs.GetResource[resource.Termination](w)
 	s.termParams = ecs.GetResource[params.Termination](w)
 	s.file = ecs.GetResource[params.ParameterFile](w)
@@ -38,7 +38,7 @@ func (s *Extinction) Initialize(w *ecs.World) {
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
 }
 
-func (s *Extinction) Update(w *ecs.World) {
+func (s *extinction) Update(w *ecs.World) {
 	// [GO-20] count Colonies + count Bees = 0
 	colonies := s.colonyFilter.Query()
 	n := colonies.Count()
@@ -55,4 +55,4 @@ func (s *Extinction) Update(w *ecs.World) {
 	}
 }
 
-func (s *Extinction) Finalize(w *ecs.World) {}
+func (s *extinction) Finalize(w *ecs.World) {}

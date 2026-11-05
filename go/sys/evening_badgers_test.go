@@ -11,15 +11,15 @@ import (
 )
 
 // prowlWorld is a colonyWorld (Scaling 0.1 patches per m: 735 m = 73.5 patches) with badgers at the given
-// positions and the BadgersOnTheProwl system.
-func prowlWorld(t *testing.T, seed uint64, badgers ...comp.Position) (*colonyWorld, *BadgersOnTheProwl) {
+// positions and the badgers system.
+func prowlWorld(t *testing.T, seed uint64, positions ...comp.Position) (*colonyWorld, *badgers) {
 	t.Helper()
 	cw := newColonyWorld(t, seed)
 	m := ecs.NewMap2[comp.Position, comp.Badger](cw.w)
-	for _, p := range badgers {
+	for _, p := range positions {
 		m.NewEntity(&p, &comp.Badger{})
 	}
-	s := &BadgersOnTheProwl{}
+	s := &badgers{}
 	s.Initialize(cw.w)
 	return cw, s
 }

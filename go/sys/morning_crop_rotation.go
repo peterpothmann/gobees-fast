@@ -14,7 +14,7 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// CropRotation replaces the whole landscape by the next foodsources file of the rotation [CROP].
+// cropRotation replaces the whole landscape by the next foodsources file of the rotation [CROP].
 //
 // Part of the morning routine [MORN-09]: on Day 365, if CropRotationList has more than 1 item (finding 3, see
 // trans/netlogo-findings.md#finding-3). CropRotationListAsString is empty in
@@ -22,7 +22,7 @@ import (
 // Not translated: Report_name (output file of a GUI button).
 //
 // NetLogo: the call in UpdateMorning_Proc and CropRotationProc.
-type CropRotation struct {
+type cropRotation struct {
 	rng       *rand.Rand
 	ticks     *globals.Ticks
 	calendar  *globals.Calendar
@@ -40,7 +40,7 @@ type CropRotation struct {
 	bees []ecs.Entity // buffer of askAllBees
 }
 
-func (s *CropRotation) Initialize(w *ecs.World) {
+func (s *cropRotation) Initialize(w *ecs.World) {
 	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.ticks = ecs.GetResource[globals.Ticks](w)
 	s.calendar = ecs.GetResource[globals.Calendar](w)
@@ -55,17 +55,17 @@ func (s *CropRotation) Initialize(w *ecs.World) {
 	s.speciesMap = newSpeciesTable(w)
 }
 
-func (s *CropRotation) Update(w *ecs.World) {
+func (s *cropRotation) Update(w *ecs.World) {
 	// [MORN-09]
 	if s.calendar.Day == 365 && len(s.derived.CropRotationList) > 1 {
-		s.CropRotationProc(w)
+		s.rotate(w)
 	}
 }
 
-func (s *CropRotation) Finalize(w *ecs.World) {}
+func (s *cropRotation) Finalize(w *ecs.World) {}
 
-// CropRotationProc replaces all foodsources by the ones of the next file of the rotation [CROP].
-func (s *CropRotation) CropRotationProc(w *ecs.World) {
+// rotate replaces all foodsources by the ones of the next file of the rotation [CROP].
+func (s *cropRotation) rotate(w *ecs.World) {
 	// [CROP-01] Worked example (list chosen by hand): 2 files, ticks 365: year 1, item 1; ticks 730: item 0.
 	year := math.Ceil(float64(s.ticks.Ticks) / 365)
 	nMaps := len(s.derived.CropRotationList)
@@ -105,7 +105,7 @@ func (s *CropRotation) CropRotationProc(w *ecs.World) {
 	}
 
 	// [CROP-03] the new landscape: new who numbers, random numbers for the hedges and layers
-	CreateFoodsourcesProc(w, s.landscape.FoodsourcesFile, s.landscape)
+	createFoodsources(w, s.landscape.FoodsourcesFile, s.landscape)
 
 	// per species the nest sites and their area as in [SPEC-06].
 	// nestHabitatsList is NOT expanded again [SPEC-04]: it keeps the habitat types of the first landscape.

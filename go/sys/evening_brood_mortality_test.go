@@ -11,7 +11,7 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-func TestMortalityBrood(t *testing.T) {
+func TestBroodMortality(t *testing.T) {
 	// [MORB-01] to [MORB-04], maximum ages from the worked example: eggs 10, larvae 20.8, pupae 34.7, queen
 	// larvae 29, queen pupae 47
 	bw := newBroodWorld(t, 1)
@@ -60,7 +60,7 @@ func TestMortalityBrood(t *testing.T) {
 	})
 }
 
-func TestMortalityBroodCompetitionPoint(t *testing.T) {
+func TestBroodMortalityCompetitionPoint(t *testing.T) {
 	// [MORB-04] after the competition point every egg dies, larvae survive
 	bw := newBroodWorld(t, 1)
 	after := bw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) { c.CompetitionPointDate = day.At(199) })

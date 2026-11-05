@@ -16,20 +16,20 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// CreateFoodsources reads the foodsources file, merges small hedges and splits every flower patch
+// landscapeSetup reads the foodsources file, merges small hedges and splits every flower patch
 // into one foodsource layer per flower species [INIT-06].
 //
 // Not translated: the map image [FSRC-01], display settings, farmland? [FSRC-07], the brush [FSRC-11]
 // and the stewardship area totals [LAYR-12].
 //
 // NetLogo: CreateFoodsourcesProc, MergeHedgesProc, CreateLayersProc.
-type CreateFoodsources struct {
+type landscapeSetup struct {
 	landscape globals.Landscape
 }
 
-func (s *CreateFoodsources) Initialize(w *ecs.World) {
+func (s *landscapeSetup) Initialize(w *ecs.World) {
 	derived := ecs.GetResource[params.Derived](w)
-	CreateFoodsourcesProc(w, derived.FoodsourcesFile, &s.landscape)
+	createFoodsources(w, derived.FoodsourcesFile, &s.landscape)
 	ecs.AddResource(w, &s.landscape)
 
 	// [INIT-15] assertion: every foodsource must have a habitat type. Part of Setup, not of CreateFoodsourcesProc,
@@ -46,13 +46,13 @@ func (s *CreateFoodsources) Initialize(w *ecs.World) {
 	}
 }
 
-func (s *CreateFoodsources) Update(w *ecs.World) {}
+func (s *landscapeSetup) Update(w *ecs.World) {}
 
-func (s *CreateFoodsources) Finalize(w *ecs.World) {}
+func (s *landscapeSetup) Finalize(w *ecs.World) {}
 
-// CreateFoodsourcesProc creates the foodsources of the given foodsources file and sets the landscape globals
+// createFoodsources creates the foodsources of the given foodsources file and sets the landscape globals
 // [FSRC]. Called in Setup [INIT-06] and by CropRotationProc [CROP-03].
-func CreateFoodsourcesProc(w *ecs.World, foodsourcesFile string, landscape *globals.Landscape) {
+func createFoodsources(w *ecs.World, foodsourcesFile string, landscape *globals.Landscape) {
 	file := ecs.GetResource[params.ParameterFile](w)
 	in := ecs.GetResource[params.Input](w)
 	derived := ecs.GetResource[params.Derived](w)
@@ -85,11 +85,11 @@ func CreateFoodsourcesProc(w *ecs.World, foodsourcesFile string, landscape *glob
 
 	// [FSRC-10] Merge small hedges into the nearest non-hedge flower patch of at least 6500 m2, and merge all hedges linked to the same patch into the largest of them [HEDG], finding 14 (see trans/netlogo-findings.md#finding-14).
 	if file.MergeHedges {
-		MergeHedgesProc(kept, rng)
+		mergeHedges(kept, rng)
 	}
 
 	// [FSRC-12] in.Flowers is nil if FlowerspeciesFile is "No Input File".
-	masterpatches, err := CreateLayersProc(w, kept, in.Flowers, file, derived.CSS_OptionsList, rng)
+	masterpatches, err := createLayers(w, kept, in.Flowers, file, derived.CSS_OptionsList, rng)
 	if err != nil {
 		panic(err)
 	}
@@ -113,9 +113,9 @@ func precision(x float64, places int) float64 {
 	return math.Round(x*f) / f
 }
 
-// MergeHedgesProc links every hedge to its nearest non-hedge flower patch of at least 6500 m2 and merges
+// mergeHedges links every hedge to its nearest non-hedge flower patch of at least 6500 m2 and merges
 // all hedges linked to the same patch into the largest of them [HEDG], finding 14 (see trans/netlogo-findings.md#finding-14).
-func MergeHedgesProc(patches []*flowerPatch, rng *rand.Rand) {
+func mergeHedges(patches []*flowerPatch, rng *rand.Rand) {
 	const areaTH_sqm = 6500 // [HEDG-01]
 
 	hedges := []*flowerPatch{}
@@ -200,11 +200,11 @@ func removeDuplicates[T comparable](list []T) []T {
 	return out
 }
 
-// CreateLayersProc splits every flower patch into one foodsource per flower species [LAYR]. It returns the
+// createLayers splits every flower patch into one foodsource per flower species [LAYR]. It returns the
 // masterpatches in NetLogo's who order (step F12): first the flower patches that are not split, in the order of
 // patches (they took their who numbers in [FSRC-04], before all layers), then the masterpatches of the split flower
 // patches, in the order of their creation.
-func CreateLayersProc(w *ecs.World, patches []*flowerPatch, flowers *params.FlowerSpeciesTable, file *params.ParameterFile,
+func createLayers(w *ecs.World, patches []*flowerPatch, flowers *params.FlowerSpeciesTable, file *params.ParameterFile,
 	cssOptions []string, rng *rand.Rand) ([]ecs.Entity, error) {
 
 	mapper := ecs.NewMap4[comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](w)

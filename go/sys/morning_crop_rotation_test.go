@@ -33,12 +33,12 @@ const (
 )
 
 // cropWorld runs the example farm setup with the crop rotation list and smallLandscape among the landscape files.
-func cropWorld(t *testing.T, list []string) (*app.App, *CropRotation) {
+func cropWorld(t *testing.T, list []string) (*app.App, *cropRotation) {
 	t.Helper()
-	cr := &CropRotation{}
+	cr := &cropRotation{}
 	a := newExampleFarmSetupFiles(t, 1, map[string]input.Landscape{smallLandscapeFile: smallLandscape},
 		func(c *input.Config) { c.CropRotation = list },
-		&Tick{}, &UpdateMorning{}, &CreateInitialQueens{}, cr)
+		&tick{}, &calendarUpdate{}, &initialQueensSetup{}, cr)
 	return a, cr
 }
 
@@ -134,7 +134,7 @@ func TestCropRotation(t *testing.T) {
 	}
 	// [FRNG] reads the dead foodsources: NetLogo runtime error, gobees panics
 	founder := newColonyFounder(w, rand.New(ecs.GetResource[resource.Rand](w)))
-	expectPanic(t, "FoodsourcesInFlowerAndRangeProc after a crop rotation", func() { founder.FoodsourcesInFlowerAndRangeProc(col) })
+	expectPanic(t, "FoodsourcesInFlowerAndRangeProc after a crop rotation", func() { founder.flowersInRange(col) })
 
 	// [SPEC-06] for B_terrestris: Scrub and Garden are nest habitats. [SPEC-07] is not computed again (step F11).
 	for i, ns := range ecs.GetResource[globals.NestSites](w).BySpecies {

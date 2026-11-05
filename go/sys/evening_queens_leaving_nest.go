@@ -16,15 +16,15 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// QueensLeavingNest [GO-12].
+// queensLeavingNest [GO-12].
 //
 // Every young (unmated) adult queen in a colony leaves it, mates and starts to hibernate.
-// A young queen emerges in Development [DEVP-04], which runs after this system, so she stays in the colony for
+// A young queen emerges in development [DEVP-04], which runs after this system, so she stays in the colony for
 // one whole day and leaves on the next evening [QLN-01].
 // Not translated: size, shape, color (GUI).
 //
 // NetLogo: QueensLeavingNestProc.
-type QueensLeavingNest struct {
+type queensLeavingNest struct {
 	rng       *rand.Rand
 	file      *params.ParameterFile
 	constants *params.Constants
@@ -36,7 +36,7 @@ type QueensLeavingNest struct {
 	queens []ecs.Entity // buffer of askBees
 }
 
-func (s *QueensLeavingNest) Initialize(w *ecs.World) {
+func (s *queensLeavingNest) Initialize(w *ecs.World) {
 	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.file = ecs.GetResource[params.ParameterFile](w)
 	s.constants = ecs.GetResource[params.Constants](w)
@@ -45,7 +45,7 @@ func (s *QueensLeavingNest) Initialize(w *ecs.World) {
 	s.beeMap = ecs.NewMap3[comp.Bee, comp.Genetics, comp.Thresholds](w)
 }
 
-func (s *QueensLeavingNest) Update(w *ecs.World) {
+func (s *queensLeavingNest) Update(w *ecs.World) {
 	// [QLN-01] ORDER: irrelevant. Each queen only changes herself, and mating does not use up the male.
 	s.queens = askBees(s.queens, s.beeFilter, s.rng, func(b *comp.Bee) bool {
 		return b.Stage == stage.Adult && b.Caste == caste.Queen && !b.Mated && !b.ColonyID.IsZero()
@@ -73,7 +73,7 @@ func (s *QueensLeavingNest) Update(w *ecs.World) {
 		} else {
 			// mating with a male from outside
 			if !s.file.UnlimitedMales {
-				s.death.DieProc(w, e, "Queen: no mating")
+				s.death.die(w, e, "Queen: no mating")
 				continue // finding 28 (see trans/netlogo-findings.md#finding-28)
 			}
 			foreignAllele := -1*util.RandomInt(s.rng, s.constants.N_ForeignAlleles) - 1 // -1, -2, ... -N_ForeignAlleles
@@ -84,14 +84,14 @@ func (s *QueensLeavingNest) Update(w *ecs.World) {
 		}
 		// [QLN-03] the other three thresholds stay "youngQueen" until she emerges next year [EMER-01]
 		bee.Mated = true
-		th.ThEgglaying = ThresholdLevelREP(thEggLaying, sitQueenInitiationPhase)
+		th.ThEgglaying = thresholdLevel(thEggLaying, sitQueenInitiationPhase)
 		bee.Activity = activity.Hibernate
 		bee.ColonyID = ecs.Entity{}
 		// [QLN-04] mated with a diploid male: she could not found a colony
 		if len(gen.SpermathecaList) == 2 {
-			s.death.DieProc(w, e, "Queen: mating with diploid male")
+			s.death.die(w, e, "Queen: mating with diploid male")
 		}
 	}
 }
 
-func (s *QueensLeavingNest) Finalize(w *ecs.World) {}
+func (s *queensLeavingNest) Finalize(w *ecs.World) {}

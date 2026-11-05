@@ -72,9 +72,9 @@ func morningWorld(t *testing.T, years []input.Year) (*ecs.World, *globals.Ticks)
 	return w, ticks
 }
 
-func TestUpdateMorningForagingPeriod(t *testing.T) {
+func TestCalendarUpdateForagingPeriod(t *testing.T) {
 	w, ticks := morningWorld(t, nil)
-	s := &UpdateMorning{}
+	s := &calendarUpdate{}
 	s.Initialize(w) // Setup, ticks = 0 [INIT-10]
 	cal := ecs.GetResource[globals.Calendar](w)
 	// finding 4 (see trans/netlogo-findings.md#finding-4): Day 0, no foraging period in Setup
@@ -93,11 +93,11 @@ func TestUpdateMorningForagingPeriod(t *testing.T) {
 	}
 }
 
-func TestUpdateMorningForagingHoursExample(t *testing.T) {
+func TestCalendarUpdateForagingHoursExample(t *testing.T) {
 	// [MORN-04] with the example weather year, day 43 is the ".5" of the NetLogo list (finding 1, see
 	// trans/netlogo-findings.md#finding-1)
 	w, ticks := morningWorld(t, []input.Year{exampleWeatherYear(t)})
-	s := &UpdateMorning{}
+	s := &calendarUpdate{}
 	s.Initialize(w)
 	ticks.Ticks = 365 + 43 // second year: a file of one year repeats, read by Day, not by ticks
 	s.Update(w)
@@ -121,7 +121,7 @@ func flowerPeriods(t *testing.T, names ...string) map[string][2]day.OfYear {
 	return result
 }
 
-func TestUpdateFoodsources(t *testing.T) {
+func TestFlowerRefill(t *testing.T) {
 	// [UFS-02] worked examples of the annotation from netlogo/_SYSTEM_Flowerspecies.csv, columns startDay, stopDay
 	periods := flowerPeriods(t, "Dandelion", "Daisy", "Crop_Cereals")
 	if periods["Dandelion"] != [2]day.OfYear{1, 364} || periods["Daisy"] != [2]day.OfYear{1, 365} || periods["Crop_Cereals"] != [2]day.OfYear{0, 0} {
@@ -138,9 +138,9 @@ func TestUpdateFoodsources(t *testing.T) {
 		// state left over from the day before: is overwritten every morning
 		entities[n] = fsMap.NewEntity(&fs, &comp.FoodsourceState{Nectar_myl: 7, Pollen_g: 7})
 	}
-	morning := &UpdateMorning{}
+	morning := &calendarUpdate{}
 	morning.Initialize(w)
-	s := &UpdateFoodsources{}
+	s := &flowerRefill{}
 	s.Initialize(w)
 	today := ecs.GetResource[globals.FoodsourcesToday](w)
 

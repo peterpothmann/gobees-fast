@@ -13,14 +13,14 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// QueenProductionDate [GO-14].
+// queenProductionDate [GO-14].
 //
 // Starts the queen production of a colony [QPD]: queenProduction? becomes true, and queenProductionDate is
 // back-calculated as the laying day of the larvae now at the caste determination age (finding 42, see
-// trans/netlogo-findings.md#finding-42). No queen is created here. Must run before Development.
+// trans/netlogo-findings.md#finding-42). No queen is created here. Must run before development.
 //
 // NetLogo: QueenProductionDateProc.
-type QueenProductionDate struct {
+type queenProductionDate struct {
 	rng       *rand.Rand
 	ticks     *globals.Ticks
 	constants *params.Constants
@@ -34,7 +34,7 @@ type QueenProductionDate struct {
 	larvae map[ecs.Entity][]ecs.Entity // buffer of beesByColony
 }
 
-func (s *QueenProductionDate) Initialize(w *ecs.World) {
+func (s *queenProductionDate) Initialize(w *ecs.World) {
 	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.ticks = ecs.GetResource[globals.Ticks](w)
 	s.constants = ecs.GetResource[params.Constants](w)
@@ -46,7 +46,7 @@ func (s *QueenProductionDate) Initialize(w *ecs.World) {
 	s.speciesMap = newSpeciesTable(w)
 }
 
-func (s *QueenProductionDate) Update(w *ecs.World) {
+func (s *queenProductionDate) Update(w *ecs.World) {
 	ticks := s.ticks.Ticks
 	// ORDER: irrelevant, each colony only reads its own larvae and changes itself. Shuffled (decision C).
 	s.larvae = beesByColony(s.larvae, s.beeFilter, func(b *comp.Bee) bool { return b.Stage == stage.Larva })
@@ -83,4 +83,4 @@ func (s *QueenProductionDate) Update(w *ecs.World) {
 	}
 }
 
-func (s *QueenProductionDate) Finalize(w *ecs.World) {}
+func (s *queenProductionDate) Finalize(w *ecs.World) {}

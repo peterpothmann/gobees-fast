@@ -12,12 +12,12 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// UpdateFoodsources fills every foodsource in flower up to its maximum and empties all others [UFS].
+// flowerRefill fills every foodsource in flower up to its maximum and empties all others [UFS].
 //
 // Part of the morning routine [MORN-05]. Initialize runs it also at ticks = 0, i.e. Day = 0 [INIT-10].
 //
 // NetLogo: UpdateFoodsourcesProc.
-type UpdateFoodsources struct {
+type flowerRefill struct {
 	rng      *rand.Rand
 	calendar *globals.Calendar
 	today    globals.FoodsourcesToday
@@ -26,7 +26,7 @@ type UpdateFoodsources struct {
 	fsMap  *ecs.Map2[comp.Foodsource, comp.FoodsourceState]
 }
 
-func (s *UpdateFoodsources) Initialize(w *ecs.World) {
+func (s *flowerRefill) Initialize(w *ecs.World) {
 	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.calendar = ecs.GetResource[globals.Calendar](w)
 	ecs.AddResource(w, &s.today)
@@ -35,7 +35,7 @@ func (s *UpdateFoodsources) Initialize(w *ecs.World) {
 	s.Update(w) // run at ticks = 0 [INIT-10]
 }
 
-func (s *UpdateFoodsources) Update(w *ecs.World) {
+func (s *flowerRefill) Update(w *ecs.World) {
 	day := s.calendar.Day
 	// [UFS-01] pollenAvailableTotalToday_kg, nectarAvailableTotalToday_l: output only, removed in step F4
 	s.today.FoodsourcesInFlowerUpdate = false
@@ -66,4 +66,4 @@ func (s *UpdateFoodsources) Update(w *ecs.World) {
 	}
 }
 
-func (s *UpdateFoodsources) Finalize(w *ecs.World) {}
+func (s *flowerRefill) Finalize(w *ecs.World) {}

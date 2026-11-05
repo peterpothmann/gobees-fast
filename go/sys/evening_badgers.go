@@ -11,14 +11,14 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// BadgersOnTheProwl [GO-17].
+// badgers [GO-17].
 //
 // Every badger digs up each colony closer than 735 m with probability 0.19 * 0.1 = 0.019 per day: the colony
 // loses its stores and all its bees. The colony itself dies the next morning in [UCOL-11].
 // Not translated: color (GUI).
 //
 // NetLogo: BadgersOnTheProwlProc.
-type BadgersOnTheProwl struct {
+type badgers struct {
 	rng       *rand.Rand
 	landscape *globals.Landscape
 	death     beeDeath
@@ -31,7 +31,7 @@ type BadgersOnTheProwl struct {
 	beesOf map[ecs.Entity][]ecs.Entity // buffer of beesByColony
 }
 
-func (s *BadgersOnTheProwl) Initialize(w *ecs.World) {
+func (s *badgers) Initialize(w *ecs.World) {
 	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.landscape = ecs.GetResource[globals.Landscape](w)
 	s.death = newBeeDeath(w)
@@ -41,7 +41,7 @@ func (s *BadgersOnTheProwl) Initialize(w *ecs.World) {
 	s.colonyMap = ecs.NewMap1[comp.ColonyStores](w)
 }
 
-func (s *BadgersOnTheProwl) Update(w *ecs.World) {
+func (s *badgers) Update(w *ecs.World) {
 	// variables, not Go constants: NetLogo multiplies two doubles, 0.19 * 0.1 = 0.019000000000000003, whereas Go
 	// would multiply constants exactly (0.019).
 	foragingRange_m := 735.0 // Kruuk & Parish 1982: territory ca. 170 ha, radius ca. 735 m
@@ -93,10 +93,10 @@ func (s *BadgersOnTheProwl) Update(w *ecs.World) {
 			util.Shuffle(s.rng, victims)
 			// memoBroodDeaths, broodDeathBadger: read only by the egg accounting [CHK-04], removed in step F4
 			for _, e := range victims {
-				s.death.DieProc(w, e, "Colony killed by badger!")
+				s.death.die(w, e, "Colony killed by badger!")
 			}
 		}
 	}
 }
 
-func (s *BadgersOnTheProwl) Finalize(w *ecs.World) {}
+func (s *badgers) Finalize(w *ecs.World) {}

@@ -8,7 +8,7 @@ import (
 	"gobees/enum/stage"
 )
 
-func TestFeedLarvae(t *testing.T) {
+func TestLarvaeFeeding(t *testing.T) {
 	// [FEED-01] worked example: pollen 0.3 of 0.6 g, energy 20 of 10 kJ: factor 0.5
 	bw := newBroodWorld(t, 1)
 	col := bw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) {

@@ -16,11 +16,11 @@ import (
 // or created by hand, because ActivityProc (step 5) does not exist yet.
 type broodWorld struct {
 	*colonyWorld
-	need *NeedNectarPollenLarvaeToday
-	feed *FeedLarvae
-	qpd  *QueenProductionDate
-	dev  *Development
-	morb *MortalityBrood
+	need *larvaeNeeds
+	feed *larvaeFeeding
+	qpd  *queenProductionDate
+	dev  *development
+	morb *broodMortality
 	eggs eggLayer
 	sp   *params.Species
 }
@@ -28,8 +28,8 @@ type broodWorld struct {
 func newBroodWorld(t *testing.T, seed uint64) *broodWorld {
 	t.Helper()
 	bw := &broodWorld{colonyWorld: newColonyWorld(t, seed),
-		need: &NeedNectarPollenLarvaeToday{}, feed: &FeedLarvae{}, qpd: &QueenProductionDate{},
-		dev: &Development{}, morb: &MortalityBrood{}}
+		need: &larvaeNeeds{}, feed: &larvaeFeeding{}, qpd: &queenProductionDate{},
+		dev: &development{}, morb: &broodMortality{}}
 	bw.need.Initialize(bw.w)
 	bw.feed.Initialize(bw.w)
 	bw.qpd.Initialize(bw.w)

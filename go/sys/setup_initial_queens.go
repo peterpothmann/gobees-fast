@@ -16,12 +16,12 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// CreateInitialQueens creates the hibernating, mated queens of the first year [INIT-09].
+// initialQueensSetup creates the hibernating, mated queens of the first year [INIT-09].
 //
 // NetLogo: CreateInitialQueensProc.
-type CreateInitialQueens struct{}
+type initialQueensSetup struct{}
 
-func (s *CreateInitialQueens) Initialize(w *ecs.World) {
+func (s *initialQueensSetup) Initialize(w *ecs.World) {
 	file := ecs.GetResource[params.ParameterFile](w)
 	constants := ecs.GetResource[params.Constants](w)
 	derived := ecs.GetResource[params.Derived](w)
@@ -81,9 +81,9 @@ func (s *CreateInitialQueens) Initialize(w *ecs.World) {
 
 			// [IQUE-08] no foodsource known yet (zero entities, empty lists)
 			forager := comp.Forager{
-				GlossaLength_mm:              ProboscisLengthREP(bee.Weight_mg, sp),
-				Cropvolume_myl:               CropAndPelletSizeREP("nectar", bee.Weight_mg, sp),
-				PollenPellets_g:              CropAndPelletSizeREP("pollen", bee.Weight_mg, sp),
+				GlossaLength_mm:              proboscisLength(bee.Weight_mg, sp),
+				Cropvolume_myl:               cropVolume(bee.Weight_mg, sp),
+				PollenPellets_g:              pollenLoad(bee.Weight_mg, sp),
 				KnownMasterpatchesNectarList: []ecs.Entity{},
 				KnownMasterpatchesPollenList: []ecs.Entity{},
 			}
@@ -93,9 +93,9 @@ func (s *CreateInitialQueens) Initialize(w *ecs.World) {
 	}
 }
 
-func (s *CreateInitialQueens) Update(w *ecs.World) {}
+func (s *initialQueensSetup) Update(w *ecs.World) {}
 
-func (s *CreateInitialQueens) Finalize(w *ecs.World) {}
+func (s *initialQueensSetup) Finalize(w *ecs.World) {}
 
 // beeMapper creates bee entities with all their components.
 type beeMapper = ecs.Map6[comp.Position, comp.Bee, comp.Genetics, comp.Thresholds, comp.Forager, comp.Development]

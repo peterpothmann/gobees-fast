@@ -16,7 +16,7 @@ type Input struct {
 
 	// Species are the species of the run file whose name is in Derived.SpeciesList, in file order, with the
 	// derived values [SPEC-01] to [SPEC-03], [SPEC-05], [SPEC-07]. NestHabitatsList is as in the file: the
-	// expansion [SPEC-04] and the nest sites [SPEC-06] need the foodsources and happen in sys.CreateSpecies.
+	// expansion [SPEC-04] and the nest sites [SPEC-06] need the foodsources and happen in sys.nestSitesSetup.
 	Species []Species
 
 	// Flowers are the flower species of the run file [LAYR-02], nil without them (NetLogo: FlowerspeciesFile is

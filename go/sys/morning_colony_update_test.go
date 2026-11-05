@@ -27,7 +27,7 @@ type colonyWorld struct {
 	file      *params.ParameterFile
 	constants *params.Constants
 	tally     *tally
-	sys       *UpdateColonies
+	sys       *colonyUpdate
 	input     *params.Input // the species
 	species   int           // index of B_terrestris
 	colonyMap *colonyMapper
@@ -60,7 +60,7 @@ func newColonyWorld(t *testing.T, seed uint64) *colonyWorld {
 	cw.colonyMap = ecs.NewMap6[comp.Position, comp.Colony, comp.ColonyStores, comp.ColonyStimuli, comp.ColonyCounts, comp.ColonyRange](w)
 	cw.beeMap = newBeeMapper(w)
 
-	cw.sys = &UpdateColonies{}
+	cw.sys = &colonyUpdate{}
 	cw.sys.Initialize(w)
 	return cw
 }
@@ -90,14 +90,14 @@ func (cw *colonyWorld) colony(e ecs.Entity) (*comp.Colony, *comp.ColonyStores, *
 	return c, s, n
 }
 
-// nextMorning advances ticks and Day by one and runs UpdateColonies.
+// nextMorning advances ticks and Day by one and runs colonyUpdate.
 func (cw *colonyWorld) nextMorning() {
 	cw.ticks.Ticks++
 	cw.cal.Day = dayOfYear(cw.ticks.Ticks)
 	cw.sys.Update(cw.w)
 }
 
-func TestUpdateColoniesStatistics(t *testing.T) {
+func TestColonyUpdateStatistics(t *testing.T) {
 	cw := newColonyWorld(t, 1)
 	col := cw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) {
 		s.SummedIncubationToday_kJ = 5
@@ -135,7 +135,7 @@ func TestUpdateColoniesStatistics(t *testing.T) {
 	}
 }
 
-func TestUpdateColoniesDeathAfterCP(t *testing.T) {
+func TestColonyUpdateDeathAfterCP(t *testing.T) {
 	// [UCOL-02] finding 37 (see trans/netlogo-findings.md#finding-37) and finding 38 (see trans/netlogo-findings.md#finding-38)
 	cw := newColonyWorld(t, 1)
 	col := cw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) {
@@ -170,7 +170,7 @@ func TestUpdateColoniesDeathAfterCP(t *testing.T) {
 
 	// the male dies (e.g. after MaxLifespanMales). The colony dies the next morning [UCOL-11].
 	death := newBeeDeath(cw.w)
-	death.DieProc(cw.w, male, "Male: adultAge > MaxLifespanMales")
+	death.die(cw.w, male, "Male: adultAge > MaxLifespanMales")
 	cw.nextMorning() // 204
 	if cw.w.Alive(col) {
 		t.Fatal("day 204: the colony without bees must die")
@@ -180,7 +180,7 @@ func TestUpdateColoniesDeathAfterCP(t *testing.T) {
 	}
 }
 
-func TestUpdateColoniesEnergyDepleted(t *testing.T) {
+func TestColonyUpdateEnergyDepleted(t *testing.T) {
 	// [UCOL-03] all bees die, the colony dies on the same morning [UCOL-11]
 	cw := newColonyWorld(t, 1)
 	col := cw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) { s.EnergyStore_kJ = -0.1 })
@@ -194,7 +194,7 @@ func TestUpdateColoniesEnergyDepleted(t *testing.T) {
 	}
 }
 
-func TestUpdateColoniesNoAdults(t *testing.T) {
+func TestColonyUpdateNoAdults(t *testing.T) {
 	// [UCOL-04] brood without any adult dies. An adult male keeps the brood alive (finding 38, see
 	// trans/netlogo-findings.md#finding-38).
 	cw := newColonyWorld(t, 1)
@@ -216,7 +216,7 @@ func TestUpdateColoniesNoAdults(t *testing.T) {
 	}
 }
 
-func TestUpdateColoniesSwitchPoint(t *testing.T) {
+func TestColonyUpdateSwitchPoint(t *testing.T) {
 	// [UCOL-08] in the eusocial phase and with larvaWorkerRatio < 3: p = 0.13 per day
 	cw := newColonyWorld(t, 5)
 	const n = 2000
@@ -258,7 +258,7 @@ func TestUpdateColoniesSwitchPoint(t *testing.T) {
 	}
 }
 
-func TestCompetitionPointDateREP(t *testing.T) {
+func TestCompetitionPointDate(t *testing.T) {
 	// [CPD-01] worked examples of the annotation, and the bounds
 	cases := []struct{ eus, qpd, want day.Abs }{
 		{120, 130, 143}, // y = 22.5, round 142.5 = 143
@@ -270,7 +270,7 @@ func TestCompetitionPointDateREP(t *testing.T) {
 	}
 	for _, c := range cases {
 		col := comp.Colony{EusocialPhaseDate: day.At(c.eus), QueenProductionDate: day.At(c.qpd)}
-		if got := CompetitionPointDateREP(&col); got != c.want {
+		if got := competitionPointDate(&col); got != c.want {
 			t.Errorf("CompetitionPointDateREP(eus %v, qpd %v) = %v, want %v", c.eus, c.qpd, got, c.want)
 		}
 	}
@@ -293,7 +293,7 @@ func TestCompetitionPointDateREP(t *testing.T) {
 	}
 }
 
-func TestUpdateColoniesRangeLists(t *testing.T) {
+func TestColonyUpdateRangeLists(t *testing.T) {
 	// [UCOL-01] the lists in flower and range are rebuilt only if FoodsourcesInFlowerUpdate
 	cw := newColonyWorld(t, 1)
 	fsMap := ecs.NewMap3[comp.Foodsource, comp.FoodsourceState, comp.Layer](cw.w)

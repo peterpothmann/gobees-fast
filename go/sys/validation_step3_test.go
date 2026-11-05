@@ -33,7 +33,7 @@ func step3Metrics(w *ecs.World) map[string]float64 {
 			m["nestsite_area"] = nestSites[i].NestSiteArea
 		}
 	}
-	// TotalColoniesEverProduced: without UpdateColonies no colony dies, so the living colonies are all colonies
+	// TotalColoniesEverProduced: without colonyUpdate no colony dies, so the living colonies are all colonies
 	// founded (the counter is output only since step F4, obs.Counters)
 	cols := ecs.NewFilter1[comp.Colony](w).Query()
 	m["colonies_founded"] = float64(cols.Count())
@@ -84,7 +84,7 @@ func TestValidationStep3AgainstNetLogo(t *testing.T) {
 		}
 	}
 	for run := 1; run <= runs; run++ {
-		a := newExampleFarmSetup(t, float64(run), &CreateInitialQueens{}, &Tick{}, &EmergenceNewQueens{})
+		a := newExampleFarmSetup(t, float64(run), &initialQueensSetup{}, &tick{}, &queenEmergence{})
 		record(0, step3Metrics(a.World))
 		for step := 1; step <= steps; step++ {
 			a.Update()

@@ -56,9 +56,9 @@ func newColonyFounder(w *ecs.World, rng *rand.Rand) colonyFounder {
 	}
 }
 
-// CreateColoniesProc creates one colony per bee in "nestConstruction" [CCOL].
+// found creates one colony per bee in "nestConstruction" [CCOL].
 // Not translated: the store bars [CCOL-01], [CCOL-07] (GUI).
-func (c *colonyFounder) CreateColoniesProc(w *ecs.World) {
+func (c *colonyFounder) found(w *ecs.World) {
 	// [CCOL-02] each new colony takes one-of the remaining queens: shuffle the queens, pair them in order.
 	queens := []ecs.Entity{}
 	query := c.beeFilter.Query()
@@ -92,17 +92,17 @@ func (c *colonyFounder) CreateColoniesProc(w *ecs.World) {
 		qBee.Activity = activity.Resting
 
 		// [CCOL-06]
-		c.PatchesInRangeProc(e)
-		c.FoodsourcesInFlowerAndRangeProc(e)
+		c.patchesInRange(e)
+		c.flowersInRange(e)
 
 		// [CCOL-08] totalColoniesEverProduced: output and [CHK-04] only, removed in step F4. The observers count
 		// the new colonies (ecs.OnCreateEntity, obs.Counters).
 	}
 }
 
-// PatchesInRangeProc sets allPatchesInRangeList of a colony: all foodsources (every layer) within ForagingRangeMax_m [PRNG].
+// patchesInRange sets allPatchesInRangeList of a colony: all foodsources (every layer) within ForagingRangeMax_m [PRNG].
 // masterpatchesInRangeList is not translated (finding 23, see trans/netlogo-findings.md#finding-23).
-func (c *colonyFounder) PatchesInRangeProc(colony ecs.Entity) {
+func (c *colonyFounder) patchesInRange(colony ecs.Entity) {
 	pos := *c.positionMap.Get(colony)
 	maxDist := c.constants.ForagingRangeMax_m * c.landscape.Scaling_NLpatches_per_m
 
@@ -128,10 +128,10 @@ func (c *colonyFounder) PatchesInRangeProc(colony ecs.Entity) {
 	c.rangeMap.Get(colony).AllPatchesInRangeList = list
 }
 
-// FoodsourcesInFlowerAndRangeProc sets the lists of masterpatches in range that offer pollen or nectar now [FRNG].
+// flowersInRange sets the lists of masterpatches in range that offer pollen or nectar now [FRNG].
 // Not translated: pollenInFlowerAndRangeList, nectarInFlowerAndRangeList and allSourcesInFlowerAndRangeList (never
 // read, removed in step F3).
-func (c *colonyFounder) FoodsourcesInFlowerAndRangeProc(colony ecs.Entity) {
+func (c *colonyFounder) flowersInRange(colony ecs.Entity) {
 	r := c.rangeMap.Get(colony)
 	polM, necM := []ecs.Entity{}, []ecs.Entity{}
 	// [FRNG-01] ORDER: irrelevant, foreach over a list.

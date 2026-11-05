@@ -98,10 +98,10 @@ func TestValidationStep6AgainstNetLogo(t *testing.T) {
 	}
 	for run := 1; run <= runs; run++ {
 		counters := &obs.Counters{} // after the model systems
-		a := newExampleFarmSetup(t, float64(run), &CreateInitialQueens{}, &Tick{}, &UpdateMorning{}, &UpdateFoodsources{},
-			&EmergenceNewQueens{}, &WakeUpBees{}, &UpdateColonies{}, &CheckNumbers{},
-			&NeedNectarPollenLarvaeToday{}, &ActivityLoop{}, &EndOfDayResting{}, &FeedLarvae{}, &QueenProductionDate{},
-			&Development{}, &MortalityBrood{}, counters)
+		a := newExampleFarmSetup(t, float64(run), &initialQueensSetup{}, &tick{}, &calendarUpdate{}, &flowerRefill{},
+			&queenEmergence{}, &wakeUp{}, &colonyUpdate{}, &broodTotals{},
+			&larvaeNeeds{}, &activities{}, &nightRest{}, &larvaeFeeding{}, &queenProductionDate{},
+			&development{}, &broodMortality{}, counters)
 		record(0, step6Metrics(a.World, counters))
 		for step := 1; step <= steps; step++ {
 			a.Update()

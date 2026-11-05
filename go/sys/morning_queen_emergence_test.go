@@ -18,10 +18,10 @@ import (
 )
 
 // emergenceWorld is a small world for the tests of step 3: B_terrestris, two nest sites and the resources
-// that EmergenceNewQueens needs. Scaling 0.1 patches per metre (10 m per patch) as in the example farm.
+// that queenEmergence needs. Scaling 0.1 patches per metre (10 m per patch) as in the example farm.
 type emergenceWorld struct {
 	w         *ecs.World
-	sys       *EmergenceNewQueens
+	sys       *queenEmergence
 	ticks     *globals.Ticks
 	file      *params.ParameterFile
 	derived   *params.Derived
@@ -71,7 +71,7 @@ func newEmergenceWorld(t *testing.T, seed uint64) *emergenceWorld {
 	ecs.AddResource(w, nestSites)
 	ew.ns = &nestSites.BySpecies[ew.species]
 
-	ew.sys = &EmergenceNewQueens{}
+	ew.sys = &queenEmergence{}
 	ew.sys.Initialize(w)
 	return ew
 }
@@ -263,7 +263,7 @@ func TestNestSiteChoicePastEnd(t *testing.T) {
 	ew.ns.NestsiteFoodsourceList = []ecs.Entity{ew.bigSite}
 	ew.ns.NestSiteArea = 20000
 	for range 100 {
-		if got := ew.sys.NestSiteFoodSourceREP(ew.ns); got != ew.bigSite {
+		if got := ew.sys.chooseNestSite(ew.ns); got != ew.bigSite {
 			t.Fatalf("NestSiteFoodSourceREP = %v, want the grassland %v", got, ew.bigSite)
 		}
 	}
@@ -274,7 +274,7 @@ func TestDieRemovesFromActiveBees(t *testing.T) {
 	a := ew.addQueen(0, 5, 700)
 	b := ew.addQueen(0, 1, 700)
 	ew.active.List = []ecs.Entity{a, b}
-	ew.sys.death.DieProc(ew.w, a, "test")
+	ew.sys.death.die(ew.w, a, "test")
 	// [DIE-01] TotalBeesEverDied + number, removed from the activity queue and from the world
 	if ew.tally.beesDied != 5 || len(ew.active.List) != 1 || ew.active.List[0] != b || ew.w.Alive(a) {
 		t.Errorf("%v bees died, queue %v, alive %v", ew.tally.beesDied, ew.active.List, ew.w.Alive(a))
@@ -304,8 +304,8 @@ func TestPatchesInRangeAndFlowerLists(t *testing.T) {
 
 	colony := ew.sys.colonies.colonyMap.NewEntity(&comp.Position{X: 0, Y: 0}, &comp.Colony{},
 		&comp.ColonyStores{}, &comp.ColonyStimuli{}, &comp.ColonyCounts{}, &comp.ColonyRange{})
-	ew.sys.colonies.PatchesInRangeProc(colony)
-	ew.sys.colonies.FoodsourcesInFlowerAndRangeProc(colony)
+	ew.sys.colonies.patchesInRange(colony)
+	ew.sys.colonies.flowersInRange(colony)
 	r := ecs.NewMap1[comp.ColonyRange](w).Get(colony)
 
 	sameSet := func(got, want []ecs.Entity) bool {
@@ -343,13 +343,13 @@ func TestPatchesInRangeAndFlowerLists(t *testing.T) {
 func TestExampleFarmFirstYear(t *testing.T) {
 	// One year with the translated parts of steps 1 to 3: every initial queen has either founded a colony,
 	// died (winter or nest search), or is still searching or hibernating at the end.
-	a := newExampleFarmSetup(t, 11, &CreateInitialQueens{}, &Tick{}, &EmergenceNewQueens{})
+	a := newExampleFarmSetup(t, 11, &initialQueensSetup{}, &tick{}, &queenEmergence{})
 	w := a.World
 	tally := newTally(w) // Setup kills no bee
 	for range 365 {
 		a.Update()
 	}
-	// without UpdateColonies no colony dies: the living colonies are all colonies founded
+	// without colonyUpdate no colony dies: the living colonies are all colonies founded
 	colonies := ecs.NewFilter1[comp.Colony](w).Query()
 	founded := colonies.Count()
 	colonies.Close()

@@ -9,7 +9,7 @@ import (
 	"gobees/enum/stage"
 )
 
-func TestMaxWeightGainToday_mg_REP(t *testing.T) {
+func TestMaxWeightGainToday(t *testing.T) {
 	// [WGAIN-01] worked example: 1.5 * 1.88^k, workers capped at 249.5 mg on the ninth feeding, queens at 980 mg
 	// on the eleventh.
 	sp := terrestris(t)
@@ -20,7 +20,7 @@ func TestMaxWeightGainToday_mg_REP(t *testing.T) {
 	}{{caste.Worker, 9, 249.5}, {caste.Male, 9, 249.5}, {caste.Undefined, 9, 249.5}, {caste.Queen, 11, 980}} {
 		b := comp.Bee{Caste: tc.caste, Weight_mg: sp.DevWeightEgg_mg}
 		for k := 1; k <= 12; k++ {
-			b.Weight_mg += MaxWeightGainToday_mg_REP(&b, sp)
+			b.Weight_mg += maxWeightGainToday(&b, sp)
 			want := math.Min(1.5*math.Pow(1.88, float64(k)), tc.cap)
 			if !almostEqual(b.Weight_mg, want) {
 				t.Errorf("%v after %d feedings: %v mg, want %v", tc.caste, k, b.Weight_mg, want)
@@ -32,7 +32,7 @@ func TestMaxWeightGainToday_mg_REP(t *testing.T) {
 	}
 }
 
-func TestNeedNectarPollenLarvaeToday(t *testing.T) {
+func TestLarvaeNeeds(t *testing.T) {
 	// [NEED-01] worked example: 12 larvae of 10 mg: 0.1056 g pollen, 0.65472 kJ
 	bw := newBroodWorld(t, 1)
 	col := bw.addColony(nil)

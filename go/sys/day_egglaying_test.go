@@ -21,7 +21,7 @@ func TestEgglaying(t *testing.T) {
 	qb.EmergingDate = day.At(120)
 	g.MtDNA, g.AllelesList, g.SpermathecaList = 42, []float64{10, 20}, []float64{30}
 
-	bw.eggs.EgglayingProc(queen)
+	bw.eggs.layEggs(queen)
 
 	eggs := bw.eggsOf(col)
 	if len(eggs) != 1 {
@@ -57,7 +57,7 @@ func TestEgglayingNotEnoughStores(t *testing.T) {
 		s.PollenStore_g, s.EnergyStore_kJ = 0.018, 10
 	})
 	queen := bw.addBee(col, stage.Adult, caste.Queen, 1, 30)
-	bw.eggs.EgglayingProc(queen)
+	bw.eggs.layEggs(queen)
 	if len(bw.eggsOf(col)) != 0 {
 		t.Error("eggs laid without enough pollen")
 	}
@@ -92,7 +92,7 @@ func TestEgglayingPloidy(t *testing.T) {
 		queen := bw.addBee(col, stage.Adult, caste.Queen, 1, 30)
 		_, g, _, _, _ := bw.bee(queen)
 		g.AllelesList, g.SpermathecaList = []float64{5, 5}, []float64{5}
-		bw.eggs.EgglayingProc(queen)
+		bw.eggs.layEggs(queen)
 		b, g, _, _, _ := bw.bee(bw.eggsOf(col)[0])
 		if b.Caste != tc.caste || len(g.AllelesList) != tc.alleles {
 			t.Errorf("%s: caste %v, alleles %v; want %v, %d alleles", tc.name, b.Caste, g.AllelesList, tc.caste, tc.alleles)
@@ -110,7 +110,7 @@ func TestEgglayingOneCohort(t *testing.T) {
 	queen := bw.addBee(col, stage.Adult, caste.Queen, 1, 30)
 	_, g, _, _, _ := bw.bee(queen)
 	g.AllelesList, g.SpermathecaList = []float64{10, 20}, []float64{30}
-	bw.eggs.EgglayingProc(queen)
+	bw.eggs.layEggs(queen)
 	eggs := bw.eggsOf(col)
 	if len(eggs) != 1 {
 		t.Fatalf("%d egg cohorts, want 1", len(eggs))

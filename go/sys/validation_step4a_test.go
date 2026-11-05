@@ -32,8 +32,8 @@ func TestValidationStep4aAgainstNetLogo(t *testing.T) {
 	}
 	for run := 1; run <= runs; run++ {
 		today := &foodsourceTotals{}
-		a := newExampleFarmSetup(t, float64(run), &CreateInitialQueens{}, &Tick{}, &UpdateMorning{}, &UpdateFoodsources{},
-			today, &EmergenceNewQueens{}, &UpdateColonies{}, &CheckNumbers{})
+		a := newExampleFarmSetup(t, float64(run), &initialQueensSetup{}, &tick{}, &calendarUpdate{}, &flowerRefill{},
+			today, &queenEmergence{}, &colonyUpdate{}, &broodTotals{})
 		cal := ecs.GetResource[globals.Calendar](a.World)
 		for step := 0; step <= steps; step++ {
 			if step > 0 {
@@ -75,7 +75,7 @@ func TestValidationStep4aAgainstNetLogo(t *testing.T) {
 
 // foodsourceTotals sums the nectar [l] and the pollen [kg] of all foodsources, as UpdateFoodsourcesProc sets
 // NectarAvailableTotalToday_l and PollenAvailableTotalToday_kg [UFS-01], [UFS-02]. Output only, not in the model
-// since step F4. Added right after UpdateFoodsources: the values of the morning, before foraging.
+// since step F4. Added right after flowerRefill: the values of the morning, before foraging.
 type foodsourceTotals struct {
 	nectar_l, pollen_kg float64
 	filter              *ecs.Filter1[comp.FoodsourceState]
@@ -83,7 +83,7 @@ type foodsourceTotals struct {
 
 func (s *foodsourceTotals) Initialize(w *ecs.World) {
 	s.filter = ecs.NewFilter1[comp.FoodsourceState](w)
-	s.Update(w) // UpdateFoodsources runs in Setup too [INIT-10]
+	s.Update(w) // flowerRefill runs in Setup too [INIT-10]
 }
 
 func (s *foodsourceTotals) Update(w *ecs.World) {

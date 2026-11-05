@@ -14,14 +14,14 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// FeedLarvae [GO-13].
+// larvaeFeeding [GO-13].
 //
 // Per colony, the larvae grow by a share of their largest possible gain [WGAIN]. The share is set by the store
 // (pollen or energy) that is emptier relative to its ideal size. The colony pays the pollen and the energy to
 // assimilate it [FEED].
 //
 // NetLogo: FeedLarvaeProc.
-type FeedLarvae struct {
+type larvaeFeeding struct {
 	rng       *rand.Rand
 	ticks     *globals.Ticks
 	constants *params.Constants
@@ -35,7 +35,7 @@ type FeedLarvae struct {
 	larvae map[ecs.Entity][]ecs.Entity // buffer of beesByColony
 }
 
-func (s *FeedLarvae) Initialize(w *ecs.World) {
+func (s *larvaeFeeding) Initialize(w *ecs.World) {
 	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.ticks = ecs.GetResource[globals.Ticks](w)
 	s.constants = ecs.GetResource[params.Constants](w)
@@ -47,7 +47,7 @@ func (s *FeedLarvae) Initialize(w *ecs.World) {
 	s.speciesMap = newSpeciesTable(w)
 }
 
-func (s *FeedLarvae) Update(w *ecs.World) {
+func (s *larvaeFeeding) Update(w *ecs.World) {
 	// ORDER of the colonies: irrelevant, each colony only feeds its own larvae from its own stores. Shuffled
 	// (decision C). The larvae are grouped by colony once: nothing changes stage or colony here.
 	s.larvae = beesByColony(s.larvae, s.beeFilter, func(b *comp.Bee) bool { return b.Stage == stage.Larva })
@@ -56,10 +56,10 @@ func (s *FeedLarvae) Update(w *ecs.World) {
 	}
 }
 
-func (s *FeedLarvae) Finalize(w *ecs.World) {}
+func (s *larvaeFeeding) Finalize(w *ecs.World) {}
 
 // feedColony runs [FEED-01] to [FEED-03] for one colony.
-func (s *FeedLarvae) feedColony(col ecs.Entity, myLarvae []ecs.Entity) {
+func (s *larvaeFeeding) feedColony(col ecs.Entity, myLarvae []ecs.Entity) {
 	stores := s.colonyMap.Get(col)
 
 	// [FEED-01] both 0 if an ideal store is 0: no feeding
@@ -84,7 +84,7 @@ func (s *FeedLarvae) feedColony(col ecs.Entity, myLarvae []ecs.Entity) {
 	for _, e := range myLarvae {
 		b := s.beeMap.Get(e)
 		sp := s.speciesMap.Get(b.SpeciesID)
-		pollenReceivedToday_mg := growthLimitingFactor * (MaxWeightGainToday_mg_REP(b, sp) / sp.PollenToBodymassFactor)
+		pollenReceivedToday_mg := growthLimitingFactor * (maxWeightGainToday(b, sp) / sp.PollenToBodymassFactor)
 		if pollenReceivedToday_mg > stores.PollenStore_g*1000 {
 			pollenReceivedToday_mg = stores.PollenStore_g * 1000
 			if pollenReceivedToday_mg < 0 {

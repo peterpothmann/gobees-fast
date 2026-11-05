@@ -58,9 +58,9 @@ func (aw *activityWorld) state(e ecs.Entity) *comp.FoodsourceState {
 func (aw *activityWorld) worker(col ecs.Entity, number int) ecs.Entity {
 	e := aw.adult(col, caste.Worker, number, 100, sitWorker)
 	_, _, _, fo, _ := aw.bee(e)
-	fo.GlossaLength_mm = ProboscisLengthREP(100, aw.sp)
-	fo.Cropvolume_myl = CropAndPelletSizeREP("nectar", 100, aw.sp)
-	fo.PollenPellets_g = CropAndPelletSizeREP("pollen", 100, aw.sp)
+	fo.GlossaLength_mm = proboscisLength(100, aw.sp)
+	fo.Cropvolume_myl = cropVolume(100, aw.sp)
+	fo.PollenPellets_g = pollenLoad(100, aw.sp)
 	fo.KnownMasterpatchesNectarList = []ecs.Entity{}
 	fo.KnownMasterpatchesPollenList = []ecs.Entity{}
 	return e
@@ -77,7 +77,7 @@ func newForagingWorld(t *testing.T, seed uint64) (*activityWorld, ecs.Entity, *f
 	return aw, col, &aw.loop.foraging
 }
 
-func TestDetectionProbREP(t *testing.T) {
+func TestDetectionProb(t *testing.T) {
 	// [DET-01] to [DET-03] worked example: edge 100 m away: e ^ -0.5
 	aw, _, f := newForagingWorld(t, 1)
 	for _, tc := range []struct {
@@ -92,13 +92,13 @@ func TestDetectionProbREP(t *testing.T) {
 		// centre is in range [PRNG], so their edge is never beyond it (removed in step F3).
 	} {
 		p := aw.flowerPatch(tc.x, 0, 50, willowherb())[0]
-		if got := f.DetectionProbREP(p, 0, 0); math.Abs(got-tc.want) > 1e-10 {
+		if got := f.detectionProb(p, 0, 0); math.Abs(got-tc.want) > 1e-10 {
 			t.Errorf("%s: %v, want %v", tc.name, got, tc.want)
 		}
 	}
 }
 
-func TestHandlingTime_s_REP(t *testing.T) {
+func TestHandlingTime(t *testing.T) {
 	// [HAND-01] to [HAND-03] worked examples: worker of 100 mg
 	aw, col, f := newForagingWorld(t, 1)
 	bee := aw.worker(col, 1)
@@ -122,13 +122,13 @@ func TestHandlingTime_s_REP(t *testing.T) {
 		s := aw.state(p)
 		s.Nectar_myl *= tc.fill
 		s.Pollen_g *= tc.fill
-		if got := f.HandlingTime_s_REP(bee, p, tc.pollen); math.Abs(got-tc.want) > 1e-6 {
+		if got := f.handlingTime(bee, p, tc.pollen); math.Abs(got-tc.want) > 1e-6 {
 			t.Errorf("%s: %v s, want %v", tc.name, got, tc.want)
 		}
 	}
 }
 
-func TestForaging_bestLayerREP(t *testing.T) {
+func TestBestLayer(t *testing.T) {
 	// [BLYR-02] pollen: the shortest handling time, [BLYR-03] nectar: the highest efficiency
 	aw, col, f := newForagingWorld(t, 1)
 	bee := aw.worker(col, 1)
@@ -137,26 +137,26 @@ func TestForaging_bestLayerREP(t *testing.T) {
 	slow.InterFlowerTime_s = 2
 	layers := aw.flowerPatch(30, 0, 50, slow, willowherb(), alsike())
 	fo.PollenForager = true
-	if got := f.Foraging_bestLayerREP(bee, layers[0]); got != layers[1] {
+	if got := f.bestLayer(bee, layers[0]); got != layers[1] {
 		t.Errorf("pollen: best layer %v, want the willowherb with 0.6 s (%v); ties go to the first", got, layers[1])
 	}
 	fo.PollenForager = false
-	if got := f.Foraging_bestLayerREP(bee, layers[2]); got != layers[1] {
+	if got := f.bestLayer(bee, layers[2]); got != layers[1] {
 		t.Errorf("nectar: best layer %v, want the faster willowherb (%v)", got, layers[1])
 	}
 	aw.state(layers[1]).Nectar_myl = 0
-	if got := f.Foraging_bestLayerREP(bee, layers[0]); got != layers[0] {
+	if got := f.bestLayer(bee, layers[0]); got != layers[0] {
 		t.Errorf("nectar without the emptied layer: %v, want the slow willowherb (%v)", got, layers[0])
 	}
 	for _, l := range layers {
 		aw.state(l).Nectar_myl = 0
 	}
-	if got := f.Foraging_bestLayerREP(bee, layers[0]); !got.IsZero() {
+	if got := f.bestLayer(bee, layers[0]); !got.IsZero() {
 		t.Errorf("no nectar left: %v, want none", got)
 	}
 }
 
-func TestForaging_SortKnownPatchesListREP(t *testing.T) {
+func TestSortKnownPatches(t *testing.T) {
 	// [SORT-01] duplicates removed, sorted by distance, stable for equal distances
 	aw, col, f := newForagingWorld(t, 1)
 	bee := aw.worker(col, 1)
@@ -164,7 +164,7 @@ func TestForaging_SortKnownPatchesListREP(t *testing.T) {
 	near := aw.flowerPatch(0, 10, 10, willowherb())[0]
 	sameA := aw.flowerPatch(30, 0, 10, willowherb())[0]
 	sameB := aw.flowerPatch(0, -30, 10, willowherb())[0]
-	got := f.Foraging_SortKnownPatchesListREP(bee, []ecs.Entity{sameB, far, near, sameA, far, sameB})
+	got := f.sortKnownPatches(bee, []ecs.Entity{sameB, far, near, sameA, far, sameB})
 	want := []ecs.Entity{near, sameB, sameA, far}
 	if len(got) != len(want) {
 		t.Fatalf("%v, want %v", got, want)
@@ -191,7 +191,7 @@ func TestForagingTripPollen(t *testing.T) {
 	fo.KnownMasterpatchesPollenList = []ecs.Entity{p}
 	fo.Expectation_PollenTrip_s = 412.2
 
-	f.ForagingProc(aw.w, bee)
+	f.forage(aw.w, bee)
 
 	b, _, _, fo, _ = aw.bee(bee)
 	_, s, _ := aw.colony(col)
@@ -226,7 +226,7 @@ func TestForagingEmptiesFoodsource(t *testing.T) {
 	fo.NectarsourceToGoTo = p
 	fo.KnownMasterpatchesNectarList = []ecs.Entity{p}
 
-	f.ForagingProc(aw.w, bee)
+	f.forage(aw.w, bee)
 
 	b, _, _, _, _ = aw.bee(bee)
 	trip := 2*300/5.0 + 3600
@@ -255,7 +255,7 @@ func TestForagingSearch(t *testing.T) {
 	b.Activity = activity.NectarForaging
 	nectarBefore := [2]float64{aw.state(layers[0]).Nectar_myl, aw.state(layers[1]).Nectar_myl}
 
-	f.ForagingProc(aw.w, bee)
+	f.forage(aw.w, bee)
 
 	b, _, _, fo, _ = aw.bee(bee)
 	if len(fo.KnownMasterpatchesNectarList) != 1 || fo.KnownMasterpatchesNectarList[0] != layers[0] {
@@ -276,7 +276,7 @@ func TestForagingSearchFails(t *testing.T) {
 	bee := aw.worker(col, 1)
 	b, _, _, fo, _ := aw.bee(bee)
 	b.Activity = activity.PollenForaging
-	f.ForagingProc(aw.w, bee)
+	f.forage(aw.w, bee)
 	b, _, _, fo, _ = aw.bee(bee)
 	_, s, _ := aw.colony(col)
 	if b.Activity != activity.ReturningEmpty || b.PersonalTime_s != 500 || !fo.PollensourceToGoTo.IsZero() {
@@ -298,7 +298,7 @@ func TestForagingMortality(t *testing.T) {
 		b, _, _, _, _ := aw.bee(bee)
 		b.Activity = activity.NectarForaging
 		aw.active.List = append(aw.active.List, bee)
-		f.ForagingProc(aw.w, bee)
+		f.forage(aw.w, bee)
 	}
 	died := float64(aw.tally.beesDied) / float64(n)
 	if want := 1 - math.Pow(1-1e-03, 500); math.Abs(died-want) > 0.03 {
@@ -314,7 +314,7 @@ func TestForagingMortality(t *testing.T) {
 	}
 }
 
-func TestForaging_PatchChoiceProc(t *testing.T) {
+func TestChoosePatch(t *testing.T) {
 	// [PCH-03] worked example: expectation 300 s, trip 400 s: new expectation 350 s.
 	// [PCH-05] after returningEmpty: 10 % go to the closest known patch, 90 % search.
 	aw, col, f := newForagingWorld(t, 5)
@@ -325,7 +325,7 @@ func TestForaging_PatchChoiceProc(t *testing.T) {
 	fo.CurrentFoodsource = p
 	fo.Expectation_NectarTrip_s = 300
 	b.Activity = activity.ExpForagingN
-	f.Foraging_PatchChoiceProc(bee, 400)
+	f.choosePatch(bee, 400)
 	if fo.Expectation_NectarTrip_s != 350 {
 		t.Errorf("expectation %v, want 350", fo.Expectation_NectarTrip_s)
 	}
@@ -334,7 +334,7 @@ func TestForaging_PatchChoiceProc(t *testing.T) {
 	n := 4000
 	for range n {
 		b.Activity = activity.ReturningEmpty
-		f.Foraging_PatchChoiceProc(bee, 500)
+		f.choosePatch(bee, 500)
 		if fo.NectarsourceToGoTo == p {
 			closest++
 		}

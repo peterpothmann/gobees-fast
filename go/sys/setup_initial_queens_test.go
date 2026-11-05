@@ -14,7 +14,7 @@ import (
 )
 
 func TestCreateInitialQueensExampleFarm(t *testing.T) {
-	a := newExampleFarmSetup(t, 3, &CreateInitialQueens{})
+	a := newExampleFarmSetup(t, 3, &initialQueensSetup{})
 	w := a.World
 	sp := terrestris(t)
 	spIndex := speciesIndices(w)["B_terrestris"][0]
@@ -50,8 +50,8 @@ func TestCreateInitialQueensExampleFarm(t *testing.T) {
 		if b.Weight_mg < 590 || b.Weight_mg > 980 {
 			t.Fatalf("weight = %v", b.Weight_mg)
 		}
-		if f.GlossaLength_mm != ProboscisLengthREP(b.Weight_mg, sp) || f.Cropvolume_myl != 173 ||
-			f.PollenPellets_g != CropAndPelletSizeREP("pollen", b.Weight_mg, sp) || !f.CurrentFoodsource.IsZero() {
+		if f.GlossaLength_mm != proboscisLength(b.Weight_mg, sp) || f.Cropvolume_myl != 173 ||
+			f.PollenPellets_g != pollenLoad(b.Weight_mg, sp) || !f.CurrentFoodsource.IsZero() {
 			t.Fatalf("forager: %+v", f)
 		}
 		sumWeight += b.Weight_mg

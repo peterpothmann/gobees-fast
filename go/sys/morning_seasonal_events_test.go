@@ -13,16 +13,16 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// seasWorld is a colonyWorld with the brood totals of the previous morning (CheckNumbers), set by hand, and the
-// UpdateSeasonalEvents system. The totals of the previous evening (OutputDailyProc) are counted from the bees.
-func seasWorld(t *testing.T, d day.OfYear) (*colonyWorld, *UpdateSeasonalEvents, *globals.Totals) {
+// seasWorld is a colonyWorld with the brood totals of the previous morning (broodTotals), set by hand, and the
+// seasonalEvents system. The totals of the previous evening (OutputDailyProc) are counted from the bees.
+func seasWorld(t *testing.T, d day.OfYear) (*colonyWorld, *seasonalEvents, *globals.Totals) {
 	t.Helper()
 	cw := newColonyWorld(t, 1)
 	cw.ticks.Ticks = day.Abs(d) // the first year
 	cw.cal.Day = d
 	totals := &globals.Totals{}
 	ecs.AddResource(cw.w, totals)
-	s := &UpdateSeasonalEvents{}
+	s := &seasonalEvents{}
 	s.Initialize(cw.w)
 	return cw, s, totals
 }

@@ -15,13 +15,13 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-func TestMergeHedgesProc(t *testing.T) {
+func TestMergeHedges(t *testing.T) {
 	field := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Grassland", X: 0, Y: 0, Area_sqm: 10000}}
 	small := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Grassland", X: 1, Y: 0, Area_sqm: 1000}} // below 6500 m2, never linked
 	big := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 100, Y: 0, Area_sqm: 500}}
 	h1 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 2, Y: 0, Area_sqm: 300}}
 	h2 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 3, Y: 0, Area_sqm: 200}}
-	MergeHedgesProc([]*flowerPatch{field, small, h1, h2, big}, rand.New(rand.NewPCG(1, 2)))
+	mergeHedges([]*flowerPatch{field, small, h1, h2, big}, rand.New(rand.NewPCG(1, 2)))
 
 	// [HEDG-04] the largest hedge is the master hedge, it keeps its position and gets the area of the others.
 	if big.Area_sqm != 1000 || h1.Area_sqm != 0 || h2.Area_sqm != 0 {
@@ -43,7 +43,7 @@ func TestMergeHedgesEqualAreaIsRandom(t *testing.T) {
 		field := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Woodland", X: 0, Y: 0, Area_sqm: 7000}}
 		a := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 1, Y: 0, Area_sqm: 100}}
 		b := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 2, Y: 0, Area_sqm: 100}}
-		MergeHedgesProc([]*flowerPatch{field, a, b}, rand.New(rand.NewPCG(seed, 7)))
+		mergeHedges([]*flowerPatch{field, a, b}, rand.New(rand.NewPCG(seed, 7)))
 		switch {
 		case a.Area_sqm == 200 && b.Area_sqm == 0:
 			masters["a"]++
@@ -66,7 +66,7 @@ func TestMergeHedgesEquallyNearFieldIsRandom(t *testing.T) {
 		right := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Woodland", X: 5, Y: 0, Area_sqm: 7000}}
 		h1 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 0, Y: 0, Area_sqm: 300}}
 		h2 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: -4, Y: 0, Area_sqm: 100}} // always linked to left
-		MergeHedgesProc([]*flowerPatch{left, right, h1, h2}, rand.New(rand.NewPCG(seed, 3)))
+		mergeHedges([]*flowerPatch{left, right, h1, h2}, rand.New(rand.NewPCG(seed, 3)))
 		if h2.Area_sqm == 0 {
 			linked["left"]++ // h1 and h2 share the field, h1 (larger) got the area
 		} else {
@@ -78,7 +78,7 @@ func TestMergeHedgesEquallyNearFieldIsRandom(t *testing.T) {
 	}
 }
 
-// testFlower returns the flower species of a layer of TestCreateLayersProc, from its values in the test table:
+// testFlower returns the flower species of a layer of TestCreateLayers, from its values in the test table:
 // the foodsource does not store its flower species (removed in step F3).
 func testFlower(fs comp.Foodsource) string {
 	switch {
@@ -92,7 +92,7 @@ func testFlower(fs comp.Foodsource) string {
 	return "B"
 }
 
-func TestCreateLayersProc(t *testing.T) {
+func TestCreateLayers(t *testing.T) {
 	w := ecs.NewWorld()
 	flowers := &params.FlowerSpeciesTable{
 		Names: []string{"A", "B", "C"},
@@ -111,7 +111,7 @@ func TestCreateLayersProc(t *testing.T) {
 		Area_sqm: 100, FlowerSpeciesList: []params.FlowerEntry{{Name: "B", Value: 1, HasValue: true}}}}
 	p3 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Scrub", X: 50, Y: 50, Area_sqm: 400}}
 
-	masterpatches, err := CreateLayersProc(w, []*flowerPatch{p1, p2, p3}, flowers, file, []string{"Margin", "Plot"}, rand.New(rand.NewPCG(1, 1)))
+	masterpatches, err := createLayers(w, []*flowerPatch{p1, p2, p3}, flowers, file, []string{"Margin", "Plot"}, rand.New(rand.NewPCG(1, 1)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,7 +177,7 @@ func TestCreateLayersProc(t *testing.T) {
 	}
 }
 
-// testLayer is a foodsource as read back in TestCreateLayersProc.
+// testLayer is a foodsource as read back in TestCreateLayers.
 type testLayer struct {
 	e  ecs.Entity
 	fs comp.Foodsource
@@ -191,12 +191,12 @@ func newExampleFarmSetup(t *testing.T, seed float64, extra ...app.System) *app.A
 	return newExampleFarmSetupWith(t, seed, func(c *input.Config) {}, extra...)
 }
 
-// newExampleFarmSetupWithModifier runs the setup incl. CreateInitialQueens with the given
+// newExampleFarmSetupWithModifier runs the setup incl. initialQueensSetup with the given
 // InitialQueensModifierBehaviorSpace.
 func newExampleFarmSetupWithModifier(t *testing.T, modifier float64) *app.App {
 	t.Helper()
 	return newExampleFarmSetupWith(t, 1,
-		func(c *input.Config) { c.Parameters.InitialQueensModifierBehaviorSpace = modifier }, &CreateInitialQueens{})
+		func(c *input.Config) { c.Parameters.InitialQueensModifierBehaviorSpace = modifier }, &initialQueensSetup{})
 }
 
 // newExampleFarmSetupWith is newExampleFarmSetup with a function that changes the run file before the setup.
@@ -217,8 +217,8 @@ func newExampleFarmSetupFiles(t *testing.T, seed float64, landscapes map[string]
 	p.Apply(a.World)
 	ecs.AddResource(a.World, &globals.ActiveBees{})
 	ecs.AddResource(a.World, &globals.Daytime{})
-	a.AddSystem(&CreateFoodsources{})
-	a.AddSystem(&CreateSpecies{})
+	a.AddSystem(&landscapeSetup{})
+	a.AddSystem(&nestSitesSetup{})
 	for _, s := range extra {
 		a.AddSystem(s)
 	}

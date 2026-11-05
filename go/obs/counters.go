@@ -84,7 +84,7 @@ func (c *Counters) Initialize(w *ecs.World) {
 func (c *Counters) Update(w *ecs.World) {
 	c.TotalForagingTripsToday, c.tripsToday = c.tripsToday, 0
 
-	// [UCOL-12] UpdateColonies removes the dead colonies on day 1 after the colonies of that day have died
+	// [UCOL-12] colonyUpdate removes the dead colonies on day 1 after the colonies of that day have died
 	if c.calendar.Day == 1 && !c.output.KeepDeadColonies {
 		c.DeadColonies = 0
 	} else {

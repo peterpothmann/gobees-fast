@@ -11,12 +11,12 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// qlnWorld is a colonyWorld with the QueensLeavingNest system.
-func qlnWorld(t *testing.T, unlimitedMales bool) (*colonyWorld, *QueensLeavingNest) {
+// qlnWorld is a colonyWorld with the queensLeavingNest system.
+func qlnWorld(t *testing.T, unlimitedMales bool) (*colonyWorld, *queensLeavingNest) {
 	t.Helper()
 	cw := newColonyWorld(t, 1)
 	cw.file.UnlimitedMales = unlimitedMales
-	s := &QueensLeavingNest{}
+	s := &queensLeavingNest{}
 	s.Initialize(cw.w)
 	return cw, s
 }

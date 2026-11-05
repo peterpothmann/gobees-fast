@@ -44,9 +44,9 @@ func newEggLayer(w *ecs.World, rng *rand.Rand) eggLayer {
 	}
 }
 
-// EgglayingProc lets the bee e (the mother) lay one batch of eggs if the colony stores cover the cost, and takes
+// layEggs lets the bee e (the mother) lay one batch of eggs if the colony stores cover the cost, and takes
 // 24 h of her time [EGG]. It returns the new egg cohorts (none if the stores were too small).
-func (l *eggLayer) EgglayingProc(e ecs.Entity) []ecs.Entity {
+func (l *eggLayer) layEggs(e ecs.Entity) []ecs.Entity {
 	_, mother, _, _, _, _ := l.beeMap.Get(e)
 	sp := l.speciesMap.Get(mother.SpeciesID)
 	colonyID := mother.ColonyID
@@ -78,7 +78,7 @@ func (l *eggLayer) EgglayingProc(e ecs.Entity) []ecs.Entity {
 		} else {
 			diploid = false // never run: workers do not lay eggs, see the annotation
 		}
-		l.EggsParameterSettingProc(egg, beesInCohort, diploid)
+		l.initEggs(egg, beesInCohort, diploid)
 		_, stores := l.colonyMap.Get(colonyID)
 		stores.PollenStore_g = stores.PollenStore_g - pollenCost_g
 		stores.EnergyStore_kJ = stores.EnergyStore_kJ - energyCost_kJ
@@ -103,9 +103,9 @@ func (l *eggLayer) hatch(e ecs.Entity) ecs.Entity {
 	return l.beeMap.NewEntity(&p, &b, &g, &t, &f, &d)
 }
 
-// EggsParameterSettingProc sets the alleles, the caste and the start values of a new egg (cohort) [EGGP]. The egg
+// initEggs sets the alleles, the caste and the start values of a new egg (cohort) [EGGP]. The egg
 // still holds all values of its mother. diploid is the ploidy of [EGG-02] (false: 1, true: 2).
-func (l *eggLayer) EggsParameterSettingProc(e ecs.Entity, beesInCohort int, diploid bool) {
+func (l *eggLayer) initEggs(e ecs.Entity, beesInCohort int, diploid bool) {
 	_, b, g, th, f, dev := l.beeMap.Get(e)
 	sp := l.speciesMap.Get(b.SpeciesID)
 

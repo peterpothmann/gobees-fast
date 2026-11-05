@@ -15,15 +15,15 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// CreateSpecies finds the nest sites of each simulated species [INIT-07] and adds them as the resource
-// globals.NestSites. Runs after CreateFoodsources, because the nest sites are foodsources.
+// nestSitesSetup finds the nest sites of each simulated species [INIT-07] and adds them as the resource
+// globals.NestSites. Runs after landscapeSetup, because the nest sites are foodsources.
 //
 // NetLogo: CreateSpeciesProc, NestHabitatsListREP.
-type CreateSpecies struct {
+type nestSitesSetup struct {
 	nestSites globals.NestSites
 }
 
-func (s *CreateSpecies) Initialize(w *ecs.World) {
+func (s *nestSitesSetup) Initialize(w *ecs.World) {
 	in := ecs.GetResource[params.Input](w)
 	rng := rand.New(ecs.GetResource[resource.Rand](w))
 
@@ -39,7 +39,7 @@ func (s *CreateSpecies) Initialize(w *ecs.World) {
 		sp := &in.Species[i]
 		ns := &s.nestSites.BySpecies[i]
 		// [SPEC-04]
-		expanded, err := NestHabitatsListREP(sp.NestHabitatsList, masterpatches, rng)
+		expanded, err := expandNestHabitats(sp.NestHabitatsList, masterpatches, rng)
 		if err != nil {
 			panic(err)
 		}
@@ -54,9 +54,9 @@ func (s *CreateSpecies) Initialize(w *ecs.World) {
 	ecs.AddResource(w, &s.nestSites)
 }
 
-func (s *CreateSpecies) Update(w *ecs.World) {}
+func (s *nestSitesSetup) Update(w *ecs.World) {}
 
-func (s *CreateSpecies) Finalize(w *ecs.World) {}
+func (s *nestSitesSetup) Finalize(w *ecs.World) {}
 
 // speciesTable gives a species by its index, the SpeciesID of bees and SpeciesIDcolony of colonies (step F11).
 // It reads params.Input.Species at each call, so species added later (tests) are found too.
@@ -102,9 +102,9 @@ func collectMasterpatches(w *ecs.World) []masterpatch {
 	return result
 }
 
-// NestHabitatsListREP expands entries ending with "*" to all habitat types of the masterpatches that contain
+// expandNestHabitats expands entries ending with "*" to all habitat types of the masterpatches that contain
 // the text before the "*" [NHAB], finding 20 (see trans/netlogo-findings.md#finding-20).
-func NestHabitatsListREP(list []string, masterpatches []masterpatch, rng *rand.Rand) ([]string, error) {
+func expandNestHabitats(list []string, masterpatches []masterpatch, rng *rand.Rand) ([]string, error) {
 	// [NHAB-01] ORDER: irrelevant, nestHabitatsList is only used with member?. Shuffled anyway (decision C).
 	order := slices.Clone(masterpatches)
 	rng.Shuffle(len(order), func(i, j int) { order[i], order[j] = order[j], order[i] })

@@ -13,29 +13,29 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// CreateBadgers [INIT-08].
+// badgersSetup [INIT-08].
 //
 // Creates N_Badgers badgers, each in the centre of the patch cell of a "Scrub" masterpatch, at least 300 m from
 // the badgers placed before. N_Badgers is 0 in netlogo/_SYSTEM_Example_Farm_Parameters.csv.
 // Not translated: size, shape (GUI).
 //
 // NetLogo: CreateBadgersProc.
-type CreateBadgers struct{}
+type badgersSetup struct{}
 
-func (s *CreateBadgers) Initialize(w *ecs.World) {
+func (s *badgersSetup) Initialize(w *ecs.World) {
 	file := ecs.GetResource[params.ParameterFile](w)
 	landscape := ecs.GetResource[globals.Landscape](w)
 	rng := rand.New(ecs.GetResource[resource.Rand](w))
-	CreateBadgersProc(w, file.N_Badgers, landscape.Scaling_NLpatches_per_m, rng)
+	createBadgers(w, file.N_Badgers, landscape.Scaling_NLpatches_per_m, rng)
 }
 
-func (s *CreateBadgers) Update(w *ecs.World) {}
+func (s *badgersSetup) Update(w *ecs.World) {}
 
-func (s *CreateBadgers) Finalize(w *ecs.World) {}
+func (s *badgersSetup) Finalize(w *ecs.World) {}
 
-// CreateBadgersProc creates n badgers on "Scrub" masterpatches [BADC], finding 48 (see
+// createBadgers creates n badgers on "Scrub" masterpatches [BADC], finding 48 (see
 // trans/netlogo-findings.md#finding-48).
-func CreateBadgersProc(w *ecs.World, n int, scaling_NLpatches_per_m float64, rng *rand.Rand) {
+func createBadgers(w *ecs.World, n int, scaling_NLpatches_per_m float64, rng *rand.Rand) {
 	burrowHabitatsList := []string{"Scrub"} // case-sensitive, as member?
 	const distanceLimit_m = 300
 	distance_patches := distanceLimit_m * scaling_NLpatches_per_m
@@ -69,7 +69,7 @@ func CreateBadgersProc(w *ecs.World, n int, scaling_NLpatches_per_m float64, rng
 	burrowFsSet := slices.Clone(sites)
 	for _, b := range badgers {
 		if len(burrowFsSet) == 0 {
-			badgerDeath{}.DieProc(w, b, "Badger: not enough habitat!")
+			badgerDeath{}.die(w, b, "Badger: not enough habitat!")
 			continue
 		}
 		chosenFs := burrowFsSet[rng.IntN(len(burrowFsSet))]

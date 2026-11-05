@@ -19,17 +19,17 @@ import (
 // (Weather = "Constant 8 hrs" in netlogo/_SYSTEM_Example_Farm_Parameters.csv), the foraging mortality "high".
 type activityWorld struct {
 	*broodWorld
-	wake    *WakeUpBees
-	loop    *ActivityLoop
-	eod     *EndOfDayResting
+	wake    *wakeUp
+	loop    *activities
+	eod     *nightRest
 	active  *globals.ActiveBees
 	daytime *globals.Daytime
 }
 
 func newActivityWorld(t *testing.T, seed uint64) *activityWorld {
 	t.Helper()
-	aw := &activityWorld{broodWorld: newBroodWorld(t, seed), wake: &WakeUpBees{},
-		loop: &ActivityLoop{CheckActiveCount: true}, eod: &EndOfDayResting{}}
+	aw := &activityWorld{broodWorld: newBroodWorld(t, seed), wake: &wakeUp{},
+		loop: &activities{CheckActiveCount: true}, eod: &nightRest{}}
 	aw.cal.DailyForagingPeriod_s = 8 * 3600
 	ecs.AddResource(aw.w, &params.Derived{MortalityForager_per_s: 1e-05}) // ForagingMortalityModel "high" [PAR-04]
 	aw.wake.Initialize(aw.w)
@@ -49,7 +49,7 @@ func (aw *activityWorld) adult(col ecs.Entity, c caste.Caste, number int, weight
 	return e
 }
 
-func TestNextActiveBeeREP(t *testing.T) {
+func TestNextActiveBee(t *testing.T) {
 	// [NEXT-04] worked examples
 	for _, tc := range []struct {
 		name  string
@@ -76,7 +76,7 @@ func TestNextActiveBeeREP(t *testing.T) {
 			list = append(list, e)
 		}
 		aw.active.List = list
-		first := aw.loop.NextActiveBeeREP()
+		first := aw.loop.nextActiveBee()
 		got := ""
 		for _, e := range aw.active.List {
 			got += names[e]
@@ -87,7 +87,7 @@ func TestNextActiveBeeREP(t *testing.T) {
 	}
 }
 
-func TestWakeUpBees(t *testing.T) {
+func TestWakeUp(t *testing.T) {
 	// [MORN-08] active adult workers and queens, also without colony, wake up at 1 to 1800 s
 	aw := newActivityWorld(t, 2)
 	col := aw.addColony(nil)
@@ -147,7 +147,7 @@ func TestStimuli(t *testing.T) {
 		{"queen and one male", 0, comp.ColonyCounts{AllAdults: 2, AllEggs: 12}, 1},
 	} {
 		stores := comp.ColonyStores{PollenStore_g: tc.pollen}
-		if got := StimEgglayingREP(&stores, &tc.counts, sp); got != tc.want {
+		if got := egglayingStimulus(&stores, &tc.counts, sp); got != tc.want {
 			t.Errorf("StimEgglayingREP %s: %v, want %v", tc.name, got, tc.want)
 		}
 	}
@@ -155,7 +155,7 @@ func TestStimuli(t *testing.T) {
 	eggs := comp.ColonyCounts{AllEggs: 12}
 	for _, tc := range []struct{ summed, want float64 }{{6.6, 1}, {6.7, 0}} {
 		stores := comp.ColonyStores{SummedIncubationToday_kJ: tc.summed}
-		if got := StimNursingREP(&stores, &eggs, sp); got != tc.want {
+		if got := nursingStimulus(&stores, &eggs, sp); got != tc.want {
 			t.Errorf("StimNursingREP, 12 eggs need 6.67 kJ, %v kJ received: %v, want %v", tc.summed, got, tc.want)
 		}
 	}
@@ -165,7 +165,7 @@ func TestStimuli(t *testing.T) {
 		{39.44, 36000, 1}, {39.45, 36000, 0}, {0, 28799, 0}, {0, 28800, 1}, {0, 57600, 1}, {0, 57601, 0},
 	} {
 		stores := comp.ColonyStores{EnergyNeedToday_kJ: 0.65472, EnergyStore_kJ: tc.store}
-		got := StimForagingNectarREP(&stores, tc.daytime, sunrise, period)
+		got := nectarStimulus(&stores, tc.daytime, sunrise, period)
 		if got != tc.want || !almostEqual(stores.IdealEnergyStore_kJ, 39.6416) {
 			t.Errorf("StimForagingNectarREP store %v at %v s: %v (ideal %v), want %v (ideal 39.6416)",
 				tc.store, tc.daytime, got, stores.IdealEnergyStore_kJ, tc.want)
@@ -173,7 +173,7 @@ func TestStimuli(t *testing.T) {
 	}
 	for _, tc := range []struct{ store, daytime, want float64 }{{0.8978, 36000, 1}, {0.898, 36000, 0}, {0, 7200, 0}} {
 		stores := comp.ColonyStores{PollenNeedLarvaeToday_g: 0.1056, PollenStore_g: tc.store}
-		got := StimForagingPollenREP(&stores, sp, tc.daytime, sunrise, period)
+		got := pollenStimulus(&stores, sp, tc.daytime, sunrise, period)
 		if got != tc.want || !almostEqual(stores.IdealPollenStore_g, 0.9024) {
 			t.Errorf("StimForagingPollenREP store %v at %v s: %v (ideal %v), want %v (ideal 0.9024)",
 				tc.store, tc.daytime, got, stores.IdealPollenStore_g, tc.want)
@@ -181,7 +181,7 @@ func TestStimuli(t *testing.T) {
 	}
 }
 
-func TestActivityProcChoice(t *testing.T) {
+func TestActChoice(t *testing.T) {
 	// [ACT-03] the last matching task wins (finding 11, see trans/netlogo-findings.md#finding-11), [ACT-04]
 	for _, tc := range []struct {
 		name      string
@@ -234,7 +234,7 @@ func TestActivityProcChoice(t *testing.T) {
 		}
 		b.PersonalTime_s = tc.daytime
 		aw.daytime.Daytime_s = tc.daytime
-		aw.loop.ActivityProc(aw.w, e)
+		aw.loop.act(aw.w, e)
 		if !aw.w.Alive(e) {
 			continue // died on a search flight [COST-01]
 		}
@@ -253,7 +253,7 @@ func TestActivityProcChoice(t *testing.T) {
 	}
 }
 
-func TestActivityProcTime(t *testing.T) {
+func TestActTime(t *testing.T) {
 	// [ACT-05] resting 1800 s, nursing 2880 s, egg laying 24 h, a failed search 2500 m / 5 m/s [COST-01]
 	for _, tc := range []struct {
 		name      string
@@ -278,14 +278,14 @@ func TestActivityProcTime(t *testing.T) {
 		b, _, _, _, _ := aw.bee(e)
 		b.PersonalTime_s = tc.daytime
 		aw.daytime.Daytime_s = tc.daytime
-		aw.loop.ActivityProc(aw.w, e)
+		aw.loop.act(aw.w, e)
 		if b, _, _, _, _ := aw.bee(e); b.PersonalTime_s != tc.want {
 			t.Errorf("%s: personalTime_s %v, want %v", tc.name, b.PersonalTime_s, tc.want)
 		}
 	}
 }
 
-func TestBroodIncubationProc(t *testing.T) {
+func TestIncubateBrood(t *testing.T) {
 	// [INC-01], [INC-02] worked example: a queen of 800 mg and 12 eggs: about 0.5 kJ, 0.0417 kJ per egg.
 	// The NetLogo constant is truncated, so the heat is 0.499999998 kJ.
 	heat := 2880 * 0.000000217013888 * 800.0
@@ -300,7 +300,7 @@ func TestBroodIncubationProc(t *testing.T) {
 	queen := aw.adult(col, caste.Queen, 1, 800, sitQueenSocialPhase)
 	aw.loop.broodOf = beesByColony(aw.loop.broodOf, aw.loop.beeFilter, func(b *comp.Bee) bool { return b.Stage != stage.Adult })
 
-	aw.loop.BroodIncubationProc(aw.w, queen)
+	aw.loop.incubateBrood(aw.w, queen)
 
 	if _, _, _, _, d := aw.bee(eggs); !almostEqual(d.CumulIncubationReceived_kJ, 0.1+heat/12) {
 		t.Errorf("egg incubation %v kJ, want %v", d.CumulIncubationReceived_kJ, 0.1+heat/12)
@@ -320,7 +320,7 @@ func TestBroodIncubationProc(t *testing.T) {
 	}
 }
 
-func TestActivityLoopDay(t *testing.T) {
+func TestActivitiesDay(t *testing.T) {
 	// one day of a social colony: the queen and 20 workers heat 12 eggs, then the queen lays.
 	// Finding 46 (see trans/netlogo-findings.md#finding-46): the new eggs get no heat today.
 	aw := newActivityWorld(t, 4)
@@ -362,7 +362,7 @@ func TestActivityLoopDay(t *testing.T) {
 	}
 }
 
-func TestActivityLoopQueenWithoutColony(t *testing.T) {
+func TestActivitiesQueenWithoutColony(t *testing.T) {
 	// [GO-10] one rest, then her day is over. The loop needs a colony [GO-06].
 	aw := newActivityWorld(t, 1)
 	col := aw.addColony(nil)
@@ -377,17 +377,17 @@ func TestActivityLoopQueenWithoutColony(t *testing.T) {
 	}
 }
 
-func TestActivityLoopExampleFarm(t *testing.T) {
+func TestActivitiesExampleFarm(t *testing.T) {
 	// the full schedule of steps 0 to 6 on the example farm for 200 days. CheckActiveCount compares the length of
 	// the queue with NetLogo's count in every turn [GO-06]. The checks of the state [CHK-03] run every day.
 	if testing.Short() {
 		t.Skip("200 days of the example farm")
 	}
-	loop := &ActivityLoop{CheckActiveCount: true}
-	a := newExampleFarmSetup(t, 1, &CreateInitialQueens{}, &Tick{}, &UpdateMorning{}, &UpdateFoodsources{},
-		&EmergenceNewQueens{}, &WakeUpBees{}, &UpdateColonies{}, &CheckNumbers{},
-		&NeedNectarPollenLarvaeToday{}, loop, &EndOfDayResting{}, &FeedLarvae{}, &QueenProductionDate{},
-		&Development{}, &MortalityBrood{})
+	loop := &activities{CheckActiveCount: true}
+	a := newExampleFarmSetup(t, 1, &initialQueensSetup{}, &tick{}, &calendarUpdate{}, &flowerRefill{},
+		&queenEmergence{}, &wakeUp{}, &colonyUpdate{}, &broodTotals{},
+		&larvaeNeeds{}, loop, &nightRest{}, &larvaeFeeding{}, &queenProductionDate{},
+		&development{}, &broodMortality{})
 	active := ecs.GetResource[globals.ActiveBees](a.World)
 	maxQueue := 0
 	for range 200 {
@@ -405,7 +405,7 @@ func TestActivityLoopExampleFarm(t *testing.T) {
 		maxQueue, totals.TotalEggs, totals.TotalLarvae, totals.TotalPupae)
 }
 
-func TestNextActiveBeeREPAfterDeath(t *testing.T) {
+func TestNextActiveBeeAfterDeath(t *testing.T) {
 	// [NEXT-01] the previous bee died: the next bee has not been active yet and is re-inserted. With equal times
 	// it moves behind the next bee (trans/data-model.md, "Daily activity queue").
 	aw := newActivityWorld(t, 1)
@@ -421,8 +421,8 @@ func TestNextActiveBeeREPAfterDeath(t *testing.T) {
 	}
 	aw.active.List = list
 	death := newBeeDeath(aw.w)
-	death.DieProc(aw.w, list[0], "test") // A
-	aw.loop.NextActiveBeeREP()
+	death.die(aw.w, list[0], "test") // A
+	aw.loop.nextActiveBee()
 	got := ""
 	for _, e := range aw.active.List {
 		got += names[e]
@@ -432,7 +432,7 @@ func TestNextActiveBeeREPAfterDeath(t *testing.T) {
 	}
 }
 
-func TestEndOfDayResting(t *testing.T) {
+func TestNightRest(t *testing.T) {
 	// [GO-11] all adult, non-hibernating females rest, also bees whose day ended earlier
 	aw := newActivityWorld(t, 1)
 	col := aw.addColony(nil)

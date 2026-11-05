@@ -16,15 +16,15 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// Development [GO-15].
+// development [GO-15].
 //
 // All bees age by one day [DEV]. Adults: adult mortality and queen thresholds [MORA]. Brood: development to the
-// next stage [DEVP], [DEVL], [DEVE]. Must run after QueenProductionDate (finding 42, see
+// next stage [DEVP], [DEVL], [DEVE]. Must run after queenProductionDate (finding 42, see
 // trans/netlogo-findings.md#finding-42).
 //
 // NetLogo: DevelopmentProc, Development_Mortality_AdultsProc, Development_PupaeProc, Development_LarvaeProc,
 // Development_EggsProc, DetermineCaste_REP.
-type Development struct {
+type development struct {
 	rng       *rand.Rand
 	ticks     *globals.Ticks
 	constants *params.Constants
@@ -40,7 +40,7 @@ type Development struct {
 	bees []ecs.Entity // buffer of askAllBees
 }
 
-func (s *Development) Initialize(w *ecs.World) {
+func (s *development) Initialize(w *ecs.World) {
 	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.ticks = ecs.GetResource[globals.Ticks](w)
 	s.constants = ecs.GetResource[params.Constants](w)
@@ -53,7 +53,7 @@ func (s *Development) Initialize(w *ecs.World) {
 	s.speciesMap = newSpeciesTable(w)
 }
 
-func (s *Development) Update(w *ecs.World) {
+func (s *development) Update(w *ecs.World) {
 	// [DEV-01] ALL bees. ORDER: irrelevant for the state, see the annotation. Shuffled (decision C).
 	// A bee dies only in its own turn [MORA], so every bee of the list is alive when its turn comes.
 	s.bees = askAllBees(s.bees, s.beeFilter, s.rng)
@@ -67,7 +67,7 @@ func (s *Development) Update(w *ecs.World) {
 				panic("Assertion violated: Bee with 2 hibernations!")
 			}
 			// assertion adult bee with brood? = true: brood? is the stage since step F9, it cannot fail
-			s.Development_Mortality_AdultsProc(w, e)
+			s.ageAdult(w, e)
 			continue
 		}
 		// [DEV-03] a switch on the stage at the start: each bee advances at most one stage per day
@@ -75,32 +75,32 @@ func (s *Development) Update(w *ecs.World) {
 		// assertion brood with brood? = false: brood? is the stage since step F9, it cannot fail
 		switch bee.Stage {
 		case stage.Pupa:
-			s.Development_PupaeProc(e)
+			s.developPupa(e)
 		case stage.Larva:
-			s.Development_LarvaeProc(e, whoCol)
+			s.developLarva(e, whoCol)
 		case stage.Egg:
-			s.Development_EggsProc(e)
+			s.developEgg(e)
 		}
 		// [DEV-04] GUI ONLY, not translated.
 	}
 }
 
-func (s *Development) Finalize(w *ecs.World) {}
+func (s *development) Finalize(w *ecs.World) {}
 
-// Development_Mortality_AdultsProc applies the maximum life span, the social-phase thresholds of the colony
+// ageAdult applies the maximum life span, the social-phase thresholds of the colony
 // queen and the background mortality to an adult bee [MORA].
-func (s *Development) Development_Mortality_AdultsProc(w *ecs.World, e ecs.Entity) {
+func (s *development) ageAdult(w *ecs.World, e ecs.Entity) {
 	_, bee, _, th, _, _ := s.beeMap.Get(e)
 	// [MORA-01] DieProc ends the bee's code (finding 28, see trans/netlogo-findings.md#finding-28)
 	if bee.Caste == caste.Worker {
 		if bee.AdultAge > s.speciesMap.Get(bee.SpeciesID).MaxLifespanWorkers {
-			s.death.DieProc(w, e, "Worker: adultAge > maxLifespanWorkers")
+			s.death.die(w, e, "Worker: adultAge > maxLifespanWorkers")
 			return
 		}
 	}
 	if bee.Caste == caste.Male {
 		if bee.AdultAge > s.constants.MaxLifespanMales {
-			s.death.DieProc(w, e, "Male: adultAge > MaxLifespanMales")
+			s.death.die(w, e, "Male: adultAge > MaxLifespanMales")
 			return
 		}
 	}
@@ -115,13 +115,13 @@ func (s *Development) Development_Mortality_AdultsProc(w *ecs.World, e ecs.Entit
 	// [MORA-03] inverted condition (finding 22, see trans/netlogo-findings.md#finding-22). With the value 0, no
 	// random number is drawn.
 	if s.constants.MortalityAdultsBackground_daily > 0 && s.rng.Float64() > s.constants.MortalityAdultsBackground_daily {
-		s.death.DieProc(w, e, "Adult bee: mortality in colony")
+		s.death.die(w, e, "Adult bee: mortality in colony")
 	}
 }
 
-// Development_PupaeProc lets a pupa become an adult once it is old enough and incubated enough [DEVP].
+// developPupa lets a pupa become an adult once it is old enough and incubated enough [DEVP].
 // totalAdultsProduced of the colony: read only by the egg accounting [CHK-04], removed in step F4.
-func (s *Development) Development_PupaeProc(e ecs.Entity) {
+func (s *development) developPupa(e ecs.Entity) {
 	_, bee, _, th, forager, dev := s.beeMap.Get(e)
 	sp := s.speciesMap.Get(bee.SpeciesID)
 	// [DEVP-01] cumulTimePupa_d: never read, removed in step F3.
@@ -130,10 +130,10 @@ func (s *Development) Development_PupaeProc(e ecs.Entity) {
 	if bee.Caste == caste.Worker {
 		if dev.CumulIncubationReceived_kJ >= sp.DevIncubationEmergingTH_kJ && float64(bee.BroodAge) >= sp.DevAgeEmergingMin_d {
 			bee.Stage = stage.Adult
-			forager.Cropvolume_myl = CropAndPelletSizeREP("nectar", bee.Weight_mg, sp)
-			forager.PollenPellets_g = CropAndPelletSizeREP("pollen", bee.Weight_mg, sp)
+			forager.Cropvolume_myl = cropVolume(bee.Weight_mg, sp)
+			forager.PollenPellets_g = pollenLoad(bee.Weight_mg, sp)
 			*th = thresholds(sitWorker)
-			forager.GlossaLength_mm = ProboscisLengthREP(bee.Weight_mg, sp)
+			forager.GlossaLength_mm = proboscisLength(bee.Weight_mg, sp)
 		}
 	}
 
@@ -156,10 +156,10 @@ func (s *Development) Development_PupaeProc(e ecs.Entity) {
 			}
 			bee.Stage = stage.Adult
 			s.queenEmerged.Emit(e) // totalAdultQueensEverProduced: output only, counted by the observers (step F4)
-			forager.Cropvolume_myl = CropAndPelletSizeREP("nectar", bee.Weight_mg, sp)
-			forager.PollenPellets_g = CropAndPelletSizeREP("pollen", bee.Weight_mg, sp)
+			forager.Cropvolume_myl = cropVolume(bee.Weight_mg, sp)
+			forager.PollenPellets_g = pollenLoad(bee.Weight_mg, sp)
 			*th = thresholds(sitYoungQueen)
-			forager.GlossaLength_mm = ProboscisLengthREP(bee.Weight_mg, sp)
+			forager.GlossaLength_mm = proboscisLength(bee.Weight_mg, sp)
 		}
 	}
 
@@ -169,11 +169,11 @@ func (s *Development) Development_PupaeProc(e ecs.Entity) {
 	}
 }
 
-// DetermineCaste_REP returns the caste of a female larva at larval day 3 [CAST]: queen if she is heavy enough
+// determineCaste returns the caste of a female larva at larval day 3 [CAST]: queen if she is heavy enough
 // and her colony produces queens, else worker. dev_Q_DeterminationWeight_mg is 0 for all species, so every
 // female larva becomes a queen once the colony produces queens (finding 40, see
 // trans/netlogo-findings.md#finding-40).
-func DetermineCaste_REP(weight_mg float64, sp *params.Species, col *comp.Colony) caste.Caste {
+func determineCaste(weight_mg float64, sp *params.Species, col *comp.Colony) caste.Caste {
 	// [CAST-01]
 	mycaste := caste.Worker
 	if weight_mg >= sp.Dev_Q_DeterminationWeight_mg && col.QueenProduction {
@@ -182,9 +182,9 @@ func DetermineCaste_REP(weight_mg float64, sp *params.Species, col *comp.Colony)
 	return mycaste
 }
 
-// Development_LarvaeProc determines the caste of a female larva at larval day 3 and lets a larva pupate once it
+// developLarva determines the caste of a female larva at larval day 3 and lets a larva pupate once it
 // is old enough, incubated enough and heavy enough [DEVL]. whoCol is the larva's own colony.
-func (s *Development) Development_LarvaeProc(e ecs.Entity, whoCol ecs.Entity) {
+func (s *development) developLarva(e ecs.Entity, whoCol ecs.Entity) {
 	_, bee, _, _, _, dev := s.beeMap.Get(e)
 	sp := s.speciesMap.Get(bee.SpeciesID)
 	// [DEVL-01]
@@ -193,7 +193,7 @@ func (s *Development) Development_LarvaeProc(e ecs.Entity, whoCol ecs.Entity) {
 	// [DEVL-02]
 	if bee.Caste == caste.Undefined && dev.CumulTimeLarva_d == sp.Dev_larvalAge_QueenDetermination_d {
 		colony, _ := s.colonyMap.Get(whoCol)
-		bee.Caste = DetermineCaste_REP(bee.Weight_mg, sp, colony)
+		bee.Caste = determineCaste(bee.Weight_mg, sp, colony)
 		if bee.Caste == caste.Undefined {
 			panic("Assertion violated: undefined caste! (Development_LarvaeProc)")
 		}
@@ -216,8 +216,8 @@ func (s *Development) Development_LarvaeProc(e ecs.Entity, whoCol ecs.Entity) {
 	}
 }
 
-// Development_EggsProc lets an egg hatch into a larva once it is old enough and incubated enough [DEVE].
-func (s *Development) Development_EggsProc(e ecs.Entity) {
+// developEgg lets an egg hatch into a larva once it is old enough and incubated enough [DEVE].
+func (s *development) developEgg(e ecs.Entity) {
 	_, bee, _, _, _, dev := s.beeMap.Get(e)
 	sp := s.speciesMap.Get(bee.SpeciesID)
 	// [DEVE-01] cumulTimeEgg_d and totalLarvaeProduced: never read, removed in step F3.

@@ -17,15 +17,15 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// EmergenceNewQueens lets queens emerge from hibernation, applies winter mortality, lets every queen without
+// queenEmergence lets queens emerge from hibernation, applies winter mortality, lets every queen without
 // a colony search a nest site and founds colonies [EMER].
 //
-// Part of the morning routine [MORN-07], after UpdateFoodsources and UpdateSeasonalEvents.
+// Part of the morning routine [MORN-07], after flowerRefill and seasonalEvents.
 // At ticks = 0 (Setup, [INIT-10]) no queen emerges, so it does not run then.
 //
 // NetLogo: EmergenceNewQueensProc, NestSitesSearchingProc, NestSiteFoodSourceREP, PsithyrusNestSearchProc,
 // CreateColoniesProc.
-type EmergenceNewQueens struct {
+type queenEmergence struct {
 	rng       *rand.Rand
 	ticks     *globals.Ticks
 	file      *params.ParameterFile
@@ -44,7 +44,7 @@ type EmergenceNewQueens struct {
 	foodsourceMap *ecs.Map2[comp.Position, comp.Foodsource]
 }
 
-func (s *EmergenceNewQueens) Initialize(w *ecs.World) {
+func (s *queenEmergence) Initialize(w *ecs.World) {
 	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.ticks = ecs.GetResource[globals.Ticks](w)
 	s.file = ecs.GetResource[params.ParameterFile](w)
@@ -63,7 +63,7 @@ func (s *EmergenceNewQueens) Initialize(w *ecs.World) {
 	s.foodsourceMap = ecs.NewMap2[comp.Position, comp.Foodsource](w)
 }
 
-func (s *EmergenceNewQueens) Update(w *ecs.World) {
+func (s *queenEmergence) Update(w *ecs.World) {
 	ticks := s.ticks.Ticks
 
 	// [EMER-01] emergence, cohorts are split into identical copies (finding 32, see trans/netlogo-findings.md#finding-32)
@@ -86,8 +86,8 @@ func (s *EmergenceNewQueens) Update(w *ecs.World) {
 			fmt.Println("WARNING! Something else than a queen emerged from hibernation! (2)")
 		}
 		// [EMER-03] finding 33 (see trans/netlogo-findings.md#finding-33)
-		if s.file.WinterMortality && s.rng.Float64() > WintermortalityProbREP(bee.Weight_mg, s.speciesMap.Get(bee.SpeciesID)) {
-			s.death.DieProc(w, e, "winter mortality")
+		if s.file.WinterMortality && s.rng.Float64() > winterMortalityProb(bee.Weight_mg, s.speciesMap.Get(bee.SpeciesID)) {
+			s.death.die(w, e, "winter mortality")
 			continue // finding 28 (see trans/netlogo-findings.md#finding-28)
 		}
 		bee.Activity = activity.Resting
@@ -109,29 +109,29 @@ func (s *EmergenceNewQueens) Update(w *ecs.World) {
 		sp := s.speciesMap.Get(bee.SpeciesID)
 		ns := &s.nestSites.BySpecies[bee.SpeciesID]
 		if len(ns.NestsiteFoodsourceList) == 0 {
-			s.death.DieProc(w, e, "no suitable foodsources for nesting exist for "+sp.Name)
+			s.death.die(w, e, "no suitable foodsources for nesting exist for "+sp.Name)
 			continue
 		}
 		if !sp.Parasitic { // speciesName != "Psithyrus" (step F9)
-			s.NestSitesSearchingProc(w, e, sp, ns)
+			s.searchNestSite(w, e, sp, ns)
 		} else {
-			s.PsithyrusNestSearchProc(w, e)
+			s.searchHostColony(w, e)
 		}
 	}
 
 	// [EMER-05]
 	if len(s.collectBees(func(b *comp.Bee) bool { return b.Activity == activity.NestConstruction })) > 0 {
-		s.colonies.CreateColoniesProc(w)
+		s.colonies.found(w)
 	}
 	if len(s.collectBees(func(b *comp.Bee) bool { return b.Activity == activity.NestConstruction })) > 0 {
 		fmt.Println("That's weird - no constructions here, please!")
 	}
 }
 
-func (s *EmergenceNewQueens) Finalize(w *ecs.World) {}
+func (s *queenEmergence) Finalize(w *ecs.World) {}
 
 // collectBees returns all bees for which keep is true, shuffled (decision C, NetLogo: ask bees with [...]).
-func (s *EmergenceNewQueens) collectBees(keep func(b *comp.Bee) bool) []ecs.Entity {
+func (s *queenEmergence) collectBees(keep func(b *comp.Bee) bool) []ecs.Entity {
 	result := []ecs.Entity{}
 	query := s.beeFilter.Query()
 	for query.Next() {
@@ -145,7 +145,7 @@ func (s *EmergenceNewQueens) collectBees(keep func(b *comp.Bee) bool) []ecs.Enti
 
 // copyBee creates n copies of a bee with all its values. NetLogo: hatch n (with a new who number each, not kept
 // since step F12).
-func (s *EmergenceNewQueens) copyBee(e ecs.Entity, n int) {
+func (s *queenEmergence) copyBee(e ecs.Entity, n int) {
 	if n <= 0 {
 		return
 	}
@@ -163,12 +163,12 @@ func (s *EmergenceNewQueens) copyBee(e ecs.Entity, n int) {
 	}
 }
 
-// NestSitesSearchingProc lets a queen search a nest site for one day [NEST].
-func (s *EmergenceNewQueens) NestSitesSearchingProc(w *ecs.World, e ecs.Entity, sp *params.Species, ns *globals.SpeciesNestSites) {
+// searchNestSite lets a queen search a nest site for one day [NEST].
+func (s *queenEmergence) searchNestSite(w *ecs.World, e ecs.Entity, sp *params.Species, ns *globals.SpeciesNestSites) {
 	// [NEST-01]
 	if s.rng.Float64() <= sp.DailyNestSiteChance {
 		// [NEST-02]
-		fsE := s.NestSiteFoodSourceREP(ns)
+		fsE := s.chooseNestSite(ns)
 		fsPos, fs := s.foodsourceMap.Get(fsE)
 		// [NEST-03] a random patch centre within the circle, finding 25 (see trans/netlogo-findings.md#finding-25)
 		candidates := util.PatchCentresWithin(fsPos.X, fsPos.Y, fs.Radius_m*s.landscape.Scaling_NLpatches_per_m,
@@ -187,17 +187,17 @@ func (s *EmergenceNewQueens) NestSitesSearchingProc(w *ecs.World, e ecs.Entity, 
 	}
 	// [NEST-04] finding 26 (see trans/netlogo-findings.md#finding-26)
 	if s.rng.Float64() < s.searchMortality() {
-		s.death.DieProc(w, e, "Queen: died while searching nest site")
+		s.death.die(w, e, "Queen: died while searching nest site")
 	}
 }
 
 // searchMortality returns the probability to die during one day of nest search [NEST-04], [PSI-04].
-func (s *EmergenceNewQueens) searchMortality() float64 {
+func (s *queenEmergence) searchMortality() float64 {
 	return 1 - math.Pow(1-s.derived.MortalityForager_per_s, s.constants.NestSearchTime_h*60*60)
 }
 
-// NestSiteFoodSourceREP chooses a nest site, weighted by area [NSFS].
-func (s *EmergenceNewQueens) NestSiteFoodSourceREP(ns *globals.SpeciesNestSites) ecs.Entity {
+// chooseNestSite chooses a nest site, weighted by area [NSFS].
+func (s *queenEmergence) chooseNestSite(ns *globals.SpeciesNestSites) ecs.Entity {
 	// [NSFS-01] NestsiteFoodsourceList is sorted by who. SIMPLIFY: shuffle not needed for the distribution.
 	list := slices.Clone(ns.NestsiteFoodsourceList)
 	util.Shuffle(s.rng, list)
@@ -215,8 +215,8 @@ func (s *EmergenceNewQueens) NestSiteFoodSourceREP(ns *globals.SpeciesNestSites)
 	return list[len(list)-1]
 }
 
-// PsithyrusNestSearchProc lets a cuckoo bee search a host colony for one day [PSI].
-func (s *EmergenceNewQueens) PsithyrusNestSearchProc(w *ecs.World, e ecs.Entity) {
+// searchHostColony lets a cuckoo bee search a host colony for one day [PSI].
+func (s *queenEmergence) searchHostColony(w *ecs.World, e ecs.Entity) {
 	// [PSI-01] arbitrary values (comments in the NetLogo code)
 	const (
 		findSingleNestProb = 0.05
@@ -239,7 +239,7 @@ func (s *EmergenceNewQueens) PsithyrusNestSearchProc(w *ecs.World, e ecs.Entity)
 	if s.rng.Float64() < findAnyNestProb {
 		if s.rng.Float64() < getAccessProb {
 			if s.rng.Float64() < getKilledProb {
-				s.death.DieProc(w, e, "Psithyrus: killed by Bombus queen")
+				s.death.die(w, e, "Psithyrus: killed by Bombus queen")
 				return
 			}
 			host = colonies[s.rng.IntN(len(colonies))]
@@ -255,13 +255,13 @@ func (s *EmergenceNewQueens) PsithyrusNestSearchProc(w *ecs.World, e ecs.Entity)
 		victims := s.collectBees(func(b *comp.Bee) bool { return b.ColonyID == host && b.Caste == caste.Queen && b.Mated })
 		for _, v := range victims {
 			if v != e && s.rng.Float64() < killQueenProb {
-				s.death.DieProc(w, v, "Queen killed by cuckoo bee!")
+				s.death.die(w, v, "Queen killed by cuckoo bee!")
 			}
 		}
 		return
 	}
 	// [PSI-04]
 	if s.rng.Float64() < s.searchMortality() {
-		s.death.DieProc(w, e, "Psithyrus: died while searching nest")
+		s.death.die(w, e, "Psithyrus: died while searching nest")
 	}
 }

@@ -11,12 +11,12 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-func TestNestHabitatsListREP(t *testing.T) {
+func TestExpandNestHabitats(t *testing.T) {
 	masterpatches := []masterpatch{
 		{patchType: "Grassland"}, {patchType: "Grass_improved"}, {patchType: "Improved_Grassland"},
 		{patchType: "Hedgerow"}, {patchType: "Grassland"},
 	}
-	got, err := NestHabitatsListREP([]string{"Grassland*", "Garden", "Hedgerow"}, masterpatches, rand.New(rand.NewPCG(1, 1)))
+	got, err := expandNestHabitats([]string{"Grassland*", "Garden", "Hedgerow"}, masterpatches, rand.New(rand.NewPCG(1, 1)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,7 +28,7 @@ func TestNestHabitatsListREP(t *testing.T) {
 		t.Errorf("got %q, want %q (in any order)", got, want)
 	}
 	// "*" not at the end gives an assertion
-	if _, err := NestHabitatsListREP([]string{"Gr*ss"}, masterpatches, rand.New(rand.NewPCG(1, 1))); err == nil {
+	if _, err := expandNestHabitats([]string{"Gr*ss"}, masterpatches, rand.New(rand.NewPCG(1, 1))); err == nil {
 		t.Error("expected an error for a '*' that is not at the end")
 	}
 }
@@ -46,7 +46,7 @@ func TestNestSites(t *testing.T) {
 	}
 }
 
-func TestCreateSpeciesExampleFarm(t *testing.T) {
+func TestNestSitesSetupExampleFarm(t *testing.T) {
 	a := newExampleFarmSetup(t, 1)
 	w := a.World
 

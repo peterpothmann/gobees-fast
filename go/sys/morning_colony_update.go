@@ -15,7 +15,7 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// UpdateColonies updates every colony in the morning [UCOL]: range lists, deaths of whole colonies, statistics,
+// colonyUpdate updates every colony in the morning [UCOL]: range lists, deaths of whole colonies, statistics,
 // eusocial phase, switch point, competition point, death of an empty colony.
 //
 // Part of the morning routine [MORN-10]. Initialize runs it also at ticks = 0 [INIT-10] (no colonies exist then).
@@ -23,7 +23,7 @@ import (
 // (never read).
 //
 // NetLogo: UpdateColoniesProc, CompetitionPointDateREP.
-type UpdateColonies struct {
+type colonyUpdate struct {
 	rng       *rand.Rand
 	ticks     *globals.Ticks
 	calendar  *globals.Calendar
@@ -43,7 +43,7 @@ type UpdateColonies struct {
 	beesOf map[ecs.Entity][]ecs.Entity // buffer of beesByColony
 }
 
-func (s *UpdateColonies) Initialize(w *ecs.World) {
+func (s *colonyUpdate) Initialize(w *ecs.World) {
 	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.ticks = ecs.GetResource[globals.Ticks](w)
 	s.calendar = ecs.GetResource[globals.Calendar](w)
@@ -61,7 +61,7 @@ func (s *UpdateColonies) Initialize(w *ecs.World) {
 	s.Update(w) // run at ticks = 0 [INIT-10]
 }
 
-func (s *UpdateColonies) Update(w *ecs.World) {
+func (s *colonyUpdate) Update(w *ecs.World) {
 	// ORDER of the colonies: irrelevant for the state, see [UCOL-01] to [UCOL-11]. Shuffled (decision C).
 	colonies := []ecs.Entity{}
 	query := s.colonyFilter.Query()
@@ -83,11 +83,11 @@ func (s *UpdateColonies) Update(w *ecs.World) {
 	// observers (obs.Counters), step F4.
 }
 
-func (s *UpdateColonies) Finalize(w *ecs.World) {}
+func (s *colonyUpdate) Finalize(w *ecs.World) {}
 
 // updateColony runs [UCOL-01] to [UCOL-11] for one colony. ORDER within the colony: MATTERS
 // (finding 37, see trans/netlogo-findings.md#finding-37).
-func (s *UpdateColonies) updateColony(w *ecs.World, col ecs.Entity, members []ecs.Entity) {
+func (s *colonyUpdate) updateColony(w *ecs.World, col ecs.Entity, members []ecs.Entity) {
 	ticks := s.ticks.Ticks
 	// alive returns the living members for which keep is true (NetLogo: bees with [ colonyID = whoCol ... ]).
 	alive := func(keep func(b *comp.Bee) bool) []ecs.Entity {
@@ -111,7 +111,7 @@ func (s *UpdateColonies) updateColony(w *ecs.World, col ecs.Entity, members []ec
 
 	// [UCOL-01]
 	if s.today.FoodsourcesInFlowerUpdate {
-		s.colonies.FoodsourcesInFlowerAndRangeProc(col)
+		s.colonies.flowersInRange(col)
 	}
 	colony, stores, counts := s.colonyMap.Get(col)
 
@@ -125,13 +125,13 @@ func (s *UpdateColonies) updateColony(w *ecs.World, col ecs.Entity, members []ec
 		for _, e := range ask(func(b *comp.Bee) bool {
 			return b.AdultAge > 10 && (b.Caste == caste.Worker || b.Caste == caste.Queen)
 		}) {
-			s.beeDeath.DieProc(w, e, "Colony death after CP!")
+			s.beeDeath.die(w, e, "Colony death after CP!")
 		}
 	}
 	// [UCOL-03]
 	if stores.EnergyStore_kJ <= 0 {
 		for _, e := range ask(all) {
-			s.beeDeath.DieProc(w, e, "Colony's energy store depleted!")
+			s.beeDeath.die(w, e, "Colony's energy store depleted!")
 		}
 	}
 	// [UCOL-04] adult = brood? false = stage adult, males included (finding 38, see
@@ -142,7 +142,7 @@ func (s *UpdateColonies) updateColony(w *ecs.World, col ecs.Entity, members []ec
 	}
 	if adults == 0 {
 		for _, e := range ask(all) {
-			s.beeDeath.DieProc(w, e, "No adult bees left!")
+			s.beeDeath.die(w, e, "No adult bees left!")
 		}
 	}
 	// get the components again: removing entities is a structural change of the world
@@ -170,7 +170,7 @@ func (s *UpdateColonies) updateColony(w *ecs.World, col ecs.Entity, members []ec
 	if !colony.CompetitionPointDate.IsSet() &&
 		colony.EusocialPhaseDate.IsSet() &&
 		colony.QueenProductionDate.IsSet() {
-		colony.CompetitionPointDate = day.At(CompetitionPointDateREP(colony))
+		colony.CompetitionPointDate = day.At(competitionPointDate(colony))
 	}
 
 	// [UCOL-10] queenright?: never read, removed in step F3
@@ -178,12 +178,12 @@ func (s *UpdateColonies) updateColony(w *ecs.World, col ecs.Entity, members []ec
 	// [UCOL-11]
 	// colonyDeathsEndSeason, colonyDeathsNoBees: read only by [CHK-04], removed in step F4
 	if len(alive(all)) == 0 {
-		s.colDeath.DieProc(w, col, "Colony: No adults or brood left in this colony!")
+		s.colDeath.die(w, col, "Colony: No adults or brood left in this colony!")
 	} // otherwise colonyAge + 1: never read, removed in step F3
 }
 
 // statistics sets the colony statistics from the living members of the colony [UCOL-06].
-func (s *UpdateColonies) statistics(c *comp.ColonyCounts, members []ecs.Entity) {
+func (s *colonyUpdate) statistics(c *comp.ColonyCounts, members []ecs.Entity) {
 	// allAdultMales: read only by [CHK-03], removed in step F4
 	c.AllEggs, c.AllLarvae, c.AllPupae, c.AllAdults, c.AllAdultWorkers = 0, 0, 0, 0, 0
 	for _, e := range members {
@@ -209,10 +209,10 @@ func (s *UpdateColonies) statistics(c *comp.ColonyCounts, members []ecs.Entity) 
 	}
 }
 
-// CompetitionPointDateREP returns the day of the competition point of a colony [CPD].
+// competitionPointDate returns the day of the competition point of a colony [CPD].
 // After the competition point, workers and queens compete for male production: workers become aggressive, lay their own (male) eggs and eat the eggs of others. The model does not simulate this behaviour, only its consequences: after the competition point eggs no longer develop (MortalityBroodProc) and the colony ends once no brood is left [UCOL-02].
 // Both dates must be set.
-func CompetitionPointDateREP(c *comp.Colony) day.Abs {
+func competitionPointDate(c *comp.Colony) day.Abs {
 	// [CPD-01] x: days from the first worker to the first queen-destined eggs (about -5 to 40).
 	// y: days from the first worker to the CP, linear in x (Duchateau & Velthuis 1988, Fig. 6).
 	// The CP is rounded to a whole day (.5 up) and lies at most 45 days after the first worker.

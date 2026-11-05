@@ -12,7 +12,7 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-func TestDetermineCaste_REP(t *testing.T) {
+func TestDetermineCaste(t *testing.T) {
 	// finding 40 (see trans/netlogo-findings.md#finding-40): every female larva becomes a queen
 	sp := terrestris(t)
 	if sp.Dev_Q_DeterminationWeight_mg != 0 {
@@ -20,16 +20,16 @@ func TestDetermineCaste_REP(t *testing.T) {
 	}
 	producing := comp.Colony{QueenProduction: true}
 	for _, w := range []float64{0, 1.5, 10, 600} {
-		if got := DetermineCaste_REP(w, sp, &producing); got != caste.Queen {
+		if got := determineCaste(w, sp, &producing); got != caste.Queen {
 			t.Errorf("weight %v mg, queen production: %v, want queen", w, got)
 		}
-		if got := DetermineCaste_REP(w, sp, &comp.Colony{}); got != caste.Worker {
+		if got := determineCaste(w, sp, &comp.Colony{}); got != caste.Worker {
 			t.Errorf("weight %v mg, no queen production: %v, want worker", w, got)
 		}
 	}
 	heavy := *sp
 	heavy.Dev_Q_DeterminationWeight_mg = 50
-	if got := DetermineCaste_REP(49, &heavy, &producing); got != caste.Worker {
+	if got := determineCaste(49, &heavy, &producing); got != caste.Worker {
 		t.Errorf("weight criterion: %v, want worker", got)
 	}
 }
@@ -70,7 +70,7 @@ func layAndRaise(t *testing.T, queenProduction bool) (bw *broodWorld, eggs ecs.E
 	_, g, _, _, _ := bw.bee(queen)
 	g.AllelesList, g.SpermathecaList = []float64{10, 20}, []float64{30}
 
-	bw.eggs.EgglayingProc(queen)
+	bw.eggs.layEggs(queen)
 	eggs = ecs.Entity{}
 	query := bw.beeFilter().Query()
 	for query.Next() {
@@ -125,7 +125,7 @@ func TestDevelopmentWorkerTimeline(t *testing.T) {
 	if b.Stage != stage.Adult || b.Number != 12 || b.AdultAge != 0 || *th != thresholds(sitWorker) {
 		t.Errorf("new workers: stage %v, number %v, adultAge %v, thresholds %+v", b.Stage, b.Number, b.AdultAge, *th)
 	}
-	if f.Cropvolume_myl != CropAndPelletSizeREP("nectar", b.Weight_mg, bw.sp) || f.GlossaLength_mm != ProboscisLengthREP(b.Weight_mg, bw.sp) {
+	if f.Cropvolume_myl != cropVolume(b.Weight_mg, bw.sp) || f.GlossaLength_mm != proboscisLength(b.Weight_mg, bw.sp) {
 		t.Errorf("crop %v, glossa %v", f.Cropvolume_myl, f.GlossaLength_mm)
 	}
 	if bw.tally.queensEmerged != 0 {
@@ -147,7 +147,7 @@ func TestDevelopmentQueenTimeline(t *testing.T) {
 	if !b.EmergingDate.IsSet() || b.EmergingDate.Day() <= 365 || b.EmergingDate.Day() > 365+305 {
 		t.Errorf("emergingDate %v, want a day in (365, 670]", b.EmergingDate)
 	}
-	if *th != thresholds(sitYoungQueen) || f.PollenPellets_g != CropAndPelletSizeREP("pollen", 980, bw.sp) {
+	if *th != thresholds(sitYoungQueen) || f.PollenPellets_g != pollenLoad(980, bw.sp) {
 		t.Errorf("thresholds %+v, pollen load %v", *th, f.PollenPellets_g)
 	}
 	// event.QueenEmerged for the output (obs.Counters.TotalAdultQueensEverProduced)
@@ -166,7 +166,7 @@ func TestQueenEmergingDateDistribution(t *testing.T) {
 		e := bw.addBrood(col, stage.Pupa, caste.Queen, 1, 40, 980, 100)
 		b, _, _, _, _ := bw.bee(e)
 		b.EmergingDate = day.Date{}
-		bw.dev.Development_PupaeProc(e)
+		bw.dev.developPupa(e)
 		b, _, _, _, _ = bw.bee(e)
 		if !b.EmergingDate.IsSet() || b.EmergingDate.Day() <= 365 || b.EmergingDate.Day() > 670 {
 			t.Fatalf("emergingDate %v outside (365, 670]", b.EmergingDate)

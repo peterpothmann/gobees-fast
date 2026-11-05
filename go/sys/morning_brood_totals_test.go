@@ -14,7 +14,7 @@ import (
 )
 
 // checkWorld is a colonyWorld with a hibernating queen without colony and a colony with its queen, brood, a worker
-// and a male. The colony statistics are set by one UpdateColonies morning.
+// and a male. The colony statistics are set by one colonyUpdate morning.
 func checkWorld(t *testing.T) (*colonyWorld, ecs.Entity) {
 	t.Helper()
 	cw := newColonyWorld(t, 1)
@@ -32,9 +32,9 @@ func checkWorld(t *testing.T) (*colonyWorld, ecs.Entity) {
 	return cw, col
 }
 
-func TestCheckNumbersTotals(t *testing.T) {
+func TestBroodTotals(t *testing.T) {
 	cw, col := checkWorld(t)
-	s := &CheckNumbers{}
+	s := &broodTotals{}
 	s.Initialize(cw.w)
 	got := ecs.GetResource[globals.Totals](cw.w)
 	// [CHK-02] the totals of the colonies of this morning, finding 39 (see trans/netlogo-findings.md#finding-39):
@@ -50,8 +50,8 @@ func TestCheckNumbersTotals(t *testing.T) {
 func TestMorningExampleFarm(t *testing.T) {
 	// The morning systems on the example farm for one year, with the queens of step 3. Without brood and
 	// foraging every colony consists of its queen only and keeps its start energy, so no colony dies.
-	a := newExampleFarmSetup(t, 1, &CreateInitialQueens{}, &Tick{}, &UpdateMorning{}, &UpdateFoodsources{},
-		&EmergenceNewQueens{}, &UpdateColonies{}, &CheckNumbers{})
+	a := newExampleFarmSetup(t, 1, &initialQueensSetup{}, &tick{}, &calendarUpdate{}, &flowerRefill{},
+		&queenEmergence{}, &colonyUpdate{}, &broodTotals{})
 	w := a.World
 	tally := newTally(w) // Setup kills no colony
 	cal := ecs.GetResource[globals.Calendar](w)

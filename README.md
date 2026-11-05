@@ -68,12 +68,40 @@ go run .
 
 This runs the example farm for 365 days and prints a short summary. The example farm is built in
 ([go/input/examplefarm](go/input/examplefarm), converted from `netlogo/_SYSTEM_Example_Farm_Parameters.csv`).
+Other scenarios need a run file (YAML) and its landscape files (see [Run files](#run-files)).
 
-Other scenarios need a run file (YAML) and its landscape files. Paths in the run file are relative to its folder.
+### Command-line arguments
+
+The model (`go/`, `go run .`):
+
+| Flag | Short | Default | Meaning |
+| --- | --- | --- | --- |
+| `--config PATH` | `-c` | the example farm (built in) | run file (YAML). Its landscape files are relative to its folder. |
+| `--seed N` | `-s` | `0` | random seed (NetLogo: `RAND_SEED`). `0` draws a random seed. |
+| `--days N` | | `365` | number of days to run. `0`: no limit, the run ends only when the population is extinct and `StopExtinct?` is true. |
+| `--output` | `-o` | off | write the daily output to `daily_output.csv` in the working directory (`go/`), tab separated. |
+| `--output-file PATH` | `-f` | | write the daily output to `PATH` instead (implies `-o`). Missing folders are created. |
+| `--help` | `-h` | | show all flags. |
 
 ```shell
 go run . -c path/to/run.yaml -s 3 --days 730   # own run file, seed 3, 2 years
+go run . -o                                    # example farm, output in go/daily_output.csv
+go run . -f path/to/output.csv                 # output to any path
 ```
+
+The converter of the NetLogo input files (`tools/netlogo2gobees`, `go run . <command>`, see
+[NetLogo input files](#netlogo-input-files)):
+
+| Command | Flag | Short | Default | Meaning |
+| --- | --- | --- | --- | --- |
+| `convert` | `--parameters PATH` | `-p` | (required) | NetLogo parameter file (`MyParametersFile`). |
+| `convert` | `--dir PATH` | `-d` | `../../netlogo` | folder of the NetLogo input files (the folder of the `.nlogo`). The file names in the parameter file are relative to it. |
+| `convert` | `--map NAME` | `-m` | `_SYSTEM_Example_Farm.png` | map (`MyMap`). The foodsources are read from `<NAME without .png>_Foodsources.txt` in `--dir`. |
+| `convert` | `--out PATH` | `-o` | (required) | folder of the run file and its landscape files, created if missing. |
+| `convert` | `--run NAME` | | `run.yaml` | name of the run file in `--out`. |
+| `generate` | `--root PATH` | | `../..` | root of the repository. Writes the run files of the repository: the example farm (`go/input/examplefarm`) and the scenarios of `go/compare`. |
+
+### Run files
 
 A run file has these sections. Keys of NetLogo values keep their NetLogo names, values are in the unit of the model
 (e.g. seconds).
@@ -105,7 +133,7 @@ foodsources file of the start.
 ```shell
 cd tools/netlogo2gobees
 go run . convert -d ../../netlogo -p ../../netlogo/_SYSTEM_Sussex1_Parameters.csv -m _SYSTEM_Sussex1.png -o sussex
-go run . generate   # the run files of the repository: example farm and the scenarios of go/compare
+go run . generate
 ```
 
 `Weather` is either one of NetLogo's constant options (`"Constant 8 hrs"`, ...: 365 equal values) or the name of a
@@ -117,13 +145,9 @@ other than 0, `MapAreaIncluded` other than `"complete"` (a part of a map is its 
 whose columns `species` and `name` differ. The tests of the converter check
 that the run files of the repository are the conversion of the NetLogo files.
 
-The daily output can be written to a tab-separated file. It holds the totals of `OutputDailyProc` (colonies, queens, males, mean weights, ...), followed by brood, workers, stores, foraging trips, forager deaths, queens produced and the mean competition point date (`obs.DailyOutputExtended`). The CSV reporter of ark-tools adds one row at the end of every tick. Its first column `t` counts from 0, the column `ticks` holds the NetLogo ticks (1 on the first day). The totals of `OutputDailyProc` keep their NetLogo names.
+### Daily output
 
-```shell
-go run . -o                     # writes go/daily_output.csv
-go run . -f path/to/output.csv  # writes to any path, folders are created
-go run . --help                 # all flags
-```
+The daily output (`-o`, `-f`) is a tab-separated file. It holds the totals of `OutputDailyProc` (colonies, queens, males, mean weights, ...), followed by brood, workers, stores, foraging trips, forager deaths, queens produced and the mean competition point date (`obs.DailyOutputExtended`). The CSV reporter of ark-tools adds one row at the end of every tick. Its first column `t` counts from 0, the column `ticks` holds the NetLogo ticks (1 on the first day). The totals of `OutputDailyProc` keep their NetLogo names.
 
 Tests:
 

@@ -43,7 +43,7 @@ func Default(p params.Params, a *app.App) *app.App {
 	// [INIT-11] CreateSignsProc: GUI only, not translated.
 	// [INIT-12] OutputDailyProc: output only, in the observers (obs.DailyOutput) [GO-18].
 	// [INIT-13], [INIT-14]: GUI only, not translated.
-	// [INIT-15] assertion on undefined habitat types: part of CreateFoodsources.
+	// [INIT-15] assertion on undefined habitat types: part of landscapeSetup.
 
 	// ---- Go, one tick = one day.
 	// [GO-01] Assertions are not a system. Violations will panic where they occur (NetLogo: AssertionProc).
