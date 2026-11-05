@@ -79,8 +79,8 @@ func (cw *colonyWorld) addColony(change func(c *comp.Colony, s *comp.ColonyStore
 
 // addBee adds a bee or cohort to a colony. Adult queens are mated.
 func (cw *colonyWorld) addBee(col ecs.Entity, st stage.Stage, c caste.Caste, number, adultAge int) ecs.Entity {
-	b := comp.Bee{Number: number, Stage: st, Brood: st != stage.Adult, Caste: c, Activity: activity.Resting,
-		ColonyID: col, SpeciesID: cw.species, SpeciesName: "B_terrestris", AdultAge: adultAge, Weight_mg: 100,
+	b := comp.Bee{Number: number, Stage: st, Caste: c, Activity: activity.Resting,
+		ColonyID: col, SpeciesID: cw.species, AdultAge: adultAge, Weight_mg: 100,
 		Mated: st == stage.Adult && c == caste.Queen}
 	return cw.beeMap.NewEntity(&comp.Who{Who: cw.who.Next()}, &comp.Position{}, &b, &comp.Genetics{},
 		&comp.Thresholds{}, &comp.Forager{}, &comp.Development{})

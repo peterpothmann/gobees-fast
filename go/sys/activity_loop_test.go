@@ -219,13 +219,14 @@ func TestActivityProcChoice(t *testing.T) {
 			}
 		})
 		e := aw.adult(col, caste.Queen, 1, 800, tc.situation)
+		psithSpecies := addParasiticSpecies(aw.w, aw.sp)
 		b, g, _, _, _ := aw.bee(e)
 		g.AllelesList, g.SpermathecaList = []float64{10, 20}, []float64{30}
 		if tc.situation == sitWorker {
 			b.Caste = caste.Worker
 		}
 		if tc.psithyrus {
-			b.SpeciesName = "Psithyrus"
+			b.SpeciesID = psithSpecies // in the host colony of species aw.species
 		}
 		if tc.noColony {
 			b.ColonyID = ecs.Entity{}

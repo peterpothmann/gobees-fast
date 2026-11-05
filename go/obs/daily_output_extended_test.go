@@ -25,23 +25,29 @@ func TestDailyOutputExtended(t *testing.T) {
 	calendar := ecs.GetResource[globals.Calendar](w)
 	calendar.DailyForagingPeriod_s = 28800
 
+	species := ecs.NewMap1[comp.Species](w)
+	psithyrus := species.NewEntity(&comp.Species{Name: "Psithyrus", Parasitic: true})
+
 	// activity.Hibernate is the zero value: all other bees rest.
 	bees := []ecs.Entity{}
 	for _, b := range []comp.Bee{
 		{Number: 12, Stage: stage.Egg, Activity: activity.Resting},
 		{Number: 10, Stage: stage.Larva, Caste: caste.Worker, Activity: activity.Resting},
 		{Number: 5, Stage: stage.Pupa, Caste: caste.Worker, Activity: activity.Resting},
-		{Number: 3, Stage: stage.Pupa, Caste: caste.Male, Ploidy: 2, Activity: activity.Resting},
+		{Number: 3, Stage: stage.Pupa, Caste: caste.Male, Activity: activity.Resting},
 		{Number: 20, Stage: stage.Adult, Caste: caste.Worker, Activity: activity.Resting},
 		{Number: 1, Stage: stage.Adult, Caste: caste.Worker, Activity: activity.Resting},
 		{Number: 1, Stage: stage.Adult, Caste: caste.Queen, Activity: activity.Resting},
 		{Number: 1, Stage: stage.Adult, Caste: caste.Queen, Mated: true, Activity: activity.Hibernate},
-		{Number: 2, Stage: stage.Adult, Caste: caste.Queen, Mated: true, SpeciesName: "Psithyrus", Activity: activity.Resting},
-		{Number: 4, Stage: stage.Adult, Caste: caste.Male, Ploidy: 1, Activity: activity.Resting},
+		{Number: 2, Stage: stage.Adult, Caste: caste.Queen, Mated: true, SpeciesID: psithyrus, Activity: activity.Resting},
+		{Number: 4, Stage: stage.Adult, Caste: caste.Male, Activity: activity.Resting},
 	} {
 		bees = append(bees, addBee(w, b))
 	}
-	species := ecs.NewMap1[comp.Species](w)
+	// diploid male pupae (2 alleles), haploid adult males (1 allele)
+	genetics := ecs.NewMap1[comp.Genetics](w)
+	genetics.Get(bees[3]).AllelesList = []float64{10, 20}
+	genetics.Get(bees[9]).AllelesList = []float64{10}
 	terrestris := species.NewEntity(&comp.Species{Name: "B_terrestris"})
 	hortorum := species.NewEntity(&comp.Species{Name: "B_hortorum"})
 	pascuorum := species.NewEntity(&comp.Species{Name: "B_pascuorum"})

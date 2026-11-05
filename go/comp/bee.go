@@ -16,15 +16,12 @@ import (
 // Bee holds the state of a bee or cohort.
 type Bee struct {
 	Number         int               // bees in this agent: 1, or the cohort size
-	Stage          stage.Stage       // egg, larva, pupa, adult (decision A)
-	Brood          bool              // brood? true for egg, larva, pupa
+	Stage          stage.Stage       // egg, larva, pupa, adult (decision A). NetLogo brood?: Stage != stage.Adult (step F9)
 	Caste          caste.Caste       // undefined, queen, worker, male
 	Activity       activity.Activity // current task
 	ColonyID       ecs.Entity        // the colony, zero entity for none (NetLogo -1)
-	SpeciesID      ecs.Entity        // the species entity
-	SpeciesName    string            // name of the species
+	SpeciesID      ecs.Entity        // the species entity. NetLogo speciesName: the Name of the species (step F9)
 	Mated          bool              // mated?
-	Ploidy         float64           // 1: haploid male, 2: diploid female or diploid male
 	AdultAge       int               // [d]
 	BroodAge       int               // [d]
 	EmergingDate   day.Date          // day of emergence from hibernation, unset for brood (NetLogo: NotSetLow)
@@ -35,7 +32,7 @@ type Bee struct {
 // Genetics holds the alleles. Allele values are random-float 139.9 (a NetLogo colour, also used for display).
 type Genetics struct {
 	MtDNA           float64
-	AllelesList     []float64 // 1 allele (haploid male) or 2 (female, diploid male)
+	AllelesList     []float64 // 1 allele (haploid male) or 2 (female, diploid male). NetLogo ploidy: len(AllelesList) (step F9)
 	SpermathecaList []float64 // allele(s) of the male the queen mated with
 }
 

@@ -199,8 +199,10 @@ func (s *ActivityLoop) ActivityProc(w *ecs.World, e ecs.Entity) {
 		}
 	}
 
-	// [ACT-04]
-	if b.SpeciesName == "Psithyrus" && (b.Activity == activity.Nursing || b.Activity == activity.PollenForaging || b.Activity == activity.NectarForaging) {
+	// [ACT-04] speciesName = "Psithyrus": the flag of the bee's species (step F9). The task is tested first, so the
+	// species is looked up only for nursing and foraging (no side effects, same result).
+	if (b.Activity == activity.Nursing || b.Activity == activity.PollenForaging || b.Activity == activity.NectarForaging) &&
+		s.speciesMap.Get(b.SpeciesID).Parasitic {
 		b.Activity = activity.Resting
 	}
 

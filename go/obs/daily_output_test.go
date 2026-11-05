@@ -32,10 +32,9 @@ func newWorld(t *testing.T) *ecs.World {
 	return w
 }
 
-// addBee adds a bee with the given values. Adults are no brood.
+// addBee adds a bee with the given values and empty genetics.
 func addBee(w *ecs.World, b comp.Bee) ecs.Entity {
-	b.Brood = b.Stage != stage.Adult
-	return ecs.NewMap1[comp.Bee](w).NewEntity(&b)
+	return ecs.NewMap2[comp.Bee, comp.Genetics](w).NewEntity(&b, &comp.Genetics{})
 }
 
 // addFoodsourceAt adds a foodsource with the given radius at (x, y).
@@ -87,7 +86,7 @@ func TestDailyOutputTotals(t *testing.T) {
 	adults := []ecs.Entity{}
 	query := ecs.NewFilter1[comp.Bee](w).Query()
 	for query.Next() {
-		if !query.Get().Brood {
+		if query.Get().Stage == stage.Adult {
 			adults = append(adults, query.Entity())
 		}
 	}

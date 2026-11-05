@@ -154,6 +154,8 @@ func deriveSpecies(s Species, constants *params.Constants) comp.Species {
 		ChanceFindNest:               s.DailyNestSiteChance,
 		NestHabitatsList:             slices.Clone(s.NestHabitatsList),
 	}
+	// the only place that knows the name of the parasitic species (step F9)
+	sp.Parasitic = sp.Name == "Psithyrus"
 	sp.EmergingDay_sd = util.Round(sp.EmergingDay_sd) // finding 20 (see trans/netlogo-findings.md#finding-20)
 	sp.FlightCosts_kJ_per_m_per_mg = constants.MetabolicRateFlight_W_per_kg / sp.FlightVelocity_m_per_s / (1000 * 1000 * 1000)
 

@@ -76,7 +76,7 @@ func newEmergenceWorld(t *testing.T, seed uint64) *emergenceWorld {
 // addQueen adds a hibernating queen that emerges at the given tick.
 func (ew *emergenceWorld) addQueen(emergingDate day.Abs, number int, weight float64) ecs.Entity {
 	bee := comp.Bee{Number: number, Stage: stage.Adult, Caste: caste.Queen, Activity: activity.Hibernate, Mated: true,
-		Ploidy: 2, SpeciesID: ew.species, SpeciesName: ew.sp.Name, EmergingDate: day.At(emergingDate), Weight_mg: weight}
+		SpeciesID: ew.species, EmergingDate: day.At(emergingDate), Weight_mg: weight}
 	gen := comp.Genetics{AllelesList: []float64{1, 2}, SpermathecaList: []float64{3}}
 	return newBeeMapper(ew.w).NewEntity(&comp.Who{Who: ecs.GetResource[globals.WhoCounter](ew.w).Next()}, &comp.Position{},
 		&bee, &gen, &comp.Thresholds{}, &comp.Forager{}, &comp.Development{})

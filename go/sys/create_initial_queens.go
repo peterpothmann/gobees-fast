@@ -53,16 +53,13 @@ func (s *CreateInitialQueens) Initialize(w *ecs.World) {
 				// [IQUE-03]
 				AdultAge: 180,
 				BroodAge: 36,
-				Brood:    false,
 				Caste:    caste.Queen,
 				Mated:    true,
 				Number:   1,
-				Ploidy:   2,
 				// [IQUE-04]
-				SpeciesID:   speciesE,
-				SpeciesName: sp.Name,
-				Stage:       stage.Adult,
-				Activity:    activity.Hibernate,
+				SpeciesID: speciesE,
+				Stage:     stage.Adult,
+				Activity:  activity.Hibernate,
 				// [IQUE-06] -3599 to 3600 s, no effect (finding 31, see trans/netlogo-findings.md#finding-31)
 				PersonalTime_s: util.RandomInt(rng, 2*3600) + (constants.GetUpTime_s - 3600),
 			}

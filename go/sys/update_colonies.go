@@ -138,9 +138,10 @@ func (s *UpdateColonies) updateColony(w *ecs.World, col ecs.Entity, members []ec
 			s.beeDeath.DieProc(w, e, "Colony's energy store depleted!")
 		}
 	}
-	// [UCOL-04] adult = brood? false, males included (finding 38, see trans/netlogo-findings.md#finding-38)
+	// [UCOL-04] adult = brood? false = stage adult, males included (finding 38, see
+	// trans/netlogo-findings.md#finding-38)
 	adults := 0
-	for _, e := range alive(func(b *comp.Bee) bool { return !b.Brood }) {
+	for _, e := range alive(func(b *comp.Bee) bool { return b.Stage == stage.Adult }) {
 		adults += s.beeMap.Get(e).Number
 	}
 	if adults == 0 {

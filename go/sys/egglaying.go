@@ -67,18 +67,20 @@ func (l *eggLayer) EgglayingProc(e ecs.Entity) []ecs.Entity {
 		// NetLogo shuffles the new cohorts (decision C). One cohort draws no random number.
 		egg := l.hatch(e)
 		eggs = []ecs.Entity{egg}
+		// NetLogo sets the ploidy of the egg (bees-own), only EggsParameterSettingProc reads it. gobees-fast passes
+		// it as a parameter (step F9): diploid = ploidy 2.
 		colony, _ := l.colonyMap.Get(colonyID)
-		_, _, b, _, _, _, _ := l.beeMap.Get(egg)
+		var diploid bool
 		if motherCaste == caste.Queen {
 			if colony.SwitchPointDate.Before(l.ticks.Ticks) {
-				b.Ploidy = 1
+				diploid = false
 			} else {
-				b.Ploidy = 2
+				diploid = true
 			}
 		} else {
-			b.Ploidy = 1 // never run: workers do not lay eggs, see the annotation
+			diploid = false // never run: workers do not lay eggs, see the annotation
 		}
-		l.EggsParameterSettingProc(egg, beesInCohort)
+		l.EggsParameterSettingProc(egg, beesInCohort, diploid)
 		_, stores := l.colonyMap.Get(colonyID)
 		stores.PollenStore_g = stores.PollenStore_g - pollenCost_g
 		stores.EnergyStore_kJ = stores.EnergyStore_kJ - energyCost_kJ
@@ -103,8 +105,8 @@ func (l *eggLayer) hatch(e ecs.Entity) ecs.Entity {
 }
 
 // EggsParameterSettingProc sets the alleles, the caste and the start values of a new egg (cohort) [EGGP]. The egg
-// still holds all values of its mother, and its ploidy is set.
-func (l *eggLayer) EggsParameterSettingProc(e ecs.Entity, beesInCohort int) {
+// still holds all values of its mother. diploid is the ploidy of [EGG-02] (false: 1, true: 2).
+func (l *eggLayer) EggsParameterSettingProc(e ecs.Entity, beesInCohort int, diploid bool) {
 	_, _, b, g, th, f, dev := l.beeMap.Get(e)
 	sp := l.speciesMap.Get(b.SpeciesID)
 
@@ -112,25 +114,22 @@ func (l *eggLayer) EggsParameterSettingProc(e ecs.Entity, beesInCohort int) {
 	myAllelesList := []float64{g.AllelesList[l.rng.IntN(len(g.AllelesList))]}
 	g.AllelesList = myAllelesList
 	b.Caste = caste.Undefined
-	if b.Ploidy == 1 {
+	// assertion Wrong ploidy! (neither 1 nor 2): a bool has no third value (step F9)
+	if !diploid {
 		b.Caste = caste.Male
 	} else {
-		if b.Ploidy != 2 {
-			panic("Wrong ploidy! (EggsParameterSettingProc)")
-		}
 		g.AllelesList = append([]float64{g.SpermathecaList[l.rng.IntN(len(g.SpermathecaList))]}, g.AllelesList...)
 		if l.file.SexLocus && g.AllelesList[0] == g.AllelesList[1] {
 			b.Caste = caste.Male
 		}
 	}
 
-	// [EGGP-02], [EGGP-03] kept from the mother: ColonyID, SpeciesID, SpeciesName, MtDNA (and the position, GUI
-	// only). activityList: GUI log, not translated.
+	// [EGGP-02], [EGGP-03] kept from the mother: ColonyID, SpeciesID (speciesName: from the species), MtDNA (and
+	// the position, GUI only). activityList: GUI log, not translated. brood? true: the stage egg (step F9).
 	g.SpermathecaList = []float64{}
 	b.Number = beesInCohort // totalBeesEverProduced: read only by [CHK-01], removed in step F4
 	b.Activity = activity.Resting
 	b.AdultAge = 0
-	b.Brood = true
 	b.BroodAge = 0
 	dev.CumulTimeLarva_d = 0
 	f.Cropvolume_myl = 0

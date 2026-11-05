@@ -112,6 +112,16 @@ func TestDeriveSpecies(t *testing.T) {
 			t.Errorf("%s: emergingDay_sd = %v, want %v", name, got, want)
 		}
 	}
+
+	// step F9: only Psithyrus is parasitic, by its name
+	for name, sp := range species {
+		if got := deriveSpecies(sp, &constants).Parasitic; got != (name == "Psithyrus") {
+			t.Errorf("%s: Parasitic = %v", name, got)
+		}
+	}
+	if _, ok := species["Psithyrus"]; !ok {
+		t.Error("the example species have no Psithyrus row")
+	}
 }
 
 func TestBuildSpeciesOrder(t *testing.T) {

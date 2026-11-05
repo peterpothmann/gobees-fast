@@ -63,17 +63,13 @@ func (s *Development) Update(w *ecs.World) {
 			if bee.AdultAge > 700 {
 				panic("Assertion violated: Bee with 2 hibernations!")
 			}
-			if bee.Brood {
-				panic("Assertion violated: adult bee with brood? = true (DevelopmentProc)")
-			}
+			// assertion adult bee with brood? = true: brood? is the stage since step F9, it cannot fail
 			s.Development_Mortality_AdultsProc(w, e)
 			continue
 		}
 		// [DEV-03] a switch on the stage at the start: each bee advances at most one stage per day
 		bee.BroodAge = bee.BroodAge + 1
-		if !bee.Brood {
-			panic("Assertion violated: brood with brood? = false (DevelopmentProc)")
-		}
+		// assertion brood with brood? = false: brood? is the stage since step F9, it cannot fail
 		switch bee.Stage {
 		case stage.Pupa:
 			s.Development_PupaeProc(e)
@@ -131,7 +127,6 @@ func (s *Development) Development_PupaeProc(e ecs.Entity) {
 	if bee.Caste == caste.Worker {
 		if dev.CumulIncubationReceived_kJ >= sp.DevIncubationEmergingTH_kJ && float64(bee.BroodAge) >= sp.DevAgeEmergingMin_d {
 			bee.Stage = stage.Adult
-			bee.Brood = false
 			forager.Cropvolume_myl = CropAndPelletSizeREP("nectar", bee.Weight_mg, sp)
 			forager.PollenPellets_g = CropAndPelletSizeREP("pollen", bee.Weight_mg, sp)
 			*th = thresholds(sitWorker)
@@ -142,7 +137,6 @@ func (s *Development) Development_PupaeProc(e ecs.Entity) {
 	// [DEVP-03] males get no crop, pollen load, thresholds or proboscis
 	if bee.Caste == caste.Male {
 		if dev.CumulIncubationReceived_kJ >= sp.DevIncubationEmergingTH_kJ && float64(bee.BroodAge) >= sp.DevAgeEmergingMin_d {
-			bee.Brood = false
 			bee.Stage = stage.Adult
 		}
 	}
@@ -158,7 +152,6 @@ func (s *Development) Development_PupaeProc(e ecs.Entity) {
 				bee.EmergingDate = day.At(yearStartSeason + day.Abs(util.Round(util.RandomNormal(s.rng, sp.EmergingDay_mean, sp.EmergingDay_sd))))
 			}
 			bee.Stage = stage.Adult
-			bee.Brood = false
 			s.queenEmerged.Emit(e) // totalAdultQueensEverProduced: output only, counted by the observers (step F4)
 			forager.Cropvolume_myl = CropAndPelletSizeREP("nectar", bee.Weight_mg, sp)
 			forager.PollenPellets_g = CropAndPelletSizeREP("pollen", bee.Weight_mg, sp)

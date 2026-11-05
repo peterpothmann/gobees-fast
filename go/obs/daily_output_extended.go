@@ -1,6 +1,8 @@
 package obs
 
 import (
+	"slices"
+
 	"gobees/comp"
 	"gobees/enum/activity"
 	"gobees/enum/caste"
@@ -43,9 +45,10 @@ type DailyOutputExtended struct {
 	daily       DailyOutput
 	counters    Counters
 	calendar    ecs.Resource[globals.Calendar]
-	bees        *ecs.Filter1[comp.Bee]
+	bees        *ecs.Filter2[comp.Bee, comp.Genetics]
 	colonies    *ecs.Filter2[comp.Colony, comp.ColonyStores]
 	species     *ecs.Map1[comp.Species]
+	allSpecies  *ecs.Filter1[comp.Species]
 	foodsources *ecs.Filter1[comp.Foodsource]
 	stocks      *ecs.Filter1[comp.FoodsourceState]
 	badgers     *ecs.Filter1[comp.Badger]
@@ -58,9 +61,10 @@ func (o *DailyOutputExtended) Initialize(w *ecs.World) {
 	o.daily.Initialize(w)
 	o.counters.Initialize(w)
 	o.calendar = ecs.NewResource[globals.Calendar](w)
-	o.bees = ecs.NewFilter1[comp.Bee](w)
+	o.bees = ecs.NewFilter2[comp.Bee, comp.Genetics](w)
 	o.colonies = ecs.NewFilter2[comp.Colony, comp.ColonyStores](w)
 	o.species = ecs.NewMap1[comp.Species](w)
+	o.allSpecies = ecs.NewFilter1[comp.Species](w)
 	o.foodsources = ecs.NewFilter1[comp.Foodsource](w)
 	o.stocks = ecs.NewFilter1[comp.FoodsourceState](w)
 	o.badgers = ecs.NewFilter1[comp.Badger](w)
@@ -79,10 +83,19 @@ func (o *DailyOutputExtended) Header() []string {
 func (o *DailyOutputExtended) Values(w *ecs.World) []float64 {
 	n := copy(o.values, o.daily.Values(w))
 
+	// the species with Parasitic (Psithyrus), usually 0 or 1
+	var parasitic []ecs.Entity
+	spq := o.allSpecies.Query()
+	for spq.Next() {
+		if spq.Get().Parasitic {
+			parasitic = append(parasitic, spq.Entity())
+		}
+	}
+
 	var eggs, larvae, pupae, workers, males, youngQueens, hibernating, beeAgents, diploidMales, psithyrus float64
 	bq := o.bees.Query()
 	for bq.Next() {
-		b := bq.Get()
+		b, g := bq.Get()
 		beeAgents++
 		switch b.Stage {
 		case stage.Egg:
@@ -104,10 +117,12 @@ func (o *DailyOutputExtended) Values(w *ecs.World) []float64 {
 		if b.Activity == activity.Hibernate {
 			hibernating += float64(b.Number)
 		}
-		if b.Caste == caste.Male && b.Ploidy == 2 {
+		// NetLogo: ploidy = 2, the number of alleles since step F9
+		if b.Caste == caste.Male && len(g.AllelesList) == 2 {
 			diploidMales += float64(b.Number)
 		}
-		if b.SpeciesName == "Psithyrus" {
+		// NetLogo: speciesName = "Psithyrus", the flag of the species since step F9
+		if slices.Contains(parasitic, b.SpeciesID) {
 			psithyrus += float64(b.Number)
 		}
 	}
