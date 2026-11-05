@@ -161,7 +161,7 @@ func (o *DailyOutputExtended) Values(w *ecs.World) []float64 {
 		badgers, foodsources, beeAgents, diploidMales,
 	}
 	values = append(values, perSpecies...)
-	values = append(values, psithyrus, o.calendar.Get().DailyForagingPeriod_s, counters.TotalHibernatingQueensEverRemoved,
+	values = append(values, psithyrus, o.calendar.Get().DailyForagingPeriod_s, float64(counters.TotalHibernatingQueensEverRemoved),
 		foragerDeaths, counters.TotalAdultQueensEverProduced, meanCP)
 	copy(o.values[n:], values)
 	return o.values

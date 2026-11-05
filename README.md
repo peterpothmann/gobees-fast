@@ -1,9 +1,9 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/logo/gobees-logo-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="docs/logo/gobees-logo-light.svg">
-  <img alt="gobees" src="docs/logo/gobees-logo-light.svg" width="560">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/logo/gobees-fast-logo-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/logo/gobees-fast-logo-light.svg">
+  <img alt="gobees-fast" src="docs/logo/gobees-fast-logo-light.svg" width="720">
 </picture>
 
 [![Tests](https://github.com/peterpothmann/gobees-fast/actions/workflows/tests.yml/badge.svg)](https://github.com/peterpothmann/gobees-fast/actions/workflows/tests.yml)

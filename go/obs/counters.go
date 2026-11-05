@@ -25,7 +25,7 @@ type Counters struct {
 	// TotalHibernatingQueensEverRemoved adds up the planned number of queens to kill on 1 January [SEAS-03], not
 	// the removed number: max(0, hibernating queens of the previous evening - MaxHibernatingQueens). Added at the
 	// end of day 1, as NetLogo adds it in the morning of day 1.
-	TotalHibernatingQueensEverRemoved float64
+	TotalHibernatingQueensEverRemoved int
 	// TotalForagersEverDiedForaging adds up the bees that died on a foraging trip [COST-01], [COST-02]. Not in
 	// NetLogo.
 	TotalForagersEverDiedForaging float64
@@ -47,7 +47,7 @@ type Counters struct {
 
 	tripsToday        float64 // trips since the last Update
 	deadColoniesToday int     // colonies removed since the last Update
-	queensToBeRemoved float64 // planned number of [SEAS-03] for the next day 1
+	queensToBeRemoved int     // planned number of [SEAS-03] for the next day 1
 }
 
 func (c *Counters) Initialize(w *ecs.World) {
@@ -118,11 +118,11 @@ func (c *Counters) Finalize(w *ecs.World) {}
 // planQueenRemoval sets the number of queens that [SEAS-03] plans to kill on the next day 1, from the hibernating
 // queens of this evening (TotalHibernatingQueens of OutputDailyProc).
 func (c *Counters) planQueenRemoval() {
-	hibernating := 0.0
+	hibernating := 0
 	query := c.beeFilter.Query()
 	for query.Next() {
 		if b := query.Get(); b.Activity == activity.Hibernate {
-			hibernating += float64(b.Number)
+			hibernating += b.Number
 		}
 	}
 	c.queensToBeRemoved = max(0, hibernating-c.file.MaxHibernatingQueens)
