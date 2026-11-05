@@ -7,8 +7,6 @@ import (
 	"io"
 	"reflect"
 
-	"gobees/day"
-	"gobees/globals"
 	"gobees/params"
 
 	"go.yaml.in/yaml/v3"
@@ -28,7 +26,7 @@ type Config struct {
 
 	// InitialQueens are the species and their initial queens, in this order [QINI] (NetLogo:
 	// BeeSpeciesInitialQueensListAsString).
-	InitialQueens []globals.SpeciesQueens `yaml:"initial_queens"`
+	InitialQueens []params.SpeciesQueens `yaml:"initial_queens"`
 
 	// ForagingPeriod_s is the foraging period per day of the year [s], 365 values per year, for one or more years.
 	// The years repeat [FPER] (NetLogo: Weather).
@@ -63,44 +61,9 @@ func (y Year) MarshalYAML() (any, error) {
 	return flowNode([]float64(y))
 }
 
-// Species are the values of one bee species in a run file [SPEC-03], before the derived values. The keys are the
-// column names of the NetLogo BeespeciesFile.
-type Species struct {
-	// Name is the name in InitialQueens [SPEC-02], [IQUE-04]. NetLogo has two columns, species (compared with the
-	// initial queens) and name (stored), equal in all files. The converter checks that they are equal (step F13).
-	Name string `yaml:"name"`
-	// Parasitic marks a cuckoo bumblebee species (Psithyrus) [ACT-04], [EMER-04], [PSI]. NetLogo compares the name
-	// with "Psithyrus", the converter sets the key for this name (step F13).
-	Parasitic                    bool       `yaml:"parasitic,omitempty"`
-	EmergingDay_mean             float64    `yaml:"emergingDay_mean"`
-	EmergingDay_sd               float64    `yaml:"emergingDay_sd"`
-	NestHabitatsList             []string   `yaml:"nestHabitatsList"` // [SPEC-04] before the expansion
-	Proboscis_min_mm             float64    `yaml:"proboscis_min_mm"`
-	Proboscis_max_mm             float64    `yaml:"proboscis_max_mm"`
-	GrowthFactor                 float64    `yaml:"growthFactor"`
-	SeasonStop                   day.OfYear `yaml:"seasonStop"`
-	MaxLifespanWorkers           int        `yaml:"maxLifespanWorkers"`
-	Batchsize                    int        `yaml:"batchsize"`
-	FlightVelocity_m_per_s       float64    `yaml:"flightVelocity_m/s"`
-	SearchLength_m               float64    `yaml:"searchLength_m"`
-	TimeUnloading                float64    `yaml:"timeUnloading"`
-	SpecMax_cropVolume_myl       float64    `yaml:"specMax_cropVolume_myl"`
-	SpecMax_pollenPellets_g      float64    `yaml:"specMax_pollenPellets_g"`
-	MinToMaxFactor               float64    `yaml:"minToMaxFactor"`
-	DevAgeHatchingMin_d          float64    `yaml:"devAgeHatchingMin_d"`
-	DevAgePupationMin_d          float64    `yaml:"devAgePupationMin_d"`
-	DevAgeEmergingMin_d          float64    `yaml:"devAgeEmergingMin_d"`
-	DevWeightEgg_mg              float64    `yaml:"devWeightEgg_mg"`
-	DevWeightPupationMin_mg      float64    `yaml:"devWeightPupationMin_mg"`
-	DevWeightPupationMax_mg      float64    `yaml:"devWeightPupationMax_mg"`
-	PollenToBodymassFactor       float64    `yaml:"pollenToBodymassFactor"`
-	Dev_Q_DeterminationWeight_mg float64    `yaml:"dev_Q_DeterminationWeight_mg"`
-	DevAge_Q_PupationMin_d       float64    `yaml:"devAge_Q_PupationMin_d"`
-	DevWeight_Q_PupationMin_mg   float64    `yaml:"devWeight_Q_PupationMin_mg"`
-	DevWeight_Q_PupationMax_mg   float64    `yaml:"devWeight_Q_PupationMax_mg"`
-	DevAge_Q_EmergingMin_d       float64    `yaml:"devAge_Q_EmergingMin_d"`
-	DailyNestSiteChance          float64    `yaml:"dailyNestSiteChance"`
-}
+// Species are the values of one bee species in a run file [SPEC-03]. Since step F14 the type is params.SpeciesFile,
+// which params.Species embeds.
+type Species = params.SpeciesFile
 
 // Landscape is the content of a landscape file (YAML) [FSRC-02] to [FSRC-04] (NetLogo: foodsources file).
 type Landscape struct {

@@ -40,11 +40,11 @@ The reference is written in NetLogo 5.3.1.
 
 | Folder         | Content                                                         |
 | -------------- | --------------------------------------------------------------- |
-| `go/model`     | system order of setup and one simulated day                     |
-| `go/sys`       | systems, one per NetLogo procedure                              |
+| `go/schedule`  | system order of setup and one simulated day                     |
+| `go/sys`       | 4 systems (Setup, Morning, Day, Evening), their parts one per NetLogo procedure |
 | `go/comp`      | components of the entities (bees, colonies, foodsources, ...)   |
-| `go/globals`   | global state of the model                                       |
-| `go/params`    | parameters and the content of the input files                   |
+| `go/globals`   | global state of the run (changes during the run)                |
+| `go/params`    | parameters, the content of the input files and the values derived from them (read-only during the run) |
 | `go/input`     | reader of the run files (YAML), the built-in example farm       |
 | `go/util`      | functions that mirror NetLogo reporters                         |
 | `go/obs`       | observers of the model output                                   |

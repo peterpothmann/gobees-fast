@@ -1,8 +1,3 @@
-// Package comp contains the ECS components.
-//
-// Naming: fields keep the NetLogo variable names with the first letter in upper case, so they can be found
-// in the NetLogo code. "?" is dropped, "/" becomes "_per_" (as in package params).
-// References to other agents (NetLogo: who numbers) are ecs.Entity. Agents keep no who number (step F12). NetLogo -1 ("nobody") is the zero entity.
 package comp
 
 import (
@@ -54,59 +49,4 @@ type Layer struct {
 	Masterpatch       bool         // true for the first surviving layer of a flower patch [LAYR-08]
 	MasterpatchID     ecs.Entity   // the masterpatch of this layer's flower patch, itself for a masterpatch
 	LayersInPatchList []ecs.Entity // all layers of the same flower patch, sorted by who (= order of creation) [LAYR-10], finding 15 (see trans/netlogo-findings.md#finding-15), fixed in step F5
-}
-
-// Species holds the parameters of one bee species. Not a component since step F11: the species lie in
-// params.Input.Species, bees and colonies hold their index. Read-only during the run. The values that depend on the
-// landscape are in globals.NestSites.
-//
-// NetLogo: species-own (oneSpecies agents), created in CreateSpeciesProc [SPEC].
-type Species struct {
-	Name string
-	// Parasitic is true for the cuckoo bumblebees (Psithyrus): they rest instead of nursing and foraging [ACT-04]
-	// and take over a host colony [EMER-04], [PSI]. NetLogo compares the name with "Psithyrus" at these places.
-	// The key parasitic of the run file (step F13), before: derived from the name in input.deriveSpecies (step F9).
-	Parasitic                          bool
-	MaxLifespanWorkers                 int
-	EmergingDay_mean                   float64
-	EmergingDay_sd                     float64 // rounded [SPEC-03]
-	Batchsize                          int
-	FlightVelocity_m_per_s             float64
-	FlightCosts_kJ_per_m_per_mg        float64 // derived from MetabolicRateFlight_W/kg
-	SearchLength_m                     float64
-	SeasonStop                         day.OfYear
-	TimeUnloading                      float64
-	SpecMax_cropVolume_myl             float64
-	SpecMax_pollenPellets_g            float64
-	NestHabitatsList                   []string // as in the file, the expansion [SPEC-04] is in globals.NestSites
-	MinToMaxFactor                     float64
-	DevAgeHatchingMin_d                float64
-	DevAgePupationMin_d                float64
-	DevAgeEmergingMin_d                float64
-	DevWeightEgg_mg                    float64
-	DevWeightPupationMin_mg            float64
-	DevWeightPupationMax_mg            float64
-	PollenToBodymassFactor             float64
-	Dev_Q_DeterminationWeight_mg       float64
-	DevAge_Q_PupationMin_d             float64
-	DevWeight_Q_PupationMin_mg         float64
-	DevWeight_Q_PupationMax_mg         float64
-	DevAge_Q_EmergingMin_d             float64
-	GrowthFactor                       float64
-	Proboscis_min_mm                   float64
-	Proboscis_max_mm                   float64
-	ChanceFindNest                     float64 // column dailyNestSiteChance
-	DevQuotaIncubationToday_kJ         float64 // [SPEC-05] and following: derived
-	DevAgeHatchingMax_d                float64
-	DevAgePupationMax_d                float64
-	DevAgeEmergingMax_d                float64
-	DevIncubationHatchingTH_kJ         float64
-	DevIncubationPupationTH_kJ         float64
-	DevIncubationEmergingTH_kJ         float64
-	Dev_larvalAge_QueenDetermination_d int
-	DevAge_Q_PupationMax_d             float64
-	DevAge_Q_EmergingMax_d             float64
-	DevIncubation_Q_PupationTH_kJ      float64
-	DevIncubation_Q_EmergingTH_kJ      float64
-	MinPollenStore_g                   float64 // [SPEC-07]
 }

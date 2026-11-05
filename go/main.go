@@ -8,9 +8,9 @@ import (
 
 	"gobees/globals"
 	"gobees/input"
-	"gobees/model"
 	"gobees/obs"
 	"gobees/params"
+	"gobees/schedule"
 
 	"github.com/alecthomas/kong"
 	"github.com/mlange-42/ark-tools/reporter"
@@ -74,7 +74,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	a := model.Default(p, nil)
+	a := schedule.Default(p, nil)
 	// after all model systems: colonies founded and bees died for the summary below (the benchmark reads it)
 	counters := obs.Counters{}
 	a.AddSystem(&counters)
@@ -93,7 +93,7 @@ func main() {
 	a.Run()
 
 	ticks := ecs.GetResource[globals.Ticks](a.World)
-	derived := ecs.GetResource[globals.Derived](a.World)
+	derived := ecs.GetResource[params.Derived](a.World)
 	fmt.Printf("species: %v\n", derived.BeeSpeciesInitialQueensList)
 	fmt.Printf("colonies founded: %v, bees died: %v\n", counters.TotalColoniesEverProduced, counters.TotalBeesEverDied)
 	fmt.Printf("finished after %d days\n", ticks.Ticks)

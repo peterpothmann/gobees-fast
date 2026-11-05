@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"slices"
 
-	"gobees/comp"
-	"gobees/globals"
 	"gobees/params"
 	"gobees/util"
 )
@@ -32,7 +30,7 @@ func Build(c Config, landscapes map[string]Landscape) (params.Params, error) {
 	if err != nil {
 		return p, err
 	}
-	in.Derived = globals.Derived{
+	in.Derived = params.Derived{
 		BeeSpeciesInitialQueensList: slices.Clone(c.InitialQueens),
 		SpeciesList:                 species,
 		MortalityForager_per_s:      mortality,
@@ -102,11 +100,11 @@ func mortalityForager(model string) (float64, error) {
 
 // weather checks the foraging periods of the run file: at least one year, 365 values per year, each from 0 to
 // 86400 s.
-func weather(years []Year) (globals.Weather, error) {
+func weather(years []Year) (params.Weather, error) {
 	if len(years) == 0 {
-		return globals.Weather{}, fmt.Errorf("foraging_period_s: at least one year is needed")
+		return params.Weather{}, fmt.Errorf("foraging_period_s: at least one year is needed")
 	}
-	w := globals.Weather{Years_s: make([][]float64, len(years))}
+	w := params.Weather{Years_s: make([][]float64, len(years))}
 	for i, y := range years {
 		if len(y) != daysPerYear {
 			return w, fmt.Errorf("foraging_period_s: year %d has %d days, expected %d", i+1, len(y), daysPerYear)
@@ -123,39 +121,10 @@ func weather(years []Year) (globals.Weather, error) {
 
 // deriveSpecies returns the species of the run file with the derived values [SPEC-03], [SPEC-05], [SPEC-07].
 // NestHabitatsList is not yet expanded [SPEC-04].
-func deriveSpecies(s Species, constants *params.Constants) comp.Species {
-	sp := comp.Species{
-		Name:                         s.Name,
-		Parasitic:                    s.Parasitic,
-		MaxLifespanWorkers:           s.MaxLifespanWorkers,
-		EmergingDay_mean:             s.EmergingDay_mean,
-		EmergingDay_sd:               s.EmergingDay_sd,
-		Batchsize:                    s.Batchsize,
-		FlightVelocity_m_per_s:       s.FlightVelocity_m_per_s,
-		SearchLength_m:               s.SearchLength_m,
-		SeasonStop:                   s.SeasonStop,
-		TimeUnloading:                s.TimeUnloading,
-		SpecMax_cropVolume_myl:       s.SpecMax_cropVolume_myl,
-		SpecMax_pollenPellets_g:      s.SpecMax_pollenPellets_g,
-		MinToMaxFactor:               s.MinToMaxFactor,
-		DevAgeHatchingMin_d:          s.DevAgeHatchingMin_d,
-		DevAgePupationMin_d:          s.DevAgePupationMin_d,
-		DevAgeEmergingMin_d:          s.DevAgeEmergingMin_d,
-		DevWeightEgg_mg:              s.DevWeightEgg_mg,
-		DevWeightPupationMin_mg:      s.DevWeightPupationMin_mg,
-		DevWeightPupationMax_mg:      s.DevWeightPupationMax_mg,
-		PollenToBodymassFactor:       s.PollenToBodymassFactor,
-		Dev_Q_DeterminationWeight_mg: s.Dev_Q_DeterminationWeight_mg,
-		DevAge_Q_PupationMin_d:       s.DevAge_Q_PupationMin_d,
-		DevWeight_Q_PupationMin_mg:   s.DevWeight_Q_PupationMin_mg,
-		DevWeight_Q_PupationMax_mg:   s.DevWeight_Q_PupationMax_mg,
-		DevAge_Q_EmergingMin_d:       s.DevAge_Q_EmergingMin_d,
-		GrowthFactor:                 s.GrowthFactor,
-		Proboscis_min_mm:             s.Proboscis_min_mm,
-		Proboscis_max_mm:             s.Proboscis_max_mm,
-		ChanceFindNest:               s.DailyNestSiteChance,
-		NestHabitatsList:             slices.Clone(s.NestHabitatsList),
-	}
+func deriveSpecies(s Species, constants *params.Constants) params.Species {
+	// the values of the run file as they are (a copy, NestHabitatsList cloned), then the derived values (step F14)
+	sp := params.Species{SpeciesFile: s}
+	sp.NestHabitatsList = slices.Clone(s.NestHabitatsList)
 	sp.EmergingDay_sd = util.Round(sp.EmergingDay_sd) // finding 20 (see trans/netlogo-findings.md#finding-20)
 	sp.FlightCosts_kJ_per_m_per_mg = constants.MetabolicRateFlight_W_per_kg / sp.FlightVelocity_m_per_s / (1000 * 1000 * 1000)
 

@@ -1,8 +1,3 @@
-// Package params contains the model parameters as ECS resources.
-//
-// Naming: fields keep the NetLogo names, so they can be found in the NetLogo code.
-// Characters that are invalid in Go are replaced: "?" is dropped, "/" becomes "_per_".
-// Numbers are float64 like in NetLogo. Conversions to integers happen where NetLogo converts.
 package params
 
 import (
@@ -71,6 +66,8 @@ func (p *Params) Apply(w *ecs.World) {
 	ecs.AddResource(w, &pCopy.File)
 	ecs.AddResource(w, &pCopy.Output)
 	ecs.AddResource(w, &pCopy.Input)
+	ecs.AddResource(w, &pCopy.Input.Derived) // [INIT-05] ParametersProc, see package input
+	ecs.AddResource(w, &pCopy.Input.Weather) // [FPER]
 	ecs.AddResource(w, &pCopy.Constants)
 	ecs.AddResource(w, &pCopy.Termination)
 }
