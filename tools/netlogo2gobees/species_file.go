@@ -13,6 +13,10 @@ import (
 // by the keys of input.Species, which are the NetLogo column names. gobees-fast selects the species of the initial
 // queens [SPEC-02] and derives the other values [SPEC-05], [SPEC-07] when it reads the run file.
 // nestHabitatsList is as in the file, not yet expanded [SPEC-04].
+//
+// Step F13: the column species (compared with the initial queens [SPEC-02]) must equal the column name (stored), so
+// that the run file needs only the key name. The key parasitic is set for the species named Psithyrus, which
+// NetLogo recognises by its name [ACT-04], [EMER-04].
 func parseSpeciesFile(r io.Reader) ([]input.Species, error) {
 	t, err := readCSVTable(r)
 	if err != nil {
@@ -44,6 +48,8 @@ func parseSpeciesFile(r io.Reader) ([]input.Species, error) {
 					return nil, err
 				}
 				field.SetInt(int64(n))
+			case reflect.Bool: // parasitic: no column, set below
+				continue
 			case reflect.Slice: // nestHabitatsList, a list literal
 				cell, err := t.cell(row, column)
 				if err != nil {
@@ -58,6 +64,14 @@ func parseSpeciesFile(r io.Reader) ([]input.Species, error) {
 				return nil, fmt.Errorf("unsupported field type %s of %s", field.Kind(), f.Name)
 			}
 		}
+		species, err := t.cell(row, "species")
+		if err != nil {
+			return nil, err
+		}
+		if species != s.Name {
+			return nil, fmt.Errorf("species %q has the name %q: gobees-fast needs both equal", species, s.Name)
+		}
+		s.Parasitic = s.Name == "Psithyrus"
 		result = append(result, s)
 	}
 	return result, nil

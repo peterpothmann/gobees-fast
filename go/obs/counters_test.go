@@ -62,7 +62,7 @@ func TestCountersDeadColoniesNewYear(t *testing.T) {
 	// [UCOL-12] on 1 January the dead colonies are removed unless KeepDeadColonies?, also those of that day
 	for _, keep := range []bool{false, true} {
 		w := newWorld(t)
-		ecs.GetResource[params.ParameterFile](w).KeepDeadColonies = keep
+		ecs.GetResource[params.Output](w).KeepDeadColonies = keep
 		calendar := ecs.GetResource[globals.Calendar](w)
 		c := Counters{}
 		c.Initialize(w)

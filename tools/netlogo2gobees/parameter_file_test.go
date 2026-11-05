@@ -19,9 +19,7 @@ var wantExampleFarmParameters = netLogoParameters{
 		ForagingMortalityFactor:            1,
 		ForagingMortalityModel:             "high",
 		InitialQueensModifierBehaviorSpace: 1,
-		KeepDeadColonies:                   true,
 		Lambda_detectProb:                  -0.005,
-		MapAreaIncluded:                    "complete",
 		MaxHibernatingQueens:               10000,
 		MergeHedges:                        true,
 		MinSizeFoodSources:                 true,
@@ -38,6 +36,7 @@ var wantExampleFarmParameters = netLogoParameters{
 	FlowerspeciesFile:                   "_SYSTEM_Flowerspecies.csv", // column name "FlowerspeciesFile " with trailing blank
 	HabitatsFile:                        "_SYSTEM_Habitats.csv",
 	Weather:                             "Constant 8 hrs",
+	KeepDeadColonies:                    true, // output option since step F13
 }
 
 // wantSystemParameters holds every value of _SYSTEM_Parameters.csv that the model reads. The file differs from the
@@ -93,6 +92,7 @@ func TestParseParameterFileErrors(t *testing.T) {
 		"boolean expected":                       "StopExtinct?\n1\n",
 		"no value row":                           "Weather\n",
 		"removed parameter with another value":   "COLONIES_IBM\n10\n",
+		"part of the map (step F13)":             "MapAreaIncluded\n\"\"\"top half\"\"\"\n",
 	}
 	for name, csv := range cases {
 		if _, err := ParseParameterFile(strings.NewReader(csv)); err == nil {
@@ -103,7 +103,8 @@ func TestParseParameterFileErrors(t *testing.T) {
 
 func TestParseParameterFileRemovedParameter(t *testing.T) {
 	// COLONIES_IBM: individual-based colonies are removed (step F1). The NetLogo files keep the column with 0.
-	p, err := ParseParameterFile(strings.NewReader("COLONIES_IBM,N_Badgers\n0,2\n"))
+	// MapAreaIncluded: only "complete" (step F13).
+	p, err := ParseParameterFile(strings.NewReader("COLONIES_IBM,MapAreaIncluded,N_Badgers\n0,\"\"\"complete\"\"\",2\n"))
 	if err != nil {
 		t.Fatal(err)
 	}

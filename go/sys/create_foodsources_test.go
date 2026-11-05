@@ -15,34 +15,6 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-func TestInsideMapArea(t *testing.T) {
-	world := &params.World{MaxPxcor: 300, MaxPycor: 210}
-	// [FSRC-08] half of the world: x 150, y 105. Points on the border follow the NetLogo comparisons.
-	cases := []struct {
-		area string
-		x, y float64
-		want bool
-	}{
-		{"complete", 299, 1, true},
-		{"top left quarter", 150, 105, true},
-		{"top left quarter", 150.1, 105, false},
-		{"top right quarter", 150, 200, false},
-		{"top right quarter", 151, 105, true},
-		{"bottom left quarter", 150, 104.9, true},
-		{"bottom left quarter", 150, 105, false},
-		{"bottom right quarter", 151, 104, true},
-		{"top half", 0, 105, true},
-		{"bottom half", 0, 105, false},
-		{"left half", 150, 0, true},
-		{"right half", 150, 0, false},
-	}
-	for _, c := range cases {
-		if got := insideMapArea(c.area, c.x, c.y, world); got != c.want {
-			t.Errorf("insideMapArea(%q, %v, %v) = %v, want %v", c.area, c.x, c.y, got, c.want)
-		}
-	}
-}
-
 func TestMergeHedgesProc(t *testing.T) {
 	field := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Grassland", X: 0, Y: 0, Area_sqm: 10000}}
 	small := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Grassland", X: 1, Y: 0, Area_sqm: 1000}} // below 6500 m2, never linked

@@ -26,7 +26,7 @@ func (s *CreateBadgers) Initialize(w *ecs.World) {
 	file := ecs.GetResource[params.ParameterFile](w)
 	landscape := ecs.GetResource[globals.Landscape](w)
 	rng := rand.New(ecs.GetResource[resource.Rand](w))
-	CreateBadgersProc(w, int(file.N_Badgers), landscape.Scaling_NLpatches_per_m, rng)
+	CreateBadgersProc(w, file.N_Badgers, landscape.Scaling_NLpatches_per_m, rng)
 }
 
 func (s *CreateBadgers) Update(w *ecs.World) {}

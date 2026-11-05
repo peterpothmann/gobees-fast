@@ -23,6 +23,9 @@ import (
 type Config struct {
 	Parameters params.ParameterFile `yaml:"parameters"`
 
+	// Output are the options of the output (step F13). NetLogo: the parameter KeepDeadColonies?.
+	Output params.Output `yaml:"output"`
+
 	// InitialQueens are the species and their initial queens, in this order [QINI] (NetLogo:
 	// BeeSpeciesInitialQueensListAsString).
 	InitialQueens []globals.SpeciesQueens `yaml:"initial_queens"`
@@ -36,7 +39,7 @@ type Config struct {
 	StewardshipOptions []string `yaml:"stewardship_options"`
 
 	// Species are the bee species [SPEC] (NetLogo: rows of the BeespeciesFile). Only the species of InitialQueens are
-	// used, in the order of this list.
+	// used, in the order of this list, found by their name [SPEC-02].
 	Species []Species `yaml:"species"`
 
 	// Flowers are the flower species [LAYR-02] (NetLogo: rows of the FlowerspeciesFile). Without the key, no layers
@@ -63,8 +66,12 @@ func (y Year) MarshalYAML() (any, error) {
 // Species are the values of one bee species in a run file [SPEC-03], before the derived values. The keys are the
 // column names of the NetLogo BeespeciesFile.
 type Species struct {
-	Species                      string     `yaml:"species"` // the name in InitialQueens
-	Name                         string     `yaml:"name"`
+	// Name is the name in InitialQueens [SPEC-02], [IQUE-04]. NetLogo has two columns, species (compared with the
+	// initial queens) and name (stored), equal in all files. The converter checks that they are equal (step F13).
+	Name string `yaml:"name"`
+	// Parasitic marks a cuckoo bumblebee species (Psithyrus) [ACT-04], [EMER-04], [PSI]. NetLogo compares the name
+	// with "Psithyrus", the converter sets the key for this name (step F13).
+	Parasitic                    bool       `yaml:"parasitic,omitempty"`
 	EmergingDay_mean             float64    `yaml:"emergingDay_mean"`
 	EmergingDay_sd               float64    `yaml:"emergingDay_sd"`
 	NestHabitatsList             []string   `yaml:"nestHabitatsList"` // [SPEC-04] before the expansion

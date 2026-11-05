@@ -55,7 +55,6 @@ func (s *CreateFoodsources) Finalize(w *ecs.World) {}
 func CreateFoodsourcesProc(w *ecs.World, foodsourcesFile string, landscape *globals.Landscape) {
 	file := ecs.GetResource[params.ParameterFile](w)
 	in := ecs.GetResource[params.Input](w)
-	world := ecs.GetResource[params.World](w)
 	derived := ecs.GetResource[globals.Derived](w)
 	rng := rand.New(ecs.GetResource[resource.Rand](w))
 
@@ -72,17 +71,15 @@ func CreateFoodsourcesProc(w *ecs.World, foodsourcesFile string, landscape *glob
 		patches[i] = flowerPatch{FlowerPatch: read.Patches[i]}
 	}
 
-	// [FSRC-04] to [FSRC-08] every flower patch is created, also if it dies right after. NetLogo gives it a who number
-	// here, before all layers. gobees-fast keeps no who number (step F12), only the order that follows from it (see
-	// CreateLayersProc).
-	kept := make([]*flowerPatch, 0, len(patches))
+	// [FSRC-04] to [FSRC-08] every flower patch is created. NetLogo gives it a who number here, before all layers.
+	// gobees-fast keeps no who number (step F12), only the order that follows from it (see CreateLayersProc).
+	// [FSRC-08] MapAreaIncluded is removed (step F13): the whole landscape file is simulated (NetLogo: "complete"). A
+	// part of a map is its own landscape file.
+	kept := make([]*flowerPatch, len(patches))
 	for i := range patches {
 		p := &patches[i]
 		p.Radius_m = math.Sqrt(p.Area_sqm / math.Pi) // [FSRC-05]
-		if !insideMapArea(file.MapAreaIncluded, p.X, p.Y, world) {
-			continue // [FSRC-08]
-		}
-		kept = append(kept, p)
+		kept[i] = p
 	}
 
 	// [FSRC-10] Merge small hedges into the nearest non-hedge flower patch of at least 6500 m2, and merge all hedges linked to the same patch into the largest of them [HEDG], finding 14 (see trans/netlogo-findings.md#finding-14).
@@ -113,30 +110,6 @@ type flowerPatch struct {
 func precision(x float64, places int) float64 {
 	f := math.Pow(10, float64(places))
 	return math.Round(x*f) / f
-}
-
-// insideMapArea reproduces the MapAreaIncluded conditions [FSRC-08] (max-pxcor / 2 = 150, max-pycor / 2 = 105).
-func insideMapArea(area string, x, y float64, world *params.World) bool {
-	hx, hy := world.MaxPxcor/2, world.MaxPycor/2
-	switch area {
-	case "top left quarter":
-		return !(x > hx || y < hy)
-	case "top right quarter":
-		return !(x <= hx || y < hy)
-	case "bottom left quarter":
-		return !(x > hx || y >= hy)
-	case "bottom right quarter":
-		return !(x <= hx || y >= hy)
-	case "top half":
-		return !(y < hy)
-	case "bottom half":
-		return !(y >= hy)
-	case "left half":
-		return !(x > hx)
-	case "right half":
-		return !(x <= hx)
-	}
-	return true // "complete" and any other value
 }
 
 // MergeHedgesProc links every hedge to its nearest non-hedge flower patch of at least 6500 m2 and merges
@@ -282,7 +255,6 @@ func CreateLayersProc(w *ecs.World, patches []*flowerPatch, flowers *params.Flow
 				PollenMax_g:                   p.Area_sqm * relAbundance * data.Pollen_g_per_flower,
 				NectarFlowerVolume_myl:        data.Nectar_ml_per_flower * 1000,
 				NectarConcentration_mol_per_l: data.Concentration_mol_per_l,
-				ProteinPollenProp:             data.ProteinPollenProp,
 				StartDay:                      data.StartDay,
 				StopDay:                       data.StopDay,
 				CorollaDepth_mm:               data.CorollaDepth_mm,

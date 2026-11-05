@@ -18,7 +18,7 @@ func exampleSpecies(t *testing.T) map[string]Species {
 	c, _ := ExampleFarmConfig()
 	m := map[string]Species{}
 	for _, s := range c.Species {
-		m[s.Species] = s
+		m[s.Name] = s
 	}
 	return m
 }
@@ -113,7 +113,7 @@ func TestDeriveSpecies(t *testing.T) {
 		}
 	}
 
-	// step F9: only Psithyrus is parasitic, by its name
+	// step F13: only the Psithyrus row of the run file has the key parasitic, and the species keeps it
 	for name, sp := range species {
 		if got := deriveSpecies(sp, &constants).Parasitic; got != (name == "Psithyrus") {
 			t.Errorf("%s: Parasitic = %v", name, got)

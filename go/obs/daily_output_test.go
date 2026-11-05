@@ -29,6 +29,7 @@ func newWorld(t *testing.T) *ecs.World {
 	ecs.AddResource(w, &globals.Landscape{Scaling_NLpatches_per_m: 0.1})
 	ecs.AddResource(w, &globals.ActiveBees{})
 	ecs.AddResource(w, &params.ParameterFile{})
+	ecs.AddResource(w, &params.Output{})
 	return w
 }
 

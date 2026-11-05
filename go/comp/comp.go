@@ -26,7 +26,8 @@ type Badger struct{}
 // NetLogo: foodsources-own. Not translated: colorMemo (GUI), farmland? (never read, finding 17, see trans/netlogo-findings.md#finding-17),
 // stewardshipSpeciesList (GUI), perimeter_m (GUI), cso_area_m2 (never set), flowerSpeciesList (only needed to
 // create the layers), and the never read patchInfo, occurrence, flowerSpecies and relativeAbundance (removed in
-// step F3). Id_Beescout is read only by an error message.
+// step F3), proteinPollenProp (set in [LAYR-05], never read, removed in step F13). Id_Beescout is read only by an
+// error message.
 type Foodsource struct {
 	Id_Beescout                   float64 // column 1 of the foodsources file
 	PatchType                     string  // habitat type, e.g. "Hedgerow"
@@ -36,7 +37,6 @@ type Foodsource struct {
 	PollenMax_g                   float64
 	NectarFlowerVolume_myl        float64
 	NectarConcentration_mol_per_l float64
-	ProteinPollenProp             float64
 	StartDay                      day.OfYear // first day of the flowering period
 	StopDay                       day.OfYear // first day AFTER the flowering period
 	CorollaDepth_mm               float64
@@ -65,7 +65,7 @@ type Species struct {
 	Name string
 	// Parasitic is true for the cuckoo bumblebees (Psithyrus): they rest instead of nursing and foraging [ACT-04]
 	// and take over a host colony [EMER-04], [PSI]. NetLogo compares the name with "Psithyrus" at these places.
-	// Derived from the name in input.deriveSpecies (step F9).
+	// The key parasitic of the run file (step F13), before: derived from the name in input.deriveSpecies (step F9).
 	Parasitic                          bool
 	MaxLifespanWorkers                 int
 	EmergingDay_mean                   float64
