@@ -5,7 +5,11 @@
 // References to other agents (NetLogo: who numbers) are ecs.Entity. NetLogo -1 ("nobody") is the zero entity.
 package comp
 
-import "github.com/mlange-42/ark/ecs"
+import (
+	"gobees/day"
+
+	"github.com/mlange-42/ark/ecs"
+)
 
 // Who is the NetLogo who number of an agent. NetLogo numbers all turtles of all breeds with one counter.
 // Some model code sorts by who, so gobees keeps it (see trans/data-model.md).
@@ -39,8 +43,8 @@ type Foodsource struct {
 	NectarFlowerVolume_myl        float64
 	NectarConcentration_mol_per_l float64
 	ProteinPollenProp             float64
-	StartDay                      float64 // first day of the flowering period
-	StopDay                       float64 // first day AFTER the flowering period
+	StartDay                      day.OfYear // first day of the flowering period
+	StopDay                       day.OfYear // first day AFTER the flowering period
 	CorollaDepth_mm               float64
 	InterFlowerTime_s             float64
 }
@@ -63,14 +67,14 @@ type Layer struct {
 // NetLogo: species-own (oneSpecies agents), created in CreateSpeciesProc [SPEC].
 type Species struct {
 	Name                               string
-	MaxLifespanWorkers                 float64
+	MaxLifespanWorkers                 int
 	EmergingDay_mean                   float64
 	EmergingDay_sd                     float64 // rounded [SPEC-03]
-	Batchsize                          float64
+	Batchsize                          int
 	FlightVelocity_m_per_s             float64
 	FlightCosts_kJ_per_m_per_mg        float64 // derived from MetabolicRateFlight_W/kg
 	SearchLength_m                     float64
-	SeasonStop                         float64
+	SeasonStop                         day.OfYear
 	TimeUnloading                      float64
 	SpecMax_cropVolume_myl             float64
 	SpecMax_pollenPellets_g            float64
@@ -99,7 +103,7 @@ type Species struct {
 	DevIncubationHatchingTH_kJ         float64
 	DevIncubationPupationTH_kJ         float64
 	DevIncubationEmergingTH_kJ         float64
-	Dev_larvalAge_QueenDetermination_d float64
+	Dev_larvalAge_QueenDetermination_d int
 	DevAge_Q_PupationMax_d             float64
 	DevAge_Q_EmergingMax_d             float64
 	DevIncubation_Q_PupationTH_kJ      float64

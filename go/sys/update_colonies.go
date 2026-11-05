@@ -4,6 +4,7 @@ import (
 	"math/rand/v2"
 
 	"gobees/comp"
+	"gobees/day"
 	"gobees/enum/caste"
 	"gobees/enum/stage"
 	"gobees/globals"
@@ -91,7 +92,7 @@ func (s *UpdateColonies) Finalize(w *ecs.World) {}
 // updateColony runs [UCOL-01] to [UCOL-11] for one colony. ORDER within the colony: MATTERS
 // (finding 37, see trans/netlogo-findings.md#finding-37).
 func (s *UpdateColonies) updateColony(w *ecs.World, col ecs.Entity, members []ecs.Entity) {
-	ticks := float64(s.ticks.Ticks)
+	ticks := s.ticks.Ticks
 	// alive returns the living members for which keep is true (NetLogo: bees with [ colonyID = whoCol ... ]).
 	alive := func(keep func(b *comp.Bee) bool) []ecs.Entity {
 		result := []ecs.Entity{}
@@ -124,7 +125,7 @@ func (s *UpdateColonies) updateColony(w *ecs.World, col ecs.Entity, members []ec
 	// of yesterday morning: brood that emerged or died since then still counts as brood. The adults therefore die
 	// one day later than with today's numbers (finding 37, see trans/netlogo-findings.md#finding-37).
 	// ORDER: irrelevant, each bee dies independently.
-	if ticks > colony.CompetitionPointDate && counts.AllEggs+counts.AllLarvae+counts.AllPupae == 0 {
+	if colony.CompetitionPointDate.Before(ticks) && counts.AllEggs+counts.AllLarvae+counts.AllPupae == 0 {
 		for _, e := range ask(func(b *comp.Bee) bool {
 			return b.AdultAge > 10 && (b.Caste == caste.Worker || b.Caste == caste.Queen)
 		}) {
@@ -138,7 +139,7 @@ func (s *UpdateColonies) updateColony(w *ecs.World, col ecs.Entity, members []ec
 		}
 	}
 	// [UCOL-04] adult = brood? false, males included (finding 38, see trans/netlogo-findings.md#finding-38)
-	adults := 0.0
+	adults := 0
 	for _, e := range alive(func(b *comp.Bee) bool { return !b.Brood }) {
 		adults += s.beeMap.Get(e).Number
 	}
@@ -157,22 +158,22 @@ func (s *UpdateColonies) updateColony(w *ecs.World, col ecs.Entity, members []ec
 	s.statistics(counts, alive(all))
 
 	// [UCOL-07]
-	if colony.EusocialPhaseDate == params.NotSetHigh && counts.AllAdultWorkers > 0 {
-		colony.EusocialPhaseDate = ticks
+	if !colony.EusocialPhaseDate.IsSet() && counts.AllAdultWorkers > 0 {
+		colony.EusocialPhaseDate = day.At(ticks)
 	}
 	// [UCOL-08] ORDER: irrelevant, one independent draw per colony.
-	if colony.SwitchPointDate == params.NotSetHigh {
-		if colony.EusocialPhaseDate < params.NotSetHigh && counts.LarvaWorkerRatio < s.constants.LarvaWorkerRatioTH {
+	if !colony.SwitchPointDate.IsSet() {
+		if colony.EusocialPhaseDate.IsSet() && counts.LarvaWorkerRatio < s.constants.LarvaWorkerRatioTH {
 			if s.rng.Float64() <= s.constants.DailySwitchProbability {
-				colony.SwitchPointDate = ticks
+				colony.SwitchPointDate = day.At(ticks)
 			}
 		}
 	}
 	// [UCOL-09]
-	if colony.CompetitionPointDate == params.NotSetHigh &&
-		colony.EusocialPhaseDate < params.NotSetHigh &&
-		colony.QueenProductionDate < params.NotSetHigh {
-		colony.CompetitionPointDate = CompetitionPointDateREP(colony)
+	if !colony.CompetitionPointDate.IsSet() &&
+		colony.EusocialPhaseDate.IsSet() &&
+		colony.QueenProductionDate.IsSet() {
+		colony.CompetitionPointDate = day.At(CompetitionPointDateREP(colony))
 	}
 
 	// [UCOL-10] queenright?: never read, removed in step F3
@@ -205,7 +206,7 @@ func (s *UpdateColonies) statistics(c *comp.ColonyCounts, members []ecs.Entity) 
 		}
 	}
 	if c.AllAdultWorkers > 0 {
-		c.LarvaWorkerRatio = c.AllLarvae / c.AllAdultWorkers
+		c.LarvaWorkerRatio = float64(c.AllLarvae) / float64(c.AllAdultWorkers)
 	} else {
 		c.LarvaWorkerRatio = params.NotSetHigh
 	}
@@ -213,20 +214,22 @@ func (s *UpdateColonies) statistics(c *comp.ColonyCounts, members []ecs.Entity) 
 
 // CompetitionPointDateREP returns the day of the competition point of a colony [CPD].
 // After the competition point, workers and queens compete for male production: workers become aggressive, lay their own (male) eggs and eat the eggs of others. The model does not simulate this behaviour, only its consequences: after the competition point eggs no longer develop (MortalityBroodProc) and the colony ends once no brood is left [UCOL-02].
-func CompetitionPointDateREP(c *comp.Colony) float64 {
+// Both dates must be set.
+func CompetitionPointDateREP(c *comp.Colony) day.Abs {
 	// [CPD-01] x: days from the first worker to the first queen-destined eggs (about -5 to 40).
 	// y: days from the first worker to the CP, linear in x (Duchateau & Velthuis 1988, Fig. 6).
 	// The CP is rounded to a whole day (.5 up) and lies at most 45 days after the first worker.
 	// NetLogo first sets compDate to NotSetHigh and overwrites it below (removed in step F3).
-	x := c.QueenProductionDate - c.EusocialPhaseDate
+	eusocialPhaseDate := c.EusocialPhaseDate.Day()
+	x := float64(c.QueenProductionDate.Day() - eusocialPhaseDate)
 	// float64(...) forces Go to round after the multiplication, as Java does. Otherwise Go may compute
 	// 0.7*x + 15.5 in one step (fused multiply-add), which can change the last bit and thus the rounding.
 	y := float64(0.7*x) + 15.5
-	latestCPafter_d := 45.0
-	compDate := util.Round(c.EusocialPhaseDate + y)
+	latestCPafter_d := day.Abs(45)
+	compDate := day.Abs(util.Round(float64(eusocialPhaseDate) + y))
 	// The CP is at most 45 days after the eusocial phase
-	if compDate-c.EusocialPhaseDate > latestCPafter_d {
-		compDate = c.EusocialPhaseDate + latestCPafter_d // set to 45 days after eusocial phase (first worker), as in NetLogo
+	if compDate-eusocialPhaseDate > latestCPafter_d {
+		compDate = eusocialPhaseDate + latestCPafter_d // set to 45 days after eusocial phase (first worker), as in NetLogo
 	}
 	return compDate
 }

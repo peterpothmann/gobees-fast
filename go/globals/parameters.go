@@ -2,8 +2,8 @@ package globals
 
 // SpeciesQueens is one entry of BeeSpeciesInitialQueensList, e.g. ["B_terrestris" 500].
 type SpeciesQueens struct {
-	Species string  `yaml:"species"`
-	Queens  float64 `yaml:"queens"`
+	Species string `yaml:"species"`
+	Queens  int    `yaml:"queens"`
 }
 
 // Derived holds the globals that ParametersProc [PAR] derives from the parameters.

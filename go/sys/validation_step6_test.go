@@ -10,7 +10,6 @@ import (
 	"gobees/enum/stage"
 	"gobees/internal/check"
 	"gobees/obs"
-	"gobees/params"
 	"gobees/validation"
 
 	"github.com/mlange-42/ark/ecs"
@@ -31,7 +30,7 @@ func step6Metrics(w *ecs.World, counters *obs.Counters) map[string]float64 {
 		m["colonies"]++
 		m["energy_kJ"] += s.EnergyStore_kJ
 		m["pollen_g"] += s.PollenStore_g
-		if c.SwitchPointDate < params.NotSetHigh {
+		if c.SwitchPointDate.IsSet() {
 			m["switch_point"]++
 		}
 		if c.QueenProduction {
@@ -45,19 +44,19 @@ func step6Metrics(w *ecs.World, counters *obs.Counters) map[string]float64 {
 		b := bees.Get()
 		switch b.Stage {
 		case stage.Egg:
-			m["eggs"] += b.Number
+			m["eggs"] += float64(b.Number)
 		case stage.Larva:
-			m["larvae"] += b.Number
+			m["larvae"] += float64(b.Number)
 		case stage.Pupa:
-			m["pupae"] += b.Number
+			m["pupae"] += float64(b.Number)
 		case stage.Adult:
 			switch {
 			case b.Caste == caste.Worker:
-				m["workers"] += b.Number
+				m["workers"] += float64(b.Number)
 			case b.Caste == caste.Male:
-				m["males"] += b.Number
+				m["males"] += float64(b.Number)
 			case b.Caste == caste.Queen && !b.Mated:
-				m["young_queens"] += b.Number
+				m["young_queens"] += float64(b.Number)
 			}
 		}
 	}

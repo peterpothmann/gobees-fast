@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"gobees/comp"
+	"gobees/day"
 	"gobees/enum/activity"
 	"gobees/enum/caste"
 	"gobees/enum/stage"
@@ -110,11 +111,11 @@ func TestCountersHibernatingQueensRemoved(t *testing.T) {
 
 	// year 2: 25 hibernating queens on the evening of day 365, 15 planned
 	ecs.NewMap1[comp.Bee](w).Get(hibernating).Number = 25
-	for _, day := range []float64{364, 365} {
-		calendar.Day = day
+	for _, d := range []day.OfYear{364, 365} {
+		calendar.Day = d
 		c.Update(w)
 		if c.TotalHibernatingQueensEverRemoved != 2 {
-			t.Errorf("day %v: %v, want 2", day, c.TotalHibernatingQueensEverRemoved)
+			t.Errorf("day %v: %v, want 2", d, c.TotalHibernatingQueensEverRemoved)
 		}
 	}
 	calendar.Day = 1

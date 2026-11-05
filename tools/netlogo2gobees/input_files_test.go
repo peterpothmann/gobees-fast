@@ -152,8 +152,8 @@ func TestParseSpeciesFileExample(t *testing.T) {
 		}
 		// B_terrestris: 91,28,["Grassland*" ...],6.9,11.1,1.88,305,60,12,5,2500,165,173,0.15,2,5,12.9,23.8,1.5,62.4,249.5,1,0,17,590,980,32,0.2
 		s := species[0]
-		read := []float64{s.EmergingDay_mean, s.EmergingDay_sd, s.Proboscis_min_mm, s.Proboscis_max_mm, s.GrowthFactor, s.SeasonStop,
-			s.MaxLifespanWorkers, s.Batchsize, s.FlightVelocity_m_per_s, s.SearchLength_m, s.TimeUnloading, s.SpecMax_cropVolume_myl,
+		read := []float64{s.EmergingDay_mean, s.EmergingDay_sd, s.Proboscis_min_mm, s.Proboscis_max_mm, s.GrowthFactor, float64(s.SeasonStop),
+			float64(s.MaxLifespanWorkers), float64(s.Batchsize), s.FlightVelocity_m_per_s, s.SearchLength_m, s.TimeUnloading, s.SpecMax_cropVolume_myl,
 			s.SpecMax_pollenPellets_g, s.MinToMaxFactor, s.DevAgeHatchingMin_d, s.DevAgePupationMin_d, s.DevAgeEmergingMin_d,
 			s.DevWeightEgg_mg, s.DevWeightPupationMin_mg, s.DevWeightPupationMax_mg, s.PollenToBodymassFactor,
 			s.Dev_Q_DeterminationWeight_mg, s.DevAge_Q_PupationMin_d, s.DevWeight_Q_PupationMin_mg, s.DevWeight_Q_PupationMax_mg,

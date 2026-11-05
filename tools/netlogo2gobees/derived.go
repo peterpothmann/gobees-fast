@@ -21,9 +21,13 @@ func QueensInitialProc(s string) ([]globals.SpeciesQueens, []string, error) {
 	items := ListFromStringREP(s)
 	// [QINI-02]
 	for i := 0; i+1 < len(items); i += 2 {
-		n, err := strconv.ParseFloat(items[i+1], 64) // NetLogo: read-from-string
+		x, err := strconv.ParseFloat(items[i+1], 64) // NetLogo: read-from-string
 		if err != nil {
 			return nil, nil, fmt.Errorf("BeeSpeciesInitialQueensListAsString: %q is not a number", items[i+1])
+		}
+		n, ok := whole(x)
+		if !ok {
+			return nil, nil, fmt.Errorf("BeeSpeciesInitialQueensListAsString: %q is not a whole number", items[i+1])
 		}
 		queens = append(queens, globals.SpeciesQueens{Species: items[i], Queens: n})
 	}

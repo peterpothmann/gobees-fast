@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"gobees/comp"
+	"gobees/day"
 	"gobees/enum/caste"
 	"gobees/enum/stage"
-	"gobees/params"
 
 	"github.com/mlange-42/ark/ecs"
 )
@@ -67,7 +67,7 @@ func (bw *broodWorld) bee(e ecs.Entity) (*comp.Bee, *comp.Genetics, *comp.Thresh
 }
 
 // addBrood adds brood of a colony with the given caste, broodAge, weight and incubation.
-func (bw *broodWorld) addBrood(col ecs.Entity, st stage.Stage, c caste.Caste, number, broodAge, weight_mg, incubation_kJ float64) ecs.Entity {
+func (bw *broodWorld) addBrood(col ecs.Entity, st stage.Stage, c caste.Caste, number, broodAge int, weight_mg, incubation_kJ float64) ecs.Entity {
 	e := bw.addBee(col, st, c, number, 0)
 	b, _, _, _, d := bw.bee(e)
 	b.BroodAge, b.Weight_mg, d.CumulIncubationReceived_kJ = broodAge, weight_mg, incubation_kJ
@@ -172,19 +172,19 @@ func TestQueenProductionDate(t *testing.T) {
 	// [QPD-02] worked example: switch point on day 100
 	for _, tc := range []struct {
 		name       string
-		ticks      int64
-		larvalAge3 float64 // broodAge of a larva at larval day 3, 0 for none
+		ticks      day.Abs
+		larvalAge3 int // broodAge of a larva at larval day 3, 0 for none
 		ratio      float64
-		switchDay  float64
+		switchDay  day.Date
 		want       bool
-		wantDate   float64
+		wantDate   day.Date // unset without queen production
 	}{
-		{"no larvae, day 104", 104, 0, 1, 100, false, 0},
-		{"no larvae, day 105", 105, 0, 1, 100, true, 95},
-		{"larvae of broodAge 8, day 102", 102, 8, 1, 100, false, 0},
-		{"larvae of broodAge 8, day 103", 103, 8, 1, 100, true, 95},
-		{"larva:worker ratio 3", 120, 0, 3, 100, false, 0},
-		{"no switch point", 120, 0, 1, params.NotSetHigh, false, 0},
+		{"no larvae, day 104", 104, 0, 1, day.At(100), false, day.Date{}},
+		{"no larvae, day 105", 105, 0, 1, day.At(100), true, day.At(95)},
+		{"larvae of broodAge 8, day 102", 102, 8, 1, day.At(100), false, day.Date{}},
+		{"larvae of broodAge 8, day 103", 103, 8, 1, day.At(100), true, day.At(95)},
+		{"larva:worker ratio 3", 120, 0, 3, day.At(100), false, day.Date{}},
+		{"no switch point", 120, 0, 1, day.Date{}, false, day.Date{}},
 	} {
 		bw := newBroodWorld(t, 1)
 		bw.ticks.Ticks = tc.ticks
@@ -203,8 +203,7 @@ func TestQueenProductionDate(t *testing.T) {
 		}
 		bw.qpd.Update(bw.w)
 		c, _, _ := bw.colony(col)
-		if c.QueenProduction != tc.want || (tc.want && c.QueenProductionDate != tc.wantDate) ||
-			(!tc.want && c.QueenProductionDate != params.NotSetHigh) {
+		if c.QueenProduction != tc.want || c.QueenProductionDate != tc.wantDate {
 			t.Errorf("%s: queenProduction %v, date %v; want %v, %v", tc.name, c.QueenProduction, c.QueenProductionDate, tc.want, tc.wantDate)
 		}
 	}
@@ -215,7 +214,7 @@ func TestQueenProductionDateBeforeDevelopment(t *testing.T) {
 	bw := newBroodWorld(t, 1)
 	bw.ticks.Ticks = 110
 	col := bw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) {
-		c.SwitchPointDate = 100
+		c.SwitchPointDate = day.At(100)
 		n.LarvaWorkerRatio = 1
 	})
 	worker := bw.addBrood(col, stage.Larva, caste.Worker, 12, 8, 30, 0) // larval day 3 since last evening
@@ -229,7 +228,7 @@ func TestQueenProductionDateBeforeDevelopment(t *testing.T) {
 	bw.dev.Update(bw.w)
 
 	c, _, _ := bw.colony(col)
-	if !c.QueenProduction || c.QueenProductionDate != 102 {
+	if !c.QueenProduction || c.QueenProductionDate != day.At(102) {
 		t.Errorf("queenProduction %v, date %v; want true, 102", c.QueenProduction, c.QueenProductionDate)
 	}
 	if b, _, _, _, _ := bw.bee(worker); b.Caste != caste.Worker {
@@ -372,8 +371,8 @@ func TestDevelopmentQueenTimeline(t *testing.T) {
 		}
 	}
 	b, _, th, f, _ := bw.bee(e)
-	if b.EmergingDate <= 365 || b.EmergingDate > 365+305 || b.EmergingDate != math.Round(b.EmergingDate) {
-		t.Errorf("emergingDate %v, want a whole day in (365, 670]", b.EmergingDate)
+	if !b.EmergingDate.IsSet() || b.EmergingDate.Day() <= 365 || b.EmergingDate.Day() > 365+305 {
+		t.Errorf("emergingDate %v, want a day in (365, 670]", b.EmergingDate)
 	}
 	if *th != thresholds(sitYoungQueen) || f.PollenPellets_g != CropAndPelletSizeREP("pollen", 980, bw.sp) {
 		t.Errorf("thresholds %+v, pollen load %v", *th, f.PollenPellets_g)
@@ -393,13 +392,13 @@ func TestQueenEmergingDateDistribution(t *testing.T) {
 	for range n {
 		e := bw.addBrood(col, stage.Pupa, caste.Queen, 1, 40, 980, 100)
 		b, _, _, _, _ := bw.bee(e)
-		b.EmergingDate = params.NotSetLow
+		b.EmergingDate = day.Date{}
 		bw.dev.Development_PupaeProc(e)
 		b, _, _, _, _ = bw.bee(e)
-		if b.EmergingDate <= 365 || b.EmergingDate > 670 {
+		if !b.EmergingDate.IsSet() || b.EmergingDate.Day() <= 365 || b.EmergingDate.Day() > 670 {
 			t.Fatalf("emergingDate %v outside (365, 670]", b.EmergingDate)
 		}
-		sum += b.EmergingDate
+		sum += float64(b.EmergingDate.Day())
 	}
 	if mean := sum / float64(n); math.Abs(mean-456) > 2 {
 		t.Errorf("mean emergingDate %v, want about 456", mean)
@@ -535,8 +534,8 @@ func TestMortalityBrood(t *testing.T) {
 func TestMortalityBroodCompetitionPoint(t *testing.T) {
 	// [MORB-04] after the competition point every egg dies, larvae survive
 	bw := newBroodWorld(t, 1)
-	after := bw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) { c.CompetitionPointDate = 199 })
-	onCP := bw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) { c.CompetitionPointDate = 200 })
+	after := bw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) { c.CompetitionPointDate = day.At(199) })
+	onCP := bw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) { c.CompetitionPointDate = day.At(200) })
 	eggAfter := bw.addBrood(after, stage.Egg, caste.Undefined, 12, 1, 1.5, 0)
 	larvaAfter := bw.addBrood(after, stage.Larva, caste.Undefined, 12, 6, 10, 3)
 	eggOnCP := bw.addBrood(onCP, stage.Egg, caste.Undefined, 12, 1, 1.5, 0)
@@ -559,7 +558,7 @@ func TestEgglaying(t *testing.T) {
 	queen := bw.addBee(col, stage.Adult, caste.Queen, 1, 30)
 	qb, g, _, _, _ := bw.bee(queen)
 	qb.PersonalTime_s = 1000
-	qb.EmergingDate = 120
+	qb.EmergingDate = day.At(120)
 	g.MtDNA, g.AllelesList, g.SpermathecaList = 42, []float64{10, 20}, []float64{30}
 
 	bw.eggs.EgglayingProc(queen)
@@ -570,7 +569,7 @@ func TestEgglaying(t *testing.T) {
 	}
 	b, g, th, f, d := bw.bee(eggs[0])
 	if b.Number != 12 || b.Stage != stage.Egg || !b.Brood || b.Caste != caste.Undefined || b.Ploidy != 2 ||
-		b.ColonyID != col || b.SpeciesID != bw.species || b.Weight_mg != 1.5 || b.EmergingDate != params.NotSetLow ||
+		b.ColonyID != col || b.SpeciesID != bw.species || b.Weight_mg != 1.5 || b.EmergingDate.IsSet() ||
 		b.AdultAge != 0 || b.BroodAge != 0 || b.PersonalTime_s != 0 || b.Mated {
 		t.Errorf("egg %+v", *b)
 	}
@@ -586,7 +585,7 @@ func TestEgglaying(t *testing.T) {
 		t.Errorf("stores %v g, %v kJ; want 0.982, 0.8884", s.PollenStore_g, s.EnergyStore_kJ)
 	}
 	// [EGG-03]
-	if qb, _, _, _, _ := bw.bee(queen); qb.PersonalTime_s != 1000+86400 || qb.EmergingDate != 120 {
+	if qb, _, _, _, _ := bw.bee(queen); qb.PersonalTime_s != 1000+86400 || qb.EmergingDate != day.At(120) {
 		t.Errorf("queen personalTime_s %v, emergingDate %v", qb.PersonalTime_s, qb.EmergingDate)
 	}
 }
@@ -614,15 +613,15 @@ func TestEgglayingPloidy(t *testing.T) {
 	// [EGG-02] haploid eggs only after the switch point day. SexLocus? with equal alleles: diploid male [EGGP-01]
 	for _, tc := range []struct {
 		name      string
-		switchDay float64
+		switchDay day.Date
 		sexLocus  bool
 		ploidy    float64
 		caste     caste.Caste
 		alleles   int
 	}{
-		{"on switch point day", 200, false, 2, caste.Undefined, 2},
-		{"after switch point", 199, false, 1, caste.Male, 1},
-		{"sex locus, homozygous", params.NotSetHigh, true, 2, caste.Male, 2},
+		{"on switch point day", day.At(200), false, 2, caste.Undefined, 2},
+		{"after switch point", day.At(199), false, 1, caste.Male, 1},
+		{"sex locus, homozygous", day.Date{}, true, 2, caste.Male, 2},
 	} {
 		bw := newBroodWorld(t, 1)
 		bw.file.SexLocus = tc.sexLocus

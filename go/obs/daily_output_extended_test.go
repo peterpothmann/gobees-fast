@@ -5,12 +5,12 @@ import (
 	"testing"
 
 	"gobees/comp"
+	"gobees/day"
 	"gobees/enum/activity"
 	"gobees/enum/caste"
 	"gobees/enum/stage"
 	"gobees/event"
 	"gobees/globals"
-	"gobees/params"
 
 	"github.com/mlange-42/ark/ecs"
 )
@@ -46,11 +46,11 @@ func TestDailyOutputExtended(t *testing.T) {
 	hortorum := species.NewEntity(&comp.Species{Name: "B_hortorum"})
 	pascuorum := species.NewEntity(&comp.Species{Name: "B_pascuorum"})
 	colonies := ecs.NewMap2[comp.Colony, comp.ColonyStores](w)
-	colonies.NewEntity(&comp.Colony{CompetitionPointDate: 150, SpeciesIDcolony: terrestris},
+	colonies.NewEntity(&comp.Colony{CompetitionPointDate: day.At(150), SpeciesIDcolony: terrestris},
 		&comp.ColonyStores{EnergyStore_kJ: 100, PollenStore_g: 2})
-	colonies.NewEntity(&comp.Colony{CompetitionPointDate: 160, SpeciesIDcolony: hortorum},
+	colonies.NewEntity(&comp.Colony{CompetitionPointDate: day.At(160), SpeciesIDcolony: hortorum},
 		&comp.ColonyStores{EnergyStore_kJ: 50, PollenStore_g: 1})
-	colonies.NewEntity(&comp.Colony{CompetitionPointDate: params.NotSetHigh, SpeciesIDcolony: terrestris},
+	colonies.NewEntity(&comp.Colony{CompetitionPointDate: day.Date{}, SpeciesIDcolony: terrestris},
 		&comp.ColonyStores{EnergyStore_kJ: 10})
 	foodsources := ecs.NewMap2[comp.Foodsource, comp.FoodsourceState](w)
 	foodsources.NewEntity(&comp.Foodsource{}, &comp.FoodsourceState{Nectar_myl: 1500000, Pollen_g: 2000})
@@ -78,7 +78,7 @@ func TestDailyOutputExtended(t *testing.T) {
 	emit(w, event.DiedForaging, bees[5])
 	w.RemoveEntity(bees[5])
 	emit(w, event.QueenEmerged, bees[6])
-	founded := colonies.NewEntity(&comp.Colony{CompetitionPointDate: params.NotSetHigh, SpeciesIDcolony: pascuorum},
+	founded := colonies.NewEntity(&comp.Colony{CompetitionPointDate: day.Date{}, SpeciesIDcolony: pascuorum},
 		&comp.ColonyStores{})
 	o.Update(w)
 	want := map[string]float64{
@@ -108,7 +108,7 @@ func TestDailyOutputExtendedNoCompetitionPoint(t *testing.T) {
 	w := newWorld(t)
 	terrestris := ecs.NewMap1[comp.Species](w).NewEntity(&comp.Species{Name: "B_terrestris"})
 	ecs.NewMap2[comp.Colony, comp.ColonyStores](w).NewEntity(
-		&comp.Colony{CompetitionPointDate: params.NotSetHigh, SpeciesIDcolony: terrestris}, &comp.ColonyStores{})
+		&comp.Colony{CompetitionPointDate: day.Date{}, SpeciesIDcolony: terrestris}, &comp.ColonyStores{})
 
 	o := DailyOutputExtended{}
 	o.Initialize(w)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 
+	"gobees/day"
 	"gobees/params"
 )
 
@@ -33,8 +34,6 @@ func parseFlowerspeciesFile(r io.Reader) (params.FlowerSpeciesTable, error) {
 			{"nectar_ml/flower", &d.Nectar_ml_per_flower},
 			{"proteinPollenProp", &d.ProteinPollenProp},
 			{"concentration_mol/l", &d.Concentration_mol_per_l},
-			{"startDay", &d.StartDay},
-			{"stopDay", &d.StopDay},
 			{"corollaDepth_mm", &d.CorollaDepth_mm},
 			{"intFlowerTime_s", &d.IntFlowerTime_s},
 		}
@@ -42,6 +41,20 @@ func parseFlowerspeciesFile(r io.Reader) (params.FlowerSpeciesTable, error) {
 			if *f.value, err = t.number(row, f.column); err != nil {
 				return table, err
 			}
+		}
+		days := []struct {
+			column string
+			value  *day.OfYear
+		}{
+			{"startDay", &d.StartDay},
+			{"stopDay", &d.StopDay},
+		}
+		for _, f := range days {
+			n, err := t.wholeNumber(row, f.column)
+			if err != nil {
+				return table, err
+			}
+			*f.value = day.OfYear(n)
 		}
 		table.Names = append(table.Names, name)
 		table.Rows = append(table.Rows, d)

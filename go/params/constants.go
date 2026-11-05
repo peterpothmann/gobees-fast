@@ -14,12 +14,12 @@ type Constants struct {
 	ForagingRangeMax_m                           float64 // Foraging range [m] (Knight et al. 2005). NetLogo never reads MaxForagingRange_m of the parameter file.
 	GetUpTime_s                                  float64 // Beginning of the working day [s].
 	LarvaWorkerRatioTH                           float64 // Threshold larva:worker ratio (Duchateau & Velthuis 1988).
-	MaxLifespanMales                             float64 // [d] adult age (Duchateau & Marien 1995).
+	MaxLifespanMales                             int     // [d] adult age (Duchateau & Marien 1995).
 	MetabolicRateFlight_W_per_kg                 float64 // [W/kg] (Wolf et al. 1999).
 	MortalityAdultsBackground_daily              float64 // Daily background mortality of adults (Plowright & Jay 1968).
 	N_ForeignAlleles                             float64 // Number of sex alleles in the population (Duchateau et al. 1994).
 	NestSearchTime_h                             float64 // Daily nest search time of queens [h].
-	QueenDestinedEggsBeforeSP_d                  float64 // First queen-destined egg before the switch point [d] (Duchateau & Velthuis 1988).
+	QueenDestinedEggsBeforeSP_d                  int     // First queen-destined egg before the switch point [d] (Duchateau & Velthuis 1988).
 	Sunrise_s                                    float64 // Start of the foraging period [s].
 }
 

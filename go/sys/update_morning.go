@@ -3,6 +3,7 @@ package sys
 import (
 	"fmt"
 
+	"gobees/day"
 	"gobees/globals"
 
 	"github.com/mlange-42/ark/ecs"
@@ -52,9 +53,9 @@ func (s *UpdateMorning) Finalize(w *ecs.World) {}
 //
 // NetLogo: round (ticks mod 365.00000001). Computed with integers, which gives the same result
 // (finding 36, see trans/netlogo-findings.md#finding-36).
-func dayOfYear(ticks int64) float64 {
+func dayOfYear(ticks day.Abs) day.OfYear {
 	if ticks <= 0 {
 		return 0
 	}
-	return float64((ticks-1)%365 + 1)
+	return day.OfYear((ticks-1)%365 + 1)
 }

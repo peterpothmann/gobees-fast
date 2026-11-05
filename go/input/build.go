@@ -158,7 +158,7 @@ func deriveSpecies(s Species, constants *params.Constants) comp.Species {
 	sp.FlightCosts_kJ_per_m_per_mg = constants.MetabolicRateFlight_W_per_kg / sp.FlightVelocity_m_per_s / (1000 * 1000 * 1000)
 
 	// [SPEC-05]
-	sp.DevQuotaIncubationToday_kJ = 10 / (1.5 * sp.Batchsize)
+	sp.DevQuotaIncubationToday_kJ = 10 / (1.5 * float64(sp.Batchsize))
 	sp.DevAgeHatchingMax_d = sp.DevAgeHatchingMin_d * sp.MinToMaxFactor
 	sp.DevAgePupationMax_d = sp.DevAgePupationMin_d*sp.MinToMaxFactor - sp.DevAgeHatchingMin_d
 	sp.DevAgeEmergingMax_d = sp.DevAgeEmergingMin_d*sp.MinToMaxFactor - sp.DevAgePupationMin_d
@@ -172,7 +172,7 @@ func deriveSpecies(s Species, constants *params.Constants) comp.Species {
 	sp.DevIncubation_Q_EmergingTH_kJ = sp.DevQuotaIncubationToday_kJ * sp.DevAge_Q_EmergingMin_d
 
 	// [SPEC-07]
-	sp.MinPollenStore_g = 0.5 * 0.001 * sp.DevWeightPupationMin_mg * sp.Batchsize / sp.PollenToBodymassFactor
+	sp.MinPollenStore_g = 0.5 * 0.001 * sp.DevWeightPupationMin_mg * float64(sp.Batchsize) / sp.PollenToBodymassFactor
 	return sp
 }
 

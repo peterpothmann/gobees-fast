@@ -1,10 +1,10 @@
 package sys
 
 import (
-	"math"
 	"math/rand/v2"
 
 	"gobees/comp"
+	"gobees/day"
 	"gobees/enum/caste"
 	"gobees/enum/stage"
 	"gobees/event"
@@ -129,7 +129,7 @@ func (s *Development) Development_PupaeProc(e ecs.Entity) {
 
 	// [DEVP-02]
 	if bee.Caste == caste.Worker {
-		if dev.CumulIncubationReceived_kJ >= sp.DevIncubationEmergingTH_kJ && bee.BroodAge >= sp.DevAgeEmergingMin_d {
+		if dev.CumulIncubationReceived_kJ >= sp.DevIncubationEmergingTH_kJ && float64(bee.BroodAge) >= sp.DevAgeEmergingMin_d {
 			bee.Stage = stage.Adult
 			bee.Brood = false
 			forager.Cropvolume_myl = CropAndPelletSizeREP("nectar", bee.Weight_mg, sp)
@@ -141,7 +141,7 @@ func (s *Development) Development_PupaeProc(e ecs.Entity) {
 
 	// [DEVP-03] males get no crop, pollen load, thresholds or proboscis
 	if bee.Caste == caste.Male {
-		if dev.CumulIncubationReceived_kJ >= sp.DevIncubationEmergingTH_kJ && bee.BroodAge >= sp.DevAgeEmergingMin_d {
+		if dev.CumulIncubationReceived_kJ >= sp.DevIncubationEmergingTH_kJ && float64(bee.BroodAge) >= sp.DevAgeEmergingMin_d {
 			bee.Brood = false
 			bee.Stage = stage.Adult
 		}
@@ -149,12 +149,13 @@ func (s *Development) Development_PupaeProc(e ecs.Entity) {
 
 	// [DEVP-04]
 	if bee.Caste == caste.Queen {
-		if dev.CumulIncubationReceived_kJ >= sp.DevIncubation_Q_EmergingTH_kJ && bee.BroodAge >= sp.DevAge_Q_EmergingMin_d {
-			ticks := float64(s.ticks.Ticks)
-			yearEndSeason := (365 * math.Ceil(ticks/365)) + sp.SeasonStop
-			yearStartSeason := 365 * math.Ceil(ticks/365)
-			for bee.EmergingDate <= yearStartSeason || bee.EmergingDate > yearEndSeason {
-				bee.EmergingDate = (365 * math.Ceil(ticks/365)) + util.Round(util.RandomNormal(s.rng, sp.EmergingDay_mean, sp.EmergingDay_sd))
+		if dev.CumulIncubationReceived_kJ >= sp.DevIncubation_Q_EmergingTH_kJ && float64(bee.BroodAge) >= sp.DevAge_Q_EmergingMin_d {
+			// The emerging date of a new queen is unset (NetLogo: NotSetLow, set in EggsParameterSettingProc), so it is
+			// drawn at least once.
+			yearStartSeason := day.YearEnd(s.ticks.Ticks)
+			yearEndSeason := yearStartSeason + day.Abs(sp.SeasonStop)
+			for !bee.EmergingDate.IsSet() || bee.EmergingDate.Day() <= yearStartSeason || bee.EmergingDate.Day() > yearEndSeason {
+				bee.EmergingDate = day.At(yearStartSeason + day.Abs(util.Round(util.RandomNormal(s.rng, sp.EmergingDay_mean, sp.EmergingDay_sd))))
 			}
 			bee.Stage = stage.Adult
 			bee.Brood = false
@@ -206,14 +207,14 @@ func (s *Development) Development_LarvaeProc(e ecs.Entity, whoCol ecs.Entity) {
 	// trans/netlogo-findings.md#finding-41)
 	if (bee.Caste == caste.Worker || bee.Caste == caste.Male) &&
 		dev.CumulIncubationReceived_kJ >= sp.DevIncubationPupationTH_kJ &&
-		bee.BroodAge >= sp.DevAgePupationMin_d &&
+		float64(bee.BroodAge) >= sp.DevAgePupationMin_d &&
 		bee.Weight_mg >= sp.DevWeightPupationMin_mg {
 		bee.Stage = stage.Pupa // totalPupaeProduced: never read, removed in step F3
 	}
 
 	if bee.Caste == caste.Queen &&
 		dev.CumulIncubationReceived_kJ >= sp.DevIncubation_Q_PupationTH_kJ &&
-		bee.BroodAge >= sp.DevAge_Q_PupationMin_d &&
+		float64(bee.BroodAge) >= sp.DevAge_Q_PupationMin_d &&
 		bee.Weight_mg >= sp.DevWeight_Q_PupationMin_mg {
 		bee.Stage = stage.Pupa
 	}
@@ -224,7 +225,7 @@ func (s *Development) Development_EggsProc(e ecs.Entity) {
 	_, _, bee, _, _, _, dev := s.beeMap.Get(e)
 	sp := s.speciesMap.Get(bee.SpeciesID)
 	// [DEVE-01] cumulTimeEgg_d and totalLarvaeProduced: never read, removed in step F3.
-	if dev.CumulIncubationReceived_kJ >= sp.DevIncubationHatchingTH_kJ && bee.BroodAge >= sp.DevAgeHatchingMin_d {
+	if dev.CumulIncubationReceived_kJ >= sp.DevIncubationHatchingTH_kJ && float64(bee.BroodAge) >= sp.DevAgeHatchingMin_d {
 		bee.Stage = stage.Larva
 	}
 }

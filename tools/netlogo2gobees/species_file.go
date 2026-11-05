@@ -38,6 +38,12 @@ func parseSpeciesFile(r io.Reader) ([]input.Species, error) {
 					return nil, err
 				}
 				field.SetFloat(x)
+			case reflect.Int: // counts and days, e.g. batchsize, seasonStop
+				n, err := t.wholeNumber(row, column)
+				if err != nil {
+					return nil, err
+				}
+				field.SetInt(int64(n))
 			case reflect.Slice: // nestHabitatsList, a list literal
 				cell, err := t.cell(row, column)
 				if err != nil {

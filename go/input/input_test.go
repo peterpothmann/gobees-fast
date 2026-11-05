@@ -69,8 +69,8 @@ func TestDeriveSpecies(t *testing.T) {
 	species := exampleSpecies(t)
 	// B_terrestris: 91,28,[...],6.9,11.1,1.88,305,60,12,5,2500,165,173,0.15,2,5,12.9,23.8,1.5,62.4,249.5,1,0,17,590,980,32,0.2
 	s := deriveSpecies(species["B_terrestris"], &constants)
-	read := []float64{s.EmergingDay_mean, s.EmergingDay_sd, s.Proboscis_min_mm, s.Proboscis_max_mm, s.GrowthFactor, s.SeasonStop,
-		s.MaxLifespanWorkers, s.Batchsize, s.FlightVelocity_m_per_s, s.SearchLength_m, s.TimeUnloading, s.SpecMax_cropVolume_myl,
+	read := []float64{s.EmergingDay_mean, s.EmergingDay_sd, s.Proboscis_min_mm, s.Proboscis_max_mm, s.GrowthFactor, float64(s.SeasonStop),
+		float64(s.MaxLifespanWorkers), float64(s.Batchsize), s.FlightVelocity_m_per_s, s.SearchLength_m, s.TimeUnloading, s.SpecMax_cropVolume_myl,
 		s.SpecMax_pollenPellets_g, s.MinToMaxFactor, s.DevAgeHatchingMin_d, s.DevAgePupationMin_d, s.DevAgeEmergingMin_d,
 		s.DevWeightEgg_mg, s.DevWeightPupationMin_mg, s.DevWeightPupationMax_mg, s.PollenToBodymassFactor,
 		s.Dev_Q_DeterminationWeight_mg, s.DevAge_Q_PupationMin_d, s.DevWeight_Q_PupationMin_mg, s.DevWeight_Q_PupationMax_mg,
@@ -93,7 +93,7 @@ func TestDeriveSpecies(t *testing.T) {
 		"DevIncubationHatchingTH_kJ (10/18 * 5)":          {s.DevIncubationHatchingTH_kJ, 2.7777777777777777},
 		"DevIncubationPupationTH_kJ (10/18 * 12.9)":       {s.DevIncubationPupationTH_kJ, 7.166666666666667},
 		"DevIncubationEmergingTH_kJ (10/18 * 23.8)":       {s.DevIncubationEmergingTH_kJ, 13.222222222222221},
-		"Dev_larvalAge_QueenDetermination_d (constant 3)": {s.Dev_larvalAge_QueenDetermination_d, 3},
+		"Dev_larvalAge_QueenDetermination_d (constant 3)": {float64(s.Dev_larvalAge_QueenDetermination_d), 3},
 		"DevAge_Q_PupationMax_d (17 * 2 - 5)":             {s.DevAge_Q_PupationMax_d, 29},
 		"DevAge_Q_EmergingMax_d (32 * 2 - 17)":            {s.DevAge_Q_EmergingMax_d, 47},
 		"DevIncubation_Q_PupationTH_kJ (10/18 * 17)":      {s.DevIncubation_Q_PupationTH_kJ, 9.444444444444445},
@@ -190,6 +190,11 @@ func TestReadConfigStrict(t *testing.T) {
 		"GUI parameter":     "parameters:\n  ShowPlots?: true\n",
 		"two documents":     "landscape: a.yaml\n---\nlandscape: b.yaml\n",
 		"empty":             "",
+		// counts and days are whole numbers (step F8)
+		"fraction of queens":       "initial_queens:\n  - species: B_terrestris\n    queens: 2.5\n",
+		"fraction in batchsize":    "species:\n  - batchsize: 12.5\n",
+		"fraction in seasonStop":   "species:\n  - seasonStop: 305.5\n",
+		"fraction in a flower day": "flowers:\n  - startDay: 1.5\n",
 	}
 	for name, text := range cases {
 		if _, err := ReadConfig(strings.NewReader(text)); err == nil {

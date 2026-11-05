@@ -10,11 +10,11 @@ import (
 // tally counts what the model reports through the removal of entities and through the custom events of package
 // event, as obs.Counters does. The model no longer counts it itself (step F4).
 type tally struct {
-	beesDied      float64 // sum of Number of the removed bees
+	beesDied      int // sum of Number of the removed bees
 	coloniesDied  int
-	trips         float64 // event.ForagingTrip, sum of Number
-	foragersDied  float64 // event.DiedForaging, sum of Number
-	queensEmerged float64 // event.QueenEmerged, sum of Number
+	trips         int // event.ForagingTrip, sum of Number
+	foragersDied  int // event.DiedForaging, sum of Number
+	queensEmerged int // event.QueenEmerged, sum of Number
 }
 
 // newTally registers the observers of a new tally.

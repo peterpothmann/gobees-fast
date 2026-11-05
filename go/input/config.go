@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"reflect"
 
+	"gobees/day"
 	"gobees/globals"
 	"gobees/params"
 
@@ -61,36 +63,36 @@ func (y Year) MarshalYAML() (any, error) {
 // Species are the values of one bee species in a run file [SPEC-03], before the derived values. The keys are the
 // column names of the NetLogo BeespeciesFile.
 type Species struct {
-	Species                      string   `yaml:"species"` // the name in InitialQueens
-	Name                         string   `yaml:"name"`
-	EmergingDay_mean             float64  `yaml:"emergingDay_mean"`
-	EmergingDay_sd               float64  `yaml:"emergingDay_sd"`
-	NestHabitatsList             []string `yaml:"nestHabitatsList"` // [SPEC-04] before the expansion
-	Proboscis_min_mm             float64  `yaml:"proboscis_min_mm"`
-	Proboscis_max_mm             float64  `yaml:"proboscis_max_mm"`
-	GrowthFactor                 float64  `yaml:"growthFactor"`
-	SeasonStop                   float64  `yaml:"seasonStop"`
-	MaxLifespanWorkers           float64  `yaml:"maxLifespanWorkers"`
-	Batchsize                    float64  `yaml:"batchsize"`
-	FlightVelocity_m_per_s       float64  `yaml:"flightVelocity_m/s"`
-	SearchLength_m               float64  `yaml:"searchLength_m"`
-	TimeUnloading                float64  `yaml:"timeUnloading"`
-	SpecMax_cropVolume_myl       float64  `yaml:"specMax_cropVolume_myl"`
-	SpecMax_pollenPellets_g      float64  `yaml:"specMax_pollenPellets_g"`
-	MinToMaxFactor               float64  `yaml:"minToMaxFactor"`
-	DevAgeHatchingMin_d          float64  `yaml:"devAgeHatchingMin_d"`
-	DevAgePupationMin_d          float64  `yaml:"devAgePupationMin_d"`
-	DevAgeEmergingMin_d          float64  `yaml:"devAgeEmergingMin_d"`
-	DevWeightEgg_mg              float64  `yaml:"devWeightEgg_mg"`
-	DevWeightPupationMin_mg      float64  `yaml:"devWeightPupationMin_mg"`
-	DevWeightPupationMax_mg      float64  `yaml:"devWeightPupationMax_mg"`
-	PollenToBodymassFactor       float64  `yaml:"pollenToBodymassFactor"`
-	Dev_Q_DeterminationWeight_mg float64  `yaml:"dev_Q_DeterminationWeight_mg"`
-	DevAge_Q_PupationMin_d       float64  `yaml:"devAge_Q_PupationMin_d"`
-	DevWeight_Q_PupationMin_mg   float64  `yaml:"devWeight_Q_PupationMin_mg"`
-	DevWeight_Q_PupationMax_mg   float64  `yaml:"devWeight_Q_PupationMax_mg"`
-	DevAge_Q_EmergingMin_d       float64  `yaml:"devAge_Q_EmergingMin_d"`
-	DailyNestSiteChance          float64  `yaml:"dailyNestSiteChance"`
+	Species                      string     `yaml:"species"` // the name in InitialQueens
+	Name                         string     `yaml:"name"`
+	EmergingDay_mean             float64    `yaml:"emergingDay_mean"`
+	EmergingDay_sd               float64    `yaml:"emergingDay_sd"`
+	NestHabitatsList             []string   `yaml:"nestHabitatsList"` // [SPEC-04] before the expansion
+	Proboscis_min_mm             float64    `yaml:"proboscis_min_mm"`
+	Proboscis_max_mm             float64    `yaml:"proboscis_max_mm"`
+	GrowthFactor                 float64    `yaml:"growthFactor"`
+	SeasonStop                   day.OfYear `yaml:"seasonStop"`
+	MaxLifespanWorkers           int        `yaml:"maxLifespanWorkers"`
+	Batchsize                    int        `yaml:"batchsize"`
+	FlightVelocity_m_per_s       float64    `yaml:"flightVelocity_m/s"`
+	SearchLength_m               float64    `yaml:"searchLength_m"`
+	TimeUnloading                float64    `yaml:"timeUnloading"`
+	SpecMax_cropVolume_myl       float64    `yaml:"specMax_cropVolume_myl"`
+	SpecMax_pollenPellets_g      float64    `yaml:"specMax_pollenPellets_g"`
+	MinToMaxFactor               float64    `yaml:"minToMaxFactor"`
+	DevAgeHatchingMin_d          float64    `yaml:"devAgeHatchingMin_d"`
+	DevAgePupationMin_d          float64    `yaml:"devAgePupationMin_d"`
+	DevAgeEmergingMin_d          float64    `yaml:"devAgeEmergingMin_d"`
+	DevWeightEgg_mg              float64    `yaml:"devWeightEgg_mg"`
+	DevWeightPupationMin_mg      float64    `yaml:"devWeightPupationMin_mg"`
+	DevWeightPupationMax_mg      float64    `yaml:"devWeightPupationMax_mg"`
+	PollenToBodymassFactor       float64    `yaml:"pollenToBodymassFactor"`
+	Dev_Q_DeterminationWeight_mg float64    `yaml:"dev_Q_DeterminationWeight_mg"`
+	DevAge_Q_PupationMin_d       float64    `yaml:"devAge_Q_PupationMin_d"`
+	DevWeight_Q_PupationMin_mg   float64    `yaml:"devWeight_Q_PupationMin_mg"`
+	DevWeight_Q_PupationMax_mg   float64    `yaml:"devWeight_Q_PupationMax_mg"`
+	DevAge_Q_EmergingMin_d       float64    `yaml:"devAge_Q_EmergingMin_d"`
+	DailyNestSiteChance          float64    `yaml:"dailyNestSiteChance"`
 }
 
 // Landscape is the content of a landscape file (YAML) [FSRC-02] to [FSRC-04] (NetLogo: foodsources file).
@@ -166,8 +168,14 @@ func ReadLandscape(r io.Reader) (Landscape, error) {
 	return l, decodeStrict(r, &l)
 }
 
+// decodeStrict decodes one YAML document into v (a pointer). An unknown key, a second document and a number with a
+// fraction for an integer field (checkWhole) are errors.
 func decodeStrict(r io.Reader, v any) error {
-	d := yaml.NewDecoder(r)
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return err
+	}
+	d := yaml.NewDecoder(bytes.NewReader(data))
 	d.KnownFields(true)
 	if err := d.Decode(v); err != nil {
 		if errors.Is(err, io.EOF) {
@@ -179,7 +187,11 @@ func decodeStrict(r io.Reader, v any) error {
 	if err := d.Decode(&extra); !errors.Is(err, io.EOF) {
 		return fmt.Errorf("more than one YAML document")
 	}
-	return nil
+	var root yaml.Node
+	if err := yaml.Unmarshal(data, &root); err != nil {
+		return err
+	}
+	return checkWhole(&root, reflect.TypeOf(v).Elem(), "")
 }
 
 // WriteConfig writes a run file.

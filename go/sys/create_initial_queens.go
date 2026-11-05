@@ -5,6 +5,7 @@ import (
 	"math/rand/v2"
 
 	"gobees/comp"
+	"gobees/day"
 	"gobees/enum/activity"
 	"gobees/enum/caste"
 	"gobees/enum/stage"
@@ -36,7 +37,7 @@ func (s *CreateInitialQueens) Initialize(w *ecs.World) {
 		if file.InitialQueensModifierBehaviorSpace == 0 {
 			file.InitialQueensModifierBehaviorSpace = 1 // changes the parameter, as NetLogo changes the global
 		}
-		newQueens := int(util.Round(sq.Queens * file.InitialQueensModifierBehaviorSpace))
+		newQueens := int(util.Round(float64(sq.Queens) * file.InitialQueensModifierBehaviorSpace))
 
 		// [IQUE-04] one-of the species with this name
 		candidates := speciesByName[sq.Species]
@@ -70,10 +71,13 @@ func (s *CreateInitialQueens) Initialize(w *ecs.World) {
 				AllelesList:     []float64{util.RandomFloat(rng, 139.9), util.RandomFloat(rng, 139.9)},
 				SpermathecaList: []float64{util.RandomFloat(rng, 139.9)},
 			}
-			// [IQUE-07] emergingDate starts at 0, so it is drawn at least once
-			for bee.EmergingDate <= 0 || bee.EmergingDate >= sp.SeasonStop {
-				bee.EmergingDate = util.Round(util.RandomNormal(rng, sp.EmergingDay_mean, sp.EmergingDay_sd))
+			// [IQUE-07] emergingDate starts at 0, so it is drawn at least once. In the first year the absolute day
+			// is the day of the year.
+			emerging := day.Abs(0)
+			for emerging <= 0 || emerging >= day.Abs(sp.SeasonStop) {
+				emerging = day.Abs(util.Round(util.RandomNormal(rng, sp.EmergingDay_mean, sp.EmergingDay_sd)))
 			}
+			bee.EmergingDate = day.At(emerging)
 			// [IQUE-09]
 			minWeight_mg := sp.DevWeight_Q_PupationMin_mg
 			maxWeight_mg := sp.DevWeight_Q_PupationMax_mg

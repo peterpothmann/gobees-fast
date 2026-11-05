@@ -53,7 +53,7 @@ func (s *NeedNectarPollenLarvaeToday) Update(w *ecs.World) {
 		for _, e := range myLarvae {
 			b := s.beeMap.Get(e)
 			sp := s.speciesMap.Get(b.SpeciesID)
-			pollenNeedMyColony_g = pollenNeedMyColony_g + b.Number*(MaxWeightGainToday_mg_REP(b, sp)/sp.PollenToBodymassFactor)/1000
+			pollenNeedMyColony_g = pollenNeedMyColony_g + float64(b.Number)*(MaxWeightGainToday_mg_REP(b, sp)/sp.PollenToBodymassFactor)/1000
 		}
 		stores := s.storesMap.Get(col)
 		stores.PollenNeedLarvaeToday_g = pollenNeedMyColony_g

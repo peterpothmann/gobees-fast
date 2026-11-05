@@ -64,10 +64,10 @@ func (s *EmergenceNewQueens) Initialize(w *ecs.World) {
 }
 
 func (s *EmergenceNewQueens) Update(w *ecs.World) {
-	ticks := float64(s.ticks.Ticks)
+	ticks := s.ticks.Ticks
 
 	// [EMER-01] emergence, cohorts are split into identical copies (finding 32, see trans/netlogo-findings.md#finding-32)
-	for _, e := range s.collectBees(func(b *comp.Bee) bool { return b.EmergingDate == ticks }) {
+	for _, e := range s.collectBees(func(b *comp.Bee) bool { return b.EmergingDate.Is(ticks) }) {
 		_, _, bee, _, th, _, _ := s.beeMap.Get(e)
 		if bee.Caste != caste.Queen {
 			fmt.Println("WARNING! Something else than a queen emerged from hibernation! (1)")

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"gobees/comp"
+	"gobees/day"
 	"gobees/enum/caste"
 	"gobees/enum/stage"
 	"gobees/params"
@@ -56,7 +57,7 @@ func TestExtinctionMaxTicks(t *testing.T) {
 	ecs.AddResource(cw.w, &params.Termination{MaxTicks: 365})
 	s := &Extinction{}
 	s.Initialize(cw.w)
-	for _, ticks := range []int64{364, 365} {
+	for _, ticks := range []day.Abs{364, 365} {
 		cw.ticks.Ticks = ticks
 		s.Update(cw.w)
 		if term.Terminate != (ticks == 365) {

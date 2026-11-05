@@ -192,7 +192,7 @@ func (f *forager) Foraging_collectNectarPollenProc(e ecs.Entity) {
 	if b.Activity == activity.CollectPollen {
 		_, _, state, _ := f.foodsourceMap.Get(fo.CurrentFoodsource)
 		if state.Pollen_g > 0 {
-			fo.PollenLoadSquadron_g = min(fo.PollenPellets_g*b.Number, state.Pollen_g)
+			fo.PollenLoadSquadron_g = min(fo.PollenPellets_g*float64(b.Number), state.Pollen_g)
 			b.Activity = activity.BringingPollen
 			memoPollenLoad := fo.PollenLoadSquadron_g
 			state.Pollen_g = state.Pollen_g - memoPollenLoad // cumulPollenVisits: never read, removed in step F3
@@ -204,7 +204,7 @@ func (f *forager) Foraging_collectNectarPollenProc(e ecs.Entity) {
 	if b.Activity == activity.CollectNectar {
 		_, fs, state, _ := f.foodsourceMap.Get(fo.CurrentFoodsource)
 		if state.Nectar_myl > 0 {
-			nectarRemoved := min(fo.Cropvolume_myl*b.Number, state.Nectar_myl)
+			nectarRemoved := min(fo.Cropvolume_myl*float64(b.Number), state.Nectar_myl)
 			fo.NectarLoadSquadron_kJ = nectarRemoved * f.constants.EnergySucrose_kJ_per_mymol * fs.NectarConcentration_mol_per_l
 			b.Activity = activity.BringingNectar
 			state.Nectar_myl = state.Nectar_myl - nectarRemoved // cumulNectarVisits: never read, removed in step F3
@@ -308,7 +308,7 @@ func (f *forager) Foraging_bestLayerREP(e ecs.Entity, myCurrentFoodsource ecs.En
 			handlingTime_s := f.HandlingTime_s_REP(e, currentLayer, fo.PollenForager)
 			energyCostsThisLayer_kJ := (float64(2*distanceColonyFoodpatch_m) +
 				float64(handlingTime_s*sp.FlightVelocity_m_per_s*f.constants.EnergyFactorOnFlower)) *
-				sp.FlightCosts_kJ_per_m_per_mg * b.Weight_mg * b.Number
+				sp.FlightCosts_kJ_per_m_per_mg * b.Weight_mg * float64(b.Number)
 			energyGainThisLayer_kJ := fo.Cropvolume_myl * f.constants.EnergySucrose_kJ_per_mymol * fs.NectarConcentration_mol_per_l
 			eef := (energyGainThisLayer_kJ - energyCostsThisLayer_kJ) / energyCostsThisLayer_kJ
 			if eef > memoBestEEF {
@@ -409,7 +409,7 @@ func (f *forager) Foraging_PatchChoiceProc(e ecs.Entity, currentTripDuration_s f
 func (f *forager) Foraging_costsAndChoiceProc(w *ecs.World, e ecs.Entity) bool {
 	who, _, b, _, _, fo, _ := f.beeMap.Get(e)
 	persTimeSave := b.PersonalTime_s
-	saveNumber := b.Number
+	saveNumber := float64(b.Number)
 	saveWeight_mg := b.Weight_mg
 	saveFlightCosts_kJ_per_m_per_mg := f.speciesMap.Get(b.SpeciesID).FlightCosts_kJ_per_m_per_mg
 

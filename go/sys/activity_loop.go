@@ -225,13 +225,13 @@ func (s *ActivityLoop) BroodIncubationProc(w *ecs.World, e ecs.Entity) {
 	incubationEnergy_kJ_per_mg_s := 0.000000217013888
 	_, _, b, _, _, _, _ := s.beeMap.Get(e)
 	// [INC-01]
-	heatProvided_kJ := heatingPeriod_s * incubationEnergy_kJ_per_mg_s * b.Weight_mg * b.Number
+	heatProvided_kJ := heatingPeriod_s * incubationEnergy_kJ_per_mg_s * b.Weight_mg * float64(b.Number)
 	// [INC-02] the divisor uses this morning's counts, brood laid today is not in it (finding 46, see
 	// trans/netlogo-findings.md#finding-46)
 	heatProvidedPerBrood_kJ := 0.0
 	_, stores, _, counts := s.colonyMap.Get(b.ColonyID)
 	if counts.AllEggs+counts.AllLarvae+counts.AllPupae > 0 {
-		heatProvidedPerBrood_kJ = heatProvided_kJ / (counts.AllEggs + counts.AllLarvae + counts.AllPupae)
+		heatProvidedPerBrood_kJ = heatProvided_kJ / float64(counts.AllEggs+counts.AllLarvae+counts.AllPupae)
 	}
 	// ORDER: irrelevant, each brood agent only changes itself. Shuffled (decision C).
 	brood := s.broodOf[b.ColonyID]

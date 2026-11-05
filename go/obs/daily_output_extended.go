@@ -6,7 +6,6 @@ import (
 	"gobees/enum/caste"
 	"gobees/enum/stage"
 	"gobees/globals"
-	"gobees/params"
 
 	"github.com/mlange-42/ark/ecs"
 )
@@ -87,29 +86,29 @@ func (o *DailyOutputExtended) Values(w *ecs.World) []float64 {
 		beeAgents++
 		switch b.Stage {
 		case stage.Egg:
-			eggs += b.Number
+			eggs += float64(b.Number)
 		case stage.Larva:
-			larvae += b.Number
+			larvae += float64(b.Number)
 		case stage.Pupa:
-			pupae += b.Number
+			pupae += float64(b.Number)
 		case stage.Adult:
 			switch {
 			case b.Caste == caste.Worker:
-				workers += b.Number
+				workers += float64(b.Number)
 			case b.Caste == caste.Male:
-				males += b.Number
+				males += float64(b.Number)
 			case b.Caste == caste.Queen && !b.Mated:
-				youngQueens += b.Number
+				youngQueens += float64(b.Number)
 			}
 		}
 		if b.Activity == activity.Hibernate {
-			hibernating += b.Number
+			hibernating += float64(b.Number)
 		}
 		if b.Caste == caste.Male && b.Ploidy == 2 {
-			diploidMales += b.Number
+			diploidMales += float64(b.Number)
 		}
 		if b.SpeciesName == "Psithyrus" {
-			psithyrus += b.Number
+			psithyrus += float64(b.Number)
 		}
 	}
 
@@ -127,8 +126,8 @@ func (o *DailyOutputExtended) Values(w *ecs.World) []float64 {
 		}
 		energy += stores.EnergyStore_kJ
 		pollen += stores.PollenStore_g
-		if colony.CompetitionPointDate != params.NotSetHigh {
-			cpSum += colony.CompetitionPointDate
+		if colony.CompetitionPointDate.IsSet() {
+			cpSum += float64(colony.CompetitionPointDate.Day())
 			cpCount++
 		}
 	}
