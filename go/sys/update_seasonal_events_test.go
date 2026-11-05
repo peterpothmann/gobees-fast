@@ -30,7 +30,7 @@ func seasWorld(t *testing.T, d day.OfYear) (*colonyWorld, *UpdateSeasonalEvents,
 // addHibernatingQueen adds a mated, hibernating queen (cohort) without colony.
 func (cw *colonyWorld) addHibernatingQueen(number int) ecs.Entity {
 	e := cw.addBee(ecs.Entity{}, stage.Adult, caste.Queen, number, 0)
-	_, _, b, _, _, _, _ := cw.beeMap.Get(e)
+	_, b, _, _, _, _ := cw.beeMap.Get(e)
 	b.Activity = activity.Hibernate
 	return e
 }
@@ -74,7 +74,7 @@ func TestSeasonalEventsSeasonStopOtherSpecies(t *testing.T) {
 	other := cw.speciesNamed(t, "late")
 	cw.input.Species[other].SeasonStop = 330
 	e := cw.addBee(ecs.Entity{}, stage.Adult, caste.Queen, 1, 0)
-	_, _, b, _, _, _, _ := cw.beeMap.Get(e)
+	_, b, _, _, _, _ := cw.beeMap.Get(e)
 	b.SpeciesID = other
 	s.Update(cw.w)
 	if !cw.w.Alive(e) {
@@ -128,7 +128,7 @@ func TestSeasonalEventsTotalsBeforeSeasonStop(t *testing.T) {
 	other := cw.speciesNamed(t, "late")
 	cw.input.Species[other].SeasonStop = 330
 	male := cw.addMale(ecs.Entity{}, 2)
-	_, _, b, _, _, _, _ := cw.beeMap.Get(male)
+	_, b, _, _, _, _ := cw.beeMap.Get(male)
 	b.SpeciesID = other // survives [SEAS-01]
 	cw.addHibernatingQueen(4)
 	cw.addBee(ecs.Entity{}, stage.Adult, caste.Queen, 1, 0) // dies in [SEAS-01]

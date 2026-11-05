@@ -58,7 +58,7 @@ func (s *Development) Update(w *ecs.World) {
 	// A bee dies only in its own turn [MORA], so every bee of the list is alive when its turn comes.
 	s.bees = askAllBees(s.bees, s.beeFilter, s.rng)
 	for _, e := range s.bees {
-		_, _, bee, _, _, _, _ := s.beeMap.Get(e)
+		_, bee, _, _, _, _ := s.beeMap.Get(e)
 		whoCol := bee.ColonyID
 		if bee.Stage == stage.Adult {
 			// [DEV-02]
@@ -90,7 +90,7 @@ func (s *Development) Finalize(w *ecs.World) {}
 // Development_Mortality_AdultsProc applies the maximum life span, the social-phase thresholds of the colony
 // queen and the background mortality to an adult bee [MORA].
 func (s *Development) Development_Mortality_AdultsProc(w *ecs.World, e ecs.Entity) {
-	_, _, bee, _, th, _, _ := s.beeMap.Get(e)
+	_, bee, _, th, _, _ := s.beeMap.Get(e)
 	// [MORA-01] DieProc ends the bee's code (finding 28, see trans/netlogo-findings.md#finding-28)
 	if bee.Caste == caste.Worker {
 		if bee.AdultAge > s.speciesMap.Get(bee.SpeciesID).MaxLifespanWorkers {
@@ -122,7 +122,7 @@ func (s *Development) Development_Mortality_AdultsProc(w *ecs.World, e ecs.Entit
 // Development_PupaeProc lets a pupa become an adult once it is old enough and incubated enough [DEVP].
 // totalAdultsProduced of the colony: read only by the egg accounting [CHK-04], removed in step F4.
 func (s *Development) Development_PupaeProc(e ecs.Entity) {
-	_, _, bee, _, th, forager, dev := s.beeMap.Get(e)
+	_, bee, _, th, forager, dev := s.beeMap.Get(e)
 	sp := s.speciesMap.Get(bee.SpeciesID)
 	// [DEVP-01] cumulTimePupa_d: never read, removed in step F3.
 
@@ -185,7 +185,7 @@ func DetermineCaste_REP(weight_mg float64, sp *comp.Species, col *comp.Colony) c
 // Development_LarvaeProc determines the caste of a female larva at larval day 3 and lets a larva pupate once it
 // is old enough, incubated enough and heavy enough [DEVL]. whoCol is the larva's own colony.
 func (s *Development) Development_LarvaeProc(e ecs.Entity, whoCol ecs.Entity) {
-	_, _, bee, _, _, _, dev := s.beeMap.Get(e)
+	_, bee, _, _, _, dev := s.beeMap.Get(e)
 	sp := s.speciesMap.Get(bee.SpeciesID)
 	// [DEVL-01]
 	dev.CumulTimeLarva_d = dev.CumulTimeLarva_d + 1
@@ -218,7 +218,7 @@ func (s *Development) Development_LarvaeProc(e ecs.Entity, whoCol ecs.Entity) {
 
 // Development_EggsProc lets an egg hatch into a larva once it is old enough and incubated enough [DEVE].
 func (s *Development) Development_EggsProc(e ecs.Entity) {
-	_, _, bee, _, _, _, dev := s.beeMap.Get(e)
+	_, bee, _, _, _, dev := s.beeMap.Get(e)
 	sp := s.speciesMap.Get(bee.SpeciesID)
 	// [DEVE-01] cumulTimeEgg_d and totalLarvaeProduced: never read, removed in step F3.
 	if dev.CumulIncubationReceived_kJ >= sp.DevIncubationHatchingTH_kJ && float64(bee.BroodAge) >= sp.DevAgeHatchingMin_d {

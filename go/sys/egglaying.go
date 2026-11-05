@@ -26,7 +26,6 @@ type eggLayer struct {
 	ticks     *globals.Ticks
 	file      *params.ParameterFile
 	constants *params.Constants
-	who       *globals.WhoCounter
 
 	beeMap     *beeMapper
 	colonyMap  *ecs.Map2[comp.Colony, comp.ColonyStores]
@@ -39,7 +38,6 @@ func newEggLayer(w *ecs.World, rng *rand.Rand) eggLayer {
 		ticks:      ecs.GetResource[globals.Ticks](w),
 		file:       ecs.GetResource[params.ParameterFile](w),
 		constants:  ecs.GetResource[params.Constants](w),
-		who:        ecs.GetResource[globals.WhoCounter](w),
 		beeMap:     newBeeMapper(w),
 		colonyMap:  ecs.NewMap2[comp.Colony, comp.ColonyStores](w),
 		speciesMap: newSpeciesTable(w),
@@ -49,7 +47,7 @@ func newEggLayer(w *ecs.World, rng *rand.Rand) eggLayer {
 // EgglayingProc lets the bee e (the mother) lay one batch of eggs if the colony stores cover the cost, and takes
 // 24 h of her time [EGG]. It returns the new egg cohorts (none if the stores were too small).
 func (l *eggLayer) EgglayingProc(e ecs.Entity) []ecs.Entity {
-	_, _, mother, _, _, _, _ := l.beeMap.Get(e)
+	_, mother, _, _, _, _ := l.beeMap.Get(e)
 	sp := l.speciesMap.Get(mother.SpeciesID)
 	colonyID := mother.ColonyID
 
@@ -87,27 +85,28 @@ func (l *eggLayer) EgglayingProc(e ecs.Entity) []ecs.Entity {
 	}
 
 	// [EGG-03] also if no eggs were laid
-	_, _, mother, _, _, _, _ = l.beeMap.Get(e)
+	_, mother, _, _, _, _ = l.beeMap.Get(e)
 	mother.PersonalTime_s = mother.PersonalTime_s + 24*3600
 	return eggs
 }
 
-// hatch creates a copy of the bee e with all its values and a new who number. NetLogo: hatch 1.
+// hatch creates a copy of the bee e with all its values. NetLogo: hatch 1 (with a new who number, not kept since
+// step F12).
 func (l *eggLayer) hatch(e ecs.Entity) ecs.Entity {
-	_, pos, bee, gen, th, forager, dev := l.beeMap.Get(e)
+	pos, bee, gen, th, forager, dev := l.beeMap.Get(e)
 	// copy the values first: creating entities can move the components in memory
 	p, b, g, t, f, d := *pos, *bee, *gen, *th, *forager, *dev
 	g.AllelesList = slices.Clone(g.AllelesList)
 	g.SpermathecaList = slices.Clone(g.SpermathecaList)
 	f.KnownMasterpatchesNectarList = slices.Clone(f.KnownMasterpatchesNectarList)
 	f.KnownMasterpatchesPollenList = slices.Clone(f.KnownMasterpatchesPollenList)
-	return l.beeMap.NewEntity(&comp.Who{Who: l.who.Next()}, &p, &b, &g, &t, &f, &d)
+	return l.beeMap.NewEntity(&p, &b, &g, &t, &f, &d)
 }
 
 // EggsParameterSettingProc sets the alleles, the caste and the start values of a new egg (cohort) [EGGP]. The egg
 // still holds all values of its mother. diploid is the ploidy of [EGG-02] (false: 1, true: 2).
 func (l *eggLayer) EggsParameterSettingProc(e ecs.Entity, beesInCohort int, diploid bool) {
-	_, _, b, g, th, f, dev := l.beeMap.Get(e)
+	_, b, g, th, f, dev := l.beeMap.Get(e)
 	sp := l.speciesMap.Get(b.SpeciesID)
 
 	// [EGGP-01] one allele of the mother; diploid: one of the spermatheca in front (item 0 = father)

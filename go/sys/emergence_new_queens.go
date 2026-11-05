@@ -34,7 +34,6 @@ type EmergenceNewQueens struct {
 	landscape *globals.Landscape
 	nestSites *globals.NestSites
 	world     *params.World
-	who       *globals.WhoCounter
 	death     beeDeath
 	colonies  colonyFounder
 
@@ -54,7 +53,6 @@ func (s *EmergenceNewQueens) Initialize(w *ecs.World) {
 	s.landscape = ecs.GetResource[globals.Landscape](w)
 	s.nestSites = ecs.GetResource[globals.NestSites](w)
 	s.world = ecs.GetResource[params.World](w)
-	s.who = ecs.GetResource[globals.WhoCounter](w)
 	s.death = newBeeDeath(w)
 	s.colonies = newColonyFounder(w, s.rng)
 
@@ -70,7 +68,7 @@ func (s *EmergenceNewQueens) Update(w *ecs.World) {
 
 	// [EMER-01] emergence, cohorts are split into identical copies (finding 32, see trans/netlogo-findings.md#finding-32)
 	for _, e := range s.collectBees(func(b *comp.Bee) bool { return b.EmergingDate.Is(ticks) }) {
-		_, _, bee, _, th, _, _ := s.beeMap.Get(e)
+		_, bee, _, th, _, _ := s.beeMap.Get(e)
 		if bee.Caste != caste.Queen {
 			fmt.Println("WARNING! Something else than a queen emerged from hibernation! (1)")
 		}
@@ -83,7 +81,7 @@ func (s *EmergenceNewQueens) Update(w *ecs.World) {
 
 	// [EMER-02] ORDER: irrelevant, each queen only changes herself.
 	for _, e := range s.collectBees(func(b *comp.Bee) bool { return b.Activity == activity.Emerging }) {
-		_, _, bee, _, _, _, _ := s.beeMap.Get(e)
+		_, bee, _, _, _, _ := s.beeMap.Get(e)
 		if bee.Caste != caste.Queen {
 			fmt.Println("WARNING! Something else than a queen emerged from hibernation! (2)")
 		}
@@ -107,7 +105,7 @@ func (s *EmergenceNewQueens) Update(w *ecs.World) {
 		if !w.Alive(e) {
 			continue // killed by a cuckoo bee of this loop
 		}
-		_, _, bee, _, _, _, _ := s.beeMap.Get(e)
+		_, bee, _, _, _, _ := s.beeMap.Get(e)
 		sp := s.speciesMap.Get(bee.SpeciesID)
 		ns := &s.nestSites.BySpecies[bee.SpeciesID]
 		if len(ns.NestsiteFoodsourceList) == 0 {
@@ -145,12 +143,13 @@ func (s *EmergenceNewQueens) collectBees(keep func(b *comp.Bee) bool) []ecs.Enti
 	return result
 }
 
-// copyBee creates n copies of a bee with all its values and a new who number each. NetLogo: hatch n.
+// copyBee creates n copies of a bee with all its values. NetLogo: hatch n (with a new who number each, not kept
+// since step F12).
 func (s *EmergenceNewQueens) copyBee(e ecs.Entity, n int) {
 	if n <= 0 {
 		return
 	}
-	_, pos, bee, gen, th, forager, dev := s.beeMap.Get(e)
+	pos, bee, gen, th, forager, dev := s.beeMap.Get(e)
 	// copy the values first: creating entities can move the components in memory
 	p, b, g, t, f, d := *pos, *bee, *gen, *th, *forager, *dev
 	for range n {
@@ -160,7 +159,7 @@ func (s *EmergenceNewQueens) copyBee(e ecs.Entity, n int) {
 		fc.KnownMasterpatchesNectarList = slices.Clone(f.KnownMasterpatchesNectarList)
 		fc.KnownMasterpatchesPollenList = slices.Clone(f.KnownMasterpatchesPollenList)
 		pc, bc, tc, dc := p, b, t, d
-		s.beeMap.NewEntity(&comp.Who{Who: s.who.Next()}, &pc, &bc, &gc, &tc, &fc, &dc)
+		s.beeMap.NewEntity(&pc, &bc, &gc, &tc, &fc, &dc)
 	}
 }
 
@@ -181,7 +180,7 @@ func (s *EmergenceNewQueens) NestSitesSearchingProc(w *ecs.World, e ecs.Entity, 
 			c = candidates[s.rng.IntN(len(candidates))]
 		}
 		// [NEST-04]
-		_, pos, bee, _, _, _, _ := s.beeMap.Get(e)
+		pos, bee, _, _, _, _ := s.beeMap.Get(e)
 		pos.X, pos.Y = float64(c[0]), float64(c[1])
 		bee.Activity = activity.NestConstruction
 		return
@@ -244,7 +243,7 @@ func (s *EmergenceNewQueens) PsithyrusNestSearchProc(w *ecs.World, e ecs.Entity)
 				return
 			}
 			host = colonies[s.rng.IntN(len(colonies))]
-			_, pos, bee, _, th, _, _ := s.beeMap.Get(e)
+			pos, bee, _, th, _, _ := s.beeMap.Get(e)
 			bee.ColonyID = host
 			*pos = colonyPos[host]
 			*th = thresholds(sitPsith)

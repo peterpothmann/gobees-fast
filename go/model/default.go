@@ -25,10 +25,9 @@ func Default(p params.Params, a *app.App) *app.App {
 	}
 
 	// ---- Setup (NetLogo: Setup, SetupWithoutClearingProc). Runs in the systems' Initialize, in this order.
-	// [CLEAR] clear-all: not needed, a new world is empty. clear-all also resets the who counter.
+	// [CLEAR] clear-all: not needed, a new world is empty. clear-all also resets the who counter, which gobees-fast
+	// does not keep (step F12).
 	p.Apply(a.World) // [INIT-01] random seed, parameters as resources
-	who := globals.WhoCounter{}
-	ecs.AddResource(a.World, &who)
 	activeBees := globals.ActiveBees{}
 	ecs.AddResource(a.World, &activeBees)
 	daytime := globals.Daytime{}

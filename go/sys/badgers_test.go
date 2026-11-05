@@ -7,7 +7,6 @@ import (
 	"gobees/comp"
 	"gobees/enum/caste"
 	"gobees/enum/stage"
-	"gobees/globals"
 	"gobees/util"
 
 	"github.com/mlange-42/ark/ecs"
@@ -42,12 +41,11 @@ func TestCreateBadgersNearOrigin(t *testing.T) {
 		addScrub(w, 10.3, 10.4) // A, patch cell (10, 10)
 		addScrub(w, 100, 100)   // B
 		addScrub(w, 200, 100)   // C
-		who := &globals.WhoCounter{}
-		CreateBadgersProc(w, 2, 0.1, who, rand.New(rand.NewPCG(seed, 5)))
+		CreateBadgersProc(w, 2, 0.1, rand.New(rand.NewPCG(seed, 5)))
 
 		pos := badgerPositions(w)
-		if len(pos) != 2 || who.Next() != 2 {
-			t.Fatalf("%d badgers, want 2 with who numbers 0 and 1", len(pos))
+		if len(pos) != 2 {
+			t.Fatalf("%d badgers, want 2", len(pos))
 		}
 		// at the centre of the patch cell, at least 300 m apart
 		if util.Distance(pos[0].X, pos[0].Y, pos[1].X, pos[1].Y) <= 30 {
@@ -65,18 +63,14 @@ func TestCreateBadgersNearOrigin(t *testing.T) {
 }
 
 func TestCreateBadgersNotEnoughHabitat(t *testing.T) {
-	// [BADC-01] no candidate left: the badger dies. All three have used up a who number.
+	// [BADC-01] no candidate left: the badger dies.
 	w := ecs.NewWorld()
 	addScrub(w, 100, 100)
 	addScrub(w, 200, 100)
 	addScrub(w, 205, 100) // within 300 m of the previous one
-	who := &globals.WhoCounter{}
-	CreateBadgersProc(w, 3, 0.1, who, rand.New(rand.NewPCG(1, 5)))
+	CreateBadgersProc(w, 3, 0.1, rand.New(rand.NewPCG(1, 5)))
 	if n := len(badgerPositions(w)); n != 2 {
 		t.Errorf("%d badgers, want 2", n)
-	}
-	if next := who.Next(); next != 3 {
-		t.Errorf("next who number %d, want 3", next)
 	}
 }
 
@@ -85,9 +79,9 @@ func TestCreateBadgersNotEnoughHabitat(t *testing.T) {
 func prowlWorld(t *testing.T, seed uint64, badgers ...comp.Position) (*colonyWorld, *BadgersOnTheProwl) {
 	t.Helper()
 	cw := newColonyWorld(t, seed)
-	m := ecs.NewMap3[comp.Who, comp.Position, comp.Badger](cw.w)
+	m := ecs.NewMap2[comp.Position, comp.Badger](cw.w)
 	for _, p := range badgers {
-		m.NewEntity(&comp.Who{Who: cw.who.Next()}, &p, &comp.Badger{})
+		m.NewEntity(&p, &comp.Badger{})
 	}
 	s := &BadgersOnTheProwl{}
 	s.Initialize(cw.w)
@@ -97,7 +91,7 @@ func prowlWorld(t *testing.T, seed uint64, badgers ...comp.Position) (*colonyWor
 // addColonyAt adds a colony at (x, y).
 func (cw *colonyWorld) addColonyAt(x, y float64, change func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts)) ecs.Entity {
 	col := cw.addColony(change)
-	_, pos, _, _, _, _, _ := cw.colonyMap.Get(col)
+	pos, _, _, _, _, _ := cw.colonyMap.Get(col)
 	pos.X, pos.Y = x, y
 	return col
 }

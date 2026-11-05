@@ -26,7 +26,6 @@ func (s *CreateInitialQueens) Initialize(w *ecs.World) {
 	file := ecs.GetResource[params.ParameterFile](w)
 	constants := ecs.GetResource[params.Constants](w)
 	derived := ecs.GetResource[globals.Derived](w)
-	who := ecs.GetResource[globals.WhoCounter](w)
 	rng := rand.New(ecs.GetResource[resource.Rand](w))
 	beeMapper := newBeeMapper(w)
 	speciesByName := speciesIndices(w)
@@ -90,7 +89,7 @@ func (s *CreateInitialQueens) Initialize(w *ecs.World) {
 				KnownMasterpatchesPollenList: []ecs.Entity{},
 			}
 			th := thresholds(sitQueenInitiationPhase) // [IQUE-05]
-			beeMapper.NewEntity(&comp.Who{Who: who.Next()}, &comp.Position{}, &bee, &genetics, &th, &forager, &comp.Development{})
+			beeMapper.NewEntity(&comp.Position{}, &bee, &genetics, &th, &forager, &comp.Development{})
 		}
 	}
 }
@@ -100,10 +99,10 @@ func (s *CreateInitialQueens) Update(w *ecs.World) {}
 func (s *CreateInitialQueens) Finalize(w *ecs.World) {}
 
 // beeMapper creates bee entities with all their components.
-type beeMapper = ecs.Map7[comp.Who, comp.Position, comp.Bee, comp.Genetics, comp.Thresholds, comp.Forager, comp.Development]
+type beeMapper = ecs.Map6[comp.Position, comp.Bee, comp.Genetics, comp.Thresholds, comp.Forager, comp.Development]
 
 func newBeeMapper(w *ecs.World) *beeMapper {
-	return ecs.NewMap7[comp.Who, comp.Position, comp.Bee, comp.Genetics, comp.Thresholds, comp.Forager, comp.Development](w)
+	return ecs.NewMap6[comp.Position, comp.Bee, comp.Genetics, comp.Thresholds, comp.Forager, comp.Development](w)
 }
 
 // speciesIndices returns the indices of the species by name, in file order. NetLogo: Species with [ name = x ].

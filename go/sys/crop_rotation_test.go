@@ -42,20 +42,19 @@ func cropWorld(t *testing.T, list []string) (*app.App, *CropRotation) {
 	return a, cr
 }
 
-// foodsourceSummary returns the number of foodsources, the masterpatches by patch type and the largest who number.
-func foodsourceSummary(w *ecs.World) (int, map[string]int, int64) {
-	n, maxWho := 0, int64(-1)
+// foodsourceSummary returns the number of foodsources and the masterpatches by patch type.
+func foodsourceSummary(w *ecs.World) (int, map[string]int) {
+	n := 0
 	masters := map[string]int{}
-	q := ecs.NewFilter3[comp.Who, comp.Foodsource, comp.Layer](w).Query()
+	q := ecs.NewFilter2[comp.Foodsource, comp.Layer](w).Query()
 	for q.Next() {
-		who, fs, layer := q.Get()
+		fs, layer := q.Get()
 		n++
-		maxWho = max(maxWho, who.Who)
 		if layer.Masterpatch {
 			masters[fs.PatchType]++
 		}
 	}
-	return n, masters, maxWho
+	return n, masters
 }
 
 // setDay sets ticks and Day.
@@ -68,7 +67,7 @@ func TestCropRotation(t *testing.T) {
 	a, cr := cropWorld(t, []string{exampleLandscape, smallLandscapeFile})
 	w := a.World
 	derived := ecs.GetResource[globals.Derived](w)
-	nBefore, _, maxWhoBefore := foodsourceSummary(w)
+	nBefore, _ := foodsourceSummary(w)
 
 	// a bee that knows a foodsource, and a colony with range lists
 	var anyFs ecs.Entity
@@ -86,8 +85,7 @@ func TestCropRotation(t *testing.T) {
 	f.KnownMasterpatchesPollenList = []ecs.Entity{anyFs}
 	f.NectarsourceToGoTo, f.PollensourceToGoTo, f.CurrentFoodsource = anyFs, anyFs, anyFs
 	inRange := []ecs.Entity{anyFs}
-	col := ecs.NewMap7[comp.Who, comp.Position, comp.Colony, comp.ColonyStores, comp.ColonyStimuli, comp.ColonyCounts, comp.ColonyRange](w).NewEntity(
-		&comp.Who{}, &comp.Position{}, &comp.Colony{}, &comp.ColonyStores{}, &comp.ColonyStimuli{}, &comp.ColonyCounts{},
+	col := ecs.NewMap6[comp.Position, comp.Colony, comp.ColonyStores, comp.ColonyStimuli, comp.ColonyCounts, comp.ColonyRange](w).NewEntity(&comp.Position{}, &comp.Colony{}, &comp.ColonyStores{}, &comp.ColonyStimuli{}, &comp.ColonyCounts{},
 		&comp.ColonyRange{AllPatchesInRangeList: inRange,
 			MasterpatchesWithPollenlayersInFlowerAndRangeList: inRange, MasterpatchesWithNectarlayersInFlowerAndRangeList: inRange})
 
@@ -104,21 +102,15 @@ func TestCropRotation(t *testing.T) {
 	if derived.FoodsourcesFile != smallLandscapeFile {
 		t.Errorf("FoodsourcesFile %q, want %s", derived.FoodsourcesFile, smallLandscapeFile)
 	}
-	// [CROP-03] only the foodsources of the new file, with new who numbers
-	n, masters, _ := foodsourceSummary(w)
+	// [CROP-03] only the foodsources of the new file
+	n, masters := foodsourceSummary(w)
 	if !maps.Equal(masters, map[string]int{"Scrub": 1, "Garden": 1}) || n != 3 {
 		t.Errorf("%d foodsources, masterpatches %v; want 3 layers, one Scrub and one Garden masterpatch", n, masters)
 	}
-	minWho := int64(-1)
-	q := ecs.NewFilter2[comp.Who, comp.Foodsource](w).Query()
-	for q.Next() {
-		who, _ := q.Get()
-		if minWho < 0 || who.Who < minWho {
-			minWho = who.Who
-		}
-	}
-	if minWho <= maxWhoBefore {
-		t.Errorf("new foodsources start at who %d, want more than %d", minWho, maxWhoBefore)
+	// step F12: the landscape holds the new masterpatches only
+	newMasters := ecs.GetResource[globals.Landscape](w).Masterpatches
+	if len(newMasters) != 2 || !w.Alive(newMasters[0]) || !w.Alive(newMasters[1]) {
+		t.Errorf("landscape masterpatches %v, want the 2 new ones", newMasters)
 	}
 	foodsources := ecs.NewFilter1[comp.Foodsource](w).Query()
 	if got := foodsources.Count(); got != 3 {
@@ -154,7 +146,7 @@ func TestCropRotation(t *testing.T) {
 	// ticks 730: year 2, item 0, the example farm again
 	setDay(w, 730)
 	cr.Update(w)
-	if n, _, _ := foodsourceSummary(w); derived.FoodsourcesFile != exampleLandscape || n != nBefore {
+	if n, _ := foodsourceSummary(w); derived.FoodsourcesFile != exampleLandscape || n != nBefore {
 		t.Errorf("year 2: FoodsourcesFile %q with %d foodsources, want the example farm with %d", derived.FoodsourcesFile, n, nBefore)
 	}
 }
@@ -163,10 +155,12 @@ func TestCropRotationDefaultList(t *testing.T) {
 	// without crop rotation (NetLogo: "" gives [""] with length 1, finding 3, see trans/netlogo-findings.md#finding-3)
 	a, cr := cropWorld(t, nil)
 	w := a.World
-	nBefore, _, maxWho := foodsourceSummary(w)
+	nBefore, _ := foodsourceSummary(w)
+	mastersBefore := slices.Clone(ecs.GetResource[globals.Landscape](w).Masterpatches)
 	setDay(w, 365)
 	cr.Update(w)
-	if n, _, m := foodsourceSummary(w); n != nBefore || m != maxWho {
+	// the same foodsources, not new ones (before step F12: the same largest who number)
+	if n, _ := foodsourceSummary(w); n != nBefore || !slices.Equal(ecs.GetResource[globals.Landscape](w).Masterpatches, mastersBefore) {
 		t.Errorf("foodsources changed without crop rotation")
 	}
 }

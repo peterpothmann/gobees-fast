@@ -76,7 +76,7 @@ func (s *ActivityLoop) Update(w *ecs.World) {
 	for continueWorking && s.activeAdults() > 0 && s.colonies() > 0 {
 		// [GO-07]
 		e := s.NextActiveBeeREP()
-		_, _, b, _, _, _, _ := s.beeMap.Get(e)
+		_, b, _, _, _, _ := s.beeMap.Get(e)
 		// [GO-08]
 		if b.PersonalTime_s > s.constants.CallItaDay_s {
 			continueWorking = false
@@ -89,7 +89,7 @@ func (s *ActivityLoop) Update(w *ecs.World) {
 			}
 		}
 		// [GO-10] get the bee again: ActivityProc may have created entities
-		_, _, b, _, _, _, _ = s.beeMap.Get(e)
+		_, b, _, _, _, _ = s.beeMap.Get(e)
 		// Queens without a colony are inactive for the rest of the day.
 		if b.ColonyID.IsZero() {
 			b.PersonalTime_s = s.constants.CallItaDay_s + 1
@@ -129,7 +129,7 @@ func (s *ActivityLoop) colonies() int {
 // [NEXT]. Ported line by line, including the tie rule [NEXT-04].
 func (s *ActivityLoop) NextActiveBeeREP() ecs.Entity {
 	time := func(e ecs.Entity) float64 {
-		_, _, b, _, _, _, _ := s.beeMap.Get(e)
+		_, b, _, _, _, _ := s.beeMap.Get(e)
 		return b.PersonalTime_s
 	}
 	list := s.active.List
@@ -174,7 +174,7 @@ func (s *ActivityLoop) NextActiveBeeREP() ecs.Entity {
 func (s *ActivityLoop) ActivityProc(w *ecs.World, e ecs.Entity) {
 	// [ACT-01]
 	break_s := 0.5 * 3600
-	_, _, b, _, th, _, _ := s.beeMap.Get(e)
+	_, b, _, th, _, _ := s.beeMap.Get(e)
 	b.Activity = activity.Resting
 	if !b.ColonyID.IsZero() {
 		// [ACT-02] ORDER of the four: irrelevant.
@@ -226,7 +226,7 @@ func (s *ActivityLoop) ActivityProc(w *ecs.World, e ecs.Entity) {
 func (s *ActivityLoop) BroodIncubationProc(w *ecs.World, e ecs.Entity) {
 	heatingPeriod_s := 2880.0
 	incubationEnergy_kJ_per_mg_s := 0.000000217013888
-	_, _, b, _, _, _, _ := s.beeMap.Get(e)
+	_, b, _, _, _, _ := s.beeMap.Get(e)
 	// [INC-01]
 	heatProvided_kJ := heatingPeriod_s * incubationEnergy_kJ_per_mg_s * b.Weight_mg * float64(b.Number)
 	// [INC-02] the divisor uses this morning's counts, brood laid today is not in it (finding 46, see
@@ -243,7 +243,7 @@ func (s *ActivityLoop) BroodIncubationProc(w *ecs.World, e ecs.Entity) {
 		if !w.Alive(x) {
 			continue
 		}
-		_, _, _, _, _, _, dev := s.beeMap.Get(x)
+		_, _, _, _, _, dev := s.beeMap.Get(x)
 		dev.CumulIncubationReceived_kJ = dev.CumulIncubationReceived_kJ + heatProvidedPerBrood_kJ
 	}
 	stores.SummedIncubationToday_kJ = stores.SummedIncubationToday_kJ + heatProvided_kJ

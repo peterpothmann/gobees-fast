@@ -29,8 +29,8 @@ func (s *CreateSpecies) Initialize(w *ecs.World) {
 
 	// [SPEC-01] one species per species in speciesList, in FILE order of the BeespeciesFile. Package input has read
 	// the rows into params.Input.Species and set the derived values [SPEC-02], [SPEC-03], [SPEC-05], [SPEC-07]. Since
-	// step F11 the species are no agents: bees and colonies hold the index of their species, and the species take no
-	// who number (who is only compared among foodsources, which exist before the species).
+	// step F11 the species are no agents: bees and colonies hold the index of their species. No agent takes a who
+	// number since step F12.
 
 	// Collect all masterpatches, sorted by who, to expand the nest habitats list and find the nest sites.
 	masterpatches := collectMasterpatches(w)
@@ -85,22 +85,20 @@ func (t *speciesTable) all() []int {
 // masterpatch is a masterpatch foodsource with the values NestHabitatsListREP and the nest sites need.
 type masterpatch struct {
 	entity    ecs.Entity
-	who       int64
 	patchType string
 	area_sqm  float64
 }
 
-// collectMasterpatches returns all masterpatches, sorted by who.
+// collectMasterpatches returns all masterpatches, sorted by who: in the order of globals.Landscape.Masterpatches
+// (step F12).
 func collectMasterpatches(w *ecs.World) []masterpatch {
-	result := []masterpatch{}
-	query := ecs.NewFilter3[comp.Who, comp.Foodsource, comp.Layer](w).Query()
-	for query.Next() {
-		who, fs, layer := query.Get()
-		if layer.Masterpatch {
-			result = append(result, masterpatch{query.Entity(), who.Who, fs.PatchType, fs.Area_sqm})
-		}
+	landscape := ecs.GetResource[globals.Landscape](w)
+	fsMap := ecs.NewMap1[comp.Foodsource](w)
+	result := make([]masterpatch, len(landscape.Masterpatches))
+	for i, e := range landscape.Masterpatches {
+		fs := fsMap.Get(e)
+		result[i] = masterpatch{e, fs.PatchType, fs.Area_sqm}
 	}
-	slices.SortFunc(result, func(a, b masterpatch) int { return int(a.who - b.who) })
 	return result
 }
 

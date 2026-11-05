@@ -2,7 +2,7 @@
 //
 // Naming: fields keep the NetLogo variable names with the first letter in upper case, so they can be found
 // in the NetLogo code. "?" is dropped, "/" becomes "_per_" (as in package params).
-// References to other agents (NetLogo: who numbers) are ecs.Entity. NetLogo -1 ("nobody") is the zero entity.
+// References to other agents (NetLogo: who numbers) are ecs.Entity. Agents keep no who number (step F12). NetLogo -1 ("nobody") is the zero entity.
 package comp
 
 import (
@@ -11,19 +11,13 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// Who is the NetLogo who number of an agent. NetLogo numbers all turtles of all breeds with one counter.
-// Some model code sorts by who, so gobees keeps it (see trans/data-model.md).
-type Who struct {
-	Who int64
-}
-
 // Position of a turtle in NetLogo patch units (xcor, ycor).
 type Position struct {
 	X float64
 	Y float64
 }
 
-// Badger marks a badger entity. A badger has the components Who, Position and Badger.
+// Badger marks a badger entity. A badger has the components Position and Badger.
 // NetLogo: breed badgers, without own variables. Created in CreateBadgersProc [BADC].
 type Badger struct{}
 
@@ -59,7 +53,7 @@ type FoodsourceState struct {
 type Layer struct {
 	Masterpatch       bool         // true for the first surviving layer of a flower patch [LAYR-08]
 	MasterpatchID     ecs.Entity   // the masterpatch of this layer's flower patch, itself for a masterpatch
-	LayersInPatchList []ecs.Entity // all layers of the same flower patch, sorted by who [LAYR-10], finding 15 (see trans/netlogo-findings.md#finding-15), fixed in step F5
+	LayersInPatchList []ecs.Entity // all layers of the same flower patch, sorted by who (= order of creation) [LAYR-10], finding 15 (see trans/netlogo-findings.md#finding-15), fixed in step F5
 }
 
 // Species holds the parameters of one bee species. Not a component since step F11: the species lie in

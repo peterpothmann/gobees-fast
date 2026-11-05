@@ -31,17 +31,17 @@ func alsike() comp.Foodsource {
 }
 
 // flowerPatch adds a flower patch at (x, y) [NetLogo patches] with radius_m, one layer per foodsource. The first
-// layer is the masterpatch, all layers share LayersInPatchList (sorted by who, as in [LAYR-10]).
+// layer is the masterpatch, all layers share LayersInPatchList (sorted by who = order of creation, as in [LAYR-10]).
 func (aw *activityWorld) flowerPatch(x, y, radius_m float64, layers ...comp.Foodsource) []ecs.Entity {
-	m := ecs.NewMap5[comp.Who, comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](aw.w)
+	m := ecs.NewMap4[comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](aw.w)
 	result := []ecs.Entity{}
 	for _, fs := range layers {
 		fs.Radius_m = radius_m
 		state := comp.FoodsourceState{Nectar_myl: fs.NectarMax_myl, Pollen_g: fs.PollenMax_g}
-		result = append(result, m.NewEntity(&comp.Who{Who: aw.who.Next()}, &comp.Position{X: x, Y: y}, &fs, &state, &comp.Layer{}))
+		result = append(result, m.NewEntity(&comp.Position{X: x, Y: y}, &fs, &state, &comp.Layer{}))
 	}
 	for i, e := range result {
-		_, _, _, _, l := m.Get(e)
+		_, _, _, l := m.Get(e)
 		l.Masterpatch = i == 0
 		l.MasterpatchID = result[0]
 		l.LayersInPatchList = result
@@ -248,7 +248,7 @@ func TestForagingSearch(t *testing.T) {
 	// [PCH-03] a novice is always unhappy after her first trip.
 	aw, col, f := newForagingWorld(t, 1)
 	layers := aw.flowerPatch(1, 0, 50, willowherb(), alsike())
-	_, _, _, _, _, _, r := aw.colonyMap.Get(col)
+	_, _, _, _, _, r := aw.colonyMap.Get(col)
 	r.MasterpatchesWithNectarlayersInFlowerAndRangeList = []ecs.Entity{layers[0]}
 	bee := aw.worker(col, 1)
 	b, _, _, fo, _ := aw.bee(bee)

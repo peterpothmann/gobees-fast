@@ -28,7 +28,7 @@ type FeedLarvae struct {
 
 	colonyFilter *ecs.Filter1[comp.Colony]
 	beeFilter    *ecs.Filter1[comp.Bee]
-	colonyMap    *ecs.Map2[comp.Who, comp.ColonyStores]
+	colonyMap    *ecs.Map1[comp.ColonyStores]
 	beeMap       *ecs.Map1[comp.Bee]
 	speciesMap   *speciesTable
 
@@ -42,7 +42,7 @@ func (s *FeedLarvae) Initialize(w *ecs.World) {
 
 	s.colonyFilter = ecs.NewFilter1[comp.Colony](w)
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
-	s.colonyMap = ecs.NewMap2[comp.Who, comp.ColonyStores](w)
+	s.colonyMap = ecs.NewMap1[comp.ColonyStores](w)
 	s.beeMap = ecs.NewMap1[comp.Bee](w)
 	s.speciesMap = newSpeciesTable(w)
 }
@@ -60,7 +60,7 @@ func (s *FeedLarvae) Finalize(w *ecs.World) {}
 
 // feedColony runs [FEED-01] to [FEED-03] for one colony.
 func (s *FeedLarvae) feedColony(col ecs.Entity, myLarvae []ecs.Entity) {
-	who, stores := s.colonyMap.Get(col)
+	stores := s.colonyMap.Get(col)
 
 	// [FEED-01] both 0 if an ideal store is 0: no feeding
 	relativePollenToBeFed := 0.0
@@ -107,8 +107,9 @@ func (s *FeedLarvae) feedColony(col ecs.Entity, myLarvae []ecs.Entity) {
 	totalEnergyFedToday_kJ := totalPollenFedToday_g * s.constants.EnergyRequiredForPollenAssimilation_kJ_per_g
 	stores.PollenStore_g = stores.PollenStore_g - totalPollenFedToday_g
 	if stores.PollenStore_g < 0 {
-		// NetLogo: type "negative pollen store! Ticks: " show ticks (show adds the calling agent)
-		fmt.Printf("negative pollen store! Ticks: (colony %d): %d\n", who.Who, s.ticks.Ticks)
+		// NetLogo: type "negative pollen store! Ticks: " show ticks (show adds the calling agent, by its who number).
+		// gobees-fast names the Ark entity ID of the colony instead (step F12).
+		fmt.Printf("negative pollen store! Ticks: (colony %d): %d\n", col.ID(), s.ticks.Ticks)
 	}
 	stores.EnergyStore_kJ = stores.EnergyStore_kJ - totalEnergyFedToday_kJ
 }

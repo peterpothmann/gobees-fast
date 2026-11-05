@@ -69,7 +69,7 @@ func (bw *broodWorld) eggsOf(col ecs.Entity) []ecs.Entity {
 
 // bee returns the components of a bee.
 func (bw *broodWorld) bee(e ecs.Entity) (*comp.Bee, *comp.Genetics, *comp.Thresholds, *comp.Forager, *comp.Development) {
-	_, _, b, g, th, f, d := bw.beeMap.Get(e)
+	_, b, g, th, f, d := bw.beeMap.Get(e)
 	return b, g, th, f, d
 }
 

@@ -37,7 +37,7 @@ func TestNestSites(t *testing.T) {
 	w := ecs.NewWorld()
 	e1, e2, e3 := w.NewEntity(), w.NewEntity(), w.NewEntity()
 	masterpatches := []masterpatch{
-		{e1, 1, "Scrub", 100}, {e2, 2, "Grassland", 200}, {e3, 3, "Improved_Grassland", 400},
+		{e1, "Scrub", 100}, {e2, "Grassland", 200}, {e3, "Improved_Grassland", 400},
 	}
 	// [SPEC-06] exact match only: "Grassland" does not select "Improved_Grassland"
 	sites, area := nestSites([]string{"Grassland", "Scrub"}, masterpatches)
