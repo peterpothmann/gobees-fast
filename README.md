@@ -41,7 +41,7 @@ The reference is written in NetLogo 5.3.1.
 | Folder         | Content                                                         |
 | -------------- | --------------------------------------------------------------- |
 | `go/schedule`  | system order of setup and one simulated day                     |
-| `go/sys`       | 4 systems (Setup, Morning, Day, Evening), their parts one per NetLogo procedure |
+| `go/sys`       | 4 systems (Setup, Morning, Day, Evening), their parts one per NetLogo procedure, file names prefixed with the group |
 | `go/comp`      | components of the entities (bees, colonies, foodsources, ...)   |
 | `go/globals`   | global state of the run (changes during the run)                |
 | `go/params`    | parameters, the content of the input files and the values derived from them (read-only during the run) |
