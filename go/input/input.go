@@ -1,6 +1,7 @@
 package input
 
 import (
+	"bytes"
 	"embed"
 	"fmt"
 	"io"
@@ -20,11 +21,27 @@ var exampleFarm embed.FS
 // ExampleFarmFile is the run file of the example farm in exampleFarm.
 const ExampleFarmFile = "run.yaml"
 
+// Files is a run file and its landscape files as read, before Build.
+type Files struct {
+	Config     Config
+	Landscapes map[string]Landscape // the landscape files by their name in Config
+	Raw        map[string][]byte    // the bytes of each landscape file, by its name in Config
+}
+
 // Load reads the run file at path and its landscape files, relative to the folder of the run file, and returns the
 // parameters of the run (Build).
 func Load(path string) (params.Params, error) {
+	f, err := Read(path)
+	if err != nil {
+		return params.Params{}, err
+	}
+	return Build(f.Config, f.Landscapes)
+}
+
+// Read reads the run file at path and its landscape files, relative to the folder of the run file.
+func Read(path string) (Files, error) {
 	dir := filepath.Dir(path)
-	return load(path, func(name string) (io.ReadCloser, error) {
+	return readAll(path, func(name string) (io.ReadCloser, error) {
 		if !filepath.IsAbs(name) {
 			name = filepath.Join(dir, name)
 		}
@@ -34,68 +51,73 @@ func Load(path string) (params.Params, error) {
 
 // ExampleFarm returns the parameters of the example farm, the run without a run file.
 func ExampleFarm() params.Params {
-	p, err := load(ExampleFarmFile, openExampleFarm)
+	f := ExampleFarmFiles()
+	p, err := Build(f.Config, f.Landscapes)
 	if err != nil {
 		panic(err) // the embedded files are checked by the tests
 	}
 	return p
 }
 
+// ExampleFarmFiles returns the run file and the landscape file of the example farm, as read.
+func ExampleFarmFiles() Files {
+	f, err := readAll(ExampleFarmFile, openExampleFarm)
+	if err != nil {
+		panic(err) // the embedded files are checked by the tests
+	}
+	return f
+}
+
 // ExampleFarmConfig returns the run file of the example farm and its landscape files by name, e.g. for tests that
 // change them before Build.
 func ExampleFarmConfig() (Config, map[string]Landscape) {
-	c, landscapes, err := readAll(ExampleFarmFile, openExampleFarm)
-	if err != nil {
-		panic(err)
-	}
-	return c, landscapes
+	f := ExampleFarmFiles()
+	return f.Config, f.Landscapes
 }
 
 func openExampleFarm(name string) (io.ReadCloser, error) {
 	return exampleFarm.Open(path.Join("examplefarm", name))
 }
 
-func load(name string, open func(string) (io.ReadCloser, error)) (params.Params, error) {
-	c, landscapes, err := readAll(name, open)
-	if err != nil {
-		return params.Params{}, err
-	}
-	return Build(c, landscapes)
-}
-
 // readAll reads the run file name and the landscape files it names (the start and, with a crop rotation, every file
 // of the crop rotation, each once).
-func readAll(name string, open func(string) (io.ReadCloser, error)) (Config, map[string]Landscape, error) {
-	c := Config{}
-	if err := readFile(name, open, func(r io.Reader) (err error) { c, err = ReadConfig(r); return }); err != nil {
-		return c, nil, err
+func readAll(name string, open func(string) (io.ReadCloser, error)) (Files, error) {
+	f := Files{Landscapes: map[string]Landscape{}, Raw: map[string][]byte{}}
+	if _, err := readFile(name, open, func(r io.Reader) (err error) { f.Config, err = ReadConfig(r); return }); err != nil {
+		return f, err
 	}
-	names := []string{c.Landscape}
-	if len(c.CropRotation) > 1 {
-		names = append(names, c.CropRotation...)
+	names := []string{f.Config.Landscape}
+	if len(f.Config.CropRotation) > 1 {
+		names = append(names, f.Config.CropRotation...)
 	}
-	landscapes := map[string]Landscape{}
 	for _, n := range names {
-		if _, ok := landscapes[n]; ok {
+		if _, ok := f.Landscapes[n]; ok {
 			continue
 		}
 		var l Landscape
-		if err := readFile(n, open, func(r io.Reader) (err error) { l, err = ReadLandscape(r); return }); err != nil {
-			return c, nil, err
+		raw, err := readFile(n, open, func(r io.Reader) (err error) { l, err = ReadLandscape(r); return })
+		if err != nil {
+			return f, err
 		}
-		landscapes[n] = l
+		f.Landscapes[n] = l
+		f.Raw[n] = raw
 	}
-	return c, landscapes, nil
+	return f, nil
 }
 
-func readFile(name string, open func(string) (io.ReadCloser, error), read func(io.Reader) error) error {
+// readFile reads the file name with read and returns its bytes.
+func readFile(name string, open func(string) (io.ReadCloser, error), read func(io.Reader) error) ([]byte, error) {
 	f, err := open(name)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer f.Close()
-	if err := read(f); err != nil {
-		return fmt.Errorf("%s: %w", name, err)
+	data, err := io.ReadAll(f)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", name, err)
 	}
-	return nil
+	if err := read(bytes.NewReader(data)); err != nil {
+		return nil, fmt.Errorf("%s: %w", name, err)
+	}
+	return data, nil
 }

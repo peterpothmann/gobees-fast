@@ -167,13 +167,14 @@ func RunProgram(bin string, input []string, seed int64, days int, output bool) (
 	args := append(slices.Clone(input), "-s", strconv.FormatInt(seed, 10), "--days", strconv.Itoa(days))
 	out := ""
 	if output {
-		f, err := os.CreateTemp("", "gobees-compare-*.csv")
+		// a folder of its own: gobees-fast writes the run info and the copies of the landscape files next to the
+		// output
+		dir, err := os.MkdirTemp("", "gobees-compare-*")
 		if err != nil {
 			return Run{}, err
 		}
-		f.Close()
-		defer os.Remove(f.Name())
-		out = f.Name()
+		defer os.RemoveAll(dir)
+		out = filepath.Join(dir, "daily_output.csv")
 		args = append(args, "-f", out)
 	}
 

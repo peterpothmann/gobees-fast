@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"slices"
@@ -32,16 +33,76 @@ func TestCLIDefaults(t *testing.T) {
 	if c.Config != "" {
 		t.Errorf("Config = %q, want empty (example farm)", c.Config)
 	}
-	defaults := params.Default()
-	if c.Seed != 0 || c.Days != defaults.Termination.MaxTicks {
-		t.Errorf("Seed, Days = %d, %d, want 0, %d", c.Seed, c.Days, defaults.Termination.MaxTicks)
+	// not set: the section run of the run file or the defaults apply (TestParametersRunSection)
+	if c.Seed != nil || c.Days != nil {
+		t.Errorf("Seed, Days = %v, %v, want nil, nil", c.Seed, c.Days)
+	}
+	// set to 0: a random seed and no limit, also against the run file
+	c = parse(t, "-s", "0", "--days", "0")
+	if c.Seed == nil || *c.Seed != 0 || c.Days == nil || *c.Days != 0 {
+		t.Errorf("Seed, Days = %v, %v, want 0, 0", c.Seed, c.Days)
+	}
+}
+
+func TestParametersRunSection(t *testing.T) {
+	// the section run of a run file sets seed and days, the flags override it
+	c, landscapes := input.ExampleFarmConfig()
+	days := 3
+	c.Run = &input.Run{Seed: 5, Days: &days}
+	dir := t.TempDir()
+	writeRunFile(t, dir, "run.yaml", c, map[string]input.Landscape{c.Landscape: landscapes[c.Landscape]})
+	path := filepath.Join(dir, "run.yaml")
+
+	for _, tc := range []struct {
+		args      []string
+		seed      int64
+		days      int
+		situation string
+	}{
+		{nil, 5, 3, "no flags: the section run"},
+		{[]string{"-s", "9", "--days", "0"}, 9, 0, "flags override the section run"},
+		{[]string{"-s", "0"}, 0, 3, "-s 0: a random seed, drawn in run"},
+	} {
+		cli := parse(t, append([]string{"-c", path}, tc.args...)...)
+		p, _, err := cli.parameters()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if p.Seed != tc.seed || p.Termination.MaxTicks != tc.days {
+			t.Errorf("%s: Seed, MaxTicks = %d, %d, want %d, %d", tc.situation, p.Seed, p.Termination.MaxTicks,
+				tc.seed, tc.days)
+		}
+	}
+}
+
+// writeRunFile writes the run file c as name and its landscape files into dir.
+func writeRunFile(t *testing.T, dir, name string, c input.Config, landscapes map[string]input.Landscape) {
+	t.Helper()
+	var b bytes.Buffer
+	if err := input.WriteConfig(&b, c); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, name), b.Bytes(), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for n, l := range landscapes {
+		b.Reset()
+		if err := input.WriteLandscape(&b, l); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(filepath.Dir(filepath.Join(dir, n)), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, n), b.Bytes(), 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 
 func TestParametersExampleFarm(t *testing.T) {
 	// Without a run file: the example farm built into package input.
 	c := parse(t)
-	p, err := c.parameters()
+	p, _, err := c.parameters()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,24 +128,10 @@ func TestParametersRunFile(t *testing.T) {
 	c.Landscape = "maps/farm.yaml"
 
 	dir := t.TempDir()
-	if err := os.Mkdir(filepath.Join(dir, "maps"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	write := func(name string, w func(*os.File) error) {
-		f, err := os.Create(filepath.Join(dir, name))
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer f.Close()
-		if err := w(f); err != nil {
-			t.Fatal(err)
-		}
-	}
-	write("run.yaml", func(f *os.File) error { return input.WriteConfig(f, c) })
-	write(filepath.Join("maps", "farm.yaml"), func(f *os.File) error { return input.WriteLandscape(f, landscape) })
+	writeRunFile(t, dir, "run.yaml", c, map[string]input.Landscape{c.Landscape: landscape})
 
 	cli := parse(t, "-c", filepath.Join(dir, "run.yaml"), "-s", "7", "--days", "1")
-	p, err := cli.parameters()
+	p, _, err := cli.parameters()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,7 +151,7 @@ func TestParametersRunFile(t *testing.T) {
 func TestParametersMissingFile(t *testing.T) {
 	// a missing run file is an error, so that a wrong path does not run silently with other parameters
 	c := parse(t, "-c", filepath.Join(t.TempDir(), "missing.yaml"))
-	if _, err := c.parameters(); err == nil {
+	if _, _, err := c.parameters(); err == nil {
 		t.Error("want an error for a missing run file")
 	}
 }
