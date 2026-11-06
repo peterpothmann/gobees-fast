@@ -10,7 +10,6 @@ import (
 	"gobees/comp"
 	"gobees/globals"
 	"gobees/params"
-	"gobees/util"
 
 	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
@@ -148,7 +147,7 @@ func mergeHedges(patches []*flowerPatch, rng *rand.Rand) {
 		var nearest []*flowerPatch
 		best := math.Inf(1)
 		for _, f := range fields {
-			d := util.Distance(h.X, h.Y, f.X, f.Y)
+			d := distanceBetween(h.X, h.Y, f.X, f.Y)
 			if d < best {
 				best, nearest = d, []*flowerPatch{f}
 			} else if d == best {

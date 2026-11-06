@@ -1,6 +1,6 @@
 package stage
 
-// Stage of a bee. NetLogo: stage (a string). Decision A in trans/data-model.md: a field, not a component.
+// Stage of a bee: a field, not a component. NetLogo: stage (a string).
 type Stage uint8
 
 const (

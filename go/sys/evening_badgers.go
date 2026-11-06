@@ -5,7 +5,6 @@ import (
 
 	"gobees/comp"
 	"gobees/globals"
-	"gobees/util"
 
 	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
@@ -59,7 +58,7 @@ func (s *badgers) Update(w *ecs.World) {
 	if len(badgers) == 0 {
 		return
 	}
-	util.Shuffle(s.rng, badgers)
+	shuffle(s.rng, badgers)
 
 	// the members of each colony, grouped once. Bees that died on the way are skipped with w.Alive.
 	s.beesOf = beesByColony(s.beesOf, s.beeFilter, func(b *comp.Bee) bool { return true })
@@ -70,11 +69,11 @@ func (s *badgers) Update(w *ecs.World) {
 		cq := s.colonyFilter.Query()
 		for cq.Next() {
 			pos, _ := cq.Get()
-			if util.Distance(pos.X, pos.Y, b.x, b.y) < s.landscape.Scale*foragingRange {
+			if distanceBetween(pos.X, pos.Y, b.x, b.y) < s.landscape.Scale*foragingRange {
 				inRange = append(inRange, cq.Entity())
 			}
 		}
-		util.Shuffle(s.rng, inRange)
+		shuffle(s.rng, inRange)
 
 		for _, col := range inRange {
 			if s.rng.Float64() >= encounterProb*digUpProb { // NetLogo: random-float 1 < encounterProb * digUpProb
@@ -90,7 +89,7 @@ func (s *badgers) Update(w *ecs.World) {
 					victims = append(victims, e)
 				}
 			}
-			util.Shuffle(s.rng, victims)
+			shuffle(s.rng, victims)
 			// memoBroodDeaths, broodDeathBadger: read only by the egg accounting [CHK-04], removed in step F4
 			for _, e := range victims {
 				s.death.die(w, e, "Colony killed by badger!")

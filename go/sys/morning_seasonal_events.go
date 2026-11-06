@@ -9,7 +9,6 @@ import (
 	"gobees/enum/caste"
 	"gobees/globals"
 	"gobees/params"
-	"gobees/util"
 
 	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
@@ -58,7 +57,7 @@ func (s *seasonalEvents) Update(w *ecs.World) {
 
 	// [SEAS-01] ORDER: irrelevant, each bee dies independently, the colony counters are sums.
 	species := s.speciesMap.all()
-	util.Shuffle(s.rng, species)
+	shuffle(s.rng, species)
 	for _, sp := range species {
 		if s.calendar.Day != s.speciesMap.Get(sp).SeasonStop {
 			continue

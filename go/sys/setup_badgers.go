@@ -7,7 +7,6 @@ import (
 	"gobees/comp"
 	"gobees/globals"
 	"gobees/params"
-	"gobees/util"
 
 	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
@@ -64,7 +63,7 @@ func createBadgers(w *ecs.World, n int, scale float64, rng *rand.Rand) {
 		badgers[i] = badgerMap.NewEntity(&comp.Position{}, &comp.Badger{})
 	}
 	placed := []ecs.Entity{}
-	util.Shuffle(rng, badgers)
+	shuffle(rng, badgers)
 
 	// burrowFsSet before the badgers were created: every Scrub masterpatch
 	burrowFsSet := slices.Clone(sites)
@@ -76,7 +75,7 @@ func createBadgers(w *ecs.World, n int, scale float64, rng *rand.Rand) {
 		chosenFs := burrowFsSet[rng.IntN(len(burrowFsSet))]
 		// the badger moves to the centre of the patch cell of the foodsource (pxcor, pycor)
 		pos, _ := badgerMap.Get(b)
-		pos.X, pos.Y = float64(util.Pcor(chosenFs.pos.X)), float64(util.Pcor(chosenFs.pos.Y))
+		pos.X, pos.Y = float64(pcor(chosenFs.pos.X)), float64(pcor(chosenFs.pos.Y))
 		placed = append(placed, b)
 
 		// recomputed with the badgers placed so far: no badger on the patch cell of the foodsource (badgers-here)
@@ -87,8 +86,8 @@ func createBadgers(w *ecs.World, n int, scale float64, rng *rand.Rand) {
 			free := true
 			for _, other := range placed {
 				p, _ := badgerMap.Get(other)
-				samePatch := util.Pcor(p.X) == util.Pcor(site.pos.X) && util.Pcor(p.Y) == util.Pcor(site.pos.Y)
-				if samePatch || util.Distance(site.pos.X, site.pos.Y, p.X, p.Y) <= limitDistance {
+				samePatch := pcor(p.X) == pcor(site.pos.X) && pcor(p.Y) == pcor(site.pos.Y)
+				if samePatch || distanceBetween(site.pos.X, site.pos.Y, p.X, p.Y) <= limitDistance {
 					free = false
 					break
 				}

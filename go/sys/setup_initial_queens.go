@@ -10,7 +10,6 @@ import (
 	"gobees/enum/caste"
 	"gobees/enum/stage"
 	"gobees/params"
-	"gobees/util"
 
 	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
@@ -35,7 +34,7 @@ func (s *initialQueensSetup) Initialize(w *ecs.World) {
 		if file.InitialQueensFactor == 0 {
 			file.InitialQueensFactor = 1 // changes the parameter, as NetLogo changes the global
 		}
-		newQueens := int(util.Round(float64(sq.Queens) * file.InitialQueensFactor))
+		newQueens := int(round(float64(sq.Queens) * file.InitialQueensFactor))
 
 		// [IQUE-04] one-of the species with this name
 		candidates := speciesByName[sq.Species]
@@ -59,24 +58,24 @@ func (s *initialQueensSetup) Initialize(w *ecs.World) {
 				Stage:    stage.Adult,
 				Activity: activity.Hibernate,
 				// [IQUE-06] -3599 to 3600 s, no effect (finding 31, see trans/netlogo-findings.md#finding-31)
-				PersonalTime: util.RandomInt(rng, 2*3600) + (constants.GetUpTime - 3600),
+				PersonalTime: randomInt(rng, 2*3600) + (constants.GetUpTime - 3600),
 			}
 			genetics := comp.Genetics{
-				MtDNA:       util.RandomFloat(rng, 139.9),
-				Alleles:     []float64{util.RandomFloat(rng, 139.9), util.RandomFloat(rng, 139.9)},
-				Spermatheca: []float64{util.RandomFloat(rng, 139.9)},
+				MtDNA:       randomFloat(rng, 139.9),
+				Alleles:     []float64{randomFloat(rng, 139.9), randomFloat(rng, 139.9)},
+				Spermatheca: []float64{randomFloat(rng, 139.9)},
 			}
 			// [IQUE-07] emergingDate starts at 0, so it is drawn at least once. In the first year the absolute day
 			// is the day of the year.
 			emerging := day.Abs(0)
 			for emerging <= 0 || emerging >= day.Abs(sp.SeasonStop) {
-				emerging = day.Abs(util.Round(util.RandomNormal(rng, sp.EmergenceDayMean, sp.EmergenceDaySD)))
+				emerging = day.Abs(round(randomNormal(rng, sp.EmergenceDayMean, sp.EmergenceDaySD)))
 			}
 			bee.EmergenceDate = day.At(emerging)
 			// [IQUE-09]
 			minWeight := sp.QueenPupationWeightMin // [mg]
 			maxWeight := sp.QueenPupationWeightMax // [mg]
-			bee.Weight = util.RandomNormal(rng, (maxWeight+minWeight)/2, (maxWeight-minWeight)/4)
+			bee.Weight = randomNormal(rng, (maxWeight+minWeight)/2, (maxWeight-minWeight)/4)
 			bee.Weight = min(max(bee.Weight, minWeight), maxWeight)
 
 			// [IQUE-08] no foodsource known yet (zero entities, empty lists)

@@ -10,7 +10,6 @@ import (
 	"gobees/enum/stage"
 	"gobees/globals"
 	"gobees/params"
-	"gobees/util"
 
 	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
@@ -53,7 +52,7 @@ func (s *wakeUp) Update(w *ecs.World) {
 	list := make([]ecs.Entity, 0, len(s.bees))
 	for _, e := range s.bees {
 		b := s.beeMap.Get(e)
-		b.PersonalTime = s.constants.GetUpTime + util.RandomInt(s.rng, randomTimeToGetUp)
+		b.PersonalTime = s.constants.GetUpTime + randomInt(s.rng, randomTimeToGetUp)
 		list = append(list, e)
 	}
 	slices.Reverse(list) // fput

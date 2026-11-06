@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"gobees/comp"
-	"gobees/util"
 
 	"github.com/mlange-42/ark/ecs"
 )
@@ -46,7 +45,7 @@ func TestCreateBadgersNearOrigin(t *testing.T) {
 			t.Fatalf("%d badgers, want 2", len(pos))
 		}
 		// at the centre of the patch cell, at least 300 m apart
-		if util.Distance(pos[0].X, pos[0].Y, pos[1].X, pos[1].Y) <= 30 {
+		if distanceBetween(pos[0].X, pos[0].Y, pos[1].X, pos[1].Y) <= 30 {
 			t.Fatalf("badgers at %v and %v are not more than 300 m apart", pos[0], pos[1])
 		}
 		for _, p := range pos {

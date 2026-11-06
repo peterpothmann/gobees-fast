@@ -16,21 +16,18 @@ type World struct {
 }
 
 // Termination criteria.
-//
-// NetLogo has no maximum run length inside Go; it is set by the "Run for period" button or BehaviorSpace.
 type Termination struct {
 	MaxTicks int // Maximum number of ticks to run [d]. A value <= 0 means no limit.
 }
 
 // Params contains all parameters of the model.
 //
-// Of the NetLogo interface settings, only RAND_SEED (Seed) and the world size (World) remain. The landscape of the
-// start (NetLogo: MyMap) is in the run file.
+// Of the NetLogo interface settings, only RAND_SEED (Seed) and the world size (World) remain.
 type Params struct {
-	Seed        int64 // Random seed (RAND_SEED). 0 means a random seed [INIT-01].
+	Seed        int64 // Random seed. 0 means a random seed. NetLogo: RAND_SEED
 	World       World
-	Parameters  Parameters // The parameters of the run file, read with input.Load [INIT-04].
-	Output      Output     // The output options of the run file (step F13).
+	Parameters  Parameters // The parameters of the run file, read with input.Load.
+	Output      Output     // The output options of the run file.
 	Input       Input      // The other content of the run file and its landscape files, read with input.Load.
 	Constants   Constants
 	Termination Termination
@@ -38,8 +35,8 @@ type Params struct {
 
 // Default returns the default parameters. Seed and World are the values stored in the .nlogo file.
 //
-// File and Input are left empty. input.Load reads both from a run file, input.ExampleFarm returns the example farm
-// (NetLogo: _SYSTEM_Example_Farm_Parameters.csv with the default interface settings, MyParametersFile [INIT-02]).
+// Parameters, Output and Input are left empty. input.Load reads them from a run file, input.ExampleFarm returns
+// the example farm.
 func Default() Params {
 	return Params{
 		Seed:      0,
@@ -51,9 +48,8 @@ func Default() Params {
 	}
 }
 
-// Apply seeds the random number generator [INIT-01] and adds all parameters to the world as resources.
+// Apply seeds the random number generator and adds all parameters to the world as resources.
 func (p *Params) Apply(w *ecs.World) {
-	// [INIT-01] NetLogo seeds only if RAND_SEED != 0. NetLogo's random sequence cannot be reproduced.
 	seed := uint64(p.Seed)
 	if p.Seed == 0 {
 		seed = rand.Uint64()
@@ -66,8 +62,8 @@ func (p *Params) Apply(w *ecs.World) {
 	ecs.AddResource(w, &pCopy.Parameters)
 	ecs.AddResource(w, &pCopy.Output)
 	ecs.AddResource(w, &pCopy.Input)
-	ecs.AddResource(w, &pCopy.Input.Derived)        // [INIT-05] ParametersProc, see package input
-	ecs.AddResource(w, &pCopy.Input.ForagingPeriod) // [FPER]
+	ecs.AddResource(w, &pCopy.Input.Derived)
+	ecs.AddResource(w, &pCopy.Input.ForagingPeriod)
 	ecs.AddResource(w, &pCopy.Constants)
 	ecs.AddResource(w, &pCopy.Termination)
 }

@@ -9,7 +9,6 @@ import (
 	"gobees/enum/stage"
 	"gobees/globals"
 	"gobees/params"
-	"gobees/util"
 
 	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
@@ -139,14 +138,14 @@ func (s *activities) nextActiveBee() ecs.Entity {
 	// [NEXT-02]
 	minPosition := 0.0
 	maxPosition := float64(len(list) - 1)
-	currentPosition := util.Round(maxPosition / 2)
+	currentPosition := round(maxPosition / 2)
 	for maxPosition-minPosition > 1 {
 		if time(list[int(currentPosition)]) > activeBeeTime {
 			maxPosition = currentPosition
-			currentPosition = util.Round((currentPosition + minPosition) / 2)
+			currentPosition = round((currentPosition + minPosition) / 2)
 		} else {
 			minPosition = currentPosition
-			currentPosition = util.Round((maxPosition + currentPosition) / 2)
+			currentPosition = round((maxPosition + currentPosition) / 2)
 		}
 	}
 	beginningList := list[:int(currentPosition)]
@@ -238,7 +237,7 @@ func (s *activities) incubateBrood(w *ecs.World, e ecs.Entity) {
 	}
 	// ORDER: irrelevant, each brood agent only changes itself. Shuffled (decision C).
 	brood := s.broodOf[b.Colony]
-	util.Shuffle(s.rng, brood)
+	shuffle(s.rng, brood)
 	for _, x := range brood {
 		if !w.Alive(x) {
 			continue

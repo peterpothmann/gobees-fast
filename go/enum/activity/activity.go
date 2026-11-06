@@ -9,12 +9,12 @@ const (
 	Resting
 	Searching
 	ReturningEmpty
-	ReturningUnhappyNectar // back from a nectar trip, unhappy with the trip: looks for another layer or patch [PCH-04]. NetLogo: returningUnhappyN
+	ReturningUnhappyNectar // back from a nectar trip, unhappy with the trip: looks for another layer or patch. NetLogo: returningUnhappyN
 	ReturningUnhappyPollen // NetLogo: returningUnhappyP
 	NectarForaging
 	CollectNectar
 	BringingNectar
-	ReturningHappyNectar // back from a nectar trip with a load [COST-02], happy unless [PCH-04] makes her unhappy. NetLogo: expForagingN
+	ReturningHappyNectar // back from a nectar trip with a load, happy with her patch. NetLogo: expForagingN
 	PollenForaging
 	CollectPollen
 	BringingPollen

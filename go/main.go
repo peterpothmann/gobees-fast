@@ -23,17 +23,15 @@ const defaultOutputFile = "daily_output.csv"
 // cli holds the command-line flags.
 type cli struct {
 	Config     string `short:"c" type:"path" placeholder:"PATH" help:"Run file (YAML, see package input). Its landscape files are relative to its folder. Default: the example farm, which is built in. tools/netlogo2gobees converts NetLogo input files into run files."`
-	Seed       int64  `short:"s" default:"0" help:"Random seed (RAND_SEED). 0 means a random seed [INIT-01]."`
-	Days       int    `default:"${default_days}" help:"Number of days (ticks) to run. 0 means no limit: the run only ends with StopExtinct? when the population is extinct [GO-20]."`
-	Output     bool   `short:"o" help:"Write the daily output (the totals of OutputDailyProc and further values, see obs.DailyOutputExtended) to ${default_output_file}, one row per tick, tab separated."`
+	Seed       int64  `short:"s" default:"0" help:"Random seed. 0 means a random seed."`
+	Days       int    `default:"${default_days}" help:"Number of days (ticks) to run. 0 means no limit: the run only ends with stopExtinct when the population is extinct."`
+	Output     bool   `short:"o" help:"Write the daily output (the daily totals and further values, see obs.DailyOutputExtended) to ${default_output_file}, one row per tick, tab separated."`
 	OutputFile string `short:"f" type:"path" placeholder:"PATH" help:"Write the daily output to PATH instead (implies -o)."`
 }
 
 // parameters returns the model parameters for the flags, with all input files read. Without a run file, these are
 // the example farm parameters.
 func (c *cli) parameters() (params.Params, error) {
-	// [INIT-02] NetLogo chooses MyParametersFile from the interface settings. Here the run file is given directly.
-	// [INIT-04], [INIT-05]
 	p := input.ExampleFarm()
 	if c.Config != "" {
 		var err error

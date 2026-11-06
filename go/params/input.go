@@ -7,37 +7,33 @@ import (
 	"gobees/day"
 )
 
-// Input holds the content of the run file and its landscape files, and the values that ParametersProc derives from
-// the parameters [INIT-05]. Package input reads it before the setup, so no system opens a file. Read-only during the
-// run.
+// Input holds the content of the run file and its landscape files, and the values derived from them. Package input
+// reads it before the setup, so no system opens a file. Read-only during the run.
 type Input struct {
-	Derived        Derived        // [PAR] the derived globals, Params.Apply adds them as resource
-	ForagingPeriod ForagingPeriod // [FPER] daily foraging period (NetLogo: the parameter Weather), Params.Apply adds it as resource
+	Derived        Derived        // the derived values, Params.Apply adds them as resource
+	ForagingPeriod ForagingPeriod // daily foraging period, Params.Apply adds it as resource. NetLogo: the parameter Weather
 
 	// Species are the species of the run file whose name is in Derived.SpeciesNames, in file order, with the
-	// derived values [SPEC-01] to [SPEC-03], [SPEC-05], [SPEC-07]. NestHabitats is as in the file: the
-	// expansion [SPEC-04] and the nest sites [SPEC-06] need the foodsources and happen in sys.nestSitesSetup.
+	// derived values. NestHabitats is as in the file: the expansion and the nest sites need the foodsources and
+	// happen in sys.nestSitesSetup.
 	Species []Species
 
-	// Flowers are the flower species of the run file [LAYR-02], nil without them (NetLogo: FlowerspeciesFile is
-	// "No Input File" [FSRC-12]).
+	// Flowers are the flower species of the run file, nil without them.
 	Flowers *FlowerSpeciesTable
 
-	// Foodsources holds the landscape files by their name in the run file [FSRC-02] to [FSRC-04]: the one of the
+	// Foodsources holds the landscape files by their name in the run file: the one of the
 	// start (Derived.StartLandscape, the current one is globals.Landscape.File) and, if there is a crop rotation, every
-	// file of Derived.CropRotation [CROP-01].
+	// file of Derived.CropRotation.
 	Foodsources map[string]Foodsources
 }
 
 // Foodsources is the content of one landscape file (NetLogo: foodsources file).
 type Foodsources struct {
-	MetresPerPatch float64       // metres per NetLogo patch [FSRC-02]
-	Patches        []FlowerPatch // in file order [FSRC-04]
+	MetresPerPatch float64       // metres per NetLogo patch
+	Patches        []FlowerPatch // in file order
 }
 
-// FlowerPatch is one flower patch of a landscape file: a whole flower patch before it is split into layers [FSRC-04].
-// Of the columns of the NetLogo foodsources file, patchColour, perimeter_m and info are not read since step F7: only
-// the NetLogo GUI uses them.
+// FlowerPatch is one flower patch of a landscape file: a whole flower patch before it is split into layers.
 type FlowerPatch struct {
 	ID        float64 // column 1 of the landscape file. NetLogo: id_Beescout
 	PatchType string
@@ -53,8 +49,8 @@ type FlowerEntry struct {
 	HasValue bool
 }
 
-// FlowerSpecies is the data per flower of one flower species [LAYR-02] (NetLogo: one row of the FlowerspeciesFile).
-// The keys of the run file (tag `yaml`) are the Go names in lowerCamelCase (step F15c), the comments name the columns
+// FlowerSpecies is the data per flower of one flower species (NetLogo: one row of the FlowerspeciesFile).
+// The keys of the run file (tag `yaml`) are the Go names in lowerCamelCase, the comments name the columns
 // of the NetLogo FlowerspeciesFile.
 type FlowerSpecies struct {
 	Name            string     `yaml:"name"`            // NetLogo: Flowerspecies
@@ -73,8 +69,7 @@ type FlowerSpeciesTable struct {
 	Rows  []FlowerSpecies
 }
 
-// Get returns the row of a flower species. NetLogo: item (position mySpecies allFlowerspeciesList + 1),
-// i.e. the FIRST row with this name. A missing species is an error (NetLogo: message, then runtime error).
+// Get returns the FIRST row with the name of a flower species. A missing species is an error.
 func (t *FlowerSpeciesTable) Get(name string) (*FlowerSpecies, error) {
 	i := slices.Index(t.Names, name)
 	if i < 0 {

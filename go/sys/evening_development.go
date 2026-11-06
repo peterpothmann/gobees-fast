@@ -10,7 +10,6 @@ import (
 	"gobees/event"
 	"gobees/globals"
 	"gobees/params"
-	"gobees/util"
 
 	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
@@ -152,7 +151,7 @@ func (s *development) developPupa(e ecs.Entity) {
 			yearStartSeason := day.YearEnd(s.ticks.Ticks)
 			yearEndSeason := yearStartSeason + day.Abs(sp.SeasonStop)
 			for !bee.EmergenceDate.IsSet() || bee.EmergenceDate.Day() <= yearStartSeason || bee.EmergenceDate.Day() > yearEndSeason {
-				bee.EmergenceDate = day.At(yearStartSeason + day.Abs(util.Round(util.RandomNormal(s.rng, sp.EmergenceDayMean, sp.EmergenceDaySD))))
+				bee.EmergenceDate = day.At(yearStartSeason + day.Abs(round(randomNormal(s.rng, sp.EmergenceDayMean, sp.EmergenceDaySD))))
 			}
 			bee.Stage = stage.Adult
 			s.queenEmerged.Emit(e) // totalAdultQueensEverProduced: output only, counted by the observers (step F4)

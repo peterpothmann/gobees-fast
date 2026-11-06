@@ -102,8 +102,7 @@ func TestParametersRunFile(t *testing.T) {
 }
 
 func TestParametersMissingFile(t *testing.T) {
-	// NetLogo loads _SYSTEM_Parameters.csv instead of a missing parameter file [RPAR-01]. gobees-fast stops, so that
-	// a wrong path does not run silently with other parameters.
+	// a missing run file is an error, so that a wrong path does not run silently with other parameters
 	c := parse(t, "-c", filepath.Join(t.TempDir(), "missing.yaml"))
 	if _, err := c.parameters(); err == nil {
 		t.Error("want an error for a missing run file")
@@ -111,7 +110,7 @@ func TestParametersMissingFile(t *testing.T) {
 }
 
 func TestCLIRemovedFlags(t *testing.T) {
-	// -m (MyMap) is removed in step F6, -p and -d (NetLogo files) in step F7. The landscape is in the run file.
+	// the flags of older versions (-m, -p, -d) are errors: the landscape and all parameters are in the run file
 	for _, args := range [][]string{{"-m", "_SYSTEM_Example_Farm.png"}, {"-p", "x.csv"}, {"-d", "."}} {
 		var c cli
 		parser, err := newParser(&c)

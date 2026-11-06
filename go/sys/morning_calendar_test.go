@@ -13,7 +13,6 @@ import (
 	"gobees/globals"
 	"gobees/input"
 	"gobees/params"
-	"gobees/util"
 
 	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
@@ -29,7 +28,7 @@ func TestDayOfYear(t *testing.T) {
 	}
 	// the integer formula equals the NetLogo formula round (ticks mod 365.00000001) for 100 years
 	for ticks := day.Abs(0); ticks <= 100*365; ticks++ {
-		netlogo := util.Round(math.Mod(float64(ticks), 365.00000001))
+		netlogo := round(math.Mod(float64(ticks), 365.00000001))
 		if got := dayOfYear(ticks); float64(got) != netlogo {
 			t.Fatalf("ticks %d: dayOfYear %v, NetLogo formula %v", ticks, got, netlogo)
 		}

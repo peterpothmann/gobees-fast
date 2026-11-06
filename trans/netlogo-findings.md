@@ -135,7 +135,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Checked from the input file (2026-10-23, PP):** the 73 flower patches of `_SYSTEM_Example_Farm_Foodsources.txt` lie in 73 different patch cells, with every rounding rule for coordinates ending in .5 (finding 24). The case does not occur for the example farm.
 - **Consequence for gobees:** compute the list by patch cell exactly as NetLogo does (rounded coordinates, see the patch cells in `trans/data-model.md`), not by masterpatch. Translate the assertion, so that gobees stops in the same situation.
 - **Second Check**: 23.10.2026, PP
-- **Implemented:** `setLayersInPatchList` in `sys/setup_landscape.go`, grouped by `util.Pcor`. Test: `TestCreateLayers` (two flower patches in cell (10, 20) share one list). The assertion in `choosePatch` comes with step 6. Step 6: the assertion in `forager.choosePatch` (`sys/day_foraging.go`, `[PCH-03]`) panics. `bestLayer` reads `Layer.PatchLayers` (`LayersInPatchList` until step F15b).
+- **Implemented:** `setLayersInPatchList` in `sys/setup_landscape.go`, grouped by `util.Pcor` (`pcor` in `sys/shared_space.go` since step F16). Test: `TestCreateLayers` (two flower patches in cell (10, 20) share one list). The assertion in `choosePatch` comes with step 6. Step 6: the assertion in `forager.choosePatch` (`sys/day_foraging.go`, `[PCH-03]`) panics. `bestLayer` reads `Layer.PatchLayers` (`LayersInPatchList` until step F15b).
 - **gobees-fast:** fixed in step F5. `setLayersInPatchList` groups by `Layer.Masterpatch` (`MasterpatchID` until step F15b): the list holds the layers of the same flower patch, sorted by `who`. The assertion in [PCH-03] stays as a check of the state. Same lists as before for the example farm and `Example_Farm_PlotTest` (no patch cell with two flower patches). Test: `TestCreateLayersProc` (two flower patches in cell (10, 20) get two lists).
 
 <a id="finding-16"></a>
@@ -223,7 +223,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Side result:** the 6 layers have the `who` numbers 360, 363, 366, 367, 368 and 373. The gaps are layers of the same flower patch that were removed as empty, which confirms finding 18.
 - **Consequence for gobees:** patch cell of a point = `math.Floor(v + 0.5)` (round half up; all coordinates of the world are >= 0). Test with the 13 border coordinates of the example farm, e.g. 121.5 → 122 and 210.5 → 211.
 - **Second Check**: 23.10.2026, PP
-- **Implemented:** `util.Pcor`. Test: `TestPcor` with the 13 border coordinates of the example farm.
+- **Implemented:** `util.Pcor` (`pcor` in `sys/shared_space.go` since step F16). Test: `TestPcor` with the 13 border coordinates of the example farm.
 
 ## Findings from step 3 (queens and colony foundation)
 
@@ -238,7 +238,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Consequence for gobees:** reproduce the random choice among the patch centres within the circle (strict `<`, distance in patch units). Translate the runtime error as an error. This also corrects finding 24.
 - **Second Check**: 24.10.2026, PP
 - **Implemented:** `searchNestSite` in `sys/morning_queen_emergence.go` with `util.PatchCentresWithin` (strict `<`). No patch centre: panic. Tests: `TestNestSearchFoundsColonies` (colonies at patch centres, the 100 m2 hedge only at (50, 50)), `TestPatchCentresWithin`.
-- **gobees-fast:** edge case fixed in step F5. Without a patch centre in the circle, the colony is placed at the centre of the patch cell of the foodsource (`util.Pcor`), without a random number. Test: `TestNestSearchNoPatchCentre` (the 100 m² hedge at (133.548, 112.5): colony at (134, 113)).
+- **gobees-fast:** edge case fixed in step F5. Without a patch centre in the circle, the colony is placed at the centre of the patch cell of the foodsource (`pcor`), without a random number. Test: `TestNestSearchNoPatchCentre` (the 100 m² hedge at (133.548, 112.5): colony at (134, 113)).
 
 <a id="finding-26"></a>
 

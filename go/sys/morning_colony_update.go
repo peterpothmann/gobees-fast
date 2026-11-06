@@ -9,7 +9,6 @@ import (
 	"gobees/enum/stage"
 	"gobees/globals"
 	"gobees/params"
-	"gobees/util"
 
 	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
@@ -68,7 +67,7 @@ func (s *colonyUpdate) Update(w *ecs.World) {
 	for query.Next() {
 		colonies = append(colonies, query.Entity())
 	}
-	util.Shuffle(s.rng, colonies)
+	shuffle(s.rng, colonies)
 
 	// NetLogo: bees with [ colonyID = whoCol ]. The bees in the same colony are grouped once, as no bee is created and no bee
 	// changes its colony here. Bees that die on the way are skipped with w.Alive.
@@ -102,7 +101,7 @@ func (s *colonyUpdate) updateColony(w *ecs.World, col ecs.Entity, members []ecs.
 	// ask is alive in random order, for NetLogo's ask (decision C).
 	ask := func(keep func(b *comp.Bee) bool) []ecs.Entity {
 		result := alive(keep)
-		util.Shuffle(s.rng, result)
+		shuffle(s.rng, result)
 		return result
 	}
 	all := func(b *comp.Bee) bool { return true }
@@ -223,7 +222,7 @@ func competitionPointDate(c *comp.Colony) day.Abs {
 	// 0.7*x + 15.5 in one step (fused multiply-add), which can change the last bit and thus the rounding.
 	y := float64(0.7*x) + 15.5
 	latestCPAfter := day.Abs(45) // [d]
-	compDate := day.Abs(util.Round(float64(eusocialPhaseDate) + y))
+	compDate := day.Abs(round(float64(eusocialPhaseDate) + y))
 	// The CP is at most 45 days after the eusocial phase
 	if compDate-eusocialPhaseDate > latestCPAfter {
 		compDate = eusocialPhaseDate + latestCPAfter // set to 45 days after eusocial phase (first worker), as in NetLogo

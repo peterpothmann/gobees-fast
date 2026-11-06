@@ -4,7 +4,6 @@ import (
 	"math/rand/v2"
 
 	"gobees/comp"
-	"gobees/util"
 
 	"github.com/mlange-42/ark/ecs"
 )
@@ -22,7 +21,7 @@ func askColonies(filter *ecs.Filter1[comp.Colony], rng *rand.Rand) []ecs.Entity 
 	for query.Next() {
 		result = append(result, query.Entity())
 	}
-	util.Shuffle(rng, result)
+	shuffle(rng, result)
 	return result
 }
 
@@ -33,7 +32,7 @@ func askAllBees(buf []ecs.Entity, filter *ecs.Filter1[comp.Bee], rng *rand.Rand)
 	for query.Next() {
 		result = append(result, query.Entity())
 	}
-	util.Shuffle(rng, result)
+	shuffle(rng, result)
 	return result
 }
 
@@ -47,7 +46,7 @@ func askBees(buf []ecs.Entity, filter *ecs.Filter1[comp.Bee], rng *rand.Rand, ke
 			result = append(result, query.Entity())
 		}
 	}
-	util.Shuffle(rng, result)
+	shuffle(rng, result)
 	return result
 }
 

@@ -12,7 +12,6 @@ import (
 	"gobees/event"
 	"gobees/globals"
 	"gobees/params"
-	"gobees/util"
 
 	"github.com/mlange-42/ark/ecs"
 )
@@ -104,7 +103,7 @@ func (f *forager) sortKnownPatches(e ecs.Entity, knownPatchesList []ecs.Entity) 
 	colPos, _, _, _ := f.colonyMap.Get(b.Colony)
 	distance := func(p ecs.Entity) float64 {
 		pos, _, _, _ := f.foodsourceMap.Get(p)
-		return util.Distance(colPos.X, colPos.Y, pos.X, pos.Y)
+		return distanceBetween(colPos.X, colPos.Y, pos.X, pos.Y)
 	}
 	slices.SortStableFunc(newList, func(p1, p2 ecs.Entity) int {
 		d1, d2 := distance(p1), distance(p2)
@@ -135,7 +134,7 @@ func (f *forager) search(e ecs.Entity) {
 		}
 		// [SRCH-02] one draw per candidate in random order, the last detected one is chosen
 		candidates := slices.Clone(myMasterpatchesWithFoodList)
-		util.Shuffle(f.rng, candidates)
+		shuffle(f.rng, candidates)
 		for _, p := range candidates {
 			if f.rng.Float64() < f.detectionProb(p, xcol, ycol) {
 				chosenMasterpatch = p
@@ -172,9 +171,9 @@ func (f *forager) search(e ecs.Entity) {
 func (f *forager) detectionProb(patchWho ecs.Entity, xcol, ycol float64) float64 {
 	// [DET-01]
 	pos, fs, _, _ := f.foodsourceMap.Get(patchWho)
-	dist := util.Distance(pos.X, pos.Y, xcol, ycol) / f.landscape.Scale // [m]
-	patchRadius := fs.Radius                                            // [m]
-	relevantDistance := dist - patchRadius                              // [m]
+	dist := distanceBetween(pos.X, pos.Y, xcol, ycol) / f.landscape.Scale // [m]
+	patchRadius := fs.Radius                                              // [m]
+	relevantDistance := dist - patchRadius                                // [m]
 	if relevantDistance < 0 {
 		relevantDistance = 0
 	}
@@ -290,7 +289,7 @@ func (f *forager) bestLayer(e ecs.Entity, myCurrentFoodsource ecs.Entity) ecs.En
 	// [BLYR-01]
 	colPos, _, _, _ := f.colonyMap.Get(b.Colony)
 	fsPos, _, _, layer := f.foodsourceMap.Get(myCurrentFoodsource)
-	patchDistance := util.Distance(colPos.X, colPos.Y, fsPos.X, fsPos.Y) / f.landscape.Scale // [m]
+	patchDistance := distanceBetween(colPos.X, colPos.Y, fsPos.X, fsPos.Y) / f.landscape.Scale // [m]
 	sp := f.speciesMap.Get(b.Species)
 
 	for _, currentLayer := range layer.PatchLayers {
@@ -382,11 +381,11 @@ func (f *forager) choosePatch(e ecs.Entity, tripDuration float64) {
 		}
 	}
 
-	// [PCH-05] random 0 is 0 (util.RandomInt)
+	// [PCH-05] random 0 is 0 (RandomInt)
 	if gotoNewLayergroup {
 		newPatchPosition := -999.0
 		if f.rng.Float64() < preferenceClosePatchesProb {
-			newPatchPosition = util.RandomInt(f.rng, myCurrentPatchPosition+1) - 1
+			newPatchPosition = randomInt(f.rng, myCurrentPatchPosition+1) - 1
 		} else {
 			newPatchPosition = myCurrentPatchPosition + 1
 		}
@@ -452,7 +451,7 @@ func (f *forager) tripCosts(w *ecs.World, e ecs.Entity) bool {
 			b.Activity = activity.ReturningHappyPollen
 		}
 		fsPos, _, _, _ := f.foodsourceMap.Get(fo.CurrentFoodsource)
-		distance := util.Distance(colPos.X, colPos.Y, fsPos.X, fsPos.Y)
+		distance := distanceBetween(colPos.X, colPos.Y, fsPos.X, fsPos.Y)
 		scaling := f.landscape.Scale
 		stores.Energy = stores.Energy - float64(
 			(float64(2*distance/scaling)+

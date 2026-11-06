@@ -8,7 +8,6 @@ import (
 	"gobees/enum/stage"
 	"gobees/globals"
 	"gobees/params"
-	"gobees/util"
 
 	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
@@ -80,7 +79,7 @@ func (s *larvaeFeeding) feedColony(col ecs.Entity, myLarvae []ecs.Entity) {
 	// [FEED-02] ORDER: irrelevant, the store does not change within the loop, each larva changes only itself.
 	// The cap compares the pollen of ONE larva with the whole store (see the annotation).
 	totalPollenFedToday := 0.0 // [g]
-	util.Shuffle(s.rng, myLarvae)
+	shuffle(s.rng, myLarvae)
 	for _, e := range myLarvae {
 		b := s.beeMap.Get(e)
 		sp := s.speciesMap.Get(b.Species)

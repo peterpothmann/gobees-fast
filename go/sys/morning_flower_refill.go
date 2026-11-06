@@ -6,7 +6,6 @@ import (
 
 	"gobees/comp"
 	"gobees/globals"
-	"gobees/util"
 
 	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
@@ -46,7 +45,7 @@ func (s *flowerRefill) Update(w *ecs.World) {
 	for query.Next() {
 		foodsources = append(foodsources, query.Entity())
 	}
-	util.Shuffle(s.rng, foodsources)
+	shuffle(s.rng, foodsources)
 
 	for _, e := range foodsources {
 		fs, state := s.fsMap.Get(e)

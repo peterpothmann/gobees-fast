@@ -12,45 +12,43 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-// Config is the content of a run file (YAML) [INIT-04]. The tool tools/netlogo2gobees converts the NetLogo input files
+// Config is the content of a run file (YAML). The tool tools/netlogo2gobees converts the NetLogo input files
 // into run files.
 //
-// All keys are lowerCamelCase (step F15c), the NetLogo names are in docs/names.md and in the tag `netlogo` of the
-// fields that the converter maps by name. A key
-// missing in the file keeps its zero value (as a column missing in a NetLogo parameter file), an unknown key is an
-// error.
+// All keys are lowerCamelCase, the NetLogo names are in docs/names.md and in the tag `netlogo` of the fields that
+// the converter maps by name. A key missing in the file keeps its zero value, an unknown key is an error.
 type Config struct {
 	Parameters params.Parameters `yaml:"parameters"`
 
-	// Output are the options of the output (step F13). NetLogo: the parameter KeepDeadColonies?.
+	// Output are the options of the output. NetLogo: the parameter KeepDeadColonies?.
 	Output params.Output `yaml:"output"`
 
-	// InitialQueens are the species and their initial queens, in this order [QINI] (NetLogo:
+	// InitialQueens are the species and their initial queens, in this order (NetLogo:
 	// BeeSpeciesInitialQueensListAsString).
 	InitialQueens []params.SpeciesQueens `yaml:"initialQueens"`
 
 	// ForagingPeriod is the foraging period per day of the year [s], 365 values per year, for one or more years.
-	// The years repeat [FPER] (NetLogo: Weather).
+	// The years repeat (NetLogo: Weather).
 	ForagingPeriod []Year `yaml:"foragingPeriod"`
 
-	// StewardshipOptions are the names of the stewardship options [CSO] (NetLogo: the habitat types of the HabitatsFile
+	// StewardshipOptions are the names of the stewardship options (NetLogo: the habitat types of the HabitatsFile
 	// whose habitatColourID contains "FlowerSpeciesList_").
 	StewardshipOptions []string `yaml:"stewardshipOptions"`
 
-	// Species are the bee species [SPEC] (NetLogo: rows of the BeespeciesFile). Only the species of InitialQueens are
-	// used, in the order of this list, found by their name [SPEC-02].
+	// Species are the bee species (NetLogo: rows of the BeespeciesFile). Only the species of InitialQueens are
+	// used, in the order of this list, found by their name.
 	Species []Species `yaml:"species"`
 
-	// Flowers are the flower species [LAYR-02] (NetLogo: rows of the FlowerspeciesFile). Without the key, no layers
-	// get flower values (NetLogo: FlowerspeciesFile "No Input File" [FSRC-12]).
+	// Flowers are the flower species (NetLogo: rows of the FlowerspeciesFile). Without the key, no layers
+	// get flower values.
 	Flowers []params.FlowerSpecies `yaml:"flowers"`
 
-	// Landscape is the landscape file of the start [PAR-05], relative to the folder of the run file (NetLogo: the
+	// Landscape is the landscape file of the start, relative to the folder of the run file (NetLogo: the
 	// foodsources file of MyMap).
 	Landscape string `yaml:"landscape"`
 
-	// CropRotation are the landscape files of the crop rotation [PAR-07], relative to the folder of the run file.
-	// With fewer than 2 files, there is no crop rotation [MORN-09] (NetLogo: CropRotationListAsString).
+	// CropRotation are the landscape files of the crop rotation, relative to the folder of the run file.
+	// With fewer than 2 files, there is no crop rotation (NetLogo: CropRotationListAsString).
 	CropRotation []string `yaml:"cropRotation,omitempty"`
 }
 
@@ -62,19 +60,18 @@ func (y Year) MarshalYAML() (any, error) {
 	return flowNode([]float64(y))
 }
 
-// Species are the values of one bee species in a run file [SPEC-03]. Since step F14 the type is params.SpeciesFile,
-// which params.Species embeds.
+// Species are the values of one bee species in a run file: params.SpeciesFile, which params.Species embeds.
 type Species = params.SpeciesFile
 
-// Landscape is the content of a landscape file (YAML) [FSRC-02] to [FSRC-04] (NetLogo: foodsources file).
+// Landscape is the content of a landscape file (YAML) (NetLogo: foodsources file).
 type Landscape struct {
-	MetresPerPatch float64 `yaml:"metresPerPatch"` // metres per NetLogo patch [FSRC-02] (NetLogo: line 1)
-	Patches        []Patch `yaml:"patches"`        // flower patches, in this order [FSRC-04]
+	MetresPerPatch float64 `yaml:"metresPerPatch"` // metres per NetLogo patch
+	Patches        []Patch `yaml:"patches"`        // flower patches, in this order
 }
 
 // Patch is one flower patch of a landscape file. The keys are the columns of the NetLogo foodsources file, except
-// area (size_sqm) and flowers (flowerSpeciesList), step F15c. The keys x and y would need quotes in YAML (y is a
-// boolean in YAML 1.1), so xcor and ycor stay.
+// area (size_sqm) and flowers (flowerSpeciesList). The keys x and y would need quotes in YAML (y is a boolean in
+// YAML 1.1), so xcor and ycor stay.
 type Patch struct {
 	ID        float64    `yaml:"id"`
 	PatchType string     `yaml:"patchType"`

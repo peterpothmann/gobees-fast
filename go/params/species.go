@@ -4,19 +4,18 @@ import (
 	"gobees/day"
 )
 
-// SpeciesFile are the values of one bee species in a run file [SPEC-03] (section species, package input), before the
-// derived values. The keys (tag `yaml`) are the Go names in lowerCamelCase (step F15c), the tag `netlogo` holds the
-// column of the NetLogo BeespeciesFile where it differs (the converter reads the columns by it).
+// SpeciesFile are the values of one bee species in a run file (section species, package input), before the
+// derived values. The keys (tag `yaml`) are the Go names in lowerCamelCase, the tag `netlogo` holds the column of the
+// NetLogo BeespeciesFile where it differs (the converter reads the columns by it).
 type SpeciesFile struct {
-	// Name is the name in InitialQueens [SPEC-02], [IQUE-04]. NetLogo has two columns, species (compared with the
-	// initial queens) and name (stored), equal in all files. The converter checks that they are equal (step F13).
+	// Name is the name in InitialQueens. NetLogo: the columns species and name, equal in all files.
 	Name string `yaml:"name"`
-	// Parasitic marks a cuckoo bumblebee species (Psithyrus) [ACT-04], [EMER-04], [PSI]. NetLogo compares the name
-	// with "Psithyrus", the converter sets the key for this name (step F13).
+	// Parasitic marks a cuckoo bumblebee species (Psithyrus). NetLogo compares the name with "Psithyrus", the
+	// converter sets the key for this name.
 	Parasitic                bool       `yaml:"parasitic,omitempty"`
 	EmergenceDayMean         float64    `yaml:"emergenceDayMean" netlogo:"emergingDay_mean"` // mean day of the year of the emergence from hibernation [d]
-	EmergenceDaySD           float64    `yaml:"emergenceDaySD" netlogo:"emergingDay_sd"`     // its standard deviation [d], rounded [SPEC-03]
-	NestHabitats             []string   `yaml:"nestHabitats" netlogo:"nestHabitatsList"`     // habitat types of the nest sites [SPEC-04], before the expansion, see globals.NestSites
+	EmergenceDaySD           float64    `yaml:"emergenceDaySD" netlogo:"emergingDay_sd"`     // its standard deviation [d], rounded
+	NestHabitats             []string   `yaml:"nestHabitats" netlogo:"nestHabitatsList"`     // habitat types of the nest sites, before the expansion, see globals.NestSites
 	ProboscisMin             float64    `yaml:"proboscisMin" netlogo:"proboscis_min_mm"`     // [mm]
 	ProboscisMax             float64    `yaml:"proboscisMax" netlogo:"proboscis_max_mm"`     // [mm]
 	GrowthFactor             float64    `yaml:"growthFactor"`
@@ -45,16 +44,15 @@ type SpeciesFile struct {
 }
 
 // Species holds the parameters of one bee species: the values of the run file (SpeciesFile) and the values derived
-// from them in package input [SPEC-03], [SPEC-05], [SPEC-07]. The species lie in Input.Species, bees and colonies
-// hold their index (step F11). Read-only during the run. The values that depend on the landscape are in
-// globals.NestSites. Until step F14 the type was params.Species.
+// from them in package input. The species lie in Input.Species, bees and colonies hold their index. Read-only
+// during the run. The values that depend on the landscape are in globals.NestSites.
 //
-// NetLogo: species-own (oneSpecies agents), created in CreateSpeciesProc [SPEC].
+// NetLogo: species-own.
 type Species struct {
-	SpeciesFile // EmergenceDaySD is rounded [SPEC-03], finding 20 (see trans/netlogo-findings.md#finding-20)
+	SpeciesFile // EmergenceDaySD is rounded
 
 	FlightCosts              float64 // [kJ/(m mg)], derived from Constants.FlightMetabolicRate. NetLogo: flightCosts_kJ/m/mg
-	DailyIncubationQuota     float64 // [kJ] [SPEC-05], this and the following: derived. NetLogo: devQuotaIncubationToday_kJ
+	DailyIncubationQuota     float64 // [kJ], this and the following: derived. NetLogo: devQuotaIncubationToday_kJ
 	HatchingAgeMax           float64 // [d]. NetLogo: devAgeHatchingMax_d
 	PupationAgeMax           float64 // [d]. NetLogo: devAgePupationMax_d
 	EmergenceAgeMax          float64 // [d]. NetLogo: devAgeEmergingMax_d
@@ -66,5 +64,5 @@ type Species struct {
 	QueenEmergenceAgeMax     float64 // [d]. NetLogo: devAge_Q_EmergingMax_d
 	QueenPupationIncubation  float64 // [kJ]. NetLogo: devIncubation_Q_PupationTH_kJ
 	QueenEmergenceIncubation float64 // [kJ]. NetLogo: devIncubation_Q_EmergingTH_kJ
-	MinPollenStore           float64 // [g] [SPEC-07]. NetLogo: minPollenStore_g
+	MinPollenStore           float64 // [g]. NetLogo: minPollenStore_g
 }

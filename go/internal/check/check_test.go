@@ -43,7 +43,7 @@ func TestDayValid(t *testing.T) {
 }
 
 func TestDayMembers(t *testing.T) {
-	// [CHK-03] brood, workers and males without a living colony
+	// brood, workers and males without a living colony
 	for _, b := range []comp.Bee{
 		{Stage: stage.Adult, Caste: caste.Worker},
 		{Stage: stage.Adult, Caste: caste.Male},
@@ -64,7 +64,7 @@ func TestDayMembers(t *testing.T) {
 }
 
 func TestDayColoniesOnDay364(t *testing.T) {
-	// [CHK-04] a living colony on Day 364, only with seasonEnd
+	// a living colony on Day 364, only with seasonEnd
 	w, cal, _ := world()
 	cal.Day = 364
 	if err := Day(w, true); err == nil {

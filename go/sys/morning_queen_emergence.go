@@ -11,7 +11,6 @@ import (
 	"gobees/enum/caste"
 	"gobees/globals"
 	"gobees/params"
-	"gobees/util"
 
 	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
@@ -139,7 +138,7 @@ func (s *queenEmergence) collectBees(keep func(b *comp.Bee) bool) []ecs.Entity {
 			result = append(result, query.Entity())
 		}
 	}
-	util.Shuffle(s.rng, result)
+	shuffle(s.rng, result)
 	return result
 }
 
@@ -171,11 +170,11 @@ func (s *queenEmergence) searchNestSite(w *ecs.World, e ecs.Entity, sp *params.S
 		fsE := s.chooseNestSite(ns)
 		fsPos, fs := s.foodsourceMap.Get(fsE)
 		// [NEST-03] a random patch centre within the circle, finding 25 (see trans/netlogo-findings.md#finding-25)
-		candidates := util.PatchCentresWithin(fsPos.X, fsPos.Y, fs.Radius*s.landscape.Scale,
+		candidates := patchCentresWithin(fsPos.X, fsPos.Y, fs.Radius*s.landscape.Scale,
 			int(s.world.MinPxcor), int(s.world.MaxPxcor), int(s.world.MinPycor), int(s.world.MaxPycor))
 		// No patch centre within the circle: the nearest patch centre, the one of the patch cell of the
 		// foodsource, without a random number. NetLogo: runtime error. Fixed in step F5.
-		c := [2]int{util.Pcor(fsPos.X), util.Pcor(fsPos.Y)}
+		c := [2]int{pcor(fsPos.X), pcor(fsPos.Y)}
 		if len(candidates) > 0 {
 			c = candidates[s.rng.IntN(len(candidates))]
 		}
@@ -200,7 +199,7 @@ func (s *queenEmergence) searchMortality() float64 {
 func (s *queenEmergence) chooseNestSite(ns *globals.SpeciesNestSites) ecs.Entity {
 	// [NSFS-01] Sites is sorted by who. SIMPLIFY: shuffle not needed for the distribution.
 	list := slices.Clone(ns.Sites)
-	util.Shuffle(s.rng, list)
+	shuffle(s.rng, list)
 	p := s.rng.Float64()
 	probsSummedUp := 0.0
 	for _, e := range list {

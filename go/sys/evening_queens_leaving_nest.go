@@ -10,7 +10,6 @@ import (
 	"gobees/enum/caste"
 	"gobees/enum/stage"
 	"gobees/params"
-	"gobees/util"
 
 	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
@@ -76,7 +75,7 @@ func (s *queensLeavingNest) Update(w *ecs.World) {
 				s.death.die(w, e, "Queen: no mating")
 				continue // finding 28 (see trans/netlogo-findings.md#finding-28)
 			}
-			foreignAllele := -1*util.RandomInt(s.rng, s.constants.ForeignAlleles) - 1 // -1, -2, ... -ForeignAlleles
+			foreignAllele := -1*randomInt(s.rng, s.constants.ForeignAlleles) - 1 // -1, -2, ... -ForeignAlleles
 			gen.Spermatheca = append([]float64{foreignAllele}, gen.Spermatheca...)
 			if len(gen.Spermatheca) > 1 {
 				panic(fmt.Sprintf("Assertion violated in QueensLeavingNestProc: too many alleles here! %v", gen.Spermatheca))

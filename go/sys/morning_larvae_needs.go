@@ -7,7 +7,6 @@ import (
 	"gobees/enum/caste"
 	"gobees/enum/stage"
 	"gobees/params"
-	"gobees/util"
 
 	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
@@ -51,7 +50,7 @@ func (s *larvaeNeeds) Update(w *ecs.World) {
 	for _, col := range askColonies(s.colonyFilter, s.rng) {
 		pollenNeedMyColony := 0.0 // [g]
 		myLarvae := s.larvae[col]
-		util.Shuffle(s.rng, myLarvae)
+		shuffle(s.rng, myLarvae)
 		for _, e := range myLarvae {
 			b := s.beeMap.Get(e)
 			sp := s.speciesMap.Get(b.Species)

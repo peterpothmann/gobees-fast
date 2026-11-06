@@ -8,7 +8,6 @@ import (
 	"gobees/comp"
 	"gobees/globals"
 	"gobees/params"
-	"gobees/util"
 
 	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
@@ -113,7 +112,7 @@ func (s *cropRotation) rotate(w *ecs.World) {
 	// do not change.
 	// ORDER: irrelevant, each species only changes itself. Shuffled (decision C).
 	species := s.speciesMap.all()
-	util.Shuffle(s.rng, species)
+	shuffle(s.rng, species)
 	masterpatches := collectMasterpatches(w)
 	for _, i := range species {
 		ns := &s.nestSites.BySpecies[i]

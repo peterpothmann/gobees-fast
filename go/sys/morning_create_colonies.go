@@ -7,7 +7,6 @@ import (
 	"gobees/enum/activity"
 	"gobees/globals"
 	"gobees/params"
-	"gobees/util"
 
 	"github.com/mlange-42/ark/ecs"
 )
@@ -67,7 +66,7 @@ func (c *colonyFounder) found(w *ecs.World) {
 			queens = append(queens, query.Entity())
 		}
 	}
-	util.Shuffle(c.rng, queens)
+	shuffle(c.rng, queens)
 
 	for _, q := range queens {
 		qPos, qBee := c.beeMap.Get(q)
@@ -118,10 +117,10 @@ func (c *colonyFounder) patchesInRange(colony ecs.Entity) {
 		p, _ := query.Get()
 		all = append(all, item{query.Entity(), p.X, p.Y})
 	}
-	util.Shuffle(c.rng, all)
+	shuffle(c.rng, all)
 	list := []ecs.Entity{}
 	for _, it := range all {
-		if util.Distance(pos.X, pos.Y, it.x, it.y) <= maxDist {
+		if distanceBetween(pos.X, pos.Y, it.x, it.y) <= maxDist {
 			list = append(list, it.e)
 		}
 	}

@@ -4,24 +4,19 @@ import (
 	"gobees/day"
 )
 
-// Calendar holds the day of the year and today's foraging period [MORN-02], [MORN-04].
+// Calendar holds the day of the year and today's foraging period.
 type Calendar struct {
 	Day            day.OfYear // day of the year, 1 to 365, 0 in Setup
-	ForagingPeriod float64    // length of today's foraging period [s], 0 until day 1 (finding 4). NetLogo: DailyForagingPeriod_s
+	ForagingPeriod float64    // length of today's foraging period [s], 0 until day 1. NetLogo: DailyForagingPeriod_s
 }
 
-// Flowering holds the globals that UpdateFoodsourcesProc sets [UFS].
-// NectarAvailableTotalToday_l and PollenAvailableTotalToday_kg: output only, removed in step F4. The NetLogo
-// comparison of step 4a sums them itself.
+// Flowering tells whether the flowering changed today, set by the flower refill in the morning.
 type Flowering struct {
-	Changed bool // true on days when a foodsource starts or stops flowering, read by [UCOL-01]. NetLogo: FoodsourcesInFlowerUpdate?
+	Changed bool // true on days when a foodsource starts or stops flowering, read by the colony update. NetLogo: FoodsourcesInFlowerUpdate?
 }
 
-// BroodTotals are the daily totals of the brood that CheckNumbersProc sets in the morning [CHK-02] (finding 39, see
-// trans/netlogo-findings.md#finding-39). UpdateSeasonalEventsProc reads Eggs + Larvae + Pupae on
-// the next morning [SEAS-02].
-// TotalAdultWorkers, TotalAdultMales (read only by the check [CHK-03]) and TotalForagingTripsToday (output only,
-// counted by the observers from event.ForagingTrip): removed in step F4.
+// BroodTotals are the daily totals of the brood, set in the morning by broodTotals. The seasonal events read
+// Eggs + Larvae + Pupae on the next morning, as they run before broodTotals.
 // NetLogo: TotalEggs, TotalLarvae, TotalPupae.
 type BroodTotals struct {
 	Eggs   int
