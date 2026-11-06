@@ -17,7 +17,7 @@ import (
 )
 
 // smallLandscape is a landscape file made by hand for the crop rotation tests: two flower patches with large areas,
-// so that their layers are not removed as too small [LAYR-06], [LAYR-07].
+// so that their layers are not removed as too small.
 var smallLandscape = input.Landscape{MetresPerPatch: 10, Patches: []input.Patch{
 	{ID: 0, PatchType: "Scrub", X: 50, Y: 50, Area: 100000, Flowers: []input.FlowerEntry{
 		{Name: "Bramble", Value: 0.211, HasValue: true}, {Name: "Dandelion", Value: 0.113, HasValue: true}}},
@@ -89,25 +89,25 @@ func TestCropRotation(t *testing.T) {
 		&comp.ColonyRange{Layers: inRange,
 			PollenPatches: inRange, NectarPatches: inRange})
 
-	// [MORN-09] only on Day 365
+	// only on Day 365
 	setDay(w, 364)
 	cr.Update(w)
 	if landscape.File != exampleLandscape {
 		t.Fatalf("crop rotation on day 364")
 	}
 
-	// [CROP-01] ticks 365: year 1, item 1
+	// ticks 365: year 1, item 1
 	setDay(w, 365)
 	cr.Update(w)
 	if landscape.File != smallLandscapeFile {
 		t.Errorf("File %q, want %s", landscape.File, smallLandscapeFile)
 	}
-	// [CROP-03] only the foodsources of the new file
+	// only the foodsources of the new file
 	n, masters := foodsourceSummary(w)
 	if !maps.Equal(masters, map[string]int{"Scrub": 1, "Garden": 1}) || n != 3 {
 		t.Errorf("%d foodsources, masterpatches %v; want 3 layers, one Scrub and one Garden masterpatch", n, masters)
 	}
-	// step F12: the landscape holds the new masterpatches only
+	// the landscape holds the new masterpatches only
 	newMasters := ecs.GetResource[globals.Landscape](w).Masterpatches
 	if len(newMasters) != 2 || !w.Alive(newMasters[0]) || !w.Alive(newMasters[1]) {
 		t.Errorf("landscape masterpatches %v, want the 2 new ones", newMasters)
@@ -118,7 +118,7 @@ func TestCropRotation(t *testing.T) {
 	}
 	foodsources.Close()
 
-	// [CROP-02] the bee forgets her foodsources
+	// the bee forgets her foodsources
 	f = ecs.NewMap1[comp.Forager](w).Get(bee)
 	if len(f.KnownNectarPatches)+len(f.KnownPollenPatches) != 0 ||
 		!f.NectarSource.IsZero() || !f.PollenSource.IsZero() || !f.CurrentFoodsource.IsZero() {
@@ -132,11 +132,11 @@ func TestCropRotation(t *testing.T) {
 	if !slices.Equal(r.Layers, inRange) || w.Alive(anyFs) {
 		t.Errorf("allPatchesInRangeList must keep the dead foodsource")
 	}
-	// [FRNG] reads the dead foodsources: NetLogo runtime error, gobees panics
+	// reads the dead foodsources: a panic, as NetLogo stops with a runtime error
 	founder := newColonyFounder(w, rand.New(ecs.GetResource[resource.Rand](w)))
-	expectPanic(t, "FoodsourcesInFlowerAndRangeProc after a crop rotation", func() { founder.flowersInRange(col) })
+	expectPanic(t, "flowersInRange after a crop rotation", func() { founder.flowersInRange(col) })
 
-	// [SPEC-06] for B_terrestris: Scrub and Garden are nest habitats. [SPEC-07] is not computed again (step F11).
+	// nest sites for B_terrestris: Scrub and Garden are nest habitats
 	for i, ns := range ecs.GetResource[globals.NestSites](w).BySpecies {
 		if len(ns.Sites) != 2 || ns.Area != 150000 {
 			t.Errorf("species %d: %d nest sites, area %v; want 2 and 150000", i, len(ns.Sites), ns.Area)
@@ -152,14 +152,14 @@ func TestCropRotation(t *testing.T) {
 }
 
 func TestCropRotationDefaultList(t *testing.T) {
-	// without crop rotation (NetLogo: "" gives [""] with length 1, finding 3, see trans/netlogo-findings.md#finding-3)
+	// without crop rotation (NetLogo turns "" into [""], a list of length 1)
 	a, cr := cropWorld(t, nil)
 	w := a.World
 	nBefore, _ := foodsourceSummary(w)
 	mastersBefore := slices.Clone(ecs.GetResource[globals.Landscape](w).Masterpatches)
 	setDay(w, 365)
 	cr.Update(w)
-	// the same foodsources, not new ones (before step F12: the same largest who number)
+	// the same foodsources, not new ones
 	if n, _ := foodsourceSummary(w); n != nBefore || !slices.Equal(ecs.GetResource[globals.Landscape](w).Masterpatches, mastersBefore) {
 		t.Errorf("foodsources changed without crop rotation")
 	}

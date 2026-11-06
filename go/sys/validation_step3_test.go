@@ -34,7 +34,7 @@ func step3Metrics(w *ecs.World) map[string]float64 {
 		}
 	}
 	// TotalColoniesEverProduced: without colonyUpdate no colony dies, so the living colonies are all colonies
-	// founded (the counter is output only since step F4, obs.Counters)
+	// founded (the counter is output only, obs.Counters)
 	cols := ecs.NewFilter1[comp.Colony](w).Query()
 	m["colonies_founded"] = float64(cols.Count())
 	cols.Close()

@@ -31,7 +31,7 @@ func alsike() comp.Foodsource {
 }
 
 // flowerPatch adds a flower patch at (x, y) [NetLogo patches] with radius_m, one layer per foodsource. The first
-// layer is the masterpatch, all layers share PatchLayers (sorted by who = order of creation, as in [LAYR-10]).
+// layer is the masterpatch, all layers share PatchLayers (in order of creation, as NetLogo sorts them by who).
 func (aw *activityWorld) flowerPatch(x, y, radius float64, layers ...comp.Foodsource) []ecs.Entity {
 	m := ecs.NewMap4[comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](aw.w)
 	result := []ecs.Entity{}
@@ -53,8 +53,8 @@ func (aw *activityWorld) state(e ecs.Entity) *comp.FoodsourceState {
 	return ecs.NewMap1[comp.FoodsourceState](aw.w).Get(e)
 }
 
-// worker adds a forager of 100 mg of B_terrestris: glossa 7.072 mm [PROB], crop 40.2 microlitres, pollen load
-// 0.01206 g [LOAD].
+// worker adds a forager of 100 mg of B_terrestris: glossa 7.072 mm, crop 40.2 microlitres, pollen load
+// 0.01206 g.
 func (aw *activityWorld) worker(col ecs.Entity, number int) ecs.Entity {
 	e := aw.adult(col, caste.Worker, number, 100, sitWorker)
 	_, _, _, fo, _ := aw.bee(e)
@@ -72,13 +72,13 @@ func newForagingWorld(t *testing.T, seed uint64) (*activityWorld, ecs.Entity, *f
 	// netlogo/_SYSTEM_Example_Farm_Parameters.csv: Lambda_detectProb -0.005, ForagingMortalityFactor 1
 	aw.parameters.DetectionLambda = -0.005
 	aw.parameters.ForagingMortalityFactor = 1
-	ecs.GetResource[params.Derived](aw.w).ForagerMortality = 0 // deterministic trips; mortality is tested separately
+	ecs.GetResource[params.Derived](aw.w).ForagerMortality = 0 // deterministic trips, mortality is tested separately
 	col := aw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) { s.Energy = 100 })
 	return aw, col, &aw.loop.foraging
 }
 
 func TestDetectionProb(t *testing.T) {
-	// [DET-01] to [DET-03] worked example: edge 100 m away: e ^ -0.5
+	// worked example: edge 100 m away: e ^ -0.5
 	aw, _, f := newForagingWorld(t, 1)
 	for _, tc := range []struct {
 		name string
@@ -88,8 +88,8 @@ func TestDetectionProb(t *testing.T) {
 		{"edge 100 m away", 15, 0.6065306597},
 		{"colony inside the patch", 2, 1},
 		{"edge 750 m away", 80, 0.0235177459},
-		// [DET-02] NetLogo gives 0 beyond ForagingRangeMax_m (758 m). The colony lists hold only masterpatches whose
-		// centre is in range [PRNG], so their edge is never beyond it (removed in step F3).
+		// NetLogo gives 0 beyond ForagingRangeMax_m (758 m). The colony lists hold only masterpatches whose
+		// centre is in range, so their edge is never beyond it.
 	} {
 		p := aw.flowerPatch(tc.x, 0, 50, willowherb())[0]
 		if got := f.detectionProb(p, 0, 0); math.Abs(got-tc.want) > 1e-10 {
@@ -99,7 +99,7 @@ func TestDetectionProb(t *testing.T) {
 }
 
 func TestHandlingTime(t *testing.T) {
-	// [HAND-01] to [HAND-03] worked examples: worker of 100 mg
+	// worked examples: worker of 100 mg
 	aw, col, f := newForagingWorld(t, 1)
 	bee := aw.worker(col, 1)
 	for _, tc := range []struct {
@@ -129,7 +129,7 @@ func TestHandlingTime(t *testing.T) {
 }
 
 func TestBestLayer(t *testing.T) {
-	// [BLYR-02] pollen: the shortest handling time, [BLYR-03] nectar: the highest efficiency
+	// pollen: the shortest handling time nectar: the highest efficiency
 	aw, col, f := newForagingWorld(t, 1)
 	bee := aw.worker(col, 1)
 	_, _, _, fo, _ := aw.bee(bee)
@@ -157,7 +157,7 @@ func TestBestLayer(t *testing.T) {
 }
 
 func TestSortKnownPatches(t *testing.T) {
-	// [SORT-01] duplicates removed, sorted by distance, stable for equal distances
+	// duplicates removed, sorted by distance, stable for equal distances
 	aw, col, f := newForagingWorld(t, 1)
 	bee := aw.worker(col, 1)
 	far := aw.flowerPatch(50, 0, 10, willowherb())[0]
@@ -178,8 +178,8 @@ func TestSortKnownPatches(t *testing.T) {
 }
 
 func TestForagingTripPollen(t *testing.T) {
-	// worked example [COST-02]: pollen foodsource 300 m away, handling time 292.2 s: trip 412.2 s, 0.0101 kJ,
-	// then unloading 165 s [UNLD-01]
+	// worked example: pollen foodsource 300 m away, handling time 292.2 s: trip 412.2 s, 0.0101 kJ,
+	// then unloading 165 s
 	aw, col, f := newForagingWorld(t, 1)
 	bee := aw.worker(col, 1)
 	fs := willowherb()
@@ -202,7 +202,7 @@ func TestForagingTripPollen(t *testing.T) {
 		t.Errorf("energy paid %v kJ, want about 0.0101", 100-s.Energy)
 	}
 	if math.Abs(b.PersonalTime-(412.2+165)) > 0.01 {
-		t.Errorf("personalTime_s %v, want about %v", b.PersonalTime, 412.2+165)
+		t.Errorf("PersonalTime %v, want about %v", b.PersonalTime, 412.2+165)
 	}
 	if st := aw.state(p); !almostEqual(st.Pollen, 1000-0.01206) {
 		t.Errorf("foodsource: %v g", st.Pollen)
@@ -216,7 +216,7 @@ func TestForagingTripPollen(t *testing.T) {
 }
 
 func TestForagingEmptiesFoodsource(t *testing.T) {
-	// finding 47 (see trans/netlogo-findings.md#finding-47): the last load gives the handling time 3600 s
+	// the last load empties the foodsource and gives the handling time 3600 s
 	aw, col, f := newForagingWorld(t, 1)
 	bee := aw.worker(col, 3) // a cohort of 3 takes up to 120.6 microlitres
 	p := aw.flowerPatch(30, 0, 10, willowherb())[0]
@@ -231,7 +231,7 @@ func TestForagingEmptiesFoodsource(t *testing.T) {
 	b, _, _, _, _ = aw.bee(bee)
 	trip := 2*300/5.0 + 3600
 	if !almostEqual(b.PersonalTime, trip+165) {
-		t.Errorf("personalTime_s %v, want %v (handling time 3600 s)", b.PersonalTime, trip+165)
+		t.Errorf("PersonalTime %v, want %v (handling time 3600 s)", b.PersonalTime, trip+165)
 	}
 	_, s, _ := aw.colony(col)
 	want := 100 + 100*0.00582*1.34 - (600+3600*5*0.3)*aw.sp.FlightCosts*100*3
@@ -244,8 +244,8 @@ func TestForagingEmptiesFoodsource(t *testing.T) {
 }
 
 func TestForagingSearch(t *testing.T) {
-	// [SRCH-02], [SRCH-03]: the colony lies inside the flower patch, so it is detected with probability 1.
-	// [PCH-03] a novice is always unhappy after her first trip.
+	// the colony lies inside the flower patch, so it is detected with probability 1.
+	// a novice is always unhappy after her first trip.
 	aw, col, f := newForagingWorld(t, 1)
 	layers := aw.flowerPatch(1, 0, 50, willowherb(), alsike())
 	_, _, _, _, _, r := aw.colonyMap.Get(col)
@@ -264,14 +264,14 @@ func TestForagingSearch(t *testing.T) {
 	if b.Activity != activity.ReturningUnhappyNectar {
 		t.Errorf("activity %v, want returningUnhappyN (novice)", b.Activity)
 	}
-	// [BLYR-03] willowherb: more energy per load and a shorter handling time than alsike
+	// willowherb: more energy per load and a shorter handling time than alsike
 	if aw.state(layers[0]).Nectar >= nectarBefore[0] || aw.state(layers[1]).Nectar != nectarBefore[1] {
 		t.Error("the bee did not collect at the best layer (willowherb)")
 	}
 }
 
 func TestForagingSearchFails(t *testing.T) {
-	// [SRCH-03] nothing found: returningEmpty, [COST-01] 500 s and 0.0244 kJ, [PCH-02] next time a new search
+	// nothing found: returningEmpty 500 s and 0.0244 kJ next time a new search
 	aw, col, f := newForagingWorld(t, 1)
 	bee := aw.worker(col, 1)
 	b, _, _, fo, _ := aw.bee(bee)
@@ -280,7 +280,7 @@ func TestForagingSearchFails(t *testing.T) {
 	b, _, _, fo, _ = aw.bee(bee)
 	_, s, _ := aw.colony(col)
 	if b.Activity != activity.ReturningEmpty || b.PersonalTime != 500 || !fo.PollenSource.IsZero() {
-		t.Errorf("activity %v, personalTime_s %v, next foodsource %v", b.Activity, b.PersonalTime, fo.PollenSource)
+		t.Errorf("activity %v, PersonalTime %v, next foodsource %v", b.Activity, b.PersonalTime, fo.PollenSource)
 	}
 	if !almostEqual(100-s.Energy, 2500*aw.sp.FlightCosts*100) {
 		t.Errorf("energy paid %v kJ, want 0.0244", 100-s.Energy)
@@ -288,7 +288,7 @@ func TestForagingSearchFails(t *testing.T) {
 }
 
 func TestForagingMortality(t *testing.T) {
-	// [COST-01] 1 - (1 - 1e-05 * 100) ^ 500 = 0.394 with ForagingMortalityFactor = 100
+	// 1 - (1 - 1e-05 * 100) ^ 500 = 0.394 with ForagingMortalityFactor = 100
 	aw, col, f := newForagingWorld(t, 3)
 	ecs.GetResource[params.Derived](aw.w).ForagerMortality = 1e-05
 	aw.parameters.ForagingMortalityFactor = 100
@@ -315,8 +315,8 @@ func TestForagingMortality(t *testing.T) {
 }
 
 func TestChoosePatch(t *testing.T) {
-	// [PCH-03] worked example: expectation 300 s, trip 400 s: new expectation 350 s.
-	// [PCH-05] after returningEmpty: 10 % go to the closest known patch, 90 % search.
+	// worked example: expectation 300 s, trip 400 s: new expectation 350 s.
+	// after returningEmpty: 10 % go to the closest known patch, 90 % search.
 	aw, col, f := newForagingWorld(t, 5)
 	p := aw.flowerPatch(30, 0, 10, willowherb())[0]
 	bee := aw.worker(col, 1)

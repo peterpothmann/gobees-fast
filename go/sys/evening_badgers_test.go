@@ -33,7 +33,7 @@ func (cw *colonyWorld) addColonyAt(x, y float64, change func(c *comp.Colony, s *
 }
 
 func TestBadgersDigUpColony(t *testing.T) {
-	// [BADG-01] a dug-up colony loses its stores and all its bees. The colony dies the next morning in [UCOL-11].
+	// a dug-up colony loses its stores and all its bees. The colony dies the next morning in colonyUpdate.
 	cw, s := prowlWorld(t, 1, comp.Position{X: 0, Y: 0})
 	near := cw.addColonyAt(10, 0, func(c *comp.Colony, st *comp.ColonyStores, n *comp.ColonyCounts) {
 		st.Energy, st.Pollen = 50, 3
@@ -74,7 +74,7 @@ func TestBadgersDigUpColony(t *testing.T) {
 }
 
 func TestBadgersDigUpProbability(t *testing.T) {
-	// [BADG-01] p = 0.19 * 0.1 per badger, colony and day. Range strictly < 735 m.
+	// p = 0.19 * 0.1 per badger, colony and day. Range strictly < 735 m.
 	cases := []struct {
 		name    string
 		badgers []comp.Position

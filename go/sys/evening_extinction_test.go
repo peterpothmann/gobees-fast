@@ -14,7 +14,7 @@ import (
 )
 
 func TestExtinction(t *testing.T) {
-	// [GO-20] the run stops on the first day without colonies and bees, only with StopExtinct?.
+	// the run stops on the first day without colonies and bees, only with StopExtinct.
 	// TimeToExtinction: output, see obs.Counters.
 	for _, stop := range []bool{false, true} {
 		cw := newColonyWorld(t, 1)
@@ -41,7 +41,7 @@ func TestExtinction(t *testing.T) {
 		cw.ticks.Ticks = 202
 		s.Update(cw.w)
 		cw.ticks.Ticks = 203
-		s.Update(cw.w) // NetLogo with StopExtinct? = false runs on
+		s.Update(cw.w) // with StopExtinct = false the run goes on, as in NetLogo
 		if term.Terminate != stop {
 			t.Errorf("StopExtinct? %v: terminate %v", stop, term.Terminate)
 		}

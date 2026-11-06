@@ -73,9 +73,9 @@ func TestValidationStep4aAgainstNetLogo(t *testing.T) {
 	}
 }
 
-// foodsourceTotals sums the nectar [l] and the pollen [kg] of all foodsources, as UpdateFoodsourcesProc sets
-// NectarAvailableTotalToday_l and PollenAvailableTotalToday_kg [UFS-01], [UFS-02]. Output only, not in the model
-// since step F4. Added right after flowerRefill: the values of the morning, before foraging.
+// foodsourceTotals sums the nectar [l] and the pollen [kg] of all foodsources, as NetLogo sets
+// NectarAvailableTotalToday_l and PollenAvailableTotalToday_kg when it refills the flowers. Output only, not in the
+// model. Added right after flowerRefill: the values of the morning, before foraging.
 type foodsourceTotals struct {
 	nectar, pollen float64 // [l], [kg]
 	filter         *ecs.Filter1[comp.FoodsourceState]
@@ -83,7 +83,7 @@ type foodsourceTotals struct {
 
 func (s *foodsourceTotals) Initialize(w *ecs.World) {
 	s.filter = ecs.NewFilter1[comp.FoodsourceState](w)
-	s.Update(w) // flowerRefill runs in Setup too [INIT-10]
+	s.Update(w) // flowerRefill runs in Setup too
 }
 
 func (s *foodsourceTotals) Update(w *ecs.World) {

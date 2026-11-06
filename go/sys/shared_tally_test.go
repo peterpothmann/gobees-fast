@@ -8,7 +8,7 @@ import (
 )
 
 // tally counts what the model reports through the removal of entities and through the custom events of package
-// event, as obs.Counters does. The model no longer counts it itself (step F4).
+// event, as obs.Counters does. The model does not count it itself.
 type tally struct {
 	beesDied      int // sum of Number of the removed bees
 	coloniesDied  int

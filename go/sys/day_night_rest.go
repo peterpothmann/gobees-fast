@@ -12,10 +12,7 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// nightRest [GO-11].
-//
-// Sets all adult, non-hibernating females to resting, also the ones whose day ended earlier.
-// Not translated: activityList (GUI log).
+// nightRest sets all adult, non-hibernating females to resting, also the ones whose day ended earlier.
 //
 // NetLogo: ask bees ... set activity "resting" (in Go).
 type nightRest struct {
@@ -33,7 +30,7 @@ func (s *nightRest) Initialize(w *ecs.World) {
 }
 
 func (s *nightRest) Update(w *ecs.World) {
-	// [GO-11] ORDER: irrelevant, each bee only sets itself. Shuffled (decision C).
+	// ORDER: irrelevant, each bee only sets itself. Shuffled, as NetLogo asks the bees in random order.
 	s.bees = askBees(s.bees, s.beeFilter, s.rng, func(b *comp.Bee) bool {
 		return b.Stage == stage.Adult && b.Activity != activity.Hibernate && b.Caste != caste.Male
 	})

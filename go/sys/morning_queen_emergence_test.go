@@ -17,7 +17,7 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// emergenceWorld is a small world for the tests of step 3: B_terrestris, two nest sites and the resources
+// emergenceWorld is a small world for the tests of queenEmergence: B_terrestris, two nest sites and the resources
 // that queenEmergence needs. Scaling 0.1 patches per metre (10 m per patch) as in the example farm.
 type emergenceWorld struct {
 	w          *ecs.World
@@ -102,7 +102,7 @@ func TestEmergenceSplitsCohort(t *testing.T) {
 	ew.addQueen(11, 1, 700) // emerges tomorrow
 	ew.sys.Update(ew.w)
 
-	// [EMER-01] the cohort of 3 is split into 3 queens with number 1, identical copies (finding 32)
+	// the cohort of 3 is split into 3 queens with number 1, identical copies
 	beeMap := newBeeMapper(ew.w)
 	_, orig, origGen, _, _, _ := beeMap.Get(q)
 	emerged := 0
@@ -115,7 +115,7 @@ func TestEmergenceSplitsCohort(t *testing.T) {
 		}
 		emerged++
 		_, _, gen, th, _, _ := beeMap.Get(e)
-		// [EMER-02] resting, no colony; thresholds of the initiation phase
+		// resting, no colony, thresholds of the initiation phase
 		if b.Number != 1 || b.Weight != orig.Weight || b.Activity != activity.Resting || !b.Colony.IsZero() ||
 			*th != thresholds(sitQueenInitiationPhase) || gen.Alleles[1] != origGen.Alleles[1] {
 			t.Errorf("queen %+v %+v", b, *th)
@@ -137,7 +137,7 @@ func TestEmergenceWinterMortality(t *testing.T) {
 	ew := newEmergenceWorld(t, 2)
 	ew.parameters.WinterMortality = true
 	ew.sp.DailyNestSiteChance = 0
-	// relative weight 0.32: survival probability 0.32 (finding 33)
+	// relative weight 0.32: survival probability 0.32
 	const n = 2000
 	for range n {
 		ew.addQueen(10, 1, 590+0.32*390)
@@ -167,18 +167,18 @@ func TestNestSearchFoundsColonies(t *testing.T) {
 	atSmall := 0
 	colonies := map[ecs.Entity]bool{}
 	for e, b := range ew.bees() {
-		// [CCOL-03] every queen has a colony and rests
+		// every queen has a colony and rests
 		if b.Colony.IsZero() || b.Activity != activity.Resting {
 			t.Fatalf("queen without colony: %+v", b)
 		}
 		colonies[b.Colony] = true
 		qPos, _, _, _, _, _ := beeMap.Get(e)
 		cPos, col, stores := colonyMap.Get(b.Colony)
-		// the colony is at the queen's position, a patch centre (finding 25)
+		// the colony is at the queen's position, a patch centre
 		if *cPos != *qPos || cPos.X != math.Trunc(cPos.X) || cPos.Y != math.Trunc(cPos.Y) {
 			t.Fatalf("colony at %v, queen at %v", *cPos, *qPos)
 		}
-		// [NEST-03] the small hedge has only one patch centre in its circle: (50, 50)
+		// the small hedge has only one patch centre in its circle: (50, 50)
 		if cPos.X < 75 {
 			atSmall++
 			if *cPos != (comp.Position{X: 50, Y: 50}) {
@@ -187,7 +187,6 @@ func TestNestSearchFoundsColonies(t *testing.T) {
 		} else if math.Hypot(cPos.X-100, cPos.Y-100) >= math.Sqrt(10000/math.Pi)*0.1 {
 			t.Errorf("colony at %v outside the circle of the grassland", *cPos)
 		}
-		// [CCOL-04]
 		if col.QueenProduction || col.SwitchPointDate.IsSet() ||
 			col.Species != ew.species || !almostEqual(stores.Energy, 0.873) {
 			t.Fatalf("colony %+v %+v", col, stores)
@@ -196,7 +195,7 @@ func TestNestSearchFoundsColonies(t *testing.T) {
 	if len(colonies) != n {
 		t.Errorf("%d colonies, want %d", len(colonies), n)
 	}
-	// [NSFS-01] area-weighted: 100 / 10100 = 1 % at the small hedge, about 10 of 1000 (sd 3.1)
+	// area-weighted: 100 / 10100 = 1 % at the small hedge, about 10 of 1000 (sd 3.1)
 	if atSmall > 25 {
 		t.Errorf("%d colonies at the small hedge, want about 10", atSmall)
 	}
@@ -211,7 +210,7 @@ func TestNestSearchMortality(t *testing.T) {
 		ew.addQueen(10, 1, 700)
 	}
 	ew.sys.Update(ew.w)
-	// [NEST-04] finding 26: 1 - (1 - 1e-5) ^ 21600 = 0.194, expected 388 deaths, sd 17.7
+	// 1 - (1 - 1e-5) ^ 21600 = 0.194, expected 388 deaths, sd 17.7
 	deaths := n - len(ew.bees())
 	want := (1 - math.Pow(1-1e-5, 6*3600)) * n
 	if math.Abs(float64(deaths)-want) > 4*17.7 {
@@ -225,15 +224,15 @@ func TestNestSearchWithoutNestSites(t *testing.T) {
 	ew.addQueen(10, 1, 700)
 	ew.addQueen(10, 1, 700)
 	ew.sys.Update(ew.w)
-	// [EMER-04] a species without nest sites: the queens die
+	// a species without nest sites: the queens die
 	if len(ew.bees()) != 0 || ew.tally.beesDied != 2 {
 		t.Errorf("%d queens left, %v bees died; want 0, 2", len(ew.bees()), ew.tally.beesDied)
 	}
 }
 
 func TestNestSearchNoPatchCentre(t *testing.T) {
-	// [NEST-03] finding 25, fixed in step F5: the hedge of TestPatchCentresWithin, 100 m2 at (133.548, 112.5), has
-	// no patch centre in its circle (radius 0.564 patches). The colony is placed at the centre of the patch cell of
+	// the hedge of TestPatchCentresWithin, 100 m2 at (133.548, 112.5), has no patch centre in its circle (radius
+	// 0.564 patches). NetLogo stops with a runtime error. Here the colony is placed at the centre of the patch cell of
 	// the foodsource. y = 112.5 lies on the border between two cells, NetLogo rounds .5 up: (134, 113).
 	ew := newEmergenceWorld(t, 6)
 	hedge := ecs.NewMap4[comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](ew.w).NewEntity(&comp.Position{X: 133.548, Y: 112.5},
@@ -257,14 +256,14 @@ func TestNestSearchNoPatchCentre(t *testing.T) {
 }
 
 func TestNestSiteChoicePastEnd(t *testing.T) {
-	// [NSFS-01] finding 27, fixed in step F5: the shares sum to 0.5, so p lies above the sum in about half of the
+	// the shares sum to 0.5, so p lies above the sum in about half of the
 	// draws. The loop runs past the end and the last site of the list is chosen (NetLogo: runtime error).
 	ew := newEmergenceWorld(t, 7)
 	ew.ns.Sites = []ecs.Entity{ew.bigSite}
 	ew.ns.Area = 20000
 	for range 100 {
 		if got := ew.sys.chooseNestSite(ew.ns); got != ew.bigSite {
-			t.Fatalf("NestSiteFoodSourceREP = %v, want the grassland %v", got, ew.bigSite)
+			t.Fatalf("chooseNestSite = %v, want the grassland %v", got, ew.bigSite)
 		}
 	}
 }
@@ -275,7 +274,7 @@ func TestDieRemovesFromActiveBees(t *testing.T) {
 	b := ew.addQueen(0, 1, 700)
 	ew.active.List = []ecs.Entity{a, b}
 	ew.sys.death.die(ew.w, a, "test")
-	// [DIE-01] TotalBeesEverDied + number, removed from the activity queue and from the world
+	// TotalBeesEverDied + number, removed from the activity queue and from the world
 	if ew.tally.beesDied != 5 || len(ew.active.List) != 1 || ew.active.List[0] != b || ew.w.Alive(a) {
 		t.Errorf("%v bees died, queue %v, alive %v", ew.tally.beesDied, ew.active.List, ew.w.Alive(a))
 	}
@@ -285,7 +284,7 @@ func TestPatchesInRangeAndFlowerLists(t *testing.T) {
 	ew := newEmergenceWorld(t, 8)
 	w := ew.w
 	fsMap := ecs.NewMap4[comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](w)
-	// colony at (0, 0); range 758 m * 0.1 = 75.8 patches
+	// colony at (0, 0), range 758 m * 0.1 = 75.8 patches
 	newFs := func(x, pollen, nectar float64, master ecs.Entity) ecs.Entity {
 		e := fsMap.NewEntity(&comp.Position{X: x, Y: 0}, &comp.Foodsource{},
 			&comp.FoodsourceState{Pollen: pollen, Nectar: nectar}, &comp.Layer{Masterpatch: master})
@@ -323,12 +322,11 @@ func TestPatchesInRangeAndFlowerLists(t *testing.T) {
 		}
 		return true
 	}
-	// [PRNG-01] also the small hedge of newEmergenceWorld at (50.3, 50.2), distance 71.1 (not in flower);
-	// the grassland at (100, 100) is at distance 141.4
+	// also the small hedge of newEmergenceWorld at (50.3, 50.2), distance 71.1 (not in flower).
+	// The grassland at (100, 100) is at distance 141.4.
 	if !sameSet(r.Layers, []ecs.Entity{a, b, d, e, ew.smallSite}) {
 		t.Errorf("in range: %v", r.Layers)
 	}
-	// [FRNG-01]
 	checks := map[string][2][]ecs.Entity{
 		"pollen masters": {r.PollenPatches, {a, d}},
 		"nectar masters": {r.NectarPatches, {a, d}}, // b is a layer of a
@@ -341,7 +339,7 @@ func TestPatchesInRangeAndFlowerLists(t *testing.T) {
 }
 
 func TestExampleFarmFirstYear(t *testing.T) {
-	// One year with the translated parts of steps 1 to 3: every initial queen has either founded a colony,
+	// One year with initialQueensSetup, tick and queenEmergence only: every initial queen has either founded a colony,
 	// died (winter or nest search), or is still searching or hibernating at the end.
 	a := newExampleFarmSetup(t, 11, &initialQueensSetup{}, &tick{}, &queenEmergence{})
 	w := a.World
@@ -369,7 +367,7 @@ func TestExampleFarmFirstYear(t *testing.T) {
 	if founded+died+searching+hibernating != 500 {
 		t.Errorf("founded %v + died %v + searching %d + hibernating %d != 500", founded, died, searching, hibernating)
 	}
-	// findings 26 and 33: about 60 % survive the winter, about 56 % of them found a colony
+	// about 60 % survive the winter, about 56 % of them found a colony
 	if founded < 100 || founded > 250 {
 		t.Errorf("%v colonies founded, expected roughly 170", founded)
 	}

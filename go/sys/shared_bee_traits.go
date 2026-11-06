@@ -8,7 +8,7 @@ import (
 	"gobees/params"
 )
 
-// Threshold types and situations of ThresholdLevelREP [THR], as the NetLogo strings.
+// Threshold types and situations of thresholdLevel, as the NetLogo strings.
 const (
 	thEggLaying      = "eggLaying"
 	thPollenForaging = "pollenForaging"
@@ -23,7 +23,7 @@ const (
 	sitPsith                = "Psith"
 )
 
-// thresholdTable holds the values of ThresholdLevelREP [THR]. NotSetHigh means: never.
+// thresholdTable holds the threshold of each type and situation. NotSetHigh means: never.
 var thresholdTable = map[string]map[string]float64{
 	thEggLaying: {
 		sitEgg:                  params.NotSetHigh,
@@ -59,17 +59,17 @@ var thresholdTable = map[string]map[string]float64{
 	},
 }
 
-// thresholdLevel returns the threshold of a task type in a situation [THR].
+// thresholdLevel returns the threshold of a task type in a situation.
 // An unknown type or situation is an assertion (NetLogo: "TH not set!").
 func thresholdLevel(thType, situation string) float64 {
 	th, ok := thresholdTable[thType][situation]
 	if !ok {
-		panic(fmt.Sprintf("Assertion violated in ThresholdLevelREP: TH not set! (%s, %s)", thType, situation))
+		panic(fmt.Sprintf("Assertion violated in thresholdLevel: TH not set! (%s, %s)", thType, situation))
 	}
 	return th
 }
 
-// thresholds returns all four thresholds of a situation, as set in [IQUE-05], [EMER-01] and [PSI-02].
+// thresholds returns all four thresholds of a situation.
 func thresholds(situation string) comp.Thresholds {
 	return comp.Thresholds{
 		Egglaying:      thresholdLevel(thEggLaying, situation),
@@ -79,8 +79,8 @@ func thresholds(situation string) comp.Thresholds {
 	}
 }
 
-// proboscisLength returns the glossa length of a bee from her weight [mm] [PROB], finding 34
-// (see trans/netlogo-findings.md#finding-34): linear between the minimum worker weight and the maximum queen weight.
+// proboscisLength returns the glossa length of a bee from her weight [mm]: linear between the minimum worker weight
+// and the maximum queen weight, the same line for workers, males and queens.
 // weight is in [mg].
 func proboscisLength(weight float64, sp *params.Species) float64 {
 	minWeight := sp.PupationWeightMin      // [mg]
@@ -88,53 +88,50 @@ func proboscisLength(weight float64, sp *params.Species) float64 {
 	slope := (sp.ProboscisMax - sp.ProboscisMin) / (maxWeight - minWeight)
 	length := sp.ProboscisMin + (weight-minWeight)*slope
 	if weight < minWeight || weight > maxWeight {
-		panic(fmt.Sprintf("Wrong bee weight in ProboscisLengthREP: %v mg", weight))
+		panic(fmt.Sprintf("Wrong bee weight in proboscisLength: %v mg", weight))
 	}
 	return length
 }
 
-// Factors of the crop volume and the pollen load [LOAD].
+// Factors of the crop volume and the pollen load.
 const (
 	beeWeightToLoadFactor = 0.402      // Ings et al. 2006, nectar loads
 	cropToPelletFactor    = 0.015 / 50 // [g/µl], BEEHAVE: 50 microlitres nectar load, 0.015 g pollen load
 )
 
-// cropVolume returns the crop volume of a bee of weight weight_mg [µl] [LOAD]. A result of 0 (weight 0) is an
-// assertion, as in NetLogo.
+// cropVolume returns the crop volume of a bee of weight weight_mg [µl]. A result of 0 (weight 0) is an
+// assertion, as in NetLogo. weight is in [mg].
 //
-// NetLogo: CropAndPelletSizeREP "nectar". Since step F15 one function per forage, so the case of an unknown forage
-// (an assertion in NetLogo) no longer exists.
-// weight is in [mg].
+// NetLogo: CropAndPelletSizeREP "nectar".
 func cropVolume(weight float64, sp *params.Species) float64 {
 	result := math.Min(sp.MaxCropVolume, weight*beeWeightToLoadFactor)
 	if result == 0 {
-		panic("Assertion violated: Error in CropAndPelletSizeREP")
+		panic("Assertion violated: Error in cropVolume")
 	}
 	return result
 }
 
-// pollenLoad returns the pollen load of a bee of weight weight_mg [g] [LOAD]. A result of 0 (weight 0) is an
-// assertion, as in NetLogo.
+// pollenLoad returns the pollen load of a bee of weight weight_mg [g]. A result of 0 (weight 0) is an
+// assertion, as in NetLogo. weight is in [mg].
 //
 // NetLogo: CropAndPelletSizeREP "pollen".
-// weight is in [mg].
 func pollenLoad(weight float64, sp *params.Species) float64 {
 	result := math.Min(sp.MaxPollenPellets, weight*beeWeightToLoadFactor*cropToPelletFactor)
 	if result == 0 {
-		panic("Assertion violated: Error in CropAndPelletSizeREP")
+		panic("Assertion violated: Error in pollenLoad")
 	}
 	return result
 }
 
-// winterMortalityProb returns the probability of a queen to SURVIVE the winter [WMOR], finding 33
-// (see trans/netlogo-findings.md#finding-33): 0.64 / (1 + e^(-22 * (relative weight - 0.32))).
+// winterMortalityProb returns the probability of a queen to SURVIVE the winter (despite its name):
+// 0.64 / (1 + e^(-22 * (relative weight - 0.32))), the same curve for all species.
 // weight is in [mg].
 func winterMortalityProb(weight float64, sp *params.Species) float64 {
 	minW := sp.QueenPupationWeightMin
 	maxW := sp.QueenPupationWeightMax
 	relWeight := (weight - minW) / (maxW - minW)
 	if relWeight < 0 || relWeight > 1 {
-		panic(fmt.Sprintf("Wrong weight! (WintermortalityProbREP): %v mg", weight))
+		panic(fmt.Sprintf("Wrong weight! (winterMortalityProb): %v mg", weight))
 	}
 	return 0.64 / (1 + math.Exp(-22*(relWeight-0.32)))
 }

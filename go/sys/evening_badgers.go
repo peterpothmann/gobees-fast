@@ -10,11 +10,8 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// badgers [GO-17].
-//
-// Every badger digs up each colony closer than 735 m with probability 0.19 * 0.1 = 0.019 per day: the colony
-// loses its stores and all its bees. The colony itself dies the next morning in [UCOL-11].
-// Not translated: color (GUI).
+// badgers lets every badger dig up each colony closer than 735 m with probability 0.19 * 0.1 = 0.019 per day: the
+// colony loses its stores and all its bees. The colony itself dies the next morning in colonyUpdate.
 //
 // NetLogo: BadgersOnTheProwlProc.
 type badgers struct {
@@ -47,7 +44,7 @@ func (s *badgers) Update(w *ecs.World) {
 	encounterProb := 0.19  // Kowalczyk et al. 2006: daily range 19 % of the home range
 	digUpProb := 0.1       // ARBITRARY VALUE (NetLogo comment)
 
-	// [BADG-01] ORDER: irrelevant for the state. A colony dug up twice in one evening has nothing left to lose.
+	// ORDER: irrelevant for the state. A colony dug up twice in one evening has nothing left to lose.
 	type badger struct{ x, y float64 }
 	badgers := []badger{}
 	bq := s.badgerFilter.Query()
@@ -64,7 +61,7 @@ func (s *badgers) Update(w *ecs.World) {
 	s.beesOf = beesByColony(s.beesOf, s.beeFilter, func(b *comp.Bee) bool { return true })
 
 	for _, b := range badgers {
-		// colonies with distancexy < range, strict, in NetLogo patch units, no wrapping
+		// colonies closer than the range (strict), in patch units, no wrapping, as in NetLogo
 		inRange := []ecs.Entity{}
 		cq := s.colonyFilter.Query()
 		for cq.Next() {
@@ -76,7 +73,7 @@ func (s *badgers) Update(w *ecs.World) {
 		shuffle(s.rng, inRange)
 
 		for _, col := range inRange {
-			if s.rng.Float64() >= encounterProb*digUpProb { // NetLogo: random-float 1 < encounterProb * digUpProb
+			if s.rng.Float64() >= encounterProb*digUpProb {
 				continue
 			}
 			stores := s.colonyMap.Get(col)
@@ -90,7 +87,6 @@ func (s *badgers) Update(w *ecs.World) {
 				}
 			}
 			shuffle(s.rng, victims)
-			// memoBroodDeaths, broodDeathBadger: read only by the egg accounting [CHK-04], removed in step F4
 			for _, e := range victims {
 				s.death.die(w, e, "Colony killed by badger!")
 			}

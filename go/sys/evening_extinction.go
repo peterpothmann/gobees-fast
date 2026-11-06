@@ -10,13 +10,12 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// extinction checks whether the population is extinct and ends the run [GO-20].
+// extinction checks whether the population is extinct and ends the run.
 //
-// Stops when no colonies and no bees are left and StopExtinct? is true,
+// Stops when no colonies and no bees are left and StopExtinct is true,
 // or after params.Termination.MaxTicks days (replaces the "Run for period" button).
 // NetLogo's stop is the last command of Go, so the run ends after this day, as Terminate does.
-// TimeToExtinction: output only, set by the observers (obs.Counters, step F4). Survived? [PAR-08]: never read,
-// removed in step F3.
+// TimeToExtinction is set by the observers (obs.Counters).
 //
 // NetLogo: end of Go.
 type extinction struct {
@@ -39,7 +38,7 @@ func (s *extinction) Initialize(w *ecs.World) {
 }
 
 func (s *extinction) Update(w *ecs.World) {
-	// [GO-20] count Colonies + count Bees = 0
+	// colonies and bees left
 	colonies := s.colonyFilter.Query()
 	n := colonies.Count()
 	colonies.Close()

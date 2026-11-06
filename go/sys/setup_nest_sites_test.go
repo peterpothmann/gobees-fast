@@ -20,7 +20,7 @@ func TestExpandNestHabitats(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// [NHAB-02] "Grassland*" matches every habitat type that contains "Grassland" (finding 20, see trans/netlogo-findings.md#finding-20), each habitat once.
+	// "Grassland*" matches every habitat type that contains "Grassland", each habitat once.
 	// Entries without "*" are copied, also if they do not exist on the map ("Garden").
 	slices.Sort(got)
 	want := []string{"Garden", "Grassland", "Hedgerow", "Improved_Grassland"}
@@ -39,7 +39,7 @@ func TestNestSites(t *testing.T) {
 	masterpatches := []masterpatch{
 		{e1, "Scrub", 100}, {e2, "Grassland", 200}, {e3, "Improved_Grassland", 400},
 	}
-	// [SPEC-06] exact match only: "Grassland" does not select "Improved_Grassland"
+	// exact match only: "Grassland" does not select "Improved_Grassland"
 	sites, area := nestSites([]string{"Grassland", "Scrub"}, masterpatches)
 	if !slices.Equal(sites, []ecs.Entity{e1, e2}) || area != 300 {
 		t.Errorf("sites %v, area %v; want [e1 e2], 300", sites, area)
@@ -61,7 +61,7 @@ func TestNestSitesSetupExampleFarm(t *testing.T) {
 	}
 	ns := nestSites[0]
 
-	// [SPEC-04] the example farm has the habitat types Crop_Cereals, Grass_improved, Grassland, Hedgerow, Scrub,
+	// the example farm has the habitat types Crop_Cereals, Grass_improved, Grassland, Hedgerow, Scrub,
 	// Woodland. "Grassland*" matches only "Grassland" ("Grass_improved" does not contain "Grassland").
 	gotHabitats := slices.Clone(ns.Habitats)
 	slices.Sort(gotHabitats)
@@ -70,7 +70,7 @@ func TestNestSitesSetupExampleFarm(t *testing.T) {
 		t.Errorf("nestHabitatsList = %q, want %q", gotHabitats, wantHabitats)
 	}
 
-	// [SPEC-06] nest sites: all masterpatches with one of these habitat types, sorted by who, and their area
+	// nest sites: all masterpatches with one of these habitat types, in NetLogo's who order, and their area
 	wantSites := []ecs.Entity{}
 	wantArea := 0.0
 	for _, m := range collectMasterpatches(w) {

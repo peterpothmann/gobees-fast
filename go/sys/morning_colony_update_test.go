@@ -17,7 +17,7 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// colonyWorld is a small world for the tests of step 4a: B_terrestris, colonies and bees created by hand,
+// colonyWorld is a small world for the tests of colonyUpdate: B_terrestris, colonies and bees created by hand,
 // and the resources of the morning systems. Ticks and Day are 200 (before seasonStop 305).
 type colonyWorld struct {
 	w          *ecs.World
@@ -65,7 +65,7 @@ func newColonyWorld(t *testing.T, seed uint64) *colonyWorld {
 	return cw
 }
 
-// addColony adds a colony with the start values of CreateColoniesProc [CCOL-04]. change may modify them.
+// addColony adds a colony with the start values of colonyFounder.found. change may modify them.
 func (cw *colonyWorld) addColony(change func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts)) ecs.Entity {
 	c := comp.Colony{Species: cw.species} // the four dates unset
 	s := comp.ColonyStores{Energy: 0.873}
@@ -120,12 +120,12 @@ func TestColonyUpdateStatistics(t *testing.T) {
 	want := comp.ColonyCounts{LarvaWorkerRatio: 2, Eggs: 10, Larvae: 6, Pupae: 4, Adults: 7,
 		AdultWorkers: 3}
 	if *n != want {
-		t.Errorf("statistics [UCOL-06]:\n got %+v\nwant %+v", *n, want)
+		t.Errorf("statistics:\n got %+v\nwant %+v", *n, want)
 	}
 	if s.IncubationToday != 0 {
-		t.Errorf("[UCOL-05] summedIncubationToday_kJ = %v, want 0", s.IncubationToday)
+		t.Errorf("IncubationToday = %v, want 0", s.IncubationToday)
 	}
-	// [UCOL-07] the first adult worker starts the eusocial phase
+	// the first adult worker starts the eusocial phase
 	if c.EusocialPhaseDate != day.At(201) {
 		t.Errorf("eusocialPhaseDate %v, want 201", c.EusocialPhaseDate)
 	}
@@ -136,7 +136,6 @@ func TestColonyUpdateStatistics(t *testing.T) {
 }
 
 func TestColonyUpdateDeathAfterCP(t *testing.T) {
-	// [UCOL-02] finding 37 (see trans/netlogo-findings.md#finding-37) and finding 38 (see trans/netlogo-findings.md#finding-38)
 	cw := newColonyWorld(t, 1)
 	col := cw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) {
 		c.CompetitionPointDate = day.At(150)
@@ -168,7 +167,7 @@ func TestColonyUpdateDeathAfterCP(t *testing.T) {
 		t.Fatal("day 203: the worker must die, the colony must stay alive because of the male")
 	}
 
-	// the male dies (e.g. after MaxLifespanMales). The colony dies the next morning [UCOL-11].
+	// the male dies (e.g. after MaxLifespanMales). The colony dies the next morning.
 	death := newBeeDeath(cw.w)
 	death.die(cw.w, male, "Male: adultAge > MaxLifespanMales")
 	cw.nextMorning() // 204
@@ -181,7 +180,7 @@ func TestColonyUpdateDeathAfterCP(t *testing.T) {
 }
 
 func TestColonyUpdateEnergyDepleted(t *testing.T) {
-	// [UCOL-03] all bees die, the colony dies on the same morning [UCOL-11]
+	// all bees die, the colony dies on the same morning
 	cw := newColonyWorld(t, 1)
 	col := cw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) { s.Energy = -0.1 })
 	cw.addBee(col, stage.Adult, caste.Queen, 1, 300)
@@ -195,8 +194,7 @@ func TestColonyUpdateEnergyDepleted(t *testing.T) {
 }
 
 func TestColonyUpdateNoAdults(t *testing.T) {
-	// [UCOL-04] brood without any adult dies. An adult male keeps the brood alive (finding 38, see
-	// trans/netlogo-findings.md#finding-38).
+	// brood without any adult dies. An adult male keeps the brood alive.
 	cw := newColonyWorld(t, 1)
 	orphan := cw.addColony(nil)
 	cw.addBee(orphan, stage.Egg, caste.Undefined, 3, 0)
@@ -217,13 +215,13 @@ func TestColonyUpdateNoAdults(t *testing.T) {
 }
 
 func TestColonyUpdateSwitchPoint(t *testing.T) {
-	// [UCOL-08] in the eusocial phase and with larvaWorkerRatio < 3: p = 0.13 per day
+	// in the eusocial phase and with larvaWorkerRatio < 3: p = 0.13 per day
 	cw := newColonyWorld(t, 5)
 	const n = 2000
 	cols := make([]ecs.Entity, n)
 	for i := range cols {
 		cols[i] = cw.addColony(nil)
-		cw.addBee(cols[i], stage.Adult, caste.Worker, 1, 1) // eusocial phase starts this morning [UCOL-07]
+		cw.addBee(cols[i], stage.Adult, caste.Worker, 1, 1) // eusocial phase starts this morning
 	}
 	highRatio := cw.addColony(nil)
 	cw.addBee(highRatio, stage.Adult, caste.Worker, 2, 1)
@@ -259,7 +257,7 @@ func TestColonyUpdateSwitchPoint(t *testing.T) {
 }
 
 func TestCompetitionPointDate(t *testing.T) {
-	// [CPD-01] worked examples of the annotation, and the bounds
+	// worked examples and the bounds
 	cases := []struct{ eus, qpd, want day.Abs }{
 		{120, 130, 143}, // y = 22.5, round 142.5 = 143
 		{120, 180, 165}, // 178 - 120 = 58 > 45
@@ -271,11 +269,11 @@ func TestCompetitionPointDate(t *testing.T) {
 	for _, c := range cases {
 		col := comp.Colony{EusocialPhaseDate: day.At(c.eus), QueenProductionDate: day.At(c.qpd)}
 		if got := competitionPointDate(&col); got != c.want {
-			t.Errorf("CompetitionPointDateREP(eus %v, qpd %v) = %v, want %v", c.eus, c.qpd, got, c.want)
+			t.Errorf("competitionPointDate(eus %v, qpd %v) = %v, want %v", c.eus, c.qpd, got, c.want)
 		}
 	}
 
-	// [UCOL-09] set once both dates are set
+	// set once both dates are set
 	cw := newColonyWorld(t, 1)
 	set := cw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) {
 		c.EusocialPhaseDate, c.QueenProductionDate = day.At(120), day.At(130)
@@ -294,7 +292,7 @@ func TestCompetitionPointDate(t *testing.T) {
 }
 
 func TestColonyUpdateRangeLists(t *testing.T) {
-	// [UCOL-01] the lists in flower and range are rebuilt only if Flowering.Changed
+	// the lists in flower and range are rebuilt only if Flowering.Changed
 	cw := newColonyWorld(t, 1)
 	fsMap := ecs.NewMap3[comp.Foodsource, comp.FoodsourceState, comp.Layer](cw.w)
 	inFlower := fsMap.NewEntity(&comp.Foodsource{}, &comp.FoodsourceState{Pollen: 1, Nectar: 1}, &comp.Layer{IsMasterpatch: true})

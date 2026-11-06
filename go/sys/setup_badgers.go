@@ -12,11 +12,8 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// badgersSetup [INIT-08].
-//
-// Creates Parameters.Badgers badgers, each in the centre of the patch cell of a "Scrub" masterpatch, at least 300 m from
-// the badgers placed before. N_Badgers is 0 in netlogo/_SYSTEM_Example_Farm_Parameters.csv.
-// Not translated: size, shape (GUI).
+// badgersSetup creates Parameters.Badgers badgers, each in the centre of the patch cell of a "Scrub" masterpatch,
+// more than 300 m from the badgers placed before. The example farm has no badgers.
 //
 // NetLogo: CreateBadgersProc.
 type badgersSetup struct{}
@@ -32,8 +29,7 @@ func (s *badgersSetup) Update(w *ecs.World) {}
 
 func (s *badgersSetup) Finalize(w *ecs.World) {}
 
-// createBadgers creates n badgers on "Scrub" masterpatches [BADC], finding 48 (see
-// trans/netlogo-findings.md#finding-48).
+// createBadgers creates n badgers on "Scrub" masterpatches.
 // scale is in NetLogo patches per metre [1/m].
 func createBadgers(w *ecs.World, n int, scale float64, rng *rand.Rand) {
 	burrowHabitatsList := []string{"Scrub"} // case-sensitive, as member?
@@ -54,9 +50,8 @@ func createBadgers(w *ecs.World, n int, scale float64, rng *rand.Rand) {
 		}
 	}
 
-	// [BADC-01] create-badgers creates ALL badgers first, at the origin (0, 0), each with a who number (not
-	// kept, step F12). Then each
-	// runs the block, in random order (as ask).
+	// ALL badgers are created first, at the origin (0, 0). Then each is placed, in random order, as NetLogo asks
+	// them in random order.
 	badgerMap := ecs.NewMap2[comp.Position, comp.Badger](w)
 	badgers := make([]ecs.Entity, n)
 	for i := range badgers {
@@ -79,8 +74,8 @@ func createBadgers(w *ecs.World, n int, scale float64, rng *rand.Rand) {
 		placed = append(placed, b)
 
 		// recomputed with the badgers placed so far: no badger on the patch cell of the foodsource (badgers-here)
-		// and none within distance_patches (in-radius: <=). NetLogo also counts the badgers that still sit at the
-		// origin, which blocks the Scrub patches near the origin (finding 48). Fixed in step F5.
+		// and none within limitDistance (in-radius: <=). Only the placed badgers count. NetLogo also counts the
+		// badgers that still sit at the origin, which blocks the Scrub patches near the origin.
 		burrowFsSet = burrowFsSet[:0]
 		for _, site := range sites {
 			free := true

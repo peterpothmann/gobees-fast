@@ -14,7 +14,7 @@ import (
 )
 
 // seasWorld is a colonyWorld with the brood totals of the previous morning (broodTotals), set by hand, and the
-// seasonalEvents system. The totals of the previous evening (OutputDailyProc) are counted from the bees.
+// seasonalEvents system. The totals of the previous evening (the daily output of NetLogo) are counted from the bees.
 func seasWorld(t *testing.T, d day.OfYear) (*colonyWorld, *seasonalEvents, *globals.BroodTotals) {
 	t.Helper()
 	cw := newColonyWorld(t, 1)
@@ -36,7 +36,7 @@ func (cw *colonyWorld) addHibernatingQueen(number int) ecs.Entity {
 }
 
 func TestSeasonalEventsSeasonStop(t *testing.T) {
-	// [SEAS-01] on Day seasonStop (305 for B_terrestris) every bee of the species that does not hibernate dies
+	// on Day seasonStop (305 for B_terrestris) every bee of the species that does not hibernate dies
 	for _, d := range []day.OfYear{304, 305} {
 		cw, s, _ := seasWorld(t, d)
 		col := cw.addColony(nil)
@@ -60,7 +60,7 @@ func TestSeasonalEventsSeasonStop(t *testing.T) {
 		if alive != 1 || !cw.w.Alive(hibernating) || cw.w.Alive(searching) {
 			t.Errorf("day 305: %d bee agents alive, want only the hibernating queen", alive)
 		}
-		// the colony dies later this morning in [UCOL-11]
+		// the colony dies later this morning in colonyUpdate
 		cw.sys.Update(cw.w)
 		if cw.w.Alive(col) {
 			t.Error("the colony without bees is alive")
@@ -69,7 +69,7 @@ func TestSeasonalEventsSeasonStop(t *testing.T) {
 }
 
 func TestSeasonalEventsSeasonStopOtherSpecies(t *testing.T) {
-	// [SEAS-01] per species: a species with a later seasonStop keeps its bees
+	// per species: a species with a later seasonStop keeps its bees
 	cw, s, _ := seasWorld(t, 305)
 	other := cw.speciesNamed(t, "late")
 	cw.input.Species[other].SeasonStop = 330
@@ -83,7 +83,7 @@ func TestSeasonalEventsSeasonStopOtherSpecies(t *testing.T) {
 }
 
 func TestSeasonalEventsMalesDie(t *testing.T) {
-	// [SEAS-02] all males die if every queen hibernates, there is no brood and males exist, with the totals of the
+	// all males die if every queen hibernates, there is no brood and males exist, with the totals of the
 	// previous evening (TotalQueens, TotalHibernatingQueens, TotalMales, counted from the bees) and morning (brood)
 	cases := []struct {
 		name                string
@@ -122,16 +122,16 @@ func TestSeasonalEventsMalesDie(t *testing.T) {
 }
 
 func TestSeasonalEventsTotalsBeforeSeasonStop(t *testing.T) {
-	// [SEAS-02] uses the totals of the previous evening [OUT-01]: a queen that dies on Day seasonStop in [SEAS-01]
+	// uses the totals of the previous evening: a queen that dies at the end of the season (Day seasonStop)
 	// still counts as not hibernating, so the males survive this morning.
 	cw, s, _ := seasWorld(t, 305)
 	other := cw.speciesNamed(t, "late")
 	cw.input.Species[other].SeasonStop = 330
 	male := cw.addMale(ecs.Entity{}, 2)
 	_, b, _, _, _, _ := cw.beeMap.Get(male)
-	b.Species = other // survives [SEAS-01]
+	b.Species = other // survives
 	cw.addHibernatingQueen(4)
-	cw.addBee(ecs.Entity{}, stage.Adult, caste.Queen, 1, 0) // dies in [SEAS-01]
+	cw.addBee(ecs.Entity{}, stage.Adult, caste.Queen, 1, 0) // dies at the end of the season
 	s.Update(cw.w)
 	if !cw.w.Alive(male) {
 		t.Error("the males died on the day the last active queen died")
@@ -143,7 +143,7 @@ func TestSeasonalEventsTotalsBeforeSeasonStop(t *testing.T) {
 }
 
 func TestSeasonalEventsHibernatingQueensLimit(t *testing.T) {
-	// [SEAS-03] on Day 1: queensToKill = TotalHibernatingQueens (previous evening) - MaxHibernatingQueens
+	// on Day 1: queensToKill = TotalHibernatingQueens (previous evening) - MaxHibernatingQueens
 	cw, s, _ := seasWorld(t, 366)
 	cw.cal.Day = 1
 	cw.parameters.MaxHibernatingQueens = 5
@@ -166,7 +166,7 @@ func TestSeasonalEventsHibernatingQueensLimit(t *testing.T) {
 }
 
 func TestSeasonalEventsHibernatingCohort(t *testing.T) {
-	// [SEAS-03] a cohort can remove more queens than needed. The planned number (TotalHibernatingQueensEverRemoved)
+	// a cohort can remove more queens than needed. The planned number (TotalHibernatingQueensEverRemoved)
 	// is output, see obs.Counters.
 	cw, s, _ := seasWorld(t, 1)
 	cw.parameters.MaxHibernatingQueens = 7

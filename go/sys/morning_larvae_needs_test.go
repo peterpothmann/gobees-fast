@@ -10,7 +10,7 @@ import (
 )
 
 func TestMaxWeightGainToday(t *testing.T) {
-	// [WGAIN-01] worked example: 1.5 * 1.88^k, workers capped at 249.5 mg on the ninth feeding, queens at 980 mg
+	// worked example: 1.5 * 1.88^k, workers capped at 249.5 mg on the ninth feeding, queens at 980 mg
 	// on the eleventh.
 	sp := terrestris(t)
 	for _, tc := range []struct {
@@ -33,7 +33,7 @@ func TestMaxWeightGainToday(t *testing.T) {
 }
 
 func TestLarvaeNeeds(t *testing.T) {
-	// [NEED-01] worked example: 12 larvae of 10 mg: 0.1056 g pollen, 0.65472 kJ
+	// worked example: 12 larvae of 10 mg: 0.1056 g pollen, 0.65472 kJ
 	bw := newBroodWorld(t, 1)
 	col := bw.addColony(nil)
 	other := bw.addColony(nil)

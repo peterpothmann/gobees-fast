@@ -19,7 +19,7 @@ import (
 )
 
 func TestDayOfYear(t *testing.T) {
-	// [MORN-02] finding 36 (see trans/netlogo-findings.md#finding-36): the worked examples of the annotation
+	// worked examples
 	cases := map[day.Abs]day.OfYear{0: 0, 1: 1, 364: 364, 365: 365, 366: 1, 730: 365, 731: 1}
 	for ticks, want := range cases {
 		if got := dayOfYear(ticks); got != want {
@@ -74,9 +74,9 @@ func morningWorld(t *testing.T, years []input.Year) (*ecs.World, *globals.Ticks)
 func TestCalendarUpdateForagingPeriod(t *testing.T) {
 	w, ticks := morningWorld(t, nil)
 	s := &calendarUpdate{}
-	s.Initialize(w) // Setup, ticks = 0 [INIT-10]
+	s.Initialize(w) // Setup, ticks = 0
 	cal := ecs.GetResource[globals.Calendar](w)
-	// finding 4 (see trans/netlogo-findings.md#finding-4): Day 0, no foraging period in Setup
+	// Day 0, no foraging period in Setup
 	if cal.Day != 0 || cal.ForagingPeriod != 0 {
 		t.Errorf("Setup: Day %v, ForagingPeriod %v, want 0 and 0", cal.Day, cal.ForagingPeriod)
 	}
@@ -93,8 +93,7 @@ func TestCalendarUpdateForagingPeriod(t *testing.T) {
 }
 
 func TestCalendarUpdateForagingHoursExample(t *testing.T) {
-	// [MORN-04] with the example weather year, day 43 is the ".5" of the NetLogo list (finding 1, see
-	// trans/netlogo-findings.md#finding-1)
+	// with the example weather year, day 43 is the ".5" of the NetLogo list
 	w, ticks := morningWorld(t, []input.Year{exampleWeatherYear(t)})
 	s := &calendarUpdate{}
 	s.Initialize(w)
@@ -121,7 +120,7 @@ func flowerPeriods(t *testing.T, names ...string) map[string][2]day.OfYear {
 }
 
 func TestFlowerRefill(t *testing.T) {
-	// [UFS-02] worked examples of the annotation from netlogo/_SYSTEM_Flowerspecies.csv, columns startDay, stopDay
+	// worked examples from netlogo/_SYSTEM_Flowerspecies.csv, columns startDay, stopDay
 	periods := flowerPeriods(t, "Dandelion", "Daisy", "Crop_Cereals")
 	if periods["Dandelion"] != [2]day.OfYear{1, 364} || periods["Daisy"] != [2]day.OfYear{1, 365} || periods["Crop_Cereals"] != [2]day.OfYear{0, 0} {
 		t.Fatalf("periods from the example file: %v", periods)

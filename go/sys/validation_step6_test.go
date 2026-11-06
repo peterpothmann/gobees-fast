@@ -75,8 +75,10 @@ func step6Metrics(w *ecs.World, counters *obs.Counters) map[string]float64 {
 
 func TestValidationStep6AgainstNetLogo(t *testing.T) {
 	// Experiment go/validation/experiments/step6.xml: the colony dynamics of year 1 with brood, the daily activity
-	// queue and foraging (steps 4b to 6). NetLogo runs Go without QueensLeavingNestProc and UpdateSeasonalEventsProc
-	// (step 7), and so does gobees: the parts below are the groups of schedule.go without the step 7 parts.
+	// queue and foraging. NetLogo runs Go without the queens leaving the nest and the seasonal events, and so does
+	// the test: the parts below are the groups of schedule.go without queensLeavingNest and seasonalEvents, and also
+	// without cropRotation, badgers and extinction: the example farm has no crop rotation and no badgers, and
+	// extinction only stops a run.
 	if testing.Short() {
 		t.Skip("100 runs of 364 days")
 	}

@@ -15,7 +15,7 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// activityWorld extends broodWorld (step 4b) with the systems of steps 5 and 6. The foraging period is 8 h
+// activityWorld extends broodWorld with wakeUp, activities and nightRest. The foraging period is 8 h
 // (Weather = "Constant 8 hrs" in netlogo/_SYSTEM_Example_Farm_Parameters.csv), the foraging mortality "high".
 type activityWorld struct {
 	*broodWorld
@@ -31,7 +31,7 @@ func newActivityWorld(t *testing.T, seed uint64) *activityWorld {
 	aw := &activityWorld{broodWorld: newBroodWorld(t, seed), wake: &wakeUp{},
 		loop: &activities{CheckActiveCount: true}, eod: &nightRest{}}
 	aw.cal.ForagingPeriod = 8 * 3600
-	ecs.AddResource(aw.w, &params.Derived{ForagerMortality: 1e-05}) // ForagingMortalityModel "high" [PAR-04]
+	ecs.AddResource(aw.w, &params.Derived{ForagerMortality: 1e-05}) // ForagingMortalityModel "high"
 	aw.wake.Initialize(aw.w)
 	aw.loop.Initialize(aw.w)
 	aw.eod.Initialize(aw.w)
@@ -40,7 +40,7 @@ func newActivityWorld(t *testing.T, seed uint64) *activityWorld {
 	return aw
 }
 
-// adult adds an adult bee with the thresholds of a situation [THR].
+// adult adds an adult bee with the thresholds of a situation.
 // weight is in [mg].
 func (aw *activityWorld) adult(col ecs.Entity, c caste.Caste, number int, weight float64, situation string) ecs.Entity {
 	e := aw.addBee(col, stage.Adult, c, number, 5)
@@ -51,7 +51,7 @@ func (aw *activityWorld) adult(col ecs.Entity, c caste.Caste, number int, weight
 }
 
 func TestNextActiveBee(t *testing.T) {
-	// [NEXT-04] worked examples
+	// worked examples
 	for _, tc := range []struct {
 		name  string
 		times []float64 // A first
@@ -89,7 +89,7 @@ func TestNextActiveBee(t *testing.T) {
 }
 
 func TestWakeUp(t *testing.T) {
-	// [MORN-08] active adult workers and queens, also without colony, wake up at 1 to 1800 s
+	// active adult workers and queens, also without colony, wake up at 1 to 1800 s
 	aw := newActivityWorld(t, 2)
 	col := aw.addColony(nil)
 	want := []ecs.Entity{aw.adult(col, caste.Queen, 1, 800, sitQueenSocialPhase)}
@@ -119,7 +119,7 @@ func TestWakeUp(t *testing.T) {
 		}
 		b, _, _, _, _ := aw.bee(e)
 		if b.PersonalTime < 1 || b.PersonalTime > 1800 || b.PersonalTime != float64(int(b.PersonalTime)) {
-			t.Errorf("personalTime_s %v, want a whole second from 1 to 1800", b.PersonalTime)
+			t.Errorf("PersonalTime %v, want a whole second from 1 to 1800", b.PersonalTime)
 		}
 		if b.PersonalTime < last {
 			t.Errorf("queue not sorted: %v after %v", b.PersonalTime, last)
@@ -129,10 +129,10 @@ func TestWakeUp(t *testing.T) {
 }
 
 func TestStimuli(t *testing.T) {
-	// worked examples of [STEG-01], [STNU-01], [STNE-01] to [STNE-03], [STPO-01] to [STPO-03]
+	// worked examples
 	sp := terrestris(t)
 	if !almostEqual(sp.MinPollenStore, 0.3744) {
-		t.Fatalf("minPollenStore_g %v, want 0.3744", sp.MinPollenStore)
+		t.Fatalf("MinPollenStore %v, want 0.3744", sp.MinPollenStore)
 	}
 	for _, tc := range []struct {
 		name   string
@@ -144,12 +144,12 @@ func TestStimuli(t *testing.T) {
 		{"founding, pollen at minimum", sp.MinPollenStore, comp.ColonyCounts{Adults: 1}, 0},
 		{"founding, larvae present", 1, comp.ColonyCounts{Adults: 1, Larvae: 12}, 0},
 		{"workers present", 0, comp.ColonyCounts{Adults: 2, Eggs: 12}, 1},
-		// finding 45 (see trans/netlogo-findings.md#finding-45): a male counts like a worker
+		// a male counts like a worker
 		{"queen and one male", 0, comp.ColonyCounts{Adults: 2, Eggs: 12}, 1},
 	} {
 		stores := comp.ColonyStores{Pollen: tc.pollen}
 		if got := egglayingStimulus(&stores, &tc.counts, sp); got != tc.want {
-			t.Errorf("StimEgglayingREP %s: %v, want %v", tc.name, got, tc.want)
+			t.Errorf("egglayingStimulus %s: %v, want %v", tc.name, got, tc.want)
 		}
 	}
 
@@ -157,7 +157,7 @@ func TestStimuli(t *testing.T) {
 	for _, tc := range []struct{ summed, want float64 }{{6.6, 1}, {6.7, 0}} {
 		stores := comp.ColonyStores{IncubationToday: tc.summed}
 		if got := nursingStimulus(&stores, &eggs, sp); got != tc.want {
-			t.Errorf("StimNursingREP, 12 eggs need 6.67 kJ, %v kJ received: %v, want %v", tc.summed, got, tc.want)
+			t.Errorf("nursingStimulus, 12 eggs need 6.67 kJ, %v kJ received: %v, want %v", tc.summed, got, tc.want)
 		}
 	}
 
@@ -168,7 +168,7 @@ func TestStimuli(t *testing.T) {
 		stores := comp.ColonyStores{EnergyNeedToday: 0.65472, Energy: tc.store}
 		got := nectarStimulus(&stores, tc.daytime, sunrise, period)
 		if got != tc.want || !almostEqual(stores.IdealEnergy, 39.6416) {
-			t.Errorf("StimForagingNectarREP store %v at %v s: %v (ideal %v), want %v (ideal 39.6416)",
+			t.Errorf("nectarStimulus store %v at %v s: %v (ideal %v), want %v (ideal 39.6416)",
 				tc.store, tc.daytime, got, stores.IdealEnergy, tc.want)
 		}
 	}
@@ -176,14 +176,14 @@ func TestStimuli(t *testing.T) {
 		stores := comp.ColonyStores{LarvaePollenNeedToday: 0.1056, Pollen: tc.store}
 		got := pollenStimulus(&stores, sp, tc.daytime, sunrise, period)
 		if got != tc.want || !almostEqual(stores.IdealPollen, 0.9024) {
-			t.Errorf("StimForagingPollenREP store %v at %v s: %v (ideal %v), want %v (ideal 0.9024)",
+			t.Errorf("pollenStimulus store %v at %v s: %v (ideal %v), want %v (ideal 0.9024)",
 				tc.store, tc.daytime, got, stores.IdealPollen, tc.want)
 		}
 	}
 }
 
 func TestActChoice(t *testing.T) {
-	// [ACT-03] the last matching task wins (finding 11, see trans/netlogo-findings.md#finding-11), [ACT-04]
+	// the last matching task wins
 	for _, tc := range []struct {
 		name      string
 		situation string
@@ -205,7 +205,7 @@ func TestActChoice(t *testing.T) {
 		{"young queen", sitYoungQueen, false, false, true, true, 36000, activity.Resting},
 		{"queen without colony", sitQueenInitiationPhase, false, true, true, true, 36000, activity.Resting},
 		{"Psithyrus with Psith thresholds", sitPsith, true, false, true, true, 36000, activity.Egglaying},
-		// finding 44 (see trans/netlogo-findings.md#finding-44): nursing wins and becomes resting
+		// nursing wins and becomes resting
 		{"Psithyrus with social thresholds", sitQueenSocialPhase, true, false, true, true, 36000, activity.Resting},
 		{"Psithyrus with social thresholds, brood warm", sitQueenSocialPhase, true, false, true, false, 36000, activity.Egglaying},
 	} {
@@ -237,9 +237,9 @@ func TestActChoice(t *testing.T) {
 		aw.daytime.Time = tc.daytime
 		aw.loop.act(aw.w, e)
 		if !aw.w.Alive(e) {
-			continue // died on a search flight [COST-01]
+			continue // died on a search flight
 		}
-		// a forager ends her trip in another activity: without known patches she returns empty [SRCH-03]
+		// a forager ends her trip in another activity: without known patches she returns empty
 		b, _, _, fo, _ := aw.bee(e)
 		got := b.Activity
 		if got == activity.ReturningEmpty {
@@ -255,7 +255,7 @@ func TestActChoice(t *testing.T) {
 }
 
 func TestActTime(t *testing.T) {
-	// [ACT-05] resting 1800 s, nursing 2880 s, egg laying 24 h, a failed search 2500 m / 5 m/s [COST-01]
+	// resting 1800 s, nursing 2880 s, egg laying 24 h, a failed search 2500 m / 5 m/s
 	for _, tc := range []struct {
 		name      string
 		situation string
@@ -281,13 +281,13 @@ func TestActTime(t *testing.T) {
 		aw.daytime.Time = tc.daytime
 		aw.loop.act(aw.w, e)
 		if b, _, _, _, _ := aw.bee(e); b.PersonalTime != tc.want {
-			t.Errorf("%s: personalTime_s %v, want %v", tc.name, b.PersonalTime, tc.want)
+			t.Errorf("%s: PersonalTime %v, want %v", tc.name, b.PersonalTime, tc.want)
 		}
 	}
 }
 
 func TestIncubateBrood(t *testing.T) {
-	// [INC-01], [INC-02] worked example: a queen of 800 mg and 12 eggs: about 0.5 kJ, 0.0417 kJ per egg.
+	// worked example: a queen of 800 mg and 12 eggs: about 0.5 kJ, 0.0417 kJ per egg.
 	// The NetLogo constant is truncated, so the heat is 0.499999998 kJ.
 	heat := 2880 * 0.000000217013888 * 800.0
 	aw := newActivityWorld(t, 1)
@@ -314,16 +314,16 @@ func TestIncubateBrood(t *testing.T) {
 		t.Errorf("heat %v kJ, want about 0.5", heat)
 	}
 	if !almostEqual(s.IncubationToday, heat) || !almostEqual(s.Energy, 10-heat) {
-		t.Errorf("summedIncubationToday_kJ %v, energy store %v; want %v, %v", s.IncubationToday, s.Energy, heat, 10-heat)
+		t.Errorf("IncubationToday %v, energy store %v; want %v, %v", s.IncubationToday, s.Energy, heat, 10-heat)
 	}
 	if b, _, _, _, _ := aw.bee(queen); b.PersonalTime != 2880 {
-		t.Errorf("personalTime_s %v, want 2880", b.PersonalTime)
+		t.Errorf("PersonalTime %v, want 2880", b.PersonalTime)
 	}
 }
 
 func TestActivitiesDay(t *testing.T) {
 	// one day of a social colony: the queen and 20 workers heat 12 eggs, then the queen lays.
-	// Finding 46 (see trans/netlogo-findings.md#finding-46): the new eggs get no heat today.
+	// The new eggs get no heat today.
 	aw := newActivityWorld(t, 4)
 	col := aw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) {
 		s.Pollen, s.Energy = 1000, 1000 // no foraging
@@ -354,17 +354,17 @@ func TestActivitiesDay(t *testing.T) {
 			t.Errorf("new eggs got %v kJ, want 0", d.IncubationReceived)
 		}
 	}
-	// [GO-08] the day ends when the first bee of the queue is beyond 24 h; [GO-11] everybody rests
+	// the day ends when the first bee of the queue is beyond 24 h, then everybody rests
 	for _, e := range aw.active.List {
 		b, _, _, _, _ := aw.bee(e)
 		if b.PersonalTime <= aw.constants.CallItADay || b.Activity != activity.Resting {
-			t.Errorf("after the loop: personalTime_s %v, activity %v", b.PersonalTime, b.Activity)
+			t.Errorf("after the loop: PersonalTime %v, activity %v", b.PersonalTime, b.Activity)
 		}
 	}
 }
 
 func TestActivitiesQueenWithoutColony(t *testing.T) {
-	// [GO-10] one rest, then her day is over. The loop needs a colony [GO-06].
+	// one rest, then her day is over. The loop needs a colony.
 	aw := newActivityWorld(t, 1)
 	col := aw.addColony(nil)
 	aw.adult(col, caste.Queen, 1, 800, sitQueenInitiationPhase)
@@ -374,13 +374,13 @@ func TestActivitiesQueenWithoutColony(t *testing.T) {
 	aw.wake.Update(aw.w)
 	aw.loop.Update(aw.w)
 	if b, _, _, _, _ := aw.bee(searching); b.PersonalTime != aw.constants.CallItADay+1 {
-		t.Errorf("queen without colony: personalTime_s %v, want %v", b.PersonalTime, aw.constants.CallItADay+1)
+		t.Errorf("queen without colony: PersonalTime %v, want %v", b.PersonalTime, aw.constants.CallItADay+1)
 	}
 }
 
 func TestActivitiesExampleFarm(t *testing.T) {
-	// the full schedule of steps 0 to 6 on the example farm for 200 days. CheckActiveCount compares the length of
-	// the queue with NetLogo's count in every turn [GO-06]. The checks of the state [CHK-03] run every day.
+	// the parts below on the example farm for 200 days. CheckActiveCount compares the length of
+	// the queue with NetLogo's count in every turn. The checks of the state run every day.
 	if testing.Short() {
 		t.Skip("200 days of the example farm")
 	}
@@ -407,8 +407,8 @@ func TestActivitiesExampleFarm(t *testing.T) {
 }
 
 func TestNextActiveBeeAfterDeath(t *testing.T) {
-	// [NEXT-01] the previous bee died: the next bee has not been active yet and is re-inserted. With equal times
-	// it moves behind the next bee (trans/data-model.md, "Daily activity queue").
+	// the previous bee died: the next bee has not been active yet and is re-inserted. With equal times
+	// it moves behind the next bee.
 	aw := newActivityWorld(t, 1)
 	col := aw.addColony(nil)
 	names := map[ecs.Entity]string{}
@@ -434,7 +434,7 @@ func TestNextActiveBeeAfterDeath(t *testing.T) {
 }
 
 func TestNightRest(t *testing.T) {
-	// [GO-11] all adult, non-hibernating females rest, also bees whose day ended earlier
+	// all adult, non-hibernating females rest, also bees whose day ended earlier
 	aw := newActivityWorld(t, 1)
 	col := aw.addColony(nil)
 	worker := aw.adult(col, caste.Worker, 1, 100, sitWorker)

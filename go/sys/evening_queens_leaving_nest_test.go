@@ -21,7 +21,7 @@ func qlnWorld(t *testing.T, unlimitedMales bool) (*colonyWorld, *queensLeavingNe
 	return cw, s
 }
 
-// addYoungQueen adds an unmated adult queen with the "youngQueen" thresholds [DEVP-04] to a colony.
+// addYoungQueen adds an unmated adult queen with the "youngQueen" thresholds to a colony.
 func (cw *colonyWorld) addYoungQueen(col ecs.Entity, number int) ecs.Entity {
 	e := cw.addBee(col, stage.Adult, caste.Queen, number, 0)
 	_, b, _, th, _, _ := cw.beeMap.Get(e)
@@ -44,12 +44,12 @@ func TestQueensLeavingNestMating(t *testing.T) {
 	mother := cw.addBee(col, stage.Adult, caste.Queen, 1, 30)
 	young := cw.addYoungQueen(col, 3)
 	queenPupa := cw.addBee(col, stage.Pupa, caste.Queen, 1, 0)
-	// [QLN-02] the male can be in any colony, here in another one
+	// the male can be in any colony, here in another one
 	male := cw.addMale(cw.addColony(nil), 7)
 
 	s.Update(cw.w)
 
-	// [QLN-01] the cohort of 3 leaves as one agent
+	// the cohort of 3 leaves as one agent
 	_, b, g, th, _, _ := cw.beeMap.Get(young)
 	if b.Number != 3 || !b.Mated || b.Activity != activity.Hibernate || !b.Colony.IsZero() {
 		t.Errorf("young queen: number %v, mated %v, activity %v, colony %v; want 3, true, hibernate, none",
@@ -58,7 +58,7 @@ func TestQueensLeavingNestMating(t *testing.T) {
 	if !slices.Equal(g.Spermatheca, []float64{7}) {
 		t.Errorf("spermathecaList %v, want [7]", g.Spermatheca)
 	}
-	// [QLN-03] only the egg-laying threshold changes
+	// only the egg-laying threshold changes
 	want := thresholds(sitYoungQueen)
 	want.Egglaying = 0.1
 	if *th != want {
@@ -83,7 +83,7 @@ func TestQueensLeavingNestMating(t *testing.T) {
 }
 
 func TestQueensLeavingNestNoMale(t *testing.T) {
-	// [QLN-02] no adult male of her species: with UnlimitedMales? = false she dies. A male of another species and
+	// no adult male of her species: with UnlimitedMales = false she dies. A male of another species and
 	// male brood of her species do not count.
 	cw, s := qlnWorld(t, false)
 	other := cw.speciesNamed(t, "B_pascuorum")
@@ -104,7 +104,7 @@ func TestQueensLeavingNestNoMale(t *testing.T) {
 }
 
 func TestQueensLeavingNestUnlimitedMales(t *testing.T) {
-	// [QLN-02] with UnlimitedMales? = true she mates with a male from outside: one allele -1 to -ForeignAlleles
+	// with UnlimitedMales = true she mates with a male from outside: one allele -1 to -ForeignAlleles
 	cw, s := qlnWorld(t, true)
 	col := cw.addColony(nil)
 	queens := []ecs.Entity{}
@@ -130,7 +130,7 @@ func TestQueensLeavingNestUnlimitedMales(t *testing.T) {
 }
 
 func TestQueensLeavingNestDiploidMale(t *testing.T) {
-	// [QLN-04] a queen that mated with a diploid male dies
+	// a queen that mated with a diploid male dies
 	cw, s := qlnWorld(t, true)
 	col := cw.addColony(nil)
 	young := cw.addYoungQueen(col, 1)

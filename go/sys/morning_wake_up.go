@@ -15,12 +15,10 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// wakeUp gives every active adult worker and queen her wake-up time and fills the daily activity queue
-// [MORN-08].
+// wakeUp gives every active adult worker and queen her wake-up time and fills the daily activity queue.
 //
-// Part of the morning routine, after queenEmergence [MORN-07] and before colonyUpdate [MORN-10].
-// Initialize runs it also at ticks = 0 [INIT-10] (all queens hibernate then, the queue stays empty).
-// Not translated: activityList (GUI log).
+// Part of the morning routine, after queenEmergence and before colonyUpdate.
+// Initialize runs it also at ticks = 0 (all queens hibernate then, the queue stays empty).
 //
 // NetLogo: part of UpdateMorning_Proc.
 type wakeUp struct {
@@ -41,11 +39,11 @@ func (s *wakeUp) Initialize(w *ecs.World) {
 
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
 	s.beeMap = ecs.NewMap1[comp.Bee](w)
-	s.Update(w) // run at ticks = 0 [INIT-10]
+	s.Update(w) // run at ticks = 0
 }
 
 func (s *wakeUp) Update(w *ecs.World) {
-	// [MORN-08] ORDER: MATTERS for ties. NetLogo puts the bees in the random order of ask into the list (fput,
+	// ORDER: MATTERS for ties. NetLogo puts the bees in the random order of ask into the list (fput,
 	// i.e. in reverse), then sorts it with the stable sort-by. Here: shuffle in askBees, then a stable sort.
 	randomTimeToGetUp := 1800.0 // [s]
 	s.bees = askBees(s.bees, s.beeFilter, s.rng, isActiveAdult)
@@ -71,8 +69,7 @@ func (s *wakeUp) Update(w *ecs.World) {
 
 func (s *wakeUp) Finalize(w *ecs.World) {}
 
-// isActiveAdult is true for an active adult worker or queen. NetLogo: (caste = "worker" or caste = "queen") and
-// (activity != "hibernate") and stage = "adult", used in [MORN-08] and [GO-06].
+// isActiveAdult is true for an active adult worker or queen.
 func isActiveAdult(b *comp.Bee) bool {
 	return (b.Caste == caste.Worker || b.Caste == caste.Queen) && b.Activity != activity.Hibernate && b.Stage == stage.Adult
 }

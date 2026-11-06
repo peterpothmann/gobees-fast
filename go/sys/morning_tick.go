@@ -8,9 +8,9 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// tick advances the NetLogo day counter [GO-03].
+// tick advances the NetLogo day counter.
 //
-// NetLogo: tick (in Go).
+// NetLogo: tick (in the procedure Go).
 type tick struct {
 	tick  *resource.Tick
 	ticks globals.Ticks

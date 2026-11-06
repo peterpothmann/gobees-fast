@@ -12,10 +12,8 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// broodMortality [GO-16].
-//
-// Brood that is older than the maximum age of its stage dies, and after the competition point all eggs die
-// [MORB]. Each death is counted in one brood death counter of the colony (egg accounting [CHK-04]).
+// broodMortality kills brood that is older than the maximum age of its stage, and after the competition point all
+// eggs.
 //
 // NetLogo: MortalityBroodProc.
 type broodMortality struct {
@@ -44,24 +42,18 @@ func (s *broodMortality) Initialize(w *ecs.World) {
 
 func (s *broodMortality) Update(w *ecs.World) {
 	ticks := s.ticks.Ticks
-	// [MORB-01] to [MORB-04] in this order for each bee. ORDER of the bees: irrelevant, each bee changes only
-	// itself and the counters of its colony (sums). Shuffled (decision C).
-	// DieProc ends the bee's code (finding 28, see trans/netlogo-findings.md#finding-28): continue after it.
+	// in this order for each bee. ORDER of the bees: irrelevant, each bee changes only itself. Shuffled, as NetLogo
+	// asks the bees in random order.
+	// die ends the bee's turn: continue after it.
 	s.bees = askAllBees(s.bees, s.beeFilter, s.rng)
 	for _, e := range s.bees {
 		b, dev := s.beeMap.Get(e)
 		sp := s.speciesMap.Get(b.Species)
-		// memoNumber and the brood death counters of the colony (eggDeathsIncubation, larvaDeathsWeight,
-		// larvaDeathsIncubation, pupaDeathsIncubation, broodDeathsCP): read only by the egg accounting [CHK-04],
-		// removed in step F4. The assertion of [MORB-02] stays.
-
-		// [MORB-01]
 		if b.Stage == stage.Egg && float64(b.BroodAge) > sp.HatchingAgeMax {
-			s.death.die(w, e, "Egg: broodAge > devAgeHatchingMax_d")
+			s.death.die(w, e, "Egg: broodAge > HatchingAgeMax")
 			continue
 		}
 
-		// [MORB-02]
 		if b.Stage == stage.Larva {
 			if ((b.Caste == caste.Worker || b.Caste == caste.Male || b.Caste == caste.Undefined) && float64(b.BroodAge) > sp.PupationAgeMax) ||
 				(b.Caste == caste.Queen && float64(b.BroodAge) > sp.QueenPupationAgeMax) {
@@ -74,17 +66,16 @@ func (s *broodMortality) Update(w *ecs.World) {
 					relativeIncub = dev.IncubationReceived / sp.PupationIncubation
 				}
 				if relativeWeight >= 1 && relativeIncub >= 1 {
-					panic("Neither Weight or Incubation reason for death: MortalityBroodProc (1)")
+					panic("Neither Weight or Incubation reason for death: broodMortality (1)")
 				}
 				s.death.die(w, e, "Larva: broodAge > max. pupation age")
 				continue
 			}
 		}
 
-		// [MORB-03]
 		if b.Stage == stage.Pupa {
 			if b.Caste == caste.Undefined {
-				panic("Pupa with undefined caste (MortalityProc)!")
+				panic("Pupa with undefined caste (broodMortality)!")
 			}
 			if ((b.Caste == caste.Worker || b.Caste == caste.Male) && float64(b.BroodAge) > sp.EmergenceAgeMax) ||
 				(b.Caste == caste.Queen && float64(b.BroodAge) > sp.QueenEmergenceAgeMax) {
@@ -93,7 +84,7 @@ func (s *broodMortality) Update(w *ecs.World) {
 			}
 		}
 
-		// [MORB-04] adults without colony are skipped
+		// adults without colony are skipped
 		if !b.Colony.IsZero() {
 			if colony := s.colonyMap.Get(b.Colony); colony.CompetitionPointDate.Before(ticks) {
 				if b.Stage == stage.Egg {

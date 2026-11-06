@@ -13,10 +13,10 @@ import (
 )
 
 func TestDetermineCaste(t *testing.T) {
-	// finding 40 (see trans/netlogo-findings.md#finding-40): every female larva becomes a queen
+	// QueenDeterminationWeight is 0: every female larva becomes a queen once the colony produces queens
 	sp := terrestris(t)
 	if sp.QueenDeterminationWeight != 0 {
-		t.Fatalf("dev_Q_DeterminationWeight_mg = %v, want 0", sp.QueenDeterminationWeight)
+		t.Fatalf("QueenDeterminationWeight = %v, want 0", sp.QueenDeterminationWeight)
 	}
 	producing := comp.Colony{QueenProduction: true}
 	for _, w := range []float64{0, 1.5, 10, 600} {
@@ -35,7 +35,7 @@ func TestDetermineCaste(t *testing.T) {
 }
 
 func TestDevelopmentLarvaePrecedence(t *testing.T) {
-	// finding 41 (see trans/netlogo-findings.md#finding-41): (worker or male) and incubation and age and weight
+	// the pupation condition is (worker or male) and incubation and age and weight
 	bw := newBroodWorld(t, 1)
 	col := bw.addColony(nil)
 	light := bw.addBrood(col, stage.Larva, caste.Worker, 1, 13, 50, 100) // below 62.4 mg
@@ -92,7 +92,7 @@ func layAndRaise(t *testing.T, queenProduction bool) (bw *broodWorld, eggs ecs.E
 		if b.Stage == stage.Adult {
 			break
 		}
-		d.IncubationReceived += quota // during the day (BroodIncubationProc, step 5)
+		d.IncubationReceived += quota // during the day (activities.incubateBrood)
 		before := *b
 		bw.evening()
 		b, _, _, _, _ = bw.bee(eggs)
@@ -112,7 +112,7 @@ func layAndRaise(t *testing.T, queenProduction bool) (bw *broodWorld, eggs ecs.E
 }
 
 func TestDevelopmentWorkerTimeline(t *testing.T) {
-	// worked example [DEVL-02], [DEVL-03], [DEVP-01]: egg laid on day L, larva in the evening of L + 4, caste on
+	// worked example: egg laid on day L, larva in the evening of L + 4, caste on
 	// L + 7, pupa on L + 12 (8 feedings, 234.07 mg), adult on L + 23
 	bw, e, events := layAndRaise(t, false)
 	want := map[string]int{"larva": 4, "caste": 7, "worker": 7, "pupa": 12, "adult": 23, "pupationWeight": 23407}
@@ -134,7 +134,7 @@ func TestDevelopmentWorkerTimeline(t *testing.T) {
 }
 
 func TestDevelopmentQueenTimeline(t *testing.T) {
-	// worked example [DEVL-03], [DEVP-04]: queen pupa on L + 16 (capped at 980 mg), adult on L + 31, emerging
+	// worked example: queen pupa on L + 16 (capped at 980 mg), adult on L + 31, emerging
 	// date in year 2 between Day 1 and seasonStop 305
 	bw, e, events := layAndRaise(t, true)
 	want := map[string]int{"larva": 4, "caste": 7, "queen": 7, "pupa": 16, "adult": 31, "pupationWeight": 98000}
@@ -145,7 +145,7 @@ func TestDevelopmentQueenTimeline(t *testing.T) {
 	}
 	b, _, th, f, _ := bw.bee(e)
 	if !b.EmergenceDate.IsSet() || b.EmergenceDate.Day() <= 365 || b.EmergenceDate.Day() > 365+305 {
-		t.Errorf("emergingDate %v, want a day in (365, 670]", b.EmergenceDate)
+		t.Errorf("EmergenceDate %v, want a day in (365, 670]", b.EmergenceDate)
 	}
 	if *th != thresholds(sitYoungQueen) || f.PollenPellets != pollenLoad(980, bw.sp) {
 		t.Errorf("thresholds %+v, pollen load %v", *th, f.PollenPellets)
@@ -157,7 +157,7 @@ func TestDevelopmentQueenTimeline(t *testing.T) {
 }
 
 func TestQueenEmergingDateDistribution(t *testing.T) {
-	// [DEVP-04] worked example: emergingDate = 365 + round random-normal 91 28, mean about 456
+	// worked example: emergingDate = 365 + round random-normal 91 28, mean about 456
 	bw := newBroodWorld(t, 5)
 	col := bw.addColony(nil)
 	sum := 0.0
@@ -169,17 +169,17 @@ func TestQueenEmergingDateDistribution(t *testing.T) {
 		bw.dev.developPupa(e)
 		b, _, _, _, _ = bw.bee(e)
 		if !b.EmergenceDate.IsSet() || b.EmergenceDate.Day() <= 365 || b.EmergenceDate.Day() > 670 {
-			t.Fatalf("emergingDate %v outside (365, 670]", b.EmergenceDate)
+			t.Fatalf("EmergenceDate %v outside (365, 670]", b.EmergenceDate)
 		}
 		sum += float64(b.EmergenceDate.Day())
 	}
 	if mean := sum / float64(n); math.Abs(mean-456) > 2 {
-		t.Errorf("mean emergingDate %v, want about 456", mean)
+		t.Errorf("mean EmergenceDate %v, want about 456", mean)
 	}
 }
 
 func TestDevelopmentAdultMortality(t *testing.T) {
-	// [MORA-01] workers die at adultAge 61, males at 31, queens never
+	// workers die at adultAge 61, males at 31, queens never
 	bw := newBroodWorld(t, 1)
 	col := bw.addColony(nil)
 	w60 := bw.addBee(col, stage.Adult, caste.Worker, 1, 60)
@@ -210,7 +210,7 @@ func TestDevelopmentAdultMortality(t *testing.T) {
 }
 
 func TestDevelopmentSocialPhaseThresholds(t *testing.T) {
-	// [MORA-02] finding 44 (see trans/netlogo-findings.md#finding-44): also a Psithyrus queen
+	// no species check: a Psithyrus queen also gets the social-phase thresholds
 	bw := newBroodWorld(t, 1)
 	social := bw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) { n.AdultWorkers = 5 })
 	founding := bw.addColony(nil)
@@ -239,7 +239,7 @@ func TestDevelopmentSocialPhaseThresholds(t *testing.T) {
 }
 
 func TestDevelopmentBackgroundMortality(t *testing.T) {
-	// [MORA-03] finding 22 (see trans/netlogo-findings.md#finding-22): 0 kills nobody, 0.01 kills about 99 %
+	// inverted condition: 0 kills nobody, 0.01 kills about 99 %
 	bw := newBroodWorld(t, 1)
 	col := bw.addColony(nil)
 	for range 1000 {

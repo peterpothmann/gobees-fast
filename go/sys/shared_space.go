@@ -7,7 +7,7 @@ import "math"
 // .5 is rounded up, e.g. 121.5 -> 122, as in NetLogo. math.Floor(v + 0.5) is only correct for v >= -0.5, which
 // holds in this world (0-300 x 0-210, no wrapping).
 //
-// NetLogo: pxcor, pycor, patch-here, -here.
+// NetLogo: pxcor, pycor, patch-here, <breeds>-here.
 func pcor(v float64) int {
 	return int(math.Floor(v + 0.5))
 }
