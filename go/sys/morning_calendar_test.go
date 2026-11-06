@@ -60,15 +60,15 @@ func morningWorld(t *testing.T, years []input.Year) (*ecs.World, *globals.Ticks)
 	t.Helper()
 	w := ecs.NewWorld()
 	ecs.AddResource(w, &resource.Rand{Source: rand.NewPCG(1, 2)})
-	ecs.AddResource(w, &params.ParameterFile{})
+	ecs.AddResource(w, &params.Parameters{})
 	ticks := &globals.Ticks{}
 	ecs.AddResource(w, ticks)
 	p := exampleFarmParams(t, nil, func(c *input.Config) {
 		if years != nil {
-			c.ForagingPeriod_s = years
+			c.ForagingPeriod = years
 		}
 	})
-	ecs.AddResource(w, &p.Input.Weather)
+	ecs.AddResource(w, &p.Input.ForagingPeriod)
 	return w, ticks
 }
 

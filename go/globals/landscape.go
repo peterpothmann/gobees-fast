@@ -7,9 +7,10 @@ import (
 // Landscape holds the globals that CreateFoodsourcesProc [FSRC] sets.
 type Landscape struct {
 	Scale float64 // NetLogo patches per metre [1/m], 1 / line 1 of the foodsources file, 8 decimals [FSRC-02]. NetLogo: Scaling_NLpatches/m
-	// FoodsourcesFile is the landscape file of the current year [PAR-05], changed by CropRotationProc [CROP-01]. Until
-	// step F14 a field of the derived globals (params.Derived.FoodsourcesFile holds the one of the start).
-	FoodsourcesFile string
+	// File is the landscape file of the current year [PAR-05], changed by CropRotationProc [CROP-01]. Until
+	// step F14 a field of the derived globals (params.Derived.StartLandscape holds the one of the start). NetLogo:
+	// FoodsourcesFile.
+	File string
 	// Masterpatches holds all masterpatches in NetLogo's who order, set by CreateLayersProc and replaced at a crop
 	// rotation. gobees-fast keeps no who numbers (step F12), the model reads only this order: the nest sites
 	// [SPEC-06] are sorted by who.

@@ -53,7 +53,7 @@ func (s *wakeUp) Update(w *ecs.World) {
 	list := make([]ecs.Entity, 0, len(s.bees))
 	for _, e := range s.bees {
 		b := s.beeMap.Get(e)
-		b.PersonalTime = s.constants.GetUpTime_s + util.RandomInt(s.rng, randomTimeToGetUp_s)
+		b.PersonalTime = s.constants.GetUpTime + util.RandomInt(s.rng, randomTimeToGetUp_s)
 		list = append(list, e)
 	}
 	slices.Reverse(list) // fput

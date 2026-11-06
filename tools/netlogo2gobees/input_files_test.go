@@ -116,17 +116,17 @@ func TestParseFlowerspeciesFileExample(t *testing.T) {
 			t.Fatalf("got %d flower species, want 79", len(table.Rows))
 		}
 		// first line: """Alsike_clover""",0.0005,0.00046,0.2,0.7,181,242,10,0.6
-		want := params.FlowerSpecies{Name: "Alsike_clover", Pollen_g_per_flower: 0.0005, Nectar_ml_per_flower: 0.00046, Concentration_mol_per_l: 0.7, StartDay: 181, StopDay: 242, CorollaDepth_mm: 10, IntFlowerTime_s: 0.6}
+		want := params.FlowerSpecies{Name: "Alsike_clover", PollenPerFlower: 0.0005, NectarPerFlower: 0.00046, Concentration: 0.7, StartDay: 181, StopDay: 242, CorollaDepth: 10, InterFlowerTime: 0.6}
 		if table.Rows[0] != want {
 			t.Errorf("first row = %+v, want %+v", table.Rows[0], want)
 		}
 		// """Average_Willow""",0.01,0.00261,0.25,1.13,59,119,0,0.6
 		got, err := table.Get("Average_Willow")
-		if err != nil || *got != (params.FlowerSpecies{Name: "Average_Willow", Pollen_g_per_flower: 0.01, Nectar_ml_per_flower: 0.00261, Concentration_mol_per_l: 1.13, StartDay: 59, StopDay: 119, CorollaDepth_mm: 0, IntFlowerTime_s: 0.6}) {
+		if err != nil || *got != (params.FlowerSpecies{Name: "Average_Willow", PollenPerFlower: 0.01, NectarPerFlower: 0.00261, Concentration: 1.13, StartDay: 59, StopDay: 119, CorollaDepth: 0, InterFlowerTime: 0.6}) {
 			t.Errorf("Average_Willow = %+v, %v", got, err)
 		}
 		// last line: """Yellow_rattle""",0.01,0.00025,0.2,0.917323,121,243,13,0.6
-		if table.Rows[78] != (params.FlowerSpecies{Name: "Yellow_rattle", Pollen_g_per_flower: 0.01, Nectar_ml_per_flower: 0.00025, Concentration_mol_per_l: 0.917323, StartDay: 121, StopDay: 243, CorollaDepth_mm: 13, IntFlowerTime_s: 0.6}) {
+		if table.Rows[78] != (params.FlowerSpecies{Name: "Yellow_rattle", PollenPerFlower: 0.01, NectarPerFlower: 0.00025, Concentration: 0.917323, StartDay: 121, StopDay: 243, CorollaDepth: 13, InterFlowerTime: 0.6}) {
 			t.Errorf("last row = %+v", table.Rows[78])
 		}
 		if _, err := table.Get("Not_a_flower"); err == nil {
@@ -152,18 +152,18 @@ func TestParseSpeciesFileExample(t *testing.T) {
 		}
 		// B_terrestris: 91,28,["Grassland*" ...],6.9,11.1,1.88,305,60,12,5,2500,165,173,0.15,2,5,12.9,23.8,1.5,62.4,249.5,1,0,17,590,980,32,0.2
 		s := species[0]
-		read := []float64{s.EmergingDay_mean, s.EmergingDay_sd, s.Proboscis_min_mm, s.Proboscis_max_mm, s.GrowthFactor, float64(s.SeasonStop),
-			float64(s.MaxLifespanWorkers), float64(s.Batchsize), s.FlightVelocity_m_per_s, s.SearchLength_m, s.TimeUnloading, s.SpecMax_cropVolume_myl,
-			s.SpecMax_pollenPellets_g, s.MinToMaxFactor, s.DevAgeHatchingMin_d, s.DevAgePupationMin_d, s.DevAgeEmergingMin_d,
-			s.DevWeightEgg_mg, s.DevWeightPupationMin_mg, s.DevWeightPupationMax_mg, s.PollenToBodymassFactor,
-			s.Dev_Q_DeterminationWeight_mg, s.DevAge_Q_PupationMin_d, s.DevWeight_Q_PupationMin_mg, s.DevWeight_Q_PupationMax_mg,
-			s.DevAge_Q_EmergingMin_d, s.DailyNestSiteChance}
+		read := []float64{s.EmergenceDayMean, s.EmergenceDaySD, s.ProboscisMin, s.ProboscisMax, s.GrowthFactor, float64(s.SeasonStop),
+			float64(s.MaxLifespanWorkers), float64(s.BatchSize), s.FlightVelocity, s.SearchLength, s.UnloadingTime, s.MaxCropVolume,
+			s.MaxPollenPellets, s.MinToMaxFactor, s.HatchingAgeMin, s.PupationAgeMin, s.EmergenceAgeMin,
+			s.EggWeight, s.PupationWeightMin, s.PupationWeightMax, s.PollenToBodymassFactor,
+			s.QueenDeterminationWeight, s.QueenPupationAgeMin, s.QueenPupationWeightMin, s.QueenPupationWeightMax,
+			s.QueenEmergenceAgeMin, s.DailyNestSiteChance}
 		wantRead := []float64{91, 28, 6.9, 11.1, 1.88, 305, 60, 12, 5, 2500, 165, 173, 0.15, 2, 5, 12.9, 23.8, 1.5, 62.4, 249.5, 1, 0, 17, 590, 980, 32, 0.2}
 		if s.Name != "B_terrestris" || !reflect.DeepEqual(read, wantRead) {
 			t.Errorf("B_terrestris columns:\n got  %v %v\n want %v", s.Name, read, wantRead)
 		}
-		if !reflect.DeepEqual(s.NestHabitatsList, []string{"Grassland*", "Garden", "Hedgerow", "Scrub", "Woodland", "Nestboxes"}) {
-			t.Errorf("nestHabitatsList = %q (not yet expanded)", s.NestHabitatsList)
+		if !reflect.DeepEqual(s.NestHabitats, []string{"Grassland*", "Garden", "Hedgerow", "Scrub", "Woodland", "Nestboxes"}) {
+			t.Errorf("nestHabitatsList = %q (not yet expanded)", s.NestHabitats)
 		}
 		// step F13: only the row named Psithyrus is parasitic
 		for _, s := range species {
@@ -172,8 +172,8 @@ func TestParseSpeciesFileExample(t *testing.T) {
 			}
 		}
 		// finding 20 (see trans/netlogo-findings.md#finding-20): emergingDay_sd as in the file, gobees-fast rounds it
-		if species[1].EmergingDay_sd != 14.5 {
-			t.Errorf("B_pascuorum: emergingDay_sd = %v, want 14.5 as in the file", species[1].EmergingDay_sd)
+		if species[1].EmergenceDaySD != 14.5 {
+			t.Errorf("B_pascuorum: emergingDay_sd = %v, want 14.5 as in the file", species[1].EmergenceDaySD)
 		}
 	}
 }

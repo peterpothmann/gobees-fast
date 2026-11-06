@@ -19,9 +19,9 @@ import (
 // smallLandscape is a landscape file made by hand for the crop rotation tests: two flower patches with large areas,
 // so that their layers are not removed as too small [LAYR-06], [LAYR-07].
 var smallLandscape = input.Landscape{MetresPerPatch: 10, Patches: []input.Patch{
-	{Id: 0, PatchType: "Scrub", X: 50, Y: 50, Area_sqm: 100000, FlowerSpeciesList: []input.FlowerEntry{
+	{ID: 0, PatchType: "Scrub", X: 50, Y: 50, Area: 100000, Flowers: []input.FlowerEntry{
 		{Name: "Bramble", Value: 0.211, HasValue: true}, {Name: "Dandelion", Value: 0.113, HasValue: true}}},
-	{Id: 1, PatchType: "Garden", X: 120, Y: 80, Area_sqm: 50000, FlowerSpeciesList: []input.FlowerEntry{
+	{ID: 1, PatchType: "Garden", X: 120, Y: 80, Area: 50000, Flowers: []input.FlowerEntry{
 		{Name: "Dandelion", Value: 0.5, HasValue: true}}},
 }}
 
@@ -92,15 +92,15 @@ func TestCropRotation(t *testing.T) {
 	// [MORN-09] only on Day 365
 	setDay(w, 364)
 	cr.Update(w)
-	if landscape.FoodsourcesFile != exampleLandscape {
+	if landscape.File != exampleLandscape {
 		t.Fatalf("crop rotation on day 364")
 	}
 
 	// [CROP-01] ticks 365: year 1, item 1
 	setDay(w, 365)
 	cr.Update(w)
-	if landscape.FoodsourcesFile != smallLandscapeFile {
-		t.Errorf("FoodsourcesFile %q, want %s", landscape.FoodsourcesFile, smallLandscapeFile)
+	if landscape.File != smallLandscapeFile {
+		t.Errorf("File %q, want %s", landscape.File, smallLandscapeFile)
 	}
 	// [CROP-03] only the foodsources of the new file
 	n, masters := foodsourceSummary(w)
@@ -146,8 +146,8 @@ func TestCropRotation(t *testing.T) {
 	// ticks 730: year 2, item 0, the example farm again
 	setDay(w, 730)
 	cr.Update(w)
-	if n, _ := foodsourceSummary(w); landscape.FoodsourcesFile != exampleLandscape || n != nBefore {
-		t.Errorf("year 2: FoodsourcesFile %q with %d foodsources, want the example farm with %d", landscape.FoodsourcesFile, n, nBefore)
+	if n, _ := foodsourceSummary(w); landscape.File != exampleLandscape || n != nBefore {
+		t.Errorf("year 2: File %q with %d foodsources, want the example farm with %d", landscape.File, n, nBefore)
 	}
 }
 

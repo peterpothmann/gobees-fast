@@ -26,16 +26,16 @@ import (
 // NetLogo: EmergenceNewQueensProc, NestSitesSearchingProc, NestSiteFoodSourceREP, PsithyrusNestSearchProc,
 // CreateColoniesProc.
 type queenEmergence struct {
-	rng       *rand.Rand
-	ticks     *globals.Ticks
-	file      *params.ParameterFile
-	constants *params.Constants
-	derived   *params.Derived
-	landscape *globals.Landscape
-	nestSites *globals.NestSites
-	world     *params.World
-	death     beeDeath
-	colonies  colonyFounder
+	rng        *rand.Rand
+	ticks      *globals.Ticks
+	parameters *params.Parameters
+	constants  *params.Constants
+	derived    *params.Derived
+	landscape  *globals.Landscape
+	nestSites  *globals.NestSites
+	world      *params.World
+	death      beeDeath
+	colonies   colonyFounder
 
 	beeFilter     *ecs.Filter1[comp.Bee]
 	colonyFilter  *ecs.Filter2[comp.Position, comp.Colony]
@@ -47,7 +47,7 @@ type queenEmergence struct {
 func (s *queenEmergence) Initialize(w *ecs.World) {
 	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.ticks = ecs.GetResource[globals.Ticks](w)
-	s.file = ecs.GetResource[params.ParameterFile](w)
+	s.parameters = ecs.GetResource[params.Parameters](w)
 	s.constants = ecs.GetResource[params.Constants](w)
 	s.derived = ecs.GetResource[params.Derived](w)
 	s.landscape = ecs.GetResource[globals.Landscape](w)
@@ -86,7 +86,7 @@ func (s *queenEmergence) Update(w *ecs.World) {
 			fmt.Println("WARNING! Something else than a queen emerged from hibernation! (2)")
 		}
 		// [EMER-03] finding 33 (see trans/netlogo-findings.md#finding-33)
-		if s.file.WinterMortality && s.rng.Float64() > winterMortalityProb(bee.Weight, s.speciesMap.Get(bee.Species)) {
+		if s.parameters.WinterMortality && s.rng.Float64() > winterMortalityProb(bee.Weight, s.speciesMap.Get(bee.Species)) {
 			s.death.die(w, e, "winter mortality")
 			continue // finding 28 (see trans/netlogo-findings.md#finding-28)
 		}
@@ -193,7 +193,7 @@ func (s *queenEmergence) searchNestSite(w *ecs.World, e ecs.Entity, sp *params.S
 
 // searchMortality returns the probability to die during one day of nest search [NEST-04], [PSI-04].
 func (s *queenEmergence) searchMortality() float64 {
-	return 1 - math.Pow(1-s.derived.MortalityForager_per_s, s.constants.NestSearchTime_h*60*60)
+	return 1 - math.Pow(1-s.derived.ForagerMortality, s.constants.NestSearchTime*60*60)
 }
 
 // chooseNestSite chooses a nest site, weighted by area [NSFS].

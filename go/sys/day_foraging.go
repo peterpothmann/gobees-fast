@@ -24,14 +24,14 @@ import (
 // Foraging_collectNectarPollenProc, HandlingTime_s_REP, Foraging_bestLayerREP, Foraging_PatchChoiceProc,
 // Foraging_costs&choiceProc, Foraging_unloadingProc.
 type forager struct {
-	rng       *rand.Rand
-	file      *params.ParameterFile
-	constants *params.Constants
-	derived   *params.Derived
-	landscape *globals.Landscape
-	death     beeDeath
-	trip      ecs.Event // event.ForagingTrip
-	died      ecs.Event // event.DiedForaging
+	rng        *rand.Rand
+	parameters *params.Parameters
+	constants  *params.Constants
+	derived    *params.Derived
+	landscape  *globals.Landscape
+	death      beeDeath
+	trip       ecs.Event // event.ForagingTrip
+	died       ecs.Event // event.DiedForaging
 
 	beeMap        *beeMapper
 	colonyMap     *ecs.Map4[comp.Position, comp.Colony, comp.ColonyStores, comp.ColonyRange]
@@ -42,7 +42,7 @@ type forager struct {
 func newForager(w *ecs.World, rng *rand.Rand) forager {
 	return forager{
 		rng:           rng,
-		file:          ecs.GetResource[params.ParameterFile](w),
+		parameters:    ecs.GetResource[params.Parameters](w),
 		constants:     ecs.GetResource[params.Constants](w),
 		derived:       ecs.GetResource[params.Derived](w),
 		landscape:     ecs.GetResource[globals.Landscape](w),
@@ -178,7 +178,7 @@ func (f *forager) detectionProb(patchWho ecs.Entity, xcol, ycol float64) float64
 	if relevantDistance_m < 0 {
 		relevantDistance_m = 0
 	}
-	detProb := math.Pow(math.E, f.file.Lambda_detectProb*relevantDistance_m) // NetLogo: e ^ x
+	detProb := math.Pow(math.E, f.parameters.DetectionLambda*relevantDistance_m) // NetLogo: e ^ x
 	// [DET-02] NetLogo sets detProb to 0 beyond ForagingRangeMax_m. Never true here: the colony's lists hold only
 	// masterpatches in range [PRNG] (removed in step F3).
 	// [DET-03]
@@ -205,7 +205,7 @@ func (f *forager) collect(e ecs.Entity) {
 		_, fs, state, _ := f.foodsourceMap.Get(fo.CurrentFoodsource)
 		if state.Nectar > 0 {
 			nectarRemoved := min(fo.CropVolume*float64(b.Number), state.Nectar)
-			fo.CarriedNectar = nectarRemoved * f.constants.EnergySucrose_kJ_per_mymol * fs.NectarConcentration
+			fo.CarriedNectar = nectarRemoved * f.constants.SucroseEnergy * fs.NectarConcentration
 			b.Activity = activity.BringingNectar
 			state.Nectar = state.Nectar - nectarRemoved // cumulNectarVisits: never read, removed in step F3
 		} else {
@@ -307,9 +307,9 @@ func (f *forager) bestLayer(e ecs.Entity, myCurrentFoodsource ecs.Entity) ecs.En
 		if !fo.PollenForager && state.Nectar > 0 {
 			handlingTime_s := f.handlingTime(e, currentLayer, fo.PollenForager)
 			energyCostsThisLayer_kJ := (float64(2*distanceColonyFoodpatch_m) +
-				float64(handlingTime_s*sp.FlightVelocity_m_per_s*f.constants.EnergyFactorOnFlower)) *
-				sp.FlightCosts_kJ_per_m_per_mg * b.Weight * float64(b.Number)
-			energyGainThisLayer_kJ := fo.CropVolume * f.constants.EnergySucrose_kJ_per_mymol * fs.NectarConcentration
+				float64(handlingTime_s*sp.FlightVelocity*f.constants.EnergyFactorOnFlower)) *
+				sp.FlightCosts * b.Weight * float64(b.Number)
+			energyGainThisLayer_kJ := fo.CropVolume * f.constants.SucroseEnergy * fs.NectarConcentration
 			eef := (energyGainThisLayer_kJ - energyCostsThisLayer_kJ) / energyCostsThisLayer_kJ
 			if eef > memoBestEEF {
 				memoBestPatch = currentLayer
@@ -411,7 +411,7 @@ func (f *forager) tripCosts(w *ecs.World, e ecs.Entity) bool {
 	persTimeSave := b.PersonalTime
 	saveNumber := float64(b.Number)
 	saveWeight_mg := b.Weight
-	saveFlightCosts_kJ_per_m_per_mg := f.speciesMap.Get(b.Species).FlightCosts_kJ_per_m_per_mg
+	saveFlightCosts_kJ_per_m_per_mg := f.speciesMap.Get(b.Species).FlightCosts
 
 	if b.Caste != caste.Worker && b.Caste != caste.Queen {
 		panic(fmt.Sprintf("%v %v %d shouldn't be foraging (Foraging_costs&timeProc)", b.Stage, b.Caste, e.ID())) // Ark entity ID, not NetLogo's who (step F12)
@@ -422,12 +422,12 @@ func (f *forager) tripCosts(w *ecs.World, e ecs.Entity) bool {
 	colPos, colony, stores, _ := f.colonyMap.Get(b.Colony)
 	spColony := f.speciesMap.Get(colony.Species)
 	// survival of one second, NetLogo: (1 - MortalityForager_per_s * ForagingMortalityFactor)
-	survivalPerSecond := 1 - float64(f.derived.MortalityForager_per_s*f.file.ForagingMortalityFactor)
+	survivalPerSecond := 1 - float64(f.derived.ForagerMortality*f.parameters.ForagingMortalityFactor)
 
 	// [COST-01]
 	if b.Activity == activity.ReturningEmpty {
-		stores.Energy = stores.Energy - float64(spColony.SearchLength_m*saveFlightCosts_kJ_per_m_per_mg*saveNumber*saveWeight_mg)
-		tripDuration_s := spColony.SearchLength_m / spColony.FlightVelocity_m_per_s
+		stores.Energy = stores.Energy - float64(spColony.SearchLength*saveFlightCosts_kJ_per_m_per_mg*saveNumber*saveWeight_mg)
+		tripDuration_s := spColony.SearchLength / spColony.FlightVelocity
 		b.PersonalTime = b.PersonalTime + tripDuration_s
 		survivalChance := math.Pow(survivalPerSecond, tripDuration_s)
 		mortalityRisk := 1 - survivalChance
@@ -455,9 +455,9 @@ func (f *forager) tripCosts(w *ecs.World, e ecs.Entity) bool {
 		scaling := f.landscape.Scale
 		stores.Energy = stores.Energy - float64(
 			(float64(2*distance/scaling)+
-				float64(handlingTime_s*spColony.FlightVelocity_m_per_s*f.constants.EnergyFactorOnFlower))*
+				float64(handlingTime_s*spColony.FlightVelocity*f.constants.EnergyFactorOnFlower))*
 				saveFlightCosts_kJ_per_m_per_mg*saveWeight_mg*saveNumber)
-		tripDuration_s := (2 * distance / scaling / spColony.FlightVelocity_m_per_s) + handlingTime_s
+		tripDuration_s := (2 * distance / scaling / spColony.FlightVelocity) + handlingTime_s
 		b.PersonalTime = b.PersonalTime + tripDuration_s
 		survivalChance := math.Pow(survivalPerSecond, tripDuration_s)
 		mortalityRisk := 1 - survivalChance
@@ -489,7 +489,7 @@ func (f *forager) unload(e ecs.Entity) {
 		stores.Pollen = stores.Pollen + pollenIncrease
 		fo.CarriedNectar = 0
 		fo.CarriedPollen = 0
-		b.PersonalTime = b.PersonalTime + f.speciesMap.Get(b.Species).TimeUnloading
+		b.PersonalTime = b.PersonalTime + f.speciesMap.Get(b.Species).UnloadingTime
 	} else if fo.CarriedNectar+fo.CarriedPollen > 0 {
 		panic("Bee did not unload nectar or pollen in Foraging_unloadingProc!")
 	}

@@ -28,7 +28,7 @@ func newWorld(t *testing.T) *ecs.World {
 	ecs.AddResource(w, &world)
 	ecs.AddResource(w, &globals.Landscape{Scale: 0.1})
 	ecs.AddResource(w, &globals.ActiveBees{})
-	ecs.AddResource(w, &params.ParameterFile{})
+	ecs.AddResource(w, &params.Parameters{})
 	ecs.AddResource(w, &params.Output{})
 	return w
 }

@@ -18,7 +18,7 @@ func TestMaxWeightGainToday(t *testing.T) {
 		capped int // feeding on which the cap binds
 		cap    float64
 	}{{caste.Worker, 9, 249.5}, {caste.Male, 9, 249.5}, {caste.Undefined, 9, 249.5}, {caste.Queen, 11, 980}} {
-		b := comp.Bee{Caste: tc.caste, Weight: sp.DevWeightEgg_mg}
+		b := comp.Bee{Caste: tc.caste, Weight: sp.EggWeight}
 		for k := 1; k <= 12; k++ {
 			b.Weight += maxWeightGainToday(&b, sp)
 			want := math.Min(1.5*math.Pow(1.88, float64(k)), tc.cap)

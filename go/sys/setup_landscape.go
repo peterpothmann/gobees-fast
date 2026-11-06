@@ -29,7 +29,7 @@ type landscapeSetup struct {
 
 func (s *landscapeSetup) Initialize(w *ecs.World) {
 	derived := ecs.GetResource[params.Derived](w)
-	createFoodsources(w, derived.FoodsourcesFile, &s.landscape)
+	createFoodsources(w, derived.StartLandscape, &s.landscape)
 	ecs.AddResource(w, &s.landscape)
 
 	// [INIT-15] assertion: every foodsource must have a habitat type. Part of Setup, not of CreateFoodsourcesProc,
@@ -53,7 +53,7 @@ func (s *landscapeSetup) Finalize(w *ecs.World) {}
 // createFoodsources creates the foodsources of the given foodsources file and sets the landscape globals
 // [FSRC]. Called in Setup [INIT-06] and by CropRotationProc [CROP-03].
 func createFoodsources(w *ecs.World, foodsourcesFile string, landscape *globals.Landscape) {
-	file := ecs.GetResource[params.ParameterFile](w)
+	file := ecs.GetResource[params.Parameters](w)
 	in := ecs.GetResource[params.Input](w)
 	derived := ecs.GetResource[params.Derived](w)
 	rng := rand.New(ecs.GetResource[resource.Rand](w))
@@ -64,7 +64,7 @@ func createFoodsources(w *ecs.World, foodsourcesFile string, landscape *globals.
 	if !ok {
 		panic(fmt.Errorf("landscape file %q was not read by package input", foodsourcesFile))
 	}
-	landscape.FoodsourcesFile = foodsourcesFile // the landscape of the current year [PAR-05], [CROP-01]
+	landscape.File = foodsourcesFile // the landscape of the current year [PAR-05], [CROP-01]
 	landscape.Scale = precision(1/read.MetresPerPatch, 8)
 	// copies, because the setup changes them (radius, merged hedges), and a crop rotation can use a file twice
 	patches := make([]flowerPatch, len(read.Patches))
@@ -79,7 +79,7 @@ func createFoodsources(w *ecs.World, foodsourcesFile string, landscape *globals.
 	kept := make([]*flowerPatch, len(patches))
 	for i := range patches {
 		p := &patches[i]
-		p.Radius_m = math.Sqrt(p.Area_sqm / math.Pi) // [FSRC-05]
+		p.Radius = math.Sqrt(p.Area / math.Pi) // [FSRC-05]
 		kept[i] = p
 	}
 
@@ -89,7 +89,7 @@ func createFoodsources(w *ecs.World, foodsourcesFile string, landscape *globals.
 	}
 
 	// [FSRC-12] in.Flowers is nil if FlowerspeciesFile is "No Input File".
-	masterpatches, err := createLayers(w, kept, in.Flowers, file, derived.CSS_OptionsList, rng)
+	masterpatches, err := createLayers(w, kept, in.Flowers, file, derived.StewardshipOptions, rng)
 	if err != nil {
 		panic(err)
 	}
@@ -102,9 +102,9 @@ func createFoodsources(w *ecs.World, foodsourcesFile string, landscape *globals.
 // layers (and for flower patches with an empty list).
 type flowerPatch struct {
 	params.FlowerPatch         // the line of the file [FSRC-04]
-	Radius_m           float64 // [FSRC-05], [HEDG-05]
-	NectarMax_myl      float64 // 0 until CreateLayersProc, see [HEDG-04]
-	PollenMax_g        float64 // 0 until CreateLayersProc, see [HEDG-04]
+	Radius             float64 // [FSRC-05], [HEDG-05]
+	NectarMax          float64 // 0 until CreateLayersProc, see [HEDG-04]
+	PollenMax          float64 // 0 until CreateLayersProc, see [HEDG-04]
 }
 
 // precision rounds x to the given number of decimals. NetLogo: precision.
@@ -123,7 +123,7 @@ func mergeHedges(patches []*flowerPatch, rng *rand.Rand) {
 	for _, p := range patches {
 		if p.PatchType == "Hedgerow" {
 			hedges = append(hedges, p)
-		} else if p.Area_sqm >= areaTH_sqm {
+		} else if p.Area >= areaTH_sqm {
 			fields = append(fields, p)
 		}
 	}
@@ -132,9 +132,9 @@ func mergeHedges(patches []*flowerPatch, rng *rand.Rand) {
 	rng.Shuffle(len(hedges), func(i, j int) { hedges[i], hedges[j] = hedges[j], hedges[i] })
 	slices.SortStableFunc(hedges, func(a, b *flowerPatch) int {
 		switch {
-		case a.Area_sqm > b.Area_sqm:
+		case a.Area > b.Area:
 			return -1
-		case a.Area_sqm < b.Area_sqm:
+		case a.Area < b.Area:
 			return 1
 		}
 		return 0
@@ -176,14 +176,14 @@ func mergeHedges(patches []*flowerPatch, rng *rand.Rand) {
 				continue
 			}
 			// [HEDG-04] NetLogo also adds nectarMax_myl and pollenMax_g, which are always 0 here (removed in step F3)
-			master.Area_sqm += l.hedge.Area_sqm
-			l.hedge.Area_sqm = 0
+			master.Area += l.hedge.Area
+			l.hedge.Area = 0
 		}
 	}
 
 	// [HEDG-05] new radius of all hedges
 	for _, h := range hedges {
-		h.Radius_m = math.Sqrt(h.Area_sqm / math.Pi)
+		h.Radius = math.Sqrt(h.Area / math.Pi)
 	}
 }
 
@@ -204,14 +204,14 @@ func removeDuplicates[T comparable](list []T) []T {
 // masterpatches in NetLogo's who order (step F12): first the flower patches that are not split, in the order of
 // patches (they took their who numbers in [FSRC-04], before all layers), then the masterpatches of the split flower
 // patches, in the order of their creation.
-func createLayers(w *ecs.World, patches []*flowerPatch, flowers *params.FlowerSpeciesTable, file *params.ParameterFile,
+func createLayers(w *ecs.World, patches []*flowerPatch, flowers *params.FlowerSpeciesTable, file *params.Parameters,
 	cssOptions []string, rng *rand.Rand) ([]ecs.Entity, error) {
 
 	mapper := ecs.NewMap4[comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](w)
 
 	// [LAYR-01]
-	minNectSize_myl := file.FoodSourceLimit * 180
-	minPolsize_g := file.FoodSourceLimit * 0.05
+	minNectSize_myl := file.FoodsourceLimit * 180
+	minPolsize_g := file.FoodsourceLimit * 0.05
 
 	newFoodsource := func(p *flowerPatch, fs comp.Foodsource) ecs.Entity {
 		return mapper.NewEntity(&comp.Position{X: p.X, Y: p.Y}, &fs, &comp.FoodsourceState{}, &comp.Layer{})
@@ -223,7 +223,7 @@ func createLayers(w *ecs.World, patches []*flowerPatch, flowers *params.FlowerSp
 	// gobees-fast keeps no who number (step F12), only the order of creation, which is the who order.
 	toSplit := []*flowerPatch{}
 	for _, p := range patches {
-		if flowers != nil && len(p.FlowerSpeciesList) > 0 {
+		if flowers != nil && len(p.Flowers) > 0 {
 			toSplit = append(toSplit, p)
 		}
 	}
@@ -235,7 +235,7 @@ func createLayers(w *ecs.World, patches []*flowerPatch, flowers *params.FlowerSp
 		layers := []ecs.Entity{}
 		// [LAYR-04] ORDER: irrelevant, foreach over a list. A stewardship option is no flower species and gets no
 		// layer. NetLogo stores it as occurrence of the following layers, which nothing reads (removed in step F3).
-		for _, e := range p.FlowerSpeciesList {
+		for _, e := range p.Flowers {
 			if slices.Contains(cssOptions, e.Name) {
 				continue
 			}
@@ -245,33 +245,33 @@ func createLayers(w *ecs.World, patches []*flowerPatch, flowers *params.FlowerSp
 				return nil, err
 			}
 			if !e.HasValue {
-				return nil, fmt.Errorf("flower patch %v: %s has no value", p.Id_Beescout, e.Name)
+				return nil, fmt.Errorf("flower patch %v: %s has no value", p.ID, e.Name)
 			}
 			relAbundance := file.AbundanceBoost * e.Value
 			fs := comp.Foodsource{
-				ID:                  p.Id_Beescout,
+				ID:                  p.ID,
 				PatchType:           p.PatchType,
-				Area:                p.Area_sqm,
-				Radius:              p.Radius_m,
-				PollenMax:           p.Area_sqm * relAbundance * data.Pollen_g_per_flower,
-				NectarPerFlower:     data.Nectar_ml_per_flower * 1000,
-				NectarConcentration: data.Concentration_mol_per_l,
+				Area:                p.Area,
+				Radius:              p.Radius,
+				PollenMax:           p.Area * relAbundance * data.PollenPerFlower,
+				NectarPerFlower:     data.NectarPerFlower * 1000,
+				NectarConcentration: data.Concentration,
 				StartDay:            data.StartDay,
 				StopDay:             data.StopDay,
-				CorollaDepth:        data.CorollaDepth_mm,
-				InterFlowerTime:     data.IntFlowerTime_s,
+				CorollaDepth:        data.CorollaDepth,
+				InterFlowerTime:     data.InterFlowerTime,
 			}
-			fs.NectarMax = p.Area_sqm * relAbundance * fs.NectarPerFlower
+			fs.NectarMax = p.Area * relAbundance * fs.NectarPerFlower
 
 			// [LAYR-06]
-			if file.MinSizeFoodSources && fs.NectarMax < minNectSize_myl {
+			if file.LimitFoodsources && fs.NectarMax < minNectSize_myl {
 				fs.NectarMax = 0
 			}
-			if file.MinSizeFoodSources && fs.PollenMax < minPolsize_g {
+			if file.LimitFoodsources && fs.PollenMax < minPolsize_g {
 				fs.PollenMax = 0
 			}
 			// [LAYR-07] the removed layer has used up its who number (finding 18, no effect without who numbers)
-			if fs.NectarMax == 0 && fs.PollenMax == 0 && file.RemoveEmptyFoodSources &&
+			if fs.NectarMax == 0 && fs.PollenMax == 0 && file.RemoveEmptyFoodsources &&
 				!strings.Contains(p.PatchType, "Crop_") {
 				continue
 			}
@@ -299,16 +299,16 @@ func createLayers(w *ecs.World, patches []*flowerPatch, flowers *params.FlowerSp
 	// Without a FlowerspeciesFile, no flower patch is split.
 	masterpatches := []ecs.Entity{}
 	for _, p := range patches {
-		if flowers != nil && len(p.FlowerSpeciesList) > 0 {
+		if flowers != nil && len(p.Flowers) > 0 {
 			continue
 		}
 		e := newFoodsource(p, comp.Foodsource{
-			ID:        p.Id_Beescout,
+			ID:        p.ID,
 			PatchType: p.PatchType,
-			Area:      p.Area_sqm,
-			Radius:    p.Radius_m,
-			NectarMax: p.NectarMax_myl,
-			PollenMax: p.PollenMax_g,
+			Area:      p.Area,
+			Radius:    p.Radius,
+			NectarMax: p.NectarMax,
+			PollenMax: p.PollenMax,
 		})
 		l := layerMapper.Get(e)
 		l.IsMasterpatch = true

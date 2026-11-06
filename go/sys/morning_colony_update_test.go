@@ -20,18 +20,18 @@ import (
 // colonyWorld is a small world for the tests of step 4a: B_terrestris, colonies and bees created by hand,
 // and the resources of the morning systems. Ticks and Day are 200 (before seasonStop 305).
 type colonyWorld struct {
-	w         *ecs.World
-	ticks     *globals.Ticks
-	cal       *globals.Calendar
-	today     *globals.Flowering
-	file      *params.ParameterFile
-	constants *params.Constants
-	tally     *tally
-	sys       *colonyUpdate
-	input     *params.Input // the species
-	species   int           // index of B_terrestris
-	colonyMap *colonyMapper
-	beeMap    *beeMapper
+	w          *ecs.World
+	ticks      *globals.Ticks
+	cal        *globals.Calendar
+	today      *globals.Flowering
+	parameters *params.Parameters
+	constants  *params.Constants
+	tally      *tally
+	sys        *colonyUpdate
+	input      *params.Input // the species
+	species    int           // index of B_terrestris
+	colonyMap  *colonyMapper
+	beeMap     *beeMapper
 }
 
 func newColonyWorld(t *testing.T, seed uint64) *colonyWorld {
@@ -40,8 +40,8 @@ func newColonyWorld(t *testing.T, seed uint64) *colonyWorld {
 	cw := &colonyWorld{w: w}
 	ecs.AddResource(w, &resource.Rand{Source: rand.NewPCG(seed, 3)})
 	p := params.Default()
-	cw.file, cw.constants = &p.File, &p.Constants
-	ecs.AddResource(w, cw.file)
+	cw.parameters, cw.constants = &p.Parameters, &p.Constants
+	ecs.AddResource(w, cw.parameters)
 	ecs.AddResource(w, cw.constants)
 	cw.ticks = &globals.Ticks{Ticks: 200}
 	ecs.AddResource(w, cw.ticks)

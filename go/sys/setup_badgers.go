@@ -15,7 +15,7 @@ import (
 
 // badgersSetup [INIT-08].
 //
-// Creates N_Badgers badgers, each in the centre of the patch cell of a "Scrub" masterpatch, at least 300 m from
+// Creates Parameters.Badgers badgers, each in the centre of the patch cell of a "Scrub" masterpatch, at least 300 m from
 // the badgers placed before. N_Badgers is 0 in netlogo/_SYSTEM_Example_Farm_Parameters.csv.
 // Not translated: size, shape (GUI).
 //
@@ -23,10 +23,10 @@ import (
 type badgersSetup struct{}
 
 func (s *badgersSetup) Initialize(w *ecs.World) {
-	file := ecs.GetResource[params.ParameterFile](w)
+	file := ecs.GetResource[params.Parameters](w)
 	landscape := ecs.GetResource[globals.Landscape](w)
 	rng := rand.New(ecs.GetResource[resource.Rand](w))
-	createBadgers(w, file.N_Badgers, landscape.Scale, rng)
+	createBadgers(w, file.Badgers, landscape.Scale, rng)
 }
 
 func (s *badgersSetup) Update(w *ecs.World) {}

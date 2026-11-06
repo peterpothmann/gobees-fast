@@ -31,11 +31,11 @@ func parseFlowerspeciesFile(r io.Reader) (params.FlowerSpeciesTable, error) {
 			column string
 			value  *float64
 		}{
-			{"pollen_g/flower", &d.Pollen_g_per_flower},
-			{"nectar_ml/flower", &d.Nectar_ml_per_flower},
-			{"concentration_mol/l", &d.Concentration_mol_per_l},
-			{"corollaDepth_mm", &d.CorollaDepth_mm},
-			{"intFlowerTime_s", &d.IntFlowerTime_s},
+			{"pollen_g/flower", &d.PollenPerFlower},
+			{"nectar_ml/flower", &d.NectarPerFlower},
+			{"concentration_mol/l", &d.Concentration},
+			{"corollaDepth_mm", &d.CorollaDepth},
+			{"intFlowerTime_s", &d.InterFlowerTime},
 		}
 		for _, f := range fields {
 			if *f.value, err = t.number(row, f.column); err != nil {

@@ -18,7 +18,7 @@ func TestExtinction(t *testing.T) {
 	// TimeToExtinction: output, see obs.Counters.
 	for _, stop := range []bool{false, true} {
 		cw := newColonyWorld(t, 1)
-		cw.file.StopExtinct = stop
+		cw.parameters.StopExtinct = stop
 		term := &resource.Termination{}
 		ecs.AddResource(cw.w, term)
 		ecs.AddResource(cw.w, &params.Termination{MaxTicks: 0})

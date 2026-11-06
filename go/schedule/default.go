@@ -37,7 +37,7 @@ func Default(p params.Params, a *app.App) *app.App {
 	// [INIT-03] PanelSettingProc: GUI only, not translated.
 	// [INIT-04] ReadAllParametersProc: input.Load (a run file and its landscape files), before calling Default, so no
 	// system opens a file.
-	// [INIT-05] ParametersProc: package input derives the values, p.Apply adds them (params.Derived, params.Weather).
+	// [INIT-05] ParametersProc: package input derives the values, p.Apply adds them (params.Derived, params.ForagingPeriod).
 	a.AddSystem(&sys.Setup{}) // [INIT-06] to [INIT-09]
 	// [INIT-10] UpdateMorning_Proc at ticks = 0: in Morning.Initialize.
 	// [INIT-11] CreateSignsProc: GUI only, not translated.

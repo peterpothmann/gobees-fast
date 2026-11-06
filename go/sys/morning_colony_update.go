@@ -24,15 +24,15 @@ import (
 //
 // NetLogo: UpdateColoniesProc, CompetitionPointDateREP.
 type colonyUpdate struct {
-	rng       *rand.Rand
-	ticks     *globals.Ticks
-	calendar  *globals.Calendar
-	today     *globals.Flowering
-	file      *params.ParameterFile
-	constants *params.Constants
-	beeDeath  beeDeath
-	colDeath  colonyDeath
-	colonies  colonyFounder
+	rng        *rand.Rand
+	ticks      *globals.Ticks
+	calendar   *globals.Calendar
+	today      *globals.Flowering
+	parameters *params.Parameters
+	constants  *params.Constants
+	beeDeath   beeDeath
+	colDeath   colonyDeath
+	colonies   colonyFounder
 
 	colonyFilter *ecs.Filter1[comp.Colony]
 	beeFilter    *ecs.Filter1[comp.Bee]
@@ -48,7 +48,7 @@ func (s *colonyUpdate) Initialize(w *ecs.World) {
 	s.ticks = ecs.GetResource[globals.Ticks](w)
 	s.calendar = ecs.GetResource[globals.Calendar](w)
 	s.today = ecs.GetResource[globals.Flowering](w)
-	s.file = ecs.GetResource[params.ParameterFile](w)
+	s.parameters = ecs.GetResource[params.Parameters](w)
 	s.constants = ecs.GetResource[params.Constants](w)
 	s.beeDeath = newBeeDeath(w)
 	s.colonies = newColonyFounder(w, s.rng)
@@ -160,7 +160,7 @@ func (s *colonyUpdate) updateColony(w *ecs.World, col ecs.Entity, members []ecs.
 	}
 	// [UCOL-08] ORDER: irrelevant, one independent draw per colony.
 	if !colony.SwitchPointDate.IsSet() {
-		if colony.EusocialPhaseDate.IsSet() && counts.LarvaWorkerRatio < s.constants.LarvaWorkerRatioTH {
+		if colony.EusocialPhaseDate.IsSet() && counts.LarvaWorkerRatio < s.constants.LarvaWorkerRatioLimit {
 			if s.rng.Float64() <= s.constants.DailySwitchProbability {
 				colony.SwitchPointDate = day.At(ticks)
 			}

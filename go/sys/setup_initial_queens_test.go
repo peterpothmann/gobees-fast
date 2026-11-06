@@ -79,7 +79,7 @@ func TestCreateInitialQueensModifier(t *testing.T) {
 		if float64(n) != c.want {
 			t.Errorf("modifier %v: %d queens, want %v", c.modifier, n, c.want)
 		}
-		if c.modifier == 0 && ecs.GetResource[params.ParameterFile](a.World).InitialQueensModifierBehaviorSpace != 1 {
+		if c.modifier == 0 && ecs.GetResource[params.Parameters](a.World).InitialQueensFactor != 1 {
 			t.Error("modifier 0 must be set to 1")
 		}
 	}

@@ -94,7 +94,7 @@ func main() {
 
 	ticks := ecs.GetResource[globals.Ticks](a.World)
 	derived := ecs.GetResource[params.Derived](a.World)
-	fmt.Printf("species: %v\n", derived.BeeSpeciesInitialQueensList)
+	fmt.Printf("species: %v\n", derived.InitialQueens)
 	fmt.Printf("colonies founded: %v, bees died: %v\n", counters.TotalColoniesEverProduced, counters.TotalBeesEverDied)
 	fmt.Printf("finished after %d days\n", ticks.Ticks)
 	if outputFile != "" {

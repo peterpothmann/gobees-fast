@@ -15,7 +15,7 @@ import (
 func qlnWorld(t *testing.T, unlimitedMales bool) (*colonyWorld, *queensLeavingNest) {
 	t.Helper()
 	cw := newColonyWorld(t, 1)
-	cw.file.UnlimitedMales = unlimitedMales
+	cw.parameters.UnlimitedMales = unlimitedMales
 	s := &queensLeavingNest{}
 	s.Initialize(cw.w)
 	return cw, s
@@ -104,7 +104,7 @@ func TestQueensLeavingNestNoMale(t *testing.T) {
 }
 
 func TestQueensLeavingNestUnlimitedMales(t *testing.T) {
-	// [QLN-02] with UnlimitedMales? = true she mates with a male from outside: one allele -1 to -N_ForeignAlleles
+	// [QLN-02] with UnlimitedMales? = true she mates with a male from outside: one allele -1 to -ForeignAlleles
 	cw, s := qlnWorld(t, true)
 	col := cw.addColony(nil)
 	queens := []ecs.Entity{}

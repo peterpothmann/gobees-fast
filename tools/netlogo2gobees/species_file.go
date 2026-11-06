@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"reflect"
+	"strings"
 
 	"gobees/input"
 )
@@ -27,7 +28,10 @@ func parseSpeciesFile(r io.Reader) ([]input.Species, error) {
 		s := input.Species{}
 		v := reflect.ValueOf(&s).Elem()
 		for i, f := range reflect.VisibleFields(v.Type()) {
-			column := f.Tag.Get("yaml")
+			column := f.Tag.Get("netlogo") // the NetLogo column, if its name differs from the key
+			if column == "" {
+				column, _, _ = strings.Cut(f.Tag.Get("yaml"), ",")
+			}
 			field := v.Field(i)
 			switch field.Kind() {
 			case reflect.String:

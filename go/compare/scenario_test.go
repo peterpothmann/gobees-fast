@@ -22,20 +22,20 @@ func TestScenarioRunFiles(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: %v", s.Name, err)
 		}
-		if p.File.StopExtinct {
+		if p.Parameters.StopExtinct {
 			t.Errorf("%s: StopExtinct? must be false", s.Name)
 		}
 		runs[s.Name] = p
 	}
-	if got := runs["step7_badgers"].File.N_Badgers; got != 2 {
-		t.Errorf("badgers: N_Badgers = %v, want 2", got)
+	if got := runs["step7_badgers"].Parameters.Badgers; got != 2 {
+		t.Errorf("badgers: Badgers = %v, want 2", got)
 	}
 	want := []string{"_SYSTEM_Example_Farm_Foodsources.yaml", "Example_Farm_PlotTest_Foodsources.yaml"}
-	if got := runs["step7_crop"].Input.Derived.CropRotationList; !slices.Equal(got, want) {
-		t.Errorf("crop rotation: CropRotationList = %q, want %q", got, want)
+	if got := runs["step7_crop"].Input.Derived.CropRotation; !slices.Equal(got, want) {
+		t.Errorf("crop rotation: CropRotation = %q, want %q", got, want)
 	}
-	if got := runs["step7"].Input.Derived.CropRotationList; len(got) != 0 {
-		t.Errorf("example farm: CropRotationList = %q, want none", got)
+	if got := runs["step7"].Input.Derived.CropRotation; len(got) != 0 {
+		t.Errorf("example farm: CropRotation = %q, want none", got)
 	}
 	if got := len(runs["step8_species"].Input.Species); got != 7 {
 		t.Errorf("several species: %d species, want 7", got)

@@ -83,7 +83,7 @@ func TestNestSitesSetupExampleFarm(t *testing.T) {
 		t.Errorf("nest sites: %d with %v m2, want %d with %v m2", len(ns.Sites), ns.Area, len(wantSites), wantArea)
 	}
 	// the species keep the list of the run file
-	if slices.Equal(species[0].NestHabitatsList, ns.Habitats) {
-		t.Errorf("params.Input.Species holds the expanded list %q", species[0].NestHabitatsList)
+	if slices.Equal(species[0].NestHabitats, ns.Habitats) {
+		t.Errorf("params.Input.Species holds the expanded list %q", species[0].NestHabitats)
 	}
 }

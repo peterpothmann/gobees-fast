@@ -22,7 +22,7 @@ import (
 type extinction struct {
 	termRes    *resource.Termination
 	termParams *params.Termination
-	file       *params.ParameterFile
+	parameters *params.Parameters
 	ticks      *globals.Ticks
 
 	colonyFilter *ecs.Filter1[comp.Colony]
@@ -32,7 +32,7 @@ type extinction struct {
 func (s *extinction) Initialize(w *ecs.World) {
 	s.termRes = ecs.GetResource[resource.Termination](w)
 	s.termParams = ecs.GetResource[params.Termination](w)
-	s.file = ecs.GetResource[params.ParameterFile](w)
+	s.parameters = ecs.GetResource[params.Parameters](w)
 	s.ticks = ecs.GetResource[globals.Ticks](w)
 	s.colonyFilter = ecs.NewFilter1[comp.Colony](w)
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
@@ -46,7 +46,7 @@ func (s *extinction) Update(w *ecs.World) {
 	bees := s.beeFilter.Query()
 	n += bees.Count()
 	bees.Close()
-	if n == 0 && s.file.StopExtinct {
+	if n == 0 && s.parameters.StopExtinct {
 		s.termRes.Terminate = true
 	}
 	// not NetLogo: the run length of the "Run for period" button or BehaviorSpace

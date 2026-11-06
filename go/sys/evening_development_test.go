@@ -15,8 +15,8 @@ import (
 func TestDetermineCaste(t *testing.T) {
 	// finding 40 (see trans/netlogo-findings.md#finding-40): every female larva becomes a queen
 	sp := terrestris(t)
-	if sp.Dev_Q_DeterminationWeight_mg != 0 {
-		t.Fatalf("dev_Q_DeterminationWeight_mg = %v, want 0", sp.Dev_Q_DeterminationWeight_mg)
+	if sp.QueenDeterminationWeight != 0 {
+		t.Fatalf("dev_Q_DeterminationWeight_mg = %v, want 0", sp.QueenDeterminationWeight)
 	}
 	producing := comp.Colony{QueenProduction: true}
 	for _, w := range []float64{0, 1.5, 10, 600} {
@@ -28,7 +28,7 @@ func TestDetermineCaste(t *testing.T) {
 		}
 	}
 	heavy := *sp
-	heavy.Dev_Q_DeterminationWeight_mg = 50
+	heavy.QueenDeterminationWeight = 50
 	if got := determineCaste(49, &heavy, &producing); got != caste.Worker {
 		t.Errorf("weight criterion: %v, want worker", got)
 	}
@@ -83,7 +83,7 @@ func layAndRaise(t *testing.T, queenProduction bool) (bw *broodWorld, eggs ecs.E
 	}
 
 	events = map[string]int{}
-	quota := bw.sp.DevQuotaIncubationToday_kJ * 1.01
+	quota := bw.sp.DailyIncubationQuota * 1.01
 	for k := 0; k <= 40; k++ {
 		if !bw.w.Alive(eggs) {
 			t.Fatalf("brood died on the evening of day L + %d", k)
@@ -249,7 +249,7 @@ func TestDevelopmentBackgroundMortality(t *testing.T) {
 	if bw.tally.beesDied != 0 {
 		t.Errorf("value 0: %v bees died", bw.tally.beesDied)
 	}
-	bw.constants.MortalityAdultsBackground_daily = 0.01
+	bw.constants.AdultBackgroundMortality = 0.01
 	bw.dev.Update(bw.w)
 	if died := bw.tally.beesDied; died < 975 || died > 1000 {
 		t.Errorf("value 0.01: %v of 1000 bees died, want about 990", died)

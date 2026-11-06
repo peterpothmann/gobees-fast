@@ -146,7 +146,7 @@ func TestSeasonalEventsHibernatingQueensLimit(t *testing.T) {
 	// [SEAS-03] on Day 1: queensToKill = TotalHibernatingQueens (previous evening) - MaxHibernatingQueens
 	cw, s, _ := seasWorld(t, 366)
 	cw.cal.Day = 1
-	cw.file.MaxHibernatingQueens = 5
+	cw.parameters.MaxHibernatingQueens = 5
 	queens := []ecs.Entity{}
 	for range 8 {
 		queens = append(queens, cw.addHibernatingQueen(1))
@@ -169,7 +169,7 @@ func TestSeasonalEventsHibernatingCohort(t *testing.T) {
 	// [SEAS-03] a cohort can remove more queens than needed. The planned number (TotalHibernatingQueensEverRemoved)
 	// is output, see obs.Counters.
 	cw, s, _ := seasWorld(t, 1)
-	cw.file.MaxHibernatingQueens = 7
+	cw.parameters.MaxHibernatingQueens = 7
 	cohort := cw.addHibernatingQueen(10)
 	s.Update(cw.w)
 	if cw.w.Alive(cohort) {

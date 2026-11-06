@@ -24,11 +24,11 @@ type colonyMapper = ecs.Map6[
 
 // colonyFounder creates colonies [CCOL] and their foodsource lists [PRNG], [FRNG].
 type colonyFounder struct {
-	rng       *rand.Rand
-	ticks     *globals.Ticks
-	file      *params.ParameterFile
-	constants *params.Constants
-	landscape *globals.Landscape
+	rng        *rand.Rand
+	ticks      *globals.Ticks
+	parameters *params.Parameters
+	constants  *params.Constants
+	landscape  *globals.Landscape
 
 	beeFilter        *ecs.Filter1[comp.Bee]
 	foodsourceFilter *ecs.Filter2[comp.Position, comp.Foodsource]
@@ -43,7 +43,7 @@ func newColonyFounder(w *ecs.World, rng *rand.Rand) colonyFounder {
 	return colonyFounder{
 		rng:              rng,
 		ticks:            ecs.GetResource[globals.Ticks](w),
-		file:             ecs.GetResource[params.ParameterFile](w),
+		parameters:       ecs.GetResource[params.Parameters](w),
 		constants:        ecs.GetResource[params.Constants](w),
 		landscape:        ecs.GetResource[globals.Landscape](w),
 		beeFilter:        ecs.NewFilter1[comp.Bee](w),
@@ -82,7 +82,7 @@ func (c *colonyFounder) found(w *ecs.World) {
 			Species:         speciesID,
 			QueenProduction: false,
 		}
-		stores := comp.ColonyStores{Energy: 100 * c.constants.EnergySucrose_kJ_per_mymol * 1.5}
+		stores := comp.ColonyStores{Energy: 100 * c.constants.SucroseEnergy * 1.5}
 		counts := comp.ColonyCounts{}
 		e := c.colonyMap.NewEntity(&pos, &colony, &stores, &comp.ColonyStimuli{}, &counts, &comp.ColonyRange{})
 
@@ -100,11 +100,11 @@ func (c *colonyFounder) found(w *ecs.World) {
 	}
 }
 
-// patchesInRange sets allPatchesInRangeList of a colony: all foodsources (every layer) within ForagingRangeMax_m [PRNG].
+// patchesInRange sets allPatchesInRangeList of a colony: all foodsources (every layer) within Constants.MaxForagingRange [PRNG].
 // masterpatchesInRangeList is not translated (finding 23, see trans/netlogo-findings.md#finding-23).
 func (c *colonyFounder) patchesInRange(colony ecs.Entity) {
 	pos := *c.positionMap.Get(colony)
-	maxDist := c.constants.ForagingRangeMax_m * c.landscape.Scale
+	maxDist := c.constants.MaxForagingRange * c.landscape.Scale
 
 	// [PRNG-01] ORDER: MATTERS for the list order (finding 29, see trans/netlogo-findings.md#finding-29).
 	// NetLogo: fput in random ask order. Here: shuffle, then append. Both give a list in random order.

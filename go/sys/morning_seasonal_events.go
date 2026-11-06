@@ -26,11 +26,11 @@ import (
 //
 // NetLogo: UpdateSeasonalEventsProc.
 type seasonalEvents struct {
-	rng      *rand.Rand
-	calendar *globals.Calendar
-	file     *params.ParameterFile
-	totals   ecs.Resource[globals.BroodTotals] // set by broodTotals
-	death    beeDeath
+	rng        *rand.Rand
+	calendar   *globals.Calendar
+	parameters *params.Parameters
+	totals     ecs.Resource[globals.BroodTotals] // set by broodTotals
+	death      beeDeath
 
 	beeFilter  *ecs.Filter1[comp.Bee]
 	speciesMap *speciesTable
@@ -42,7 +42,7 @@ type seasonalEvents struct {
 func (s *seasonalEvents) Initialize(w *ecs.World) {
 	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.calendar = ecs.GetResource[globals.Calendar](w)
-	s.file = ecs.GetResource[params.ParameterFile](w)
+	s.parameters = ecs.GetResource[params.Parameters](w)
 	s.totals = ecs.NewResource[globals.BroodTotals](w)
 	s.death = newBeeDeath(w)
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
@@ -89,7 +89,7 @@ func (s *seasonalEvents) Update(w *ecs.World) {
 
 		// the limit of hibernating queens, with TotalHibernatingQueens of the previous evening [OUT-01]
 		// totalHibernatingQueensEverRemoved (the planned number): output only, computed by the observers (step F4)
-		queensToKill := totalHibernatingQueens - s.file.MaxHibernatingQueens
+		queensToKill := totalHibernatingQueens - s.parameters.MaxHibernatingQueens
 		// ORDER: the random choice of the queens matters only through the random numbers.
 		// NetLogo: one-of the hibernating queens per round. Removing the chosen one from the list gives the same
 		// distribution. A cohort can remove more queens than needed.

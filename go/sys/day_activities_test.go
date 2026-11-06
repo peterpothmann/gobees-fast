@@ -31,7 +31,7 @@ func newActivityWorld(t *testing.T, seed uint64) *activityWorld {
 	aw := &activityWorld{broodWorld: newBroodWorld(t, seed), wake: &wakeUp{},
 		loop: &activities{CheckActiveCount: true}, eod: &nightRest{}}
 	aw.cal.ForagingPeriod = 8 * 3600
-	ecs.AddResource(aw.w, &params.Derived{MortalityForager_per_s: 1e-05}) // ForagingMortalityModel "high" [PAR-04]
+	ecs.AddResource(aw.w, &params.Derived{ForagerMortality: 1e-05}) // ForagingMortalityModel "high" [PAR-04]
 	aw.wake.Initialize(aw.w)
 	aw.loop.Initialize(aw.w)
 	aw.eod.Initialize(aw.w)
@@ -130,8 +130,8 @@ func TestWakeUp(t *testing.T) {
 func TestStimuli(t *testing.T) {
 	// worked examples of [STEG-01], [STNU-01], [STNE-01] to [STNE-03], [STPO-01] to [STPO-03]
 	sp := terrestris(t)
-	if !almostEqual(sp.MinPollenStore_g, 0.3744) {
-		t.Fatalf("minPollenStore_g %v, want 0.3744", sp.MinPollenStore_g)
+	if !almostEqual(sp.MinPollenStore, 0.3744) {
+		t.Fatalf("minPollenStore_g %v, want 0.3744", sp.MinPollenStore)
 	}
 	for _, tc := range []struct {
 		name   string
@@ -140,7 +140,7 @@ func TestStimuli(t *testing.T) {
 		want   float64
 	}{
 		{"founding, pollen above minimum", 0.375, comp.ColonyCounts{Adults: 1}, 1},
-		{"founding, pollen at minimum", sp.MinPollenStore_g, comp.ColonyCounts{Adults: 1}, 0},
+		{"founding, pollen at minimum", sp.MinPollenStore, comp.ColonyCounts{Adults: 1}, 0},
 		{"founding, larvae present", 1, comp.ColonyCounts{Adults: 1, Larvae: 12}, 0},
 		{"workers present", 0, comp.ColonyCounts{Adults: 2, Eggs: 12}, 1},
 		// finding 45 (see trans/netlogo-findings.md#finding-45): a male counts like a worker
@@ -346,8 +346,8 @@ func TestActivitiesDay(t *testing.T) {
 	}
 	for _, e := range eggs {
 		_, _, _, _, d := aw.bee(e)
-		if e == old && d.IncubationReceived < aw.sp.DevQuotaIncubationToday_kJ {
-			t.Errorf("old eggs got %v kJ, want at least the quota %v", d.IncubationReceived, aw.sp.DevQuotaIncubationToday_kJ)
+		if e == old && d.IncubationReceived < aw.sp.DailyIncubationQuota {
+			t.Errorf("old eggs got %v kJ, want at least the quota %v", d.IncubationReceived, aw.sp.DailyIncubationQuota)
 		}
 		if e != old && d.IncubationReceived != 0 {
 			t.Errorf("new eggs got %v kJ, want 0", d.IncubationReceived)
@@ -356,7 +356,7 @@ func TestActivitiesDay(t *testing.T) {
 	// [GO-08] the day ends when the first bee of the queue is beyond 24 h; [GO-11] everybody rests
 	for _, e := range aw.active.List {
 		b, _, _, _, _ := aw.bee(e)
-		if b.PersonalTime <= aw.constants.CallItaDay_s || b.Activity != activity.Resting {
+		if b.PersonalTime <= aw.constants.CallItADay || b.Activity != activity.Resting {
 			t.Errorf("after the loop: personalTime_s %v, activity %v", b.PersonalTime, b.Activity)
 		}
 	}
@@ -372,8 +372,8 @@ func TestActivitiesQueenWithoutColony(t *testing.T) {
 	b.Colony = ecs.Entity{}
 	aw.wake.Update(aw.w)
 	aw.loop.Update(aw.w)
-	if b, _, _, _, _ := aw.bee(searching); b.PersonalTime != aw.constants.CallItaDay_s+1 {
-		t.Errorf("queen without colony: personalTime_s %v, want %v", b.PersonalTime, aw.constants.CallItaDay_s+1)
+	if b, _, _, _, _ := aw.bee(searching); b.PersonalTime != aw.constants.CallItADay+1 {
+		t.Errorf("queen without colony: personalTime_s %v, want %v", b.PersonalTime, aw.constants.CallItADay+1)
 	}
 }
 

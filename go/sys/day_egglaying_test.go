@@ -84,7 +84,7 @@ func TestEgglayingPloidy(t *testing.T) {
 		{"sex locus, homozygous", day.Date{}, true, caste.Male, 2},
 	} {
 		bw := newBroodWorld(t, 1)
-		bw.file.SexLocus = tc.sexLocus
+		bw.parameters.SexLocus = tc.sexLocus
 		col := bw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) {
 			c.SwitchPointDate = tc.switchDay
 			s.Pollen, s.Energy = 1, 1

@@ -39,7 +39,7 @@ func (s *nestSitesSetup) Initialize(w *ecs.World) {
 		sp := &in.Species[i]
 		ns := &s.nestSites.BySpecies[i]
 		// [SPEC-04]
-		expanded, err := expandNestHabitats(sp.NestHabitatsList, masterpatches, rng)
+		expanded, err := expandNestHabitats(sp.NestHabitats, masterpatches, rng)
 		if err != nil {
 			panic(err)
 		}

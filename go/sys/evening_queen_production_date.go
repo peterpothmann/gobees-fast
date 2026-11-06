@@ -55,13 +55,13 @@ func (s *queenProductionDate) Update(w *ecs.World) {
 
 		// [QPD-01] 7 d + dev_larvalAge_QueenDetermination_d, or the largest broodAge of the larvae at larval day 3
 		averageCumulTimeEgg_d := 7
-		timeEggToLarvalAgeAtQueenDetermination := averageCumulTimeEgg_d + s.speciesMap.Get(colony.Species).Dev_larvalAge_QueenDetermination_d
+		timeEggToLarvalAgeAtQueenDetermination := averageCumulTimeEgg_d + s.speciesMap.Get(colony.Species).QueenDeterminationAge
 		found := false
 		maxBroodAge := 0
 		for _, e := range s.larvae[col] {
 			b, dev := s.beeMap.Get(e)
 			// speciesID of the larva, as in NetLogo (the same species as the colony's)
-			if dev.LarvaTime == s.speciesMap.Get(b.Species).Dev_larvalAge_QueenDetermination_d {
+			if dev.LarvaTime == s.speciesMap.Get(b.Species).QueenDeterminationAge {
 				if !found || b.BroodAge > maxBroodAge {
 					maxBroodAge = b.BroodAge
 				}
@@ -75,8 +75,8 @@ func (s *queenProductionDate) Update(w *ecs.World) {
 		// [QPD-02] without switch point (NetLogo: NotSetHigh) the condition is false
 		layingDate := ticks - day.Abs(timeEggToLarvalAgeAtQueenDetermination)
 		if !colony.QueenProduction && colony.SwitchPointDate.IsSet() &&
-			layingDate >= colony.SwitchPointDate.Day()-day.Abs(s.constants.QueenDestinedEggsBeforeSP_d) &&
-			counts.LarvaWorkerRatio < s.constants.LarvaWorkerRatioTH {
+			layingDate >= colony.SwitchPointDate.Day()-day.Abs(s.constants.QueenEggsBeforeSwitchPoint) &&
+			counts.LarvaWorkerRatio < s.constants.LarvaWorkerRatioLimit {
 			colony.QueenProduction = true
 			colony.QueenProductionDate = day.At(layingDate)
 		}

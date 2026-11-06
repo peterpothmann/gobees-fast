@@ -56,22 +56,22 @@ func (s *broodMortality) Update(w *ecs.World) {
 		// removed in step F4. The assertion of [MORB-02] stays.
 
 		// [MORB-01]
-		if b.Stage == stage.Egg && float64(b.BroodAge) > sp.DevAgeHatchingMax_d {
+		if b.Stage == stage.Egg && float64(b.BroodAge) > sp.HatchingAgeMax {
 			s.death.die(w, e, "Egg: broodAge > devAgeHatchingMax_d")
 			continue
 		}
 
 		// [MORB-02]
 		if b.Stage == stage.Larva {
-			if ((b.Caste == caste.Worker || b.Caste == caste.Male || b.Caste == caste.Undefined) && float64(b.BroodAge) > sp.DevAgePupationMax_d) ||
-				(b.Caste == caste.Queen && float64(b.BroodAge) > sp.DevAge_Q_PupationMax_d) {
+			if ((b.Caste == caste.Worker || b.Caste == caste.Male || b.Caste == caste.Undefined) && float64(b.BroodAge) > sp.PupationAgeMax) ||
+				(b.Caste == caste.Queen && float64(b.BroodAge) > sp.QueenPupationAgeMax) {
 				var relativeIncub, relativeWeight float64
 				if b.Caste == caste.Queen {
-					relativeWeight = b.Weight / sp.DevWeight_Q_PupationMin_mg
-					relativeIncub = dev.IncubationReceived / sp.DevIncubation_Q_PupationTH_kJ
+					relativeWeight = b.Weight / sp.QueenPupationWeightMin
+					relativeIncub = dev.IncubationReceived / sp.QueenPupationIncubation
 				} else {
-					relativeWeight = b.Weight / sp.DevWeightPupationMin_mg
-					relativeIncub = dev.IncubationReceived / sp.DevIncubationPupationTH_kJ
+					relativeWeight = b.Weight / sp.PupationWeightMin
+					relativeIncub = dev.IncubationReceived / sp.PupationIncubation
 				}
 				if relativeWeight >= 1 && relativeIncub >= 1 {
 					panic("Neither Weight or Incubation reason for death: MortalityBroodProc (1)")
@@ -86,8 +86,8 @@ func (s *broodMortality) Update(w *ecs.World) {
 			if b.Caste == caste.Undefined {
 				panic("Pupa with undefined caste (MortalityProc)!")
 			}
-			if ((b.Caste == caste.Worker || b.Caste == caste.Male) && float64(b.BroodAge) > sp.DevAgeEmergingMax_d) ||
-				(b.Caste == caste.Queen && float64(b.BroodAge) > sp.DevAge_Q_EmergingMax_d) {
+			if ((b.Caste == caste.Worker || b.Caste == caste.Male) && float64(b.BroodAge) > sp.EmergenceAgeMax) ||
+				(b.Caste == caste.Queen && float64(b.BroodAge) > sp.QueenEmergenceAgeMax) {
 				s.death.die(w, e, "Pupa: broodAge > max. emerging age")
 				continue
 			}

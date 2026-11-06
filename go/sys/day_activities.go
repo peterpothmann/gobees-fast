@@ -19,7 +19,7 @@ import (
 //
 // Event-driven loop of the day. Repeatedly takes the active bee with the smallest personalTime_s
 // [NEXT], lets it perform exactly one activity [ACT] and re-inserts it, until the smallest personalTime_s
-// exceeds CallItaDay_s, no active adult worker or queen is left, or no colony is left.
+// exceeds Constants.CallItADay, no active adult worker or queen is left, or no colony is left.
 //
 // Foraging: sys/foraging.go [FOR].
 //
@@ -78,7 +78,7 @@ func (s *activities) Update(w *ecs.World) {
 		e := s.nextActiveBee()
 		_, b, _, _, _, _ := s.beeMap.Get(e)
 		// [GO-08]
-		if b.PersonalTime > s.constants.CallItaDay_s {
+		if b.PersonalTime > s.constants.CallItADay {
 			continueWorking = false
 		} else {
 			// [GO-09] activityList: GUI log, not translated.
@@ -92,7 +92,7 @@ func (s *activities) Update(w *ecs.World) {
 		_, b, _, _, _, _ = s.beeMap.Get(e)
 		// Queens without a colony are inactive for the rest of the day.
 		if b.Colony.IsZero() {
-			b.PersonalTime = s.constants.CallItaDay_s + 1
+			b.PersonalTime = s.constants.CallItADay + 1
 		}
 	}
 }
@@ -181,8 +181,8 @@ func (s *activities) act(w *ecs.World, e ecs.Entity) {
 		colony, stores, stim, counts := s.colonyMap.Get(b.Colony)
 		sp := s.speciesMap.Get(colony.Species)
 		stim.Egglaying = egglayingStimulus(stores, counts, sp)
-		stim.NectarForaging = nectarStimulus(stores, s.daytime.Time, s.constants.Sunrise_s, s.calendar.ForagingPeriod)
-		stim.PollenForaging = pollenStimulus(stores, sp, s.daytime.Time, s.constants.Sunrise_s, s.calendar.ForagingPeriod)
+		stim.NectarForaging = nectarStimulus(stores, s.daytime.Time, s.constants.Sunrise, s.calendar.ForagingPeriod)
+		stim.PollenForaging = pollenStimulus(stores, sp, s.daytime.Time, s.constants.Sunrise, s.calendar.ForagingPeriod)
 		stim.Nursing = nursingStimulus(stores, counts, sp)
 
 		// [ACT-03] the last matching task wins (finding 11, see trans/netlogo-findings.md#finding-11): no "else if".

@@ -22,10 +22,10 @@ import (
 //
 // NetLogo: EgglayingProc, EggsParameterSettingProc.
 type eggLayer struct {
-	rng       *rand.Rand
-	ticks     *globals.Ticks
-	file      *params.ParameterFile
-	constants *params.Constants
+	rng        *rand.Rand
+	ticks      *globals.Ticks
+	parameters *params.Parameters
+	constants  *params.Constants
 
 	beeMap     *beeMapper
 	colonyMap  *ecs.Map2[comp.Colony, comp.ColonyStores]
@@ -36,7 +36,7 @@ func newEggLayer(w *ecs.World, rng *rand.Rand) eggLayer {
 	return eggLayer{
 		rng:        rng,
 		ticks:      ecs.GetResource[globals.Ticks](w),
-		file:       ecs.GetResource[params.ParameterFile](w),
+		parameters: ecs.GetResource[params.Parameters](w),
 		constants:  ecs.GetResource[params.Constants](w),
 		beeMap:     newBeeMapper(w),
 		colonyMap:  ecs.NewMap2[comp.Colony, comp.ColonyStores](w),
@@ -54,9 +54,9 @@ func (l *eggLayer) layEggs(e ecs.Entity) []ecs.Entity {
 	// [EGG-01] one cohort of batchsize eggs. gobees-fast has no individual-based colonies, which lay batchsize
 	// cohorts of 1 egg in NetLogo (findings 30, 43, see trans/netlogo-findings.md#finding-43).
 	motherCaste := mother.Caste
-	beesInCohort := sp.Batchsize
-	pollenCost_g := float64(beesInCohort) * sp.DevWeightEgg_mg * sp.PollenToBodymassFactor / 1000
-	energyCost_kJ := pollenCost_g * l.constants.EnergyRequiredForPollenAssimilation_kJ_per_g
+	beesInCohort := sp.BatchSize
+	pollenCost_g := float64(beesInCohort) * sp.EggWeight * sp.PollenToBodymassFactor / 1000
+	energyCost_kJ := pollenCost_g * l.constants.PollenAssimilationEnergy
 
 	// [EGG-02]
 	var eggs []ecs.Entity
@@ -118,7 +118,7 @@ func (l *eggLayer) initEggs(e ecs.Entity, beesInCohort int, diploid bool) {
 		b.Caste = caste.Male
 	} else {
 		g.Alleles = append([]float64{g.Spermatheca[l.rng.IntN(len(g.Spermatheca))]}, g.Alleles...)
-		if l.file.SexLocus && g.Alleles[0] == g.Alleles[1] {
+		if l.parameters.SexLocus && g.Alleles[0] == g.Alleles[1] {
 			b.Caste = caste.Male
 		}
 	}
@@ -141,7 +141,7 @@ func (l *eggLayer) initEggs(e ecs.Entity, beesInCohort int, diploid bool) {
 	*th = thresholds(sitEgg)
 	f.KnownNectarPatches = []ecs.Entity{}
 	f.KnownPollenPatches = []ecs.Entity{}
-	b.Weight = sp.DevWeightEgg_mg
+	b.Weight = sp.EggWeight
 	dev.IncubationReceived = 0
 	b.EmergenceDate = day.Date{} // unset (NetLogo: NotSetLow), drawn when the queen emerges [DEVP-04]
 	f.ExpectedNectarTrip = 0

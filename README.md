@@ -78,7 +78,7 @@ The model (`go/`, `go run .`):
 | --- | --- | --- | --- |
 | `--config PATH` | `-c` | the example farm (built in) | run file (YAML). Its landscape files are relative to its folder. |
 | `--seed N` | `-s` | `0` | random seed (NetLogo: `RAND_SEED`). `0` draws a random seed. |
-| `--days N` | | `365` | number of days to run. `0`: no limit, the run ends only when the population is extinct and `StopExtinct?` is true. |
+| `--days N` | | `365` | number of days to run. `0`: no limit, the run ends only when the population is extinct and `stopExtinct` is true. |
 | `--output` | `-o` | off | write the daily output to `daily_output.csv` in the working directory (`go/`), tab separated. |
 | `--output-file PATH` | `-f` | | write the daily output to `PATH` instead (implies `-o`). Missing folders are created. |
 | `--help` | `-h` | | show all flags. |
@@ -103,26 +103,25 @@ The converter of the NetLogo input files (`tools/netlogo2gobees`, `go run . <com
 
 ### Run files
 
-A run file has these sections. Keys of NetLogo values keep their NetLogo names, values are in the unit of the model
-(e.g. seconds).
+A run file has these sections. All keys are in lowerCamelCase, values are in the unit of the model (e.g. seconds).
+[docs/names.md](docs/names.md) lists every key with its unit and the NetLogo name.
 
-| Key                   | Content                                                                 | NetLogo                                |
-| --------------------- | ----------------------------------------------------------------------- | -------------------------------------- |
-| `parameters`          | the model parameters                                                    | the columns of the parameter file      |
-| `output`              | output options (`KeepDeadColonies?`), change no model value             | `KeepDeadColonies?`                    |
-| `initial_queens`      | species and number of initial queens                                    | `BeeSpeciesInitialQueensListAsString`  |
-| `foraging_period_s`   | foraging period in seconds, 365 values per year, one or more years, the years repeat | `Weather`                 |
-| `stewardship_options` | names of the stewardship options                                        | from the `HabitatsFile`                |
-| `species`             | bee species, found by `name` (only those of `initial_queens` are used), `parasitic: true` for a cuckoo bumblebee | rows of the `BeespeciesFile` (columns `species` = `name`, Psithyrus by its name) |
-| `flowers`             | flower species, without the key no flower values                        | rows of the `FlowerspeciesFile` (without `proteinPollenProp`) |
-| `landscape`           | landscape file of the start                                             | foodsources file of `MyMap`            |
-| `crop_rotation`       | landscape files of the crop rotation (fewer than 2: none)               | `CropRotationListAsString`             |
+| Key                  | Content                                                                 | NetLogo                                |
+| -------------------- | ----------------------------------------------------------------------- | -------------------------------------- |
+| `parameters`         | the model parameters                                                    | the columns of the parameter file      |
+| `output`             | output options (`keepDeadColonies`), change no model value              | `KeepDeadColonies?`                    |
+| `initialQueens`      | species and number of initial queens                                    | `BeeSpeciesInitialQueensListAsString`  |
+| `foragingPeriod`     | foraging period [s], 365 values per year, one or more years, the years repeat | `Weather`                        |
+| `stewardshipOptions` | names of the stewardship options                                        | from the `HabitatsFile`                |
+| `species`            | bee species, found by `name` (only those of `initialQueens` are used), `parasitic: true` for a cuckoo bumblebee | rows of the `BeespeciesFile` (columns `species` = `name`, Psithyrus by its name) |
+| `flowers`            | flower species, without the key no flower values                        | rows of the `FlowerspeciesFile` (without `proteinPollenProp`) |
+| `landscape`          | landscape file of the start                                             | foodsources file of `MyMap`            |
+| `cropRotation`       | landscape files of the crop rotation (fewer than 2: none)               | `CropRotationListAsString`             |
 
-A landscape file holds `metres_per_patch` and the flower patches (`id`, `patchType`, `xcor`, `ycor`, `size_sqm`,
-`flowerSpeciesList`), the columns of the NetLogo foodsources file without the GUI columns. All files are read at the
-start (package `input`), also the landscapes of a crop rotation. An unknown key is an error, a missing key keeps its
-zero value. Unlike NetLogo, a missing file is an error at the start, also a landscape of the crop rotation (NetLogo: on
-its day 365).
+A landscape file holds `metresPerPatch` and the flower patches (`id`, `patchType`, `xcor`, `ycor`, `area`, `flowers`),
+the columns of the NetLogo foodsources file without the GUI columns. All files are read at the start (package `input`),
+also the landscapes of a crop rotation. An unknown key is an error, a missing key keeps its zero value. Unlike NetLogo,
+a missing file is an error at the start, also a landscape of the crop rotation (NetLogo: on its day 365).
 
 ### NetLogo input files
 

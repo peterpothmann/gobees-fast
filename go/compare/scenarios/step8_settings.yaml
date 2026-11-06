@@ -1,27 +1,27 @@
 parameters:
-  AbundanceBoost: 1
-  FoodSourceLimit: 25
-  ForagingMortalityFactor: 1
-  ForagingMortalityModel: high
-  InitialQueensModifierBehaviorSpace: 1
-  Lambda_detectProb: -0.005
-  MaxHibernatingQueens: 150
-  MergeHedges?: false
-  MinSizeFoodSources?: false
-  N_Badgers: 0
-  RemoveEmptyFoodSources?: false
-  SexLocus?: false
-  StopExtinct?: false
-  UnlimitedMales?: true
-  WinterMortality?: false
+  abundanceBoost: 1
+  foodsourceLimit: 25
+  foragingMortalityFactor: 1
+  foragingMortalityModel: high
+  initialQueensFactor: 1
+  detectionLambda: -0.005
+  maxHibernatingQueens: 150
+  mergeHedges: false
+  limitFoodsources: false
+  badgers: 0
+  removeEmptyFoodsources: false
+  sexLocus: false
+  stopExtinct: false
+  unlimitedMales: true
+  winterMortality: false
 output:
-  KeepDeadColonies?: false
-initial_queens:
+  keepDeadColonies: false
+initialQueens:
   - species: B_terrestris
     queens: 500
-foraging_period_s:
+foragingPeriod:
   - [28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800, 28800]
-stewardship_options:
+stewardshipOptions:
   - Legume
   - Margin
   - newCSO_Legume
@@ -30,880 +30,880 @@ stewardship_options:
   - Plot
 species:
   - name: B_terrestris
-    emergingDay_mean: 91
-    emergingDay_sd: 28
-    nestHabitatsList:
+    emergenceDayMean: 91
+    emergenceDaySD: 28
+    nestHabitats:
       - Grassland*
       - Garden
       - Hedgerow
       - Scrub
       - Woodland
       - Nestboxes
-    proboscis_min_mm: 6.9
-    proboscis_max_mm: 11.1
+    proboscisMin: 6.9
+    proboscisMax: 11.1
     growthFactor: 1.88
     seasonStop: 305
     maxLifespanWorkers: 60
-    batchsize: 12
-    flightVelocity_m/s: 5
-    searchLength_m: 2500
-    timeUnloading: 165
-    specMax_cropVolume_myl: 173
-    specMax_pollenPellets_g: 0.15
+    batchSize: 12
+    flightVelocity: 5
+    searchLength: 2500
+    unloadingTime: 165
+    maxCropVolume: 173
+    maxPollenPellets: 0.15
     minToMaxFactor: 2
-    devAgeHatchingMin_d: 5
-    devAgePupationMin_d: 12.9
-    devAgeEmergingMin_d: 23.8
-    devWeightEgg_mg: 1.5
-    devWeightPupationMin_mg: 62.4
-    devWeightPupationMax_mg: 249.5
+    hatchingAgeMin: 5
+    pupationAgeMin: 12.9
+    emergenceAgeMin: 23.8
+    eggWeight: 1.5
+    pupationWeightMin: 62.4
+    pupationWeightMax: 249.5
     pollenToBodymassFactor: 1
-    dev_Q_DeterminationWeight_mg: 0
-    devAge_Q_PupationMin_d: 17
-    devWeight_Q_PupationMin_mg: 590
-    devWeight_Q_PupationMax_mg: 980
-    devAge_Q_EmergingMin_d: 32
+    queenDeterminationWeight: 0
+    queenPupationAgeMin: 17
+    queenPupationWeightMin: 590
+    queenPupationWeightMax: 980
+    queenEmergenceAgeMin: 32
     dailyNestSiteChance: 0.2
   - name: B_pascuorum
-    emergingDay_mean: 136
-    emergingDay_sd: 14.5
-    nestHabitatsList:
+    emergenceDayMean: 136
+    emergenceDaySD: 14.5
+    nestHabitats:
       - Grassland
       - Garden
       - Hedgerow
       - Scrub
       - Woodland
       - Nestboxes
-    proboscis_min_mm: 7.3
-    proboscis_max_mm: 11.6
+    proboscisMin: 7.3
+    proboscisMax: 11.6
     growthFactor: 1.88
     seasonStop: 305
     maxLifespanWorkers: 60
-    batchsize: 7
-    flightVelocity_m/s: 5
-    searchLength_m: 2500
-    timeUnloading: 165
-    specMax_cropVolume_myl: 173
-    specMax_pollenPellets_g: 0.15
+    batchSize: 7
+    flightVelocity: 5
+    searchLength: 2500
+    unloadingTime: 165
+    maxCropVolume: 173
+    maxPollenPellets: 0.15
     minToMaxFactor: 2
-    devAgeHatchingMin_d: 5
-    devAgePupationMin_d: 12.9
-    devAgeEmergingMin_d: 23.8
-    devWeightEgg_mg: 1.5
-    devWeightPupationMin_mg: 48.5
-    devWeightPupationMax_mg: 187.6
+    hatchingAgeMin: 5
+    pupationAgeMin: 12.9
+    emergenceAgeMin: 23.8
+    eggWeight: 1.5
+    pupationWeightMin: 48.5
+    pupationWeightMax: 187.6
     pollenToBodymassFactor: 1
-    dev_Q_DeterminationWeight_mg: 0
-    devAge_Q_PupationMin_d: 17
-    devWeight_Q_PupationMin_mg: 261
-    devWeight_Q_PupationMax_mg: 461
-    devAge_Q_EmergingMin_d: 32
+    queenDeterminationWeight: 0
+    queenPupationAgeMin: 17
+    queenPupationWeightMin: 261
+    queenPupationWeightMax: 461
+    queenEmergenceAgeMin: 32
     dailyNestSiteChance: 0.2
   - name: B_lapidarius
-    emergingDay_mean: 143
-    emergingDay_sd: 20.5
-    nestHabitatsList:
+    emergenceDayMean: 143
+    emergenceDaySD: 20.5
+    nestHabitats:
       - Grassland
       - Garden
       - Hedgerow
       - Scrub
       - Woodland
       - Nestboxes
-    proboscis_min_mm: 7
-    proboscis_max_mm: 11.9
+    proboscisMin: 7
+    proboscisMax: 11.9
     growthFactor: 1.88
     seasonStop: 305
     maxLifespanWorkers: 60
-    batchsize: 12
-    flightVelocity_m/s: 5
-    searchLength_m: 2500
-    timeUnloading: 165
-    specMax_cropVolume_myl: 173
-    specMax_pollenPellets_g: 0.15
+    batchSize: 12
+    flightVelocity: 5
+    searchLength: 2500
+    unloadingTime: 165
+    maxCropVolume: 173
+    maxPollenPellets: 0.15
     minToMaxFactor: 2
-    devAgeHatchingMin_d: 5
-    devAgePupationMin_d: 12.9
-    devAgeEmergingMin_d: 23.8
-    devWeightEgg_mg: 1.5
-    devWeightPupationMin_mg: 90.7
-    devWeightPupationMax_mg: 159.8
+    hatchingAgeMin: 5
+    pupationAgeMin: 12.9
+    emergenceAgeMin: 23.8
+    eggWeight: 1.5
+    pupationWeightMin: 90.7
+    pupationWeightMax: 159.8
     pollenToBodymassFactor: 1
-    dev_Q_DeterminationWeight_mg: 0
-    devAge_Q_PupationMin_d: 17
-    devWeight_Q_PupationMin_mg: 300
-    devWeight_Q_PupationMax_mg: 850
-    devAge_Q_EmergingMin_d: 32
+    queenDeterminationWeight: 0
+    queenPupationAgeMin: 17
+    queenPupationWeightMin: 300
+    queenPupationWeightMax: 850
+    queenEmergenceAgeMin: 32
     dailyNestSiteChance: 0.2
   - name: B_hortorum
-    emergingDay_mean: 120
-    emergingDay_sd: 8
-    nestHabitatsList:
+    emergenceDayMean: 120
+    emergenceDaySD: 8
+    nestHabitats:
       - Grassland
       - Garden
       - Hedgerow
       - Scrub
       - Woodland
       - Nestboxes
-    proboscis_min_mm: 11.3
-    proboscis_max_mm: 15.6
+    proboscisMin: 11.3
+    proboscisMax: 15.6
     growthFactor: 1.88
     seasonStop: 305
     maxLifespanWorkers: 60
-    batchsize: 12
-    flightVelocity_m/s: 5
-    searchLength_m: 2500
-    timeUnloading: 165
-    specMax_cropVolume_myl: 173
-    specMax_pollenPellets_g: 0.15
+    batchSize: 12
+    flightVelocity: 5
+    searchLength: 2500
+    unloadingTime: 165
+    maxCropVolume: 173
+    maxPollenPellets: 0.15
     minToMaxFactor: 2
-    devAgeHatchingMin_d: 5
-    devAgePupationMin_d: 12.9
-    devAgeEmergingMin_d: 23.8
-    devWeightEgg_mg: 1.5
-    devWeightPupationMin_mg: 71
-    devWeightPupationMax_mg: 271
+    hatchingAgeMin: 5
+    pupationAgeMin: 12.9
+    emergenceAgeMin: 23.8
+    eggWeight: 1.5
+    pupationWeightMin: 71
+    pupationWeightMax: 271
     pollenToBodymassFactor: 1
-    dev_Q_DeterminationWeight_mg: 0
-    devAge_Q_PupationMin_d: 17
-    devWeight_Q_PupationMin_mg: 371
-    devWeight_Q_PupationMax_mg: 751
-    devAge_Q_EmergingMin_d: 32
+    queenDeterminationWeight: 0
+    queenPupationAgeMin: 17
+    queenPupationWeightMin: 371
+    queenPupationWeightMax: 751
+    queenEmergenceAgeMin: 32
     dailyNestSiteChance: 0.2
   - name: B_pratorum
-    emergingDay_mean: 110
-    emergingDay_sd: 30.5
-    nestHabitatsList:
+    emergenceDayMean: 110
+    emergenceDaySD: 30.5
+    nestHabitats:
       - Garden
       - Hedgerow
       - Scrub
       - Woodland
       - Nestboxes
-    proboscis_min_mm: 6.5
-    proboscis_max_mm: 10.3
+    proboscisMin: 6.5
+    proboscisMax: 10.3
     growthFactor: 1.88
     seasonStop: 305
     maxLifespanWorkers: 60
-    batchsize: 10
-    flightVelocity_m/s: 5
-    searchLength_m: 2500
-    timeUnloading: 165
-    specMax_cropVolume_myl: 173
-    specMax_pollenPellets_g: 0.15
+    batchSize: 10
+    flightVelocity: 5
+    searchLength: 2500
+    unloadingTime: 165
+    maxCropVolume: 173
+    maxPollenPellets: 0.15
     minToMaxFactor: 2
-    devAgeHatchingMin_d: 5
-    devAgePupationMin_d: 12.9
-    devAgeEmergingMin_d: 23.8
-    devWeightEgg_mg: 1.5
-    devWeightPupationMin_mg: 51
-    devWeightPupationMax_mg: 231
+    hatchingAgeMin: 5
+    pupationAgeMin: 12.9
+    emergenceAgeMin: 23.8
+    eggWeight: 1.5
+    pupationWeightMin: 51
+    pupationWeightMax: 231
     pollenToBodymassFactor: 1
-    dev_Q_DeterminationWeight_mg: 0
-    devAge_Q_PupationMin_d: 17
-    devWeight_Q_PupationMin_mg: 271
-    devWeight_Q_PupationMax_mg: 491
-    devAge_Q_EmergingMin_d: 32
+    queenDeterminationWeight: 0
+    queenPupationAgeMin: 17
+    queenPupationWeightMin: 271
+    queenPupationWeightMax: 491
+    queenEmergenceAgeMin: 32
     dailyNestSiteChance: 0.2
   - name: B_hypnorum
-    emergingDay_mean: 100
-    emergingDay_sd: 10
-    nestHabitatsList:
+    emergenceDayMean: 100
+    emergenceDaySD: 10
+    nestHabitats:
       - Garden
       - Hedgerow
       - Scrub
       - Woodland
       - Nestboxes
-    proboscis_min_mm: 6.2
-    proboscis_max_mm: 10.2
+    proboscisMin: 6.2
+    proboscisMax: 10.2
     growthFactor: 1.88
     seasonStop: 305
     maxLifespanWorkers: 60
-    batchsize: 12
-    flightVelocity_m/s: 5
-    searchLength_m: 2500
-    timeUnloading: 165
-    specMax_cropVolume_myl: 173
-    specMax_pollenPellets_g: 0.15
+    batchSize: 12
+    flightVelocity: 5
+    searchLength: 2500
+    unloadingTime: 165
+    maxCropVolume: 173
+    maxPollenPellets: 0.15
     minToMaxFactor: 2
-    devAgeHatchingMin_d: 5
-    devAgePupationMin_d: 12.9
-    devAgeEmergingMin_d: 19
-    devWeightEgg_mg: 1.5
-    devWeightPupationMin_mg: 112.4
-    devWeightPupationMax_mg: 218
+    hatchingAgeMin: 5
+    pupationAgeMin: 12.9
+    emergenceAgeMin: 19
+    eggWeight: 1.5
+    pupationWeightMin: 112.4
+    pupationWeightMax: 218
     pollenToBodymassFactor: 1
-    dev_Q_DeterminationWeight_mg: 0
-    devAge_Q_PupationMin_d: 17
-    devWeight_Q_PupationMin_mg: 334
-    devWeight_Q_PupationMax_mg: 410
-    devAge_Q_EmergingMin_d: 32
+    queenDeterminationWeight: 0
+    queenPupationAgeMin: 17
+    queenPupationWeightMin: 334
+    queenPupationWeightMax: 410
+    queenEmergenceAgeMin: 32
     dailyNestSiteChance: 0.2
   - name: Psithyrus
     parasitic: true
-    emergingDay_mean: 120
-    emergingDay_sd: 15
-    nestHabitatsList:
+    emergenceDayMean: 120
+    emergenceDaySD: 15
+    nestHabitats:
       - Grassland
       - Garden
       - Hedgerow
       - Scrub
       - Woodland
       - Nestboxes
-    proboscis_min_mm: 6.5
-    proboscis_max_mm: 10.3
+    proboscisMin: 6.5
+    proboscisMax: 10.3
     growthFactor: 1.88
     seasonStop: 305
     maxLifespanWorkers: 60
-    batchsize: 12
-    flightVelocity_m/s: 5
-    searchLength_m: 2500
-    timeUnloading: 165
-    specMax_cropVolume_myl: 173
-    specMax_pollenPellets_g: 0.15
+    batchSize: 12
+    flightVelocity: 5
+    searchLength: 2500
+    unloadingTime: 165
+    maxCropVolume: 173
+    maxPollenPellets: 0.15
     minToMaxFactor: 2
-    devAgeHatchingMin_d: 5
-    devAgePupationMin_d: 12.9
-    devAgeEmergingMin_d: 23.8
-    devWeightEgg_mg: 1.5
-    devWeightPupationMin_mg: 140
-    devWeightPupationMax_mg: 170
+    hatchingAgeMin: 5
+    pupationAgeMin: 12.9
+    emergenceAgeMin: 23.8
+    eggWeight: 1.5
+    pupationWeightMin: 140
+    pupationWeightMax: 170
     pollenToBodymassFactor: 1
-    dev_Q_DeterminationWeight_mg: 0
-    devAge_Q_PupationMin_d: 17
-    devWeight_Q_PupationMin_mg: 590
-    devWeight_Q_PupationMax_mg: 980
-    devAge_Q_EmergingMin_d: 32
+    queenDeterminationWeight: 0
+    queenPupationAgeMin: 17
+    queenPupationWeightMin: 590
+    queenPupationWeightMax: 980
+    queenEmergenceAgeMin: 32
     dailyNestSiteChance: 0.2
 flowers:
-  - Flowerspecies: Alsike_clover
-    pollen_g/flower: 0.0005
-    nectar_ml/flower: 0.00046
-    concentration_mol/l: 0.7
+  - name: Alsike_clover
+    pollenPerFlower: 0.0005
+    nectarPerFlower: 0.00046
+    concentration: 0.7
     startDay: 181
     stopDay: 242
-    corollaDepth_mm: 10
-    intFlowerTime_s: 0.6
-  - Flowerspecies: American_willowherb
-    pollen_g/flower: 2e-05
-    nectar_ml/flower: 0.00035
-    concentration_mol/l: 1.34
+    corollaDepth: 10
+    interFlowerTime: 0.6
+  - name: American_willowherb
+    pollenPerFlower: 2e-05
+    nectarPerFlower: 0.00035
+    concentration: 1.34
     startDay: 152
     stopDay: 243
-    corollaDepth_mm: 3.5
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Average_Willow
-    pollen_g/flower: 0.01
-    nectar_ml/flower: 0.00261
-    concentration_mol/l: 1.13
+    corollaDepth: 3.5
+    interFlowerTime: 0.6
+  - name: Average_Willow
+    pollenPerFlower: 0.01
+    nectarPerFlower: 0.00261
+    concentration: 1.13
     startDay: 59
     stopDay: 119
-    corollaDepth_mm: 0
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Bell_heather
-    pollen_g/flower: 0.00073
-    nectar_ml/flower: 0.0002
-    concentration_mol/l: 1.17
+    corollaDepth: 0
+    interFlowerTime: 0.6
+  - name: Bell_heather
+    pollenPerFlower: 0.00073
+    nectarPerFlower: 0.0002
+    concentration: 1.17
     startDay: 121
     stopDay: 334
-    corollaDepth_mm: 5.5
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Birdsfoot_trefoil
-    pollen_g/flower: 0.00036
-    nectar_ml/flower: 0.00035
-    concentration_mol/l: 0.96
+    corollaDepth: 5.5
+    interFlowerTime: 0.6
+  - name: Birdsfoot_trefoil
+    pollenPerFlower: 0.00036
+    nectarPerFlower: 0.00035
+    concentration: 0.96
     startDay: 120
     stopDay: 303
-    corollaDepth_mm: 9
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Blackthorn
-    pollen_g/flower: 0.00014
-    nectar_ml/flower: 9e-05
-    concentration_mol/l: 0.77
+    corollaDepth: 9
+    interFlowerTime: 0.6
+  - name: Blackthorn
+    pollenPerFlower: 0.00014
+    nectarPerFlower: 9e-05
+    concentration: 0.77
     startDay: 59
     stopDay: 150
-    corollaDepth_mm: 0
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Bramble
-    pollen_g/flower: 0.00048
-    nectar_ml/flower: 0.00682
-    concentration_mol/l: 0.5
+    corollaDepth: 0
+    interFlowerTime: 0.6
+  - name: Bramble
+    pollenPerFlower: 0.00048
+    nectarPerFlower: 0.00682
+    concentration: 0.5
     startDay: 120
     stopDay: 272
-    corollaDepth_mm: 0
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Buckwheat
-    pollen_g/flower: 8e-05
-    nectar_ml/flower: 0.00011
-    concentration_mol/l: 1.33
+    corollaDepth: 0
+    interFlowerTime: 0.6
+  - name: Buckwheat
+    pollenPerFlower: 8e-05
+    nectarPerFlower: 0.00011
+    concentration: 1.33
     startDay: 162
     stopDay: 222
-    corollaDepth_mm: 0.5
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Bugle
-    pollen_g/flower: 0.00065
-    nectar_ml/flower: 0.00044
-    concentration_mol/l: 0.67
+    corollaDepth: 0.5
+    interFlowerTime: 0.6
+  - name: Bugle
+    pollenPerFlower: 0.00065
+    nectarPerFlower: 0.00044
+    concentration: 0.67
     startDay: 120
     stopDay: 211
-    corollaDepth_mm: 10
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Burdock
-    pollen_g/flower: 0.00043
-    nectar_ml/flower: 0.00229
-    concentration_mol/l: 0.88
+    corollaDepth: 10
+    interFlowerTime: 0.6
+  - name: Burdock
+    pollenPerFlower: 0.00043
+    nectarPerFlower: 0.00229
+    concentration: 0.88
     startDay: 181
     stopDay: 272
-    corollaDepth_mm: 3.9
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Buttercup
-    pollen_g/flower: 0.00077
-    nectar_ml/flower: 0.0002
-    concentration_mol/l: 0.71
+    corollaDepth: 3.9
+    interFlowerTime: 0.6
+  - name: Buttercup
+    pollenPerFlower: 0.00077
+    nectarPerFlower: 0.0002
+    concentration: 0.71
     startDay: 120
     stopDay: 303
-    corollaDepth_mm: 0
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Charlock
-    pollen_g/flower: 0.00026
-    nectar_ml/flower: 1e-05
-    concentration_mol/l: 1.74
+    corollaDepth: 0
+    interFlowerTime: 0.6
+  - name: Charlock
+    pollenPerFlower: 0.00026
+    nectarPerFlower: 1e-05
+    concentration: 1.74
     startDay: 121
     stopDay: 212
-    corollaDepth_mm: 5.1
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Chicory
-    pollen_g/flower: 0.00086
-    nectar_ml/flower: 0.00184
-    concentration_mol/l: 1.74
+    corollaDepth: 5.1
+    interFlowerTime: 0.6
+  - name: Chicory
+    pollenPerFlower: 0.00086
+    nectarPerFlower: 0.00184
+    concentration: 1.74
     startDay: 172
     stopDay: 256
-    corollaDepth_mm: 6.33
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Comfrey
-    pollen_g/flower: 0.00095
-    nectar_ml/flower: 0.00432
-    concentration_mol/l: 0.98
+    corollaDepth: 6.33
+    interFlowerTime: 0.6
+  - name: Comfrey
+    pollenPerFlower: 0.00095
+    nectarPerFlower: 0.00432
+    concentration: 0.98
     startDay: 120
     stopDay: 211
-    corollaDepth_mm: 17
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Common_bluebell
-    pollen_g/flower: 0.00188
-    nectar_ml/flower: 0
-    concentration_mol/l: 0
+    corollaDepth: 17
+    interFlowerTime: 0.6
+  - name: Common_bluebell
+    pollenPerFlower: 0.00188
+    nectarPerFlower: 0
+    concentration: 0
     startDay: 90
     stopDay: 180
-    corollaDepth_mm: 0
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Common_cats_ear
-    pollen_g/flower: 0.43
-    nectar_ml/flower: 0.00309
-    concentration_mol/l: 1.74
+    corollaDepth: 0
+    interFlowerTime: 0.6
+  - name: Common_cats_ear
+    pollenPerFlower: 0.43
+    nectarPerFlower: 0.00309
+    concentration: 1.74
     startDay: 152
     stopDay: 273
-    corollaDepth_mm: 0
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Common_field_speedwell
-    pollen_g/flower: 3e-05
-    nectar_ml/flower: 0.00049
-    concentration_mol/l: 0.1
+    corollaDepth: 0
+    interFlowerTime: 0.6
+  - name: Common_field_speedwell
+    pollenPerFlower: 3e-05
+    nectarPerFlower: 0.00049
+    concentration: 0.1
     startDay: 1
     stopDay: 365
-    corollaDepth_mm: 0.5
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Common_fumitory
-    pollen_g/flower: 0
-    nectar_ml/flower: 3e-05
-    concentration_mol/l: 1.83
+    corollaDepth: 0.5
+    interFlowerTime: 0.6
+  - name: Common_fumitory
+    pollenPerFlower: 0
+    nectarPerFlower: 3e-05
+    concentration: 1.83
     startDay: 121
     stopDay: 304
-    corollaDepth_mm: 7.5
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Common_knapweed
-    pollen_g/flower: 0.00239
-    nectar_ml/flower: 0.00229
-    concentration_mol/l: 1.54
+    corollaDepth: 7.5
+    interFlowerTime: 0.6
+  - name: Common_knapweed
+    pollenPerFlower: 0.00239
+    nectarPerFlower: 0.00229
+    concentration: 1.54
     startDay: 151
     stopDay: 272
-    corollaDepth_mm: 3
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Common_mouse_ear
-    pollen_g/flower: 0.01
-    nectar_ml/flower: 3e-05
-    concentration_mol/l: 1.55
+    corollaDepth: 3
+    interFlowerTime: 0.6
+  - name: Common_mouse_ear
+    pollenPerFlower: 0.01
+    nectarPerFlower: 3e-05
+    concentration: 1.55
     startDay: 91
     stopDay: 273
-    corollaDepth_mm: 0
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Common_vetch
-    pollen_g/flower: 0.00038
-    nectar_ml/flower: 0.00086
-    concentration_mol/l: 0.81
+    corollaDepth: 0
+    interFlowerTime: 0.6
+  - name: Common_vetch
+    pollenPerFlower: 0.00038
+    nectarPerFlower: 0.00086
+    concentration: 0.81
     startDay: 120
     stopDay: 272
-    corollaDepth_mm: 7
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Creeping_buttercup
-    pollen_g/flower: 0.00043
-    nectar_ml/flower: 0.00035
-    concentration_mol/l: 0.85
+    corollaDepth: 7
+    interFlowerTime: 0.6
+  - name: Creeping_buttercup
+    pollenPerFlower: 0.00043
+    nectarPerFlower: 0.00035
+    concentration: 0.85
     startDay: 121
     stopDay: 304
-    corollaDepth_mm: 0
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Crop_Apple
-    pollen_g/flower: 0.0017
-    nectar_ml/flower: 0.0006
-    concentration_mol/l: 0.39
+    corollaDepth: 0
+    interFlowerTime: 0.6
+  - name: Crop_Apple
+    pollenPerFlower: 0.0017
+    nectarPerFlower: 0.0006
+    concentration: 0.39
     startDay: 97
     stopDay: 125
-    corollaDepth_mm: 0.3
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Crop_Cereals
-    pollen_g/flower: 0
-    nectar_ml/flower: 0
-    concentration_mol/l: 0
+    corollaDepth: 0.3
+    interFlowerTime: 0.6
+  - name: Crop_Cereals
+    pollenPerFlower: 0
+    nectarPerFlower: 0
+    concentration: 0
     startDay: 0
     stopDay: 0
-    corollaDepth_mm: 0
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Crop_Field_beans
-    pollen_g/flower: 0.00065
-    nectar_ml/flower: 0.00086
-    concentration_mol/l: 1.28
+    corollaDepth: 0
+    interFlowerTime: 0.6
+  - name: Crop_Field_beans
+    pollenPerFlower: 0.00065
+    nectarPerFlower: 0.00086
+    concentration: 1.28
     startDay: 153
     stopDay: 182
-    corollaDepth_mm: 19
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Crop_Maize
-    pollen_g/flower: 0.03
-    nectar_ml/flower: 0
-    concentration_mol/l: 0
+    corollaDepth: 19
+    interFlowerTime: 0.6
+  - name: Crop_Maize
+    pollenPerFlower: 0.03
+    nectarPerFlower: 0
+    concentration: 0
     startDay: 197
     stopDay: 210
-    corollaDepth_mm: 0
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Crop_Oilseed_rape
-    pollen_g/flower: 0.00024
-    nectar_ml/flower: 0.00055
-    concentration_mol/l: 1.5
+    corollaDepth: 0
+    interFlowerTime: 0.6
+  - name: Crop_Oilseed_rape
+    pollenPerFlower: 0.00024
+    nectarPerFlower: 0.00055
+    concentration: 1.5
     startDay: 114
     stopDay: 136
-    corollaDepth_mm: 5
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Cross_leaved_heath
-    pollen_g/flower: 0.003
-    nectar_ml/flower: 0.0002
-    concentration_mol/l: 1.17
+    corollaDepth: 5
+    interFlowerTime: 0.6
+  - name: Cross_leaved_heath
+    pollenPerFlower: 0.003
+    nectarPerFlower: 0.0002
+    concentration: 1.17
     startDay: 152
     stopDay: 273
-    corollaDepth_mm: 6.5
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Daisy
-    pollen_g/flower: 0.22
-    nectar_ml/flower: 0.00012
-    concentration_mol/l: 1.74
+    corollaDepth: 6.5
+    interFlowerTime: 0.6
+  - name: Daisy
+    pollenPerFlower: 0.22
+    nectarPerFlower: 0.00012
+    concentration: 1.74
     startDay: 1
     stopDay: 365
-    corollaDepth_mm: 0
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Dandelion
-    pollen_g/flower: 0.00122
-    nectar_ml/flower: 0.00154
-    concentration_mol/l: 1.07
+    corollaDepth: 0
+    interFlowerTime: 0.6
+  - name: Dandelion
+    pollenPerFlower: 0.00122
+    nectarPerFlower: 0.00154
+    concentration: 1.07
     startDay: 1
     stopDay: 364
-    corollaDepth_mm: 1.2
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Dog_rose
-    pollen_g/flower: 0.00067
-    nectar_ml/flower: 0
-    concentration_mol/l: 0
+    corollaDepth: 1.2
+    interFlowerTime: 0.6
+  - name: Dog_rose
+    pollenPerFlower: 0.00067
+    nectarPerFlower: 0
+    concentration: 0
     startDay: 151
     stopDay: 211
-    corollaDepth_mm: 0
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Field_pansy
-    pollen_g/flower: 0.00097
-    nectar_ml/flower: 0.00018
-    concentration_mol/l: 0.88
+    corollaDepth: 0
+    interFlowerTime: 0.6
+  - name: Field_pansy
+    pollenPerFlower: 0.00097
+    nectarPerFlower: 0.00018
+    concentration: 0.88
     startDay: 91
     stopDay: 304
-    corollaDepth_mm: 15
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Field_scabious
-    pollen_g/flower: 0.00488
-    nectar_ml/flower: 0.0015
-    concentration_mol/l: 0.25
+    corollaDepth: 15
+    interFlowerTime: 0.6
+  - name: Field_scabious
+    pollenPerFlower: 0.00488
+    nectarPerFlower: 0.0015
+    concentration: 0.25
     startDay: 181
     stopDay: 272
-    corollaDepth_mm: 0
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Field_woundwort
-    pollen_g/flower: 0.0008
-    nectar_ml/flower: 0.00087
-    concentration_mol/l: 1.04
+    corollaDepth: 0
+    interFlowerTime: 0.6
+  - name: Field_woundwort
+    pollenPerFlower: 0.0008
+    nectarPerFlower: 0.00087
+    concentration: 1.04
     startDay: 91
     stopDay: 334
-    corollaDepth_mm: 5
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Foxglove
-    pollen_g/flower: 0.02
-    nectar_ml/flower: 0.00163
-    concentration_mol/l: 0.82
+    corollaDepth: 5
+    interFlowerTime: 0.6
+  - name: Foxglove
+    pollenPerFlower: 0.02
+    nectarPerFlower: 0.00163
+    concentration: 0.82
     startDay: 151
     stopDay: 272
-    corollaDepth_mm: 7
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Germander_speedwell
-    pollen_g/flower: 0.00164
-    nectar_ml/flower: 0.00033
-    concentration_mol/l: 0.1
+    corollaDepth: 7
+    interFlowerTime: 0.6
+  - name: Germander_speedwell
+    pollenPerFlower: 0.00164
+    nectarPerFlower: 0.00033
+    concentration: 0.1
     startDay: 60
     stopDay: 212
-    corollaDepth_mm: 0.5
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Giant_bindweed
-    pollen_g/flower: 0.00091
-    nectar_ml/flower: 0.00995
-    concentration_mol/l: 0.66
+    corollaDepth: 0.5
+    interFlowerTime: 0.6
+  - name: Giant_bindweed
+    pollenPerFlower: 0.00091
+    nectarPerFlower: 0.00995
+    concentration: 0.66
     startDay: 181
     stopDay: 272
-    corollaDepth_mm: 0
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Gorse
-    pollen_g/flower: 0.00411
-    nectar_ml/flower: 2e-05
-    concentration_mol/l: 1.74
+    corollaDepth: 0
+    interFlowerTime: 0.6
+  - name: Gorse
+    pollenPerFlower: 0.00411
+    nectarPerFlower: 2e-05
+    concentration: 1.74
     startDay: 60
     stopDay: 273
-    corollaDepth_mm: 13
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Greater_birdsfoot_trefoil
-    pollen_g/flower: 0.00098
-    nectar_ml/flower: 0.00015
-    concentration_mol/l: 0.69
+    corollaDepth: 13
+    interFlowerTime: 0.6
+  - name: Greater_birdsfoot_trefoil
+    pollenPerFlower: 0.00098
+    nectarPerFlower: 0.00015
+    concentration: 0.69
     startDay: 152
     stopDay: 243
-    corollaDepth_mm: 9
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Greater_knapweed
-    pollen_g/flower: 0.0024
-    nectar_ml/flower: 0
-    concentration_mol/l: 0
+    corollaDepth: 9
+    interFlowerTime: 0.6
+  - name: Greater_knapweed
+    pollenPerFlower: 0.0024
+    nectarPerFlower: 0
+    concentration: 0
     startDay: 181
     stopDay: 272
-    corollaDepth_mm: 13.6
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Ground_ivy
-    pollen_g/flower: 0.00046
-    nectar_ml/flower: 0.00105
-    concentration_mol/l: 1.01
+    corollaDepth: 13.6
+    interFlowerTime: 0.6
+  - name: Ground_ivy
+    pollenPerFlower: 0.00046
+    nectarPerFlower: 0.00105
+    concentration: 1.01
     startDay: 59
     stopDay: 150
-    corollaDepth_mm: 7
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Hawthorn
-    pollen_g/flower: 0.00016
-    nectar_ml/flower: 0.00188
-    concentration_mol/l: 1.02
+    corollaDepth: 7
+    interFlowerTime: 0.6
+  - name: Hawthorn
+    pollenPerFlower: 0.00016
+    nectarPerFlower: 0.00188
+    concentration: 1.02
     startDay: 120
     stopDay: 180
-    corollaDepth_mm: 0
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Heath_speedwell
-    pollen_g/flower: 0.03
-    nectar_ml/flower: 3e-05
-    concentration_mol/l: 1.37
+    corollaDepth: 0
+    interFlowerTime: 0.6
+  - name: Heath_speedwell
+    pollenPerFlower: 0.03
+    nectarPerFlower: 3e-05
+    concentration: 1.37
     startDay: 121
     stopDay: 304
-    corollaDepth_mm: 3
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Hedge_bindweed
-    pollen_g/flower: 0.01
-    nectar_ml/flower: 0.00715
-    concentration_mol/l: 1.4
+    corollaDepth: 3
+    interFlowerTime: 0.6
+  - name: Hedge_bindweed
+    pollenPerFlower: 0.01
+    nectarPerFlower: 0.00715
+    concentration: 1.4
     startDay: 182
     stopDay: 273
-    corollaDepth_mm: 0
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Hedge_woundwort
-    pollen_g/flower: 0.0008
-    nectar_ml/flower: 0.00146
-    concentration_mol/l: 1.04
+    corollaDepth: 0
+    interFlowerTime: 0.6
+  - name: Hedge_woundwort
+    pollenPerFlower: 0.0008
+    nectarPerFlower: 0.00146
+    concentration: 1.04
     startDay: 181
     stopDay: 242
-    corollaDepth_mm: 9
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Ling
-    pollen_g/flower: 0
-    nectar_ml/flower: 0.0001
-    concentration_mol/l: 1.17
+    corollaDepth: 9
+    interFlowerTime: 0.6
+  - name: Ling
+    pollenPerFlower: 0
+    nectarPerFlower: 0.0001
+    concentration: 1.17
     startDay: 182
     stopDay: 273
-    corollaDepth_mm: 4
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Marsh_thistle
-    pollen_g/flower: 0.00505
-    nectar_ml/flower: 0.00064
-    concentration_mol/l: 0.89
+    corollaDepth: 4
+    interFlowerTime: 0.6
+  - name: Marsh_thistle
+    pollenPerFlower: 0.00505
+    nectarPerFlower: 0.00064
+    concentration: 0.89
     startDay: 181
     stopDay: 272
-    corollaDepth_mm: 3
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Meadow_buttercup
-    pollen_g/flower: 0.0003
-    nectar_ml/flower: 0.00026
-    concentration_mol/l: 0.94
+    corollaDepth: 3
+    interFlowerTime: 0.6
+  - name: Meadow_buttercup
+    pollenPerFlower: 0.0003
+    nectarPerFlower: 0.00026
+    concentration: 0.94
     startDay: 121
     stopDay: 304
-    corollaDepth_mm: 0
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Meadowsweet
-    pollen_g/flower: 0.0077
-    nectar_ml/flower: 0
-    concentration_mol/l: 1.74
+    corollaDepth: 0
+    interFlowerTime: 0.6
+  - name: Meadowsweet
+    pollenPerFlower: 0.0077
+    nectarPerFlower: 0
+    concentration: 1.74
     startDay: 152
     stopDay: 273
-    corollaDepth_mm: 0
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Oilseed_rape
-    pollen_g/flower: 0.00151
-    nectar_ml/flower: 0.01
-    concentration_mol/l: 1.41
+    corollaDepth: 0
+    interFlowerTime: 0.6
+  - name: Oilseed_rape
+    pollenPerFlower: 0.00151
+    nectarPerFlower: 0.01
+    concentration: 1.41
     startDay: 120
     stopDay: 242
-    corollaDepth_mm: 5
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Ox-eye_daisy
-    pollen_g/flower: 0.00122
-    nectar_ml/flower: 0.00086
-    concentration_mol/l: 1.74
+    corollaDepth: 5
+    interFlowerTime: 0.6
+  - name: Ox-eye_daisy
+    pollenPerFlower: 0.00122
+    nectarPerFlower: 0.00086
+    concentration: 1.74
     startDay: 152
     stopDay: 243
-    corollaDepth_mm: 0
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Phacelia
-    pollen_g/flower: 0.00047
-    nectar_ml/flower: 0.00028
-    concentration_mol/l: 1.64
+    corollaDepth: 0
+    interFlowerTime: 0.6
+  - name: Phacelia
+    pollenPerFlower: 0.00047
+    nectarPerFlower: 0.00028
+    concentration: 1.64
     startDay: 152
     stopDay: 243
-    corollaDepth_mm: 7.5
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Prickly_sow_thistle
-    pollen_g/flower: 0.00045
-    nectar_ml/flower: 0.00183
-    concentration_mol/l: 0.94
+    corollaDepth: 7.5
+    interFlowerTime: 0.6
+  - name: Prickly_sow_thistle
+    pollenPerFlower: 0.00045
+    nectarPerFlower: 0.00183
+    concentration: 0.94
     startDay: 152
     stopDay: 243
-    corollaDepth_mm: 8.25
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Ragwort
-    pollen_g/flower: 0.00017
-    nectar_ml/flower: 0
-    concentration_mol/l: 0
+    corollaDepth: 8.25
+    interFlowerTime: 0.6
+  - name: Ragwort
+    pollenPerFlower: 0.00017
+    nectarPerFlower: 0
+    concentration: 0
     startDay: 151
     stopDay: 303
-    corollaDepth_mm: 0
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Red_campion
-    pollen_g/flower: 0.0004
-    nectar_ml/flower: 0.00335
-    concentration_mol/l: 2.35
+    corollaDepth: 0
+    interFlowerTime: 0.6
+  - name: Red_campion
+    pollenPerFlower: 0.0004
+    nectarPerFlower: 0.00335
+    concentration: 2.35
     startDay: 91
     stopDay: 273
-    corollaDepth_mm: 16.1
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Red_clover
-    pollen_g/flower: 0.00018
-    nectar_ml/flower: 0.00032
-    concentration_mol/l: 0.97
+    corollaDepth: 16.1
+    interFlowerTime: 0.6
+  - name: Red_clover
+    pollenPerFlower: 0.00018
+    nectarPerFlower: 0.00032
+    concentration: 0.97
     startDay: 120
     stopDay: 272
-    corollaDepth_mm: 10
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Red_dead_nettle
-    pollen_g/flower: 0.00024
-    nectar_ml/flower: 0.00282
-    concentration_mol/l: 1.37
+    corollaDepth: 10
+    interFlowerTime: 0.6
+  - name: Red_dead_nettle
+    pollenPerFlower: 0.00024
+    nectarPerFlower: 0.00282
+    concentration: 1.37
     startDay: 59
     stopDay: 303
-    corollaDepth_mm: 7
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Redshank
-    pollen_g/flower: 0
-    nectar_ml/flower: 6e-05
-    concentration_mol/l: 1.74
+    corollaDepth: 7
+    interFlowerTime: 0.6
+  - name: Redshank
+    pollenPerFlower: 0
+    nectarPerFlower: 6e-05
+    concentration: 1.74
     startDay: 121
     stopDay: 304
-    corollaDepth_mm: 0.75
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Ribwort_plantain
-    pollen_g/flower: 7e-05
-    nectar_ml/flower: 0
-    concentration_mol/l: 0.87
+    corollaDepth: 0.75
+    interFlowerTime: 0.6
+  - name: Ribwort_plantain
+    pollenPerFlower: 7e-05
+    nectarPerFlower: 0
+    concentration: 0.87
     startDay: 91
     stopDay: 304
-    corollaDepth_mm: 2.5
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Rosebay_willowherb
-    pollen_g/flower: 0.00612
-    nectar_ml/flower: 0.00024
-    concentration_mol/l: 0.87
+    corollaDepth: 2.5
+    interFlowerTime: 0.6
+  - name: Rosebay_willowherb
+    pollenPerFlower: 0.00612
+    nectarPerFlower: 0.00024
+    concentration: 0.87
     startDay: 181
     stopDay: 272
-    corollaDepth_mm: 0
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Salad_burnet
-    pollen_g/flower: 0
-    nectar_ml/flower: 0.00011
-    concentration_mol/l: 0
+    corollaDepth: 0
+    interFlowerTime: 0.6
+  - name: Salad_burnet
+    pollenPerFlower: 0
+    nectarPerFlower: 0.00011
+    concentration: 0
     startDay: 121
     stopDay: 243
-    corollaDepth_mm: 0
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Scarlet_pimpernel
-    pollen_g/flower: 0.00019
-    nectar_ml/flower: 0
-    concentration_mol/l: 0
+    corollaDepth: 0
+    interFlowerTime: 0.6
+  - name: Scarlet_pimpernel
+    pollenPerFlower: 0.00019
+    nectarPerFlower: 0
+    concentration: 0
     startDay: 152
     stopDay: 243
-    corollaDepth_mm: 0
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Selfheal
-    pollen_g/flower: 0.00019
-    nectar_ml/flower: 0.00039
-    concentration_mol/l: 0.87
+    corollaDepth: 0
+    interFlowerTime: 0.6
+  - name: Selfheal
+    pollenPerFlower: 0.00019
+    nectarPerFlower: 0.00039
+    concentration: 0.87
     startDay: 151
     stopDay: 272
-    corollaDepth_mm: 8
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Silverweed
-    pollen_g/flower: 0.00053
-    nectar_ml/flower: 1e-05
-    concentration_mol/l: 2.17
+    corollaDepth: 8
+    interFlowerTime: 0.6
+  - name: Silverweed
+    pollenPerFlower: 0.00053
+    nectarPerFlower: 1e-05
+    concentration: 2.17
     startDay: 152
     stopDay: 243
-    corollaDepth_mm: 0
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Smooth_hawksbeard
-    pollen_g/flower: 0.00017
-    nectar_ml/flower: 1e-05
-    concentration_mol/l: 1.34
+    corollaDepth: 0
+    interFlowerTime: 0.6
+  - name: Smooth_hawksbeard
+    pollenPerFlower: 0.00017
+    nectarPerFlower: 1e-05
+    concentration: 1.34
     startDay: 152
     stopDay: 273
-    corollaDepth_mm: 3.8
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Spear_thistle
-    pollen_g/flower: 0.00254
-    nectar_ml/flower: 0.00306
-    concentration_mol/l: 1.51
+    corollaDepth: 3.8
+    interFlowerTime: 0.6
+  - name: Spear_thistle
+    pollenPerFlower: 0.00254
+    nectarPerFlower: 0.00306
+    concentration: 1.51
     startDay: 151
     stopDay: 303
-    corollaDepth_mm: 6.2
-    intFlowerTime_s: 0.6
-  - Flowerspecies: St_Johns_wort
-    pollen_g/flower: 0.0005
-    nectar_ml/flower: 0
-    concentration_mol/l: 0
+    corollaDepth: 6.2
+    interFlowerTime: 0.6
+  - name: St_Johns_wort
+    pollenPerFlower: 0.0005
+    nectarPerFlower: 0
+    concentration: 0
     startDay: 151
     stopDay: 272
-    corollaDepth_mm: 0
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Sunflower
-    pollen_g/flower: 0.35
-    nectar_ml/flower: 0.02
-    concentration_mol/l: 0.7
+    corollaDepth: 0
+    interFlowerTime: 0.6
+  - name: Sunflower
+    pollenPerFlower: 0.35
+    nectarPerFlower: 0.02
+    concentration: 0.7
     startDay: 237
     stopDay: 264
-    corollaDepth_mm: 3.29
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Tormentil
-    pollen_g/flower: 0.00395
-    nectar_ml/flower: 4e-05
-    concentration_mol/l: 2.17
+    corollaDepth: 3.29
+    interFlowerTime: 0.6
+  - name: Tormentil
+    pollenPerFlower: 0.00395
+    nectarPerFlower: 4e-05
+    concentration: 2.17
     startDay: 152
     stopDay: 273
-    corollaDepth_mm: 0
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Tufted_vetch
-    pollen_g/flower: 0.00044
-    nectar_ml/flower: 0.0007
-    concentration_mol/l: 0.61
+    corollaDepth: 0
+    interFlowerTime: 0.6
+  - name: Tufted_vetch
+    pollenPerFlower: 0.00044
+    nectarPerFlower: 0.0007
+    concentration: 0.61
     startDay: 151
     stopDay: 242
-    corollaDepth_mm: 6.8
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Vipers_bugloss
-    pollen_g/flower: 0.00071
-    nectar_ml/flower: 0.00104
-    concentration_mol/l: 1.2
+    corollaDepth: 6.8
+    interFlowerTime: 0.6
+  - name: Vipers_bugloss
+    pollenPerFlower: 0.00071
+    nectarPerFlower: 0.00104
+    concentration: 1.2
     startDay: 151
     stopDay: 272
-    corollaDepth_mm: 6.7
-    intFlowerTime_s: 0.6
-  - Flowerspecies: White_clover
-    pollen_g/flower: 0.00014
-    nectar_ml/flower: 0.00038
-    concentration_mol/l: 0.97
+    corollaDepth: 6.7
+    interFlowerTime: 0.6
+  - name: White_clover
+    pollenPerFlower: 0.00014
+    nectarPerFlower: 0.00038
+    concentration: 0.97
     startDay: 151
     stopDay: 272
-    corollaDepth_mm: 2
-    intFlowerTime_s: 0.6
-  - Flowerspecies: White_dead_nettle
-    pollen_g/flower: 0.0007
-    nectar_ml/flower: 0.00217
-    concentration_mol/l: 0.75
+    corollaDepth: 2
+    interFlowerTime: 0.6
+  - name: White_dead_nettle
+    pollenPerFlower: 0.0007
+    nectarPerFlower: 0.00217
+    concentration: 0.75
     startDay: 120
     stopDay: 364
-    corollaDepth_mm: 7.7
-    intFlowerTime_s: 0.6
-  - Flowerspecies: White_mustard
-    pollen_g/flower: 0.00019
-    nectar_ml/flower: 0.00061
-    concentration_mol/l: 0.9
+    corollaDepth: 7.7
+    interFlowerTime: 0.6
+  - name: White_mustard
+    pollenPerFlower: 0.00019
+    nectarPerFlower: 0.00061
+    concentration: 0.9
     startDay: 152
     stopDay: 243
-    corollaDepth_mm: 4.2
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Wild_carrot
-    pollen_g/flower: 2e-05
-    nectar_ml/flower: 2e-05
-    concentration_mol/l: 0.88
+    corollaDepth: 4.2
+    interFlowerTime: 0.6
+  - name: Wild_carrot
+    pollenPerFlower: 2e-05
+    nectarPerFlower: 2e-05
+    concentration: 0.88
     startDay: 152
     stopDay: 243
-    corollaDepth_mm: 0
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Wild_radish
-    pollen_g/flower: 0.0007
-    nectar_ml/flower: 0.00016
-    concentration_mol/l: 2.24
+    corollaDepth: 0
+    interFlowerTime: 0.6
+  - name: Wild_radish
+    pollenPerFlower: 0.0007
+    nectarPerFlower: 0.00016
+    concentration: 2.24
     startDay: 121
     stopDay: 277
-    corollaDepth_mm: 11.96
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Wild_teasel
-    pollen_g/flower: 0.01
-    nectar_ml/flower: 0.00976
-    concentration_mol/l: 1.08
+    corollaDepth: 11.96
+    interFlowerTime: 0.6
+  - name: Wild_teasel
+    pollenPerFlower: 0.01
+    nectarPerFlower: 0.00976
+    concentration: 1.08
     startDay: 181
     stopDay: 242
-    corollaDepth_mm: 10
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Yarrow
-    pollen_g/flower: 0.00019
-    nectar_ml/flower: 3e-05
-    concentration_mol/l: 1.79
+    corollaDepth: 10
+    interFlowerTime: 0.6
+  - name: Yarrow
+    pollenPerFlower: 0.00019
+    nectarPerFlower: 3e-05
+    concentration: 1.79
     startDay: 152
     stopDay: 243
-    corollaDepth_mm: 2.4
-    intFlowerTime_s: 0.6
-  - Flowerspecies: Yellow_rattle
-    pollen_g/flower: 0.01
-    nectar_ml/flower: 0.00025
-    concentration_mol/l: 0.917323
+    corollaDepth: 2.4
+    interFlowerTime: 0.6
+  - name: Yellow_rattle
+    pollenPerFlower: 0.01
+    nectarPerFlower: 0.00025
+    concentration: 0.917323
     startDay: 121
     stopDay: 243
-    corollaDepth_mm: 13
-    intFlowerTime_s: 0.6
+    corollaDepth: 13
+    interFlowerTime: 0.6
 landscape: _SYSTEM_Example_Farm_Foodsources.yaml

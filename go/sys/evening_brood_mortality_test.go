@@ -16,8 +16,8 @@ func TestBroodMortality(t *testing.T) {
 	// larvae 29, queen pupae 47
 	bw := newBroodWorld(t, 1)
 	sp := bw.sp
-	for _, x := range []struct{ got, want float64 }{{sp.DevAgeHatchingMax_d, 10}, {sp.DevAgePupationMax_d, 20.8},
-		{sp.DevAgeEmergingMax_d, 34.7}, {sp.DevAge_Q_PupationMax_d, 29}, {sp.DevAge_Q_EmergingMax_d, 47}} {
+	for _, x := range []struct{ got, want float64 }{{sp.HatchingAgeMax, 10}, {sp.PupationAgeMax, 20.8},
+		{sp.EmergenceAgeMax, 34.7}, {sp.QueenPupationAgeMax, 29}, {sp.QueenEmergenceAgeMax, 47}} {
 		if !almostEqual(x.got, x.want) {
 			t.Errorf("maximum age %v, want %v", x.got, x.want)
 		}

@@ -20,18 +20,18 @@ import (
 // emergenceWorld is a small world for the tests of step 3: B_terrestris, two nest sites and the resources
 // that queenEmergence needs. Scaling 0.1 patches per metre (10 m per patch) as in the example farm.
 type emergenceWorld struct {
-	w         *ecs.World
-	sys       *queenEmergence
-	ticks     *globals.Ticks
-	file      *params.ParameterFile
-	derived   *params.Derived
-	tally     *tally
-	active    *globals.ActiveBees
-	species   int // index of B_terrestris
-	sp        *params.Species
-	ns        *globals.SpeciesNestSites // nest sites of B_terrestris
-	bigSite   ecs.Entity                // Grassland, 10000 m2 at (100, 100)
-	smallSite ecs.Entity                // Hedgerow, 100 m2 at (50.3, 50.2), radius 0.564 patches: only the patch centre (50, 50)
+	w          *ecs.World
+	sys        *queenEmergence
+	ticks      *globals.Ticks
+	parameters *params.Parameters
+	derived    *params.Derived
+	tally      *tally
+	active     *globals.ActiveBees
+	species    int // index of B_terrestris
+	sp         *params.Species
+	ns         *globals.SpeciesNestSites // nest sites of B_terrestris
+	bigSite    ecs.Entity                // Grassland, 10000 m2 at (100, 100)
+	smallSite  ecs.Entity                // Hedgerow, 100 m2 at (50.3, 50.2), radius 0.564 patches: only the patch centre (50, 50)
 }
 
 func newEmergenceWorld(t *testing.T, seed uint64) *emergenceWorld {
@@ -40,14 +40,14 @@ func newEmergenceWorld(t *testing.T, seed uint64) *emergenceWorld {
 	ew := &emergenceWorld{w: w}
 	ecs.AddResource(w, &resource.Rand{Source: rand.NewPCG(seed, 1)})
 	p := params.Default()
-	ew.file = &p.File
-	ew.file.MergeHedges = false
+	ew.parameters = &p.Parameters
+	ew.parameters.MergeHedges = false
 	ecs.AddResource(w, &p.World)
 	ecs.AddResource(w, &p.Constants)
-	ecs.AddResource(w, ew.file)
+	ecs.AddResource(w, ew.parameters)
 	ew.ticks = &globals.Ticks{Ticks: 10}
 	ecs.AddResource(w, ew.ticks)
-	ew.derived = &params.Derived{MortalityForager_per_s: 0}
+	ew.derived = &params.Derived{ForagerMortality: 0}
 	ecs.AddResource(w, ew.derived)
 	ecs.AddResource(w, &globals.Landscape{Scale: 0.1})
 	ew.tally = newTally(w)
@@ -135,7 +135,7 @@ func TestEmergenceSplitsCohort(t *testing.T) {
 
 func TestEmergenceWinterMortality(t *testing.T) {
 	ew := newEmergenceWorld(t, 2)
-	ew.file.WinterMortality = true
+	ew.parameters.WinterMortality = true
 	ew.sp.DailyNestSiteChance = 0
 	// relative weight 0.32: survival probability 0.32 (finding 33)
 	const n = 2000
@@ -205,7 +205,7 @@ func TestNestSearchFoundsColonies(t *testing.T) {
 func TestNestSearchMortality(t *testing.T) {
 	ew := newEmergenceWorld(t, 4)
 	ew.sp.DailyNestSiteChance = 0
-	ew.derived.MortalityForager_per_s = 1e-5 // "high"
+	ew.derived.ForagerMortality = 1e-5 // "high"
 	const n = 2000
 	for range n {
 		ew.addQueen(10, 1, 700)

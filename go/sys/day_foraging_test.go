@@ -70,9 +70,9 @@ func newForagingWorld(t *testing.T, seed uint64) (*activityWorld, ecs.Entity, *f
 	t.Helper()
 	aw := newActivityWorld(t, seed)
 	// netlogo/_SYSTEM_Example_Farm_Parameters.csv: Lambda_detectProb -0.005, ForagingMortalityFactor 1
-	aw.file.Lambda_detectProb = -0.005
-	aw.file.ForagingMortalityFactor = 1
-	ecs.GetResource[params.Derived](aw.w).MortalityForager_per_s = 0 // deterministic trips; mortality is tested separately
+	aw.parameters.DetectionLambda = -0.005
+	aw.parameters.ForagingMortalityFactor = 1
+	ecs.GetResource[params.Derived](aw.w).ForagerMortality = 0 // deterministic trips; mortality is tested separately
 	col := aw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) { s.Energy = 100 })
 	return aw, col, &aw.loop.foraging
 }
@@ -234,7 +234,7 @@ func TestForagingEmptiesFoodsource(t *testing.T) {
 		t.Errorf("personalTime_s %v, want %v (handling time 3600 s)", b.PersonalTime, trip+165)
 	}
 	_, s, _ := aw.colony(col)
-	want := 100 + 100*0.00582*1.34 - (600+3600*5*0.3)*aw.sp.FlightCosts_kJ_per_m_per_mg*100*3
+	want := 100 + 100*0.00582*1.34 - (600+3600*5*0.3)*aw.sp.FlightCosts*100*3
 	if !almostEqual(s.Energy, want) {
 		t.Errorf("energy store %v kJ, want %v", s.Energy, want)
 	}
@@ -282,7 +282,7 @@ func TestForagingSearchFails(t *testing.T) {
 	if b.Activity != activity.ReturningEmpty || b.PersonalTime != 500 || !fo.PollenSource.IsZero() {
 		t.Errorf("activity %v, personalTime_s %v, next foodsource %v", b.Activity, b.PersonalTime, fo.PollenSource)
 	}
-	if !almostEqual(100-s.Energy, 2500*aw.sp.FlightCosts_kJ_per_m_per_mg*100) {
+	if !almostEqual(100-s.Energy, 2500*aw.sp.FlightCosts*100) {
 		t.Errorf("energy paid %v kJ, want 0.0244", 100-s.Energy)
 	}
 }
@@ -290,8 +290,8 @@ func TestForagingSearchFails(t *testing.T) {
 func TestForagingMortality(t *testing.T) {
 	// [COST-01] 1 - (1 - 1e-05 * 100) ^ 500 = 0.394 with ForagingMortalityFactor = 100
 	aw, col, f := newForagingWorld(t, 3)
-	ecs.GetResource[params.Derived](aw.w).MortalityForager_per_s = 1e-05
-	aw.file.ForagingMortalityFactor = 100
+	ecs.GetResource[params.Derived](aw.w).ForagerMortality = 1e-05
+	aw.parameters.ForagingMortalityFactor = 100
 	n := 2000
 	for range n {
 		bee := aw.worker(col, 1)

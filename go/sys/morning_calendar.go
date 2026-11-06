@@ -22,13 +22,13 @@ import (
 // NetLogo: UpdateMorning_Proc.
 type calendarUpdate struct {
 	ticks    *globals.Ticks
-	weather  *params.Weather
+	weather  *params.ForagingPeriod
 	calendar globals.Calendar
 }
 
 func (s *calendarUpdate) Initialize(w *ecs.World) {
 	s.ticks = ecs.GetResource[globals.Ticks](w)
-	s.weather = ecs.GetResource[params.Weather](w)
+	s.weather = ecs.GetResource[params.ForagingPeriod](w)
 	ecs.AddResource(w, &s.calendar)
 	s.Update(w) // run at ticks = 0 [INIT-10]
 }
@@ -44,7 +44,7 @@ func (s *calendarUpdate) Update(w *ecs.World) {
 	if s.calendar.Day > 0 {
 		// [FPER] year of the run: 1 for ticks 1 to 365, 2 for 366 to 730, ...
 		year := int((s.ticks.Ticks-1)/365) + 1
-		s.calendar.ForagingPeriod = s.weather.ForagingPeriod_s(year, int(s.calendar.Day))
+		s.calendar.ForagingPeriod = s.weather.Get(year, int(s.calendar.Day))
 	}
 }
 

@@ -104,7 +104,7 @@ func (s *larvaeFeeding) feedColony(col ecs.Entity, myLarvae []ecs.Entity) {
 	}
 
 	// [FEED-03]
-	totalEnergyFedToday_kJ := totalPollenFedToday_g * s.constants.EnergyRequiredForPollenAssimilation_kJ_per_g
+	totalEnergyFedToday_kJ := totalPollenFedToday_g * s.constants.PollenAssimilationEnergy
 	stores.Pollen = stores.Pollen - totalPollenFedToday_g
 	if stores.Pollen < 0 {
 		// NetLogo: type "negative pollen store! Ticks: " show ticks (show adds the calling agent, by its who number).

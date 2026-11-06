@@ -25,10 +25,10 @@ import (
 //
 // NetLogo: QueensLeavingNestProc.
 type queensLeavingNest struct {
-	rng       *rand.Rand
-	file      *params.ParameterFile
-	constants *params.Constants
-	death     beeDeath
+	rng        *rand.Rand
+	parameters *params.Parameters
+	constants  *params.Constants
+	death      beeDeath
 
 	beeFilter *ecs.Filter1[comp.Bee]
 	beeMap    *ecs.Map3[comp.Bee, comp.Genetics, comp.Thresholds]
@@ -38,7 +38,7 @@ type queensLeavingNest struct {
 
 func (s *queensLeavingNest) Initialize(w *ecs.World) {
 	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
-	s.file = ecs.GetResource[params.ParameterFile](w)
+	s.parameters = ecs.GetResource[params.Parameters](w)
 	s.constants = ecs.GetResource[params.Constants](w)
 	s.death = newBeeDeath(w)
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
@@ -72,11 +72,11 @@ func (s *queensLeavingNest) Update(w *ecs.World) {
 			gen.Spermatheca = slices.Clone(maleGen.Alleles)
 		} else {
 			// mating with a male from outside
-			if !s.file.UnlimitedMales {
+			if !s.parameters.UnlimitedMales {
 				s.death.die(w, e, "Queen: no mating")
 				continue // finding 28 (see trans/netlogo-findings.md#finding-28)
 			}
-			foreignAllele := -1*util.RandomInt(s.rng, s.constants.N_ForeignAlleles) - 1 // -1, -2, ... -N_ForeignAlleles
+			foreignAllele := -1*util.RandomInt(s.rng, s.constants.ForeignAlleles) - 1 // -1, -2, ... -ForeignAlleles
 			gen.Spermatheca = append([]float64{foreignAllele}, gen.Spermatheca...)
 			if len(gen.Spermatheca) > 1 {
 				panic(fmt.Sprintf("Assertion violated in QueensLeavingNestProc: too many alleles here! %v", gen.Spermatheca))

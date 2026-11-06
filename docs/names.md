@@ -10,6 +10,7 @@ Rules:
 - No NetLogo suffixes (`Proc`, `REP`) or prefixes (`Foraging_`, `Development_`), Go spelling.
 - Unexported unless another package uses it.
 - No unit in the name. The unit stands in the doc comment, e.g. `// handling time of one load [s]`.
+- The keys of the run files are the Go names in lowerCamelCase (step F15c), their units are in the F15c tables.
 - The output columns keep their NetLogo names, so that the comparison with NetLogo can match them.
 
 ## Step F15a: parts, functions and methods in `go/sys`
@@ -102,8 +103,8 @@ suffix `List`. The doc comment of each field gives the unit and the NetLogo vari
 
 Unchanged: `Bee.Number`, `Stage`, `Caste`, `Activity`, `Mated`, `AdultAge`, `BroodAge`, `Genetics.MtDNA`,
 `Forager.CurrentFoodsource`, `PollenForager`, the flags and dates of `Colony`, `ColonyCounts.LarvaWorkerRatio`,
-`Foodsource.PatchType`, `StartDay`, `StopDay`, `Calendar.Day`, `Landscape.FoodsourcesFile` (follows the parameter
-in F15c), `Landscape.Masterpatches`, `Ticks`, `ActiveBees`, `NestSites`.
+`Foodsource.PatchType`, `StartDay`, `StopDay`, `Calendar.Day`, `Landscape.FoodsourcesFile` (`File` since
+F15c), `Landscape.Masterpatches`, `Ticks`, `ActiveBees`, `NestSites`.
 
 ### Bee (`go/comp/bee.go`)
 
@@ -213,3 +214,164 @@ Types: `globals.FoodsourcesToday` → `globals.Flowering`, `globals.Totals` → 
 | `(DailyOutput).TotalMapAreaREP` | [AREA] | `totalMapArea` |
 
 The fields of `obs.DailyTotals` keep the names of the output columns.
+
+## Step F15c: parameters and the keys of the run files
+
+All keys of the run file and the landscape file are the Go names in lowerCamelCase, without unit and `?`. The
+Go types `params.Parameters` and `params.SpeciesFile` carry the NetLogo column in the tag `netlogo` where it
+differs from the key: the converter `tools/netlogo2gobees` finds the columns by it. The tables are also the
+reference of the keys: the unit of a value stands only here and in the doc comment of the Go field.
+
+Types: `params.ParameterFile` → `params.Parameters` (field `Params.File` → `Params.Parameters`, the fields `file`
+of the systems → `parameters`), `params.Weather` → `params.ForagingPeriod` (method `ForagingPeriod_s` → `Get`,
+field `Years_s` → `Years`, `Input.Weather` → `Input.ForagingPeriod`).
+
+### Sections of the run file
+
+| gobees Go | NetLogo | gobees-fast Go (`input.Config`) | Key | Unit | Content |
+| --- | --- | --- | --- | --- | --- |
+| `Parameters` | the columns of the parameter file | `Parameters` | `parameters` |  | the model parameters |
+| `Output` | `KeepDeadColonies?` | `Output` | `output` |  | output options |
+| `InitialQueens` | `BeeSpeciesInitialQueensListAsString` | `InitialQueens` | `initialQueens` |  | species (`species`) and number of initial queens (`queens`) |
+| `ForagingPeriod_s` | `Weather` | `ForagingPeriod` | `foragingPeriod` | [s] | 365 values per year, the years repeat |
+| `StewardshipOptions` | from the `HabitatsFile` | `StewardshipOptions` | `stewardshipOptions` |  | names of the stewardship options |
+| `Species` | rows of the `BeespeciesFile` | `Species` | `species` |  | bee species |
+| `Flowers` | rows of the `FlowerspeciesFile` | `Flowers` | `flowers` |  | flower species |
+| `Landscape` | foodsources file of `MyMap` | `Landscape` | `landscape` |  | landscape file of the start |
+| `CropRotation` | `CropRotationListAsString` | `CropRotation` | `cropRotation` |  | landscape files of the crop rotation |
+
+### Section `parameters` (`params.Parameters`)
+
+| gobees Go | NetLogo | gobees-fast Go | Key | Unit | Meaning |
+| --- | --- | --- | --- | --- | --- |
+| `AbundanceBoost` | `AbundanceBoost` | `AbundanceBoost` | `abundanceBoost` |  | factor on the flower abundance of all foodsources |
+| `FoodSourceLimit` | `FoodSourceLimit` | `FoodsourceLimit` | `foodsourceLimit` | [queen trips] | minimum size of a foodsource |
+| `ForagingMortalityFactor` | `ForagingMortalityFactor` | `ForagingMortalityFactor` | `foragingMortalityFactor` |  | factor on the foraging mortality |
+| `ForagingMortalityModel` | `ForagingMortalityModel` | `ForagingMortalityModel` | `foragingMortalityModel` |  | "high", "intermediate" or "low" |
+| `InitialQueensModifierBehaviorSpace` | `InitialQueensModifierBehaviorSpace` | `InitialQueensFactor` | `initialQueensFactor` |  | factor on the initial number of queens |
+| `Lambda_detectProb` | `Lambda_detectProb` | `DetectionLambda` | `detectionLambda` | [1/m] | decay of the detection probability with distance |
+| `MaxHibernatingQueens` | `MaxHibernatingQueens` | `MaxHibernatingQueens` | `maxHibernatingQueens` |  | maximum number of hibernating queens on 1 January |
+| `MergeHedges` | `MergeHedges?` | `MergeHedges` | `mergeHedges` |  | merge small hedge patches |
+| `MinSizeFoodSources` | `MinSizeFoodSources?` | `LimitFoodsources` | `limitFoodsources` |  | set nectar or pollen amounts below foodsourceLimit to 0 |
+| `N_Badgers` | `N_Badgers` | `Badgers` | `badgers` |  | number of badgers |
+| `RemoveEmptyFoodSources` | `RemoveEmptyFoodSources?` | `RemoveEmptyFoodsources` | `removeEmptyFoodsources` |  | remove foodsources without nectar and pollen |
+| `SexLocus` | `SexLocus?` | `SexLocus` | `sexLocus` |  | simulate the sex locus (diploid males) |
+| `StopExtinct` | `StopExtinct?` | `StopExtinct` | `stopExtinct` |  | stop the run when the population is extinct |
+| `UnlimitedMales` | `UnlimitedMales?` | `UnlimitedMales` | `unlimitedMales` |  | queens always find a mate |
+| `WinterMortality` | `WinterMortality?` | `WinterMortality` | `winterMortality` |  | winter mortality of hibernating queens |
+
+### Section `output` (`params.Output`)
+
+| gobees Go | NetLogo | gobees-fast Go | Key | Unit | Meaning |
+| --- | --- | --- | --- | --- | --- |
+| `KeepDeadColonies` | `KeepDeadColonies?` | `KeepDeadColonies` | `keepDeadColonies` |  | count the dead colonies of all years |
+
+### Section `species` (`params.SpeciesFile`)
+
+| gobees Go | NetLogo | gobees-fast Go | Key | Unit | Meaning |
+| --- | --- | --- | --- | --- | --- |
+| `Name` | `name` | `Name` | `name` |  | name in initialQueens |
+| `Parasitic` | `(by the name Psithyrus)` | `Parasitic` | `parasitic` |  | cuckoo bumblebee |
+| `EmergingDay_mean` | `emergingDay_mean` | `EmergenceDayMean` | `emergenceDayMean` | [d] | mean day of the year of the emergence from hibernation |
+| `EmergingDay_sd` | `emergingDay_sd` | `EmergenceDaySD` | `emergenceDaySD` | [d] | its standard deviation |
+| `NestHabitatsList` | `nestHabitatsList` | `NestHabitats` | `nestHabitats` |  | habitat types of the nest sites |
+| `Proboscis_min_mm` | `proboscis_min_mm` | `ProboscisMin` | `proboscisMin` | [mm] |  |
+| `Proboscis_max_mm` | `proboscis_max_mm` | `ProboscisMax` | `proboscisMax` | [mm] |  |
+| `GrowthFactor` | `growthFactor` | `GrowthFactor` | `growthFactor` |  |  |
+| `SeasonStop` | `seasonStop` | `SeasonStop` | `seasonStop` | [day of the year] |  |
+| `MaxLifespanWorkers` | `maxLifespanWorkers` | `MaxLifespanWorkers` | `maxLifespanWorkers` | [d] |  |
+| `Batchsize` | `batchsize` | `BatchSize` | `batchSize` |  | eggs per batch |
+| `FlightVelocity_m_per_s` | `flightVelocity_m/s` | `FlightVelocity` | `flightVelocity` | [m/s] |  |
+| `SearchLength_m` | `searchLength_m` | `SearchLength` | `searchLength` | [m] | flight distance of a search trip |
+| `TimeUnloading` | `timeUnloading` | `UnloadingTime` | `unloadingTime` | [s] |  |
+| `SpecMax_cropVolume_myl` | `specMax_cropVolume_myl` | `MaxCropVolume` | `maxCropVolume` | [µl] | crop volume of the largest bee |
+| `SpecMax_pollenPellets_g` | `specMax_pollenPellets_g` | `MaxPollenPellets` | `maxPollenPellets` | [g] | pollen load of the largest bee |
+| `MinToMaxFactor` | `minToMaxFactor` | `MinToMaxFactor` | `minToMaxFactor` |  |  |
+| `DevAgeHatchingMin_d` | `devAgeHatchingMin_d` | `HatchingAgeMin` | `hatchingAgeMin` | [d] |  |
+| `DevAgePupationMin_d` | `devAgePupationMin_d` | `PupationAgeMin` | `pupationAgeMin` | [d] |  |
+| `DevAgeEmergingMin_d` | `devAgeEmergingMin_d` | `EmergenceAgeMin` | `emergenceAgeMin` | [d] |  |
+| `DevWeightEgg_mg` | `devWeightEgg_mg` | `EggWeight` | `eggWeight` | [mg] |  |
+| `DevWeightPupationMin_mg` | `devWeightPupationMin_mg` | `PupationWeightMin` | `pupationWeightMin` | [mg] |  |
+| `DevWeightPupationMax_mg` | `devWeightPupationMax_mg` | `PupationWeightMax` | `pupationWeightMax` | [mg] |  |
+| `PollenToBodymassFactor` | `pollenToBodymassFactor` | `PollenToBodymassFactor` | `pollenToBodymassFactor` |  |  |
+| `Dev_Q_DeterminationWeight_mg` | `dev_Q_DeterminationWeight_mg` | `QueenDeterminationWeight` | `queenDeterminationWeight` | [mg] |  |
+| `DevAge_Q_PupationMin_d` | `devAge_Q_PupationMin_d` | `QueenPupationAgeMin` | `queenPupationAgeMin` | [d] |  |
+| `DevWeight_Q_PupationMin_mg` | `devWeight_Q_PupationMin_mg` | `QueenPupationWeightMin` | `queenPupationWeightMin` | [mg] |  |
+| `DevWeight_Q_PupationMax_mg` | `devWeight_Q_PupationMax_mg` | `QueenPupationWeightMax` | `queenPupationWeightMax` | [mg] |  |
+| `DevAge_Q_EmergingMin_d` | `devAge_Q_EmergingMin_d` | `QueenEmergenceAgeMin` | `queenEmergenceAgeMin` | [d] |  |
+| `DailyNestSiteChance` | `dailyNestSiteChance` | `DailyNestSiteChance` | `dailyNestSiteChance` |  |  |
+
+### Section `flowers` (`params.FlowerSpecies`)
+
+| gobees Go | NetLogo | gobees-fast Go | Key | Unit | Meaning |
+| --- | --- | --- | --- | --- | --- |
+| `Name` | `Flowerspecies` | `Name` | `name` |  |  |
+| `Pollen_g_per_flower` | `pollen_g/flower` | `PollenPerFlower` | `pollenPerFlower` | [g] |  |
+| `Nectar_ml_per_flower` | `nectar_ml/flower` | `NectarPerFlower` | `nectarPerFlower` | [ml] |  |
+| `Concentration_mol_per_l` | `concentration_mol/l` | `Concentration` | `concentration` | [mol/l] | sugar concentration of the nectar |
+| `StartDay` | `startDay` | `StartDay` | `startDay` | [day of the year] | first day of the flowering period |
+| `StopDay` | `stopDay` | `StopDay` | `stopDay` | [day of the year] | first day after the flowering period |
+| `CorollaDepth_mm` | `corollaDepth_mm` | `CorollaDepth` | `corollaDepth` | [mm] |  |
+| `IntFlowerTime_s` | `intFlowerTime_s` | `InterFlowerTime` | `interFlowerTime` | [s] | time from one flower to the next |
+
+### Landscape file (`input.Landscape`, `input.Patch`)
+
+The keys `x` and `y` would need quotes (`y` is a boolean in YAML 1.1), so `xcor` and `ycor` stay. Until step F15b the keys were `metres_per_patch`, `size_sqm` and `flowerSpeciesList`. `params.FlowerPatch` (`Id_Beescout` → `ID`, `Area_sqm` → `Area`, `FlowerSpeciesList` → `Flowers`) and `sys.flowerPatch` (`Radius_m` → `Radius`, `NectarMax_myl` → `NectarMax`, `PollenMax_g` → `PollenMax`) follow.
+
+| gobees Go | NetLogo | gobees-fast Go | Key | Unit | Meaning |
+| --- | --- | --- | --- | --- | --- |
+| `MetresPerPatch` | `line 1` | `MetresPerPatch` | `metresPerPatch` | [m] | metres per NetLogo patch |
+| `Patches` | `lines 2 to n` | `Patches` | `patches` |  | the flower patches |
+| `Id` | `id` | `ID` | `id` |  | column 1 |
+| `PatchType` | `patchType` | `PatchType` | `patchType` |  | habitat type |
+| `X` | `xcor` | `X` | `xcor` | [NetLogo patches] |  |
+| `Y` | `ycor` | `Y` | `ycor` | [NetLogo patches] |  |
+| `Area_sqm` | `size_sqm` | `Area` | `area` | [m2] |  |
+| `FlowerSpeciesList` | `flowerSpeciesList` | `Flowers` | `flowers` |  | flower species and their abundance |
+
+### Derived values (`params.Derived`, `params.Species`, Go only)
+
+| gobees Go | NetLogo | gobees-fast Go | Unit |
+| --- | --- | --- | --- |
+| `Derived.BeeSpeciesInitialQueensList` | `BeeSpeciesInitialQueensList` | `Derived.InitialQueens` |  |
+| `Derived.SpeciesList` | `SpeciesList` | `Derived.SpeciesNames` |  |
+| `Derived.MortalityForager_per_s` | `MortalityForager_per_s` | `Derived.ForagerMortality` | [1/s] |
+| `Derived.FoodsourcesFile` | `FoodsourcesFile` | `Derived.StartLandscape` |  |
+| `globals.Landscape.FoodsourcesFile` | `FoodsourcesFile` | `globals.Landscape.File` |  |
+| `Derived.CSS_OptionsList` | `CSS_OptionsList` | `Derived.StewardshipOptions` |  |
+| `Derived.CropRotationList` | `CropRotationList` | `Derived.CropRotation` |  |
+| `Species.FlightCosts_kJ_per_m_per_mg` | `flightCosts_kJ/m/mg` | `Species.FlightCosts` | [kJ/(m mg)] |
+| `Species.DevQuotaIncubationToday_kJ` | `devQuotaIncubationToday_kJ` | `Species.DailyIncubationQuota` | [kJ] |
+| `Species.DevAgeHatchingMax_d` | `devAgeHatchingMax_d` | `Species.HatchingAgeMax` | [d] |
+| `Species.DevAgePupationMax_d` | `devAgePupationMax_d` | `Species.PupationAgeMax` | [d] |
+| `Species.DevAgeEmergingMax_d` | `devAgeEmergingMax_d` | `Species.EmergenceAgeMax` | [d] |
+| `Species.DevIncubationHatchingTH_kJ` | `devIncubationHatchingTH_kJ` | `Species.HatchingIncubation` | [kJ] |
+| `Species.DevIncubationPupationTH_kJ` | `devIncubationPupationTH_kJ` | `Species.PupationIncubation` | [kJ] |
+| `Species.DevIncubationEmergingTH_kJ` | `devIncubationEmergingTH_kJ` | `Species.EmergenceIncubation` | [kJ] |
+| `Species.Dev_larvalAge_QueenDetermination_d` | `dev_larvalAge_QueenDetermination_d` | `Species.QueenDeterminationAge` | [d] |
+| `Species.DevAge_Q_PupationMax_d` | `devAge_Q_PupationMax_d` | `Species.QueenPupationAgeMax` | [d] |
+| `Species.DevAge_Q_EmergingMax_d` | `devAge_Q_EmergingMax_d` | `Species.QueenEmergenceAgeMax` | [d] |
+| `Species.DevIncubation_Q_PupationTH_kJ` | `devIncubation_Q_PupationTH_kJ` | `Species.QueenPupationIncubation` | [kJ] |
+| `Species.DevIncubation_Q_EmergingTH_kJ` | `devIncubation_Q_EmergingTH_kJ` | `Species.QueenEmergenceIncubation` | [kJ] |
+| `Species.MinPollenStore_g` | `minPollenStore_g` | `Species.MinPollenStore` | [g] |
+
+### Constants (`params.Constants`, Go only, keys with step F17)
+
+| gobees Go | NetLogo | gobees-fast Go | Unit |
+| --- | --- | --- | --- |
+| `CallItaDay_s` | `CallItaDay_s` | `CallItADay` | [s] |
+| `EnergyRequiredForPollenAssimilation_kJ_per_g` | `EnergyRequiredForPollenAssimilation_kJ_per_g` | `PollenAssimilationEnergy` | [kJ/g] |
+| `EnergySucrose_kJ_per_mymol` | `EnergySucrose_kJ/mymol` | `SucroseEnergy` | [kJ/µmol] |
+| `ForagingRangeMax_m` | `ForagingRangeMax_m` | `MaxForagingRange` | [m] |
+| `GetUpTime_s` | `GetUpTime_s` | `GetUpTime` | [s] |
+| `LarvaWorkerRatioTH` | `LarvaWorkerRatioTH` | `LarvaWorkerRatioLimit` |  |
+| `MetabolicRateFlight_W_per_kg` | `MetabolicRateFlight_W/kg` | `FlightMetabolicRate` | [W/kg] |
+| `MortalityAdultsBackground_daily` | `MortalityAdultsBackground_daily` | `AdultBackgroundMortality` | [1/d] |
+| `N_ForeignAlleles` | `N_ForeignAlleles` | `ForeignAlleles` |  |
+| `NestSearchTime_h` | `NestSearchTime_h` | `NestSearchTime` | [h] |
+| `QueenDestinedEggsBeforeSP_d` | `QueenDestinedEggsBeforeSP_d` | `QueenEggsBeforeSwitchPoint` | [d] |
+| `Sunrise_s` | `Sunrise_s` | `Sunrise` | [s] |
+
+Unchanged: `DailySwitchProbability`, `EnergyFactorOnFlower`, `MaxLifespanMales`, `NotSetHigh`, `NotSetLow`.
+Values that the code still converts at run time (`NestSearchTime` in hours, `nectarPerFlower` in ml, the
+constants written as `24 * 3600`) keep their unit until a step of their own.

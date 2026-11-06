@@ -60,7 +60,7 @@ func (s *larvaeNeeds) Update(w *ecs.World) {
 		stores := s.storesMap.Get(col)
 		stores.LarvaePollenNeedToday = pollenNeedMyColony_g
 		// NOTE: only the energy for the larvae's pollen, see the annotation.
-		stores.EnergyNeedToday = stores.LarvaePollenNeedToday * s.constants.EnergyRequiredForPollenAssimilation_kJ_per_g
+		stores.EnergyNeedToday = stores.LarvaePollenNeedToday * s.constants.PollenAssimilationEnergy
 	}
 }
 
@@ -71,8 +71,8 @@ func (s *larvaeNeeds) Finalize(w *ecs.World) {}
 // (myID = who), so it takes the larva and its species.
 func maxWeightGainToday(b *comp.Bee, sp *params.Species) float64 {
 	// [WGAIN-01]
-	memoQPupationMax := sp.DevWeight_Q_PupationMax_mg
-	memoWPupationMax := sp.DevWeightPupationMax_mg
+	memoQPupationMax := sp.QueenPupationWeightMax
+	memoWPupationMax := sp.PupationWeightMax
 	// float64(...) forces rounding after the multiplication, as in Java (no fused multiply-add, see
 	// CompetitionPointDateREP).
 	maxWeightGain_mg := float64(b.Weight*sp.GrowthFactor) - b.Weight

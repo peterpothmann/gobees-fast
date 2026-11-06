@@ -57,7 +57,7 @@ func (s *cropRotation) Initialize(w *ecs.World) {
 
 func (s *cropRotation) Update(w *ecs.World) {
 	// [MORN-09]
-	if s.calendar.Day == 365 && len(s.derived.CropRotationList) > 1 {
+	if s.calendar.Day == 365 && len(s.derived.CropRotation) > 1 {
 		s.rotate(w)
 	}
 }
@@ -68,9 +68,9 @@ func (s *cropRotation) Finalize(w *ecs.World) {}
 func (s *cropRotation) rotate(w *ecs.World) {
 	// [CROP-01] Worked example (list chosen by hand): 2 files, ticks 365: year 1, item 1; ticks 730: item 0.
 	year := math.Ceil(float64(s.ticks.Ticks) / 365)
-	nMaps := len(s.derived.CropRotationList)
+	nMaps := len(s.derived.CropRotation)
 	mapToUse := int(year) % nMaps // remainder: ticks > 0, so no negative values
-	s.landscape.FoodsourcesFile = s.derived.CropRotationList[mapToUse]
+	s.landscape.File = s.derived.CropRotation[mapToUse]
 
 	// [CROP-02] all foodsources die
 	dead := []ecs.Entity{}
@@ -105,7 +105,7 @@ func (s *cropRotation) rotate(w *ecs.World) {
 	}
 
 	// [CROP-03] the new landscape: new who numbers, random numbers for the hedges and layers
-	createFoodsources(w, s.landscape.FoodsourcesFile, s.landscape)
+	createFoodsources(w, s.landscape.File, s.landscape)
 
 	// per species the nest sites and their area as in [SPEC-06].
 	// nestHabitatsList is NOT expanded again [SPEC-04]: it keeps the habitat types of the first landscape.

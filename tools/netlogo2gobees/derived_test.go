@@ -55,8 +55,8 @@ func TestConvertExampleFarm(t *testing.T) {
 		t.Fatal(err)
 	}
 	c := conv.Config
-	if c.Parameters != wantExampleFarmParameters.ParameterFile {
-		t.Errorf("Parameters:\n got  %+v\n want %+v", c.Parameters, wantExampleFarmParameters.ParameterFile)
+	if c.Parameters != wantExampleFarmParameters.Parameters {
+		t.Errorf("Parameters:\n got  %+v\n want %+v", c.Parameters, wantExampleFarmParameters.Parameters)
 	}
 	// [QINI] "B_terrestris 500"
 	if !reflect.DeepEqual(c.InitialQueens, []params.SpeciesQueens{{Species: "B_terrestris", Queens: 500}}) {
@@ -66,8 +66,8 @@ func TestConvertExampleFarm(t *testing.T) {
 		t.Errorf("StewardshipOptions = %q, want %q", c.StewardshipOptions, wantCSOList)
 	}
 	// [FPER] "Constant 8 hrs"
-	if len(c.ForagingPeriod_s) != 1 || len(c.ForagingPeriod_s[0]) != 365 || c.ForagingPeriod_s[0][100] != 28800 {
-		t.Errorf("ForagingPeriod_s: want one year of 28800 s")
+	if len(c.ForagingPeriod) != 1 || len(c.ForagingPeriod[0]) != 365 || c.ForagingPeriod[0][100] != 28800 {
+		t.Errorf("ForagingPeriod: want one year of 28800 s")
 	}
 	// all rows of the species and flower files; their values are checked in TestParseSpeciesFileExample and
 	// TestParseFlowerspeciesFileExample
@@ -83,8 +83,8 @@ func TestConvertExampleFarm(t *testing.T) {
 	// Line 4: 0 "Hedgerow" 105 130 175 200 [["Average_Willow" 1.275] ...] 20  "no info": colour, perimeter and info
 	// are not converted
 	p := l.Patches[0]
-	if p.Id != 0 || p.PatchType != "Hedgerow" || p.X != 130 || p.Y != 175 || p.Area_sqm != 200 ||
-		len(p.FlowerSpeciesList) != 33 || p.FlowerSpeciesList[0] != (input.FlowerEntry{Name: "Average_Willow", Value: 1.275, HasValue: true}) {
+	if p.ID != 0 || p.PatchType != "Hedgerow" || p.X != 130 || p.Y != 175 || p.Area != 200 ||
+		len(p.Flowers) != 33 || p.Flowers[0] != (input.FlowerEntry{Name: "Average_Willow", Value: 1.275, HasValue: true}) {
 		t.Errorf("first flower patch = %+v", p)
 	}
 }

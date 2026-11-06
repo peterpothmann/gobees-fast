@@ -12,7 +12,7 @@ import (
 func egglayingStimulus(stores *comp.ColonyStores, counts *comp.ColonyCounts, sp *params.Species) float64 {
 	// [STEG-01]
 	egglayingStim := 0.0
-	if (stores.Pollen > sp.MinPollenStore_g && (counts.Eggs+counts.Larvae) == 0) || counts.Adults > 1 {
+	if (stores.Pollen > sp.MinPollenStore && (counts.Eggs+counts.Larvae) == 0) || counts.Adults > 1 {
 		egglayingStim = 1
 	}
 	return egglayingStim
@@ -22,7 +22,7 @@ func egglayingStimulus(stores *comp.ColonyStores, counts *comp.ColonyCounts, sp 
 func nursingStimulus(stores *comp.ColonyStores, counts *comp.ColonyCounts, sp *params.Species) float64 {
 	// [STNU-01] NetLogo sets nursingStim to 0 twice, gobees-fast once.
 	nursingStim := 0.0
-	incubationRequiredToday_kJ := sp.DevQuotaIncubationToday_kJ * float64(counts.Eggs+counts.Larvae+counts.Pupae)
+	incubationRequiredToday_kJ := sp.DailyIncubationQuota * float64(counts.Eggs+counts.Larvae+counts.Pupae)
 	if incubationRequiredToday_kJ > stores.IncubationToday {
 		nursingStim = 1
 	}
@@ -61,7 +61,7 @@ func pollenStimulus(stores *comp.ColonyStores, sp *params.Species, daytime_s, su
 	storeSize_d := 5.0
 	pollenStimTH := 0.005
 	// [STPO-01]
-	stores.IdealPollen = float64(stores.LarvaePollenNeedToday*storeSize_d) + sp.MinPollenStore_g
+	stores.IdealPollen = float64(stores.LarvaePollenNeedToday*storeSize_d) + sp.MinPollenStore
 	if stores.IdealPollen < 0 {
 		panic("Negative idealPollenStore_kJ! (StimForagingPollenREP)")
 	}
