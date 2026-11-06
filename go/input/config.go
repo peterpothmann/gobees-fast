@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"strings"
 
 	"gobees/params"
 
@@ -16,12 +17,17 @@ import (
 // into run files.
 //
 // All keys are lowerCamelCase, the NetLogo names are in docs/names.md and in the tag `netlogo` of the fields that
-// the converter maps by name. A key missing in the file keeps its zero value, an unknown key is an error.
+// the converter maps by name. A key missing in the file keeps its zero value, except in the section constants,
+// which must hold every key. An unknown key is an error.
 type Config struct {
 	Parameters params.Parameters `yaml:"parameters"`
 
 	// Output are the options of the output. NetLogo: the parameter KeepDeadColonies?.
 	Output params.Output `yaml:"output"`
+
+	// Constants are the values that NetLogo hard-codes and its parameter files cannot change. The section must hold
+	// every key (checkComplete), so that no value of a run comes from the code unseen.
+	Constants params.Constants `yaml:"constants"`
 
 	// InitialQueens are the species and their initial queens, in this order (NetLogo:
 	// BeeSpeciesInitialQueensListAsString).
@@ -161,12 +167,112 @@ func decodeStrict(r io.Reader, v any) error {
 	if err := yaml.Unmarshal(data, &root); err != nil {
 		return err
 	}
-	return checkWhole(&root, reflect.TypeOf(v).Elem(), "")
+	if err := checkWhole(&root, reflect.TypeOf(v).Elem(), ""); err != nil {
+		return err
+	}
+	if _, ok := v.(*Config); ok {
+		return checkConstants(&root)
+	}
+	return nil
 }
 
-// WriteConfig writes a run file.
+// checkConstants checks that the run file root holds the section constants with every key of params.Constants.
+func checkConstants(root *yaml.Node) error {
+	n := mappingValue(root.Content[0], constantsKey)
+	if n == nil {
+		return fmt.Errorf("%s: missing, the section must hold every constant (the converter writes it)", constantsKey)
+	}
+	return checkComplete(n, reflect.TypeFor[params.Constants](), constantsKey)
+}
+
+// checkComplete checks that the mapping n holds every key of the struct type t, recursively. path is the key of
+// n in the error messages.
+func checkComplete(n *yaml.Node, t reflect.Type, path string) error {
+	if n.Kind != yaml.MappingNode {
+		return fmt.Errorf("line %d: %s: expected a mapping", n.Line, path)
+	}
+	for i := range t.NumField() {
+		f := t.Field(i)
+		key, _, _ := strings.Cut(f.Tag.Get("yaml"), ",")
+		value := mappingValue(n, key)
+		if value == nil {
+			return fmt.Errorf("line %d: %s.%s: missing, the section %s must hold every key", n.Line, path, key, constantsKey)
+		}
+		if f.Type.Kind() == reflect.Struct {
+			if err := checkComplete(value, f.Type, path+"."+key); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// mappingValue returns the value of key in the mapping n, or nil.
+func mappingValue(n *yaml.Node, key string) *yaml.Node {
+	if n.Kind != yaml.MappingNode {
+		return nil
+	}
+	for i := 0; i+1 < len(n.Content); i += 2 {
+		if n.Content[i].Value == key {
+			return n.Content[i+1]
+		}
+	}
+	return nil
+}
+
+// constantsKey is the key of the section constants in a run file.
+const constantsKey = "constants"
+
+// constantsComment is the comment above the section constants.
+const constantsComment = "Fixed in the NetLogo code, not settable in NetLogo's parameter files. Defaults: the NetLogo values.\n" +
+	"Every key is needed. The comment at a key gives unit and source."
+
+// WriteConfig writes a run file. The section constants gets a comment above it and, at each key, the tag doc of the
+// field (unit and source).
 func WriteConfig(w io.Writer, c Config) error {
-	return encode(w, c)
+	return WriteConfigNotes(w, c, nil)
+}
+
+// WriteConfigNotes writes a run file as WriteConfig and adds notes to the comments of keys of the section
+// constants. notes holds the note by the path of the key below constants, e.g. "foraging.maxForagingRange".
+func WriteConfigNotes(w io.Writer, c Config, notes map[string]string) error {
+	n := &yaml.Node{}
+	if err := n.Encode(c); err != nil {
+		return err
+	}
+	for i := 0; i+1 < len(n.Content); i += 2 {
+		if n.Content[i].Value == constantsKey {
+			n.Content[i].HeadComment = constantsComment
+			commentKeys(n.Content[i+1], reflect.TypeFor[params.Constants](), "", notes)
+		}
+	}
+	return encode(w, n)
+}
+
+// commentKeys sets the tag doc of each field of the struct type t as line comment of its key in the mapping n,
+// recursively, with the note of notes for the path of the key appended.
+func commentKeys(n *yaml.Node, t reflect.Type, path string, notes map[string]string) {
+	for i := range t.NumField() {
+		f := t.Field(i)
+		key, _, _ := strings.Cut(f.Tag.Get("yaml"), ",")
+		keyPath := key
+		if path != "" {
+			keyPath = path + "." + key
+		}
+		value := mappingValue(n, key)
+		if value == nil {
+			continue
+		}
+		if f.Type.Kind() == reflect.Struct {
+			commentKeys(value, f.Type, keyPath, notes)
+			continue
+		}
+		comment := f.Tag.Get("doc")
+		if note := notes[keyPath]; note != "" {
+			comment = strings.TrimPrefix(comment+". "+note, ". ")
+		}
+		value.LineComment = comment
+	}
 }
 
 // WriteLandscape writes a landscape file.

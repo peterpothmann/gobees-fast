@@ -46,8 +46,8 @@ func (s *initialQueensSetup) Initialize(w *ecs.World) {
 		// ORDER: irrelevant, each queen only uses her own random draws.
 		for range newQueens {
 			bee := comp.Bee{
-				AdultAge: 180,
-				BroodAge: 36,
+				AdultAge: constants.InitialQueens.AdultAge,
+				BroodAge: constants.InitialQueens.BroodAge,
 				Caste:    caste.Queen,
 				Mated:    true,
 				Number:   1,
@@ -56,12 +56,12 @@ func (s *initialQueensSetup) Initialize(w *ecs.World) {
 				Activity: activity.Hibernate,
 				// -3599 to 3600 s, no effect: the morning routine sets a new personal time for every
 				// active bee, and hibernating queens are not active.
-				PersonalTime: randomInt(rng, 2*3600) + (constants.GetUpTime - 3600),
+				PersonalTime: randomInt(rng, 2*3600) + (constants.Activities.GetUpTime - 3600),
 			}
 			genetics := comp.Genetics{
-				MtDNA:       randomFloat(rng, 139.9),
-				Alleles:     []float64{randomFloat(rng, 139.9), randomFloat(rng, 139.9)},
-				Spermatheca: []float64{randomFloat(rng, 139.9)},
+				MtDNA:       randomFloat(rng, constants.InitialQueens.AlleleRange),
+				Alleles:     []float64{randomFloat(rng, constants.InitialQueens.AlleleRange), randomFloat(rng, constants.InitialQueens.AlleleRange)},
+				Spermatheca: []float64{randomFloat(rng, constants.InitialQueens.AlleleRange)},
 			}
 			// emergingDate starts at 0, so it is drawn at least once. In the first year the absolute day
 			// is the day of the year.
@@ -78,12 +78,12 @@ func (s *initialQueensSetup) Initialize(w *ecs.World) {
 			// no foodsource known yet (zero entities, empty lists)
 			forager := comp.Forager{
 				GlossaLength:       proboscisLength(bee.Weight, sp),
-				CropVolume:         cropVolume(bee.Weight, sp),
-				PollenPellets:      pollenLoad(bee.Weight, sp),
+				CropVolume:         cropVolume(bee.Weight, sp, &constants.Foraging),
+				PollenPellets:      pollenLoad(bee.Weight, sp, &constants.Foraging),
 				KnownNectarPatches: []ecs.Entity{},
 				KnownPollenPatches: []ecs.Entity{},
 			}
-			th := thresholds(sitQueenInitiationPhase)
+			th := thresholds(&constants.Thresholds, sitQueenInitiationPhase)
 			beeMapper.NewEntity(&comp.Position{}, &bee, &genetics, &th, &forager, &comp.Development{})
 		}
 	}

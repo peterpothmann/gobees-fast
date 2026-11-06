@@ -8,13 +8,8 @@ import (
 	"gobees/params"
 )
 
-// Threshold types and situations of thresholdLevel, as the NetLogo strings.
+// Situations of thresholds, as the NetLogo strings.
 const (
-	thEggLaying      = "eggLaying"
-	thPollenForaging = "pollenForaging"
-	thNectarForaging = "nectarForaging"
-	thNursing        = "nursing"
-
 	sitEgg                  = "egg"
 	sitWorker               = "worker"
 	sitYoungQueen           = "youngQueen"
@@ -23,60 +18,29 @@ const (
 	sitPsith                = "Psith"
 )
 
-// thresholdTable holds the threshold of each type and situation. NotSetHigh means: never.
-var thresholdTable = map[string]map[string]float64{
-	thEggLaying: {
-		sitEgg:                  params.NotSetHigh,
-		sitWorker:               params.NotSetHigh,
-		sitYoungQueen:           params.NotSetHigh,
-		sitQueenInitiationPhase: 0.1,
-		sitQueenSocialPhase:     0,
-		sitPsith:                0.2,
-	},
-	thPollenForaging: {
-		sitEgg:                  params.NotSetHigh,
-		sitWorker:               0.9,
-		sitYoungQueen:           params.NotSetHigh,
-		sitQueenInitiationPhase: 0.7,
-		sitQueenSocialPhase:     params.NotSetHigh,
-		sitPsith:                params.NotSetHigh,
-	},
-	thNectarForaging: {
-		sitEgg:                  params.NotSetHigh,
-		sitWorker:               0.9,
-		sitYoungQueen:           params.NotSetHigh,
-		sitQueenInitiationPhase: 0.7,
-		sitQueenSocialPhase:     params.NotSetHigh,
-		sitPsith:                params.NotSetHigh,
-	},
-	thNursing: {
-		sitEgg:                  params.NotSetHigh,
-		sitWorker:               0.9,
-		sitYoungQueen:           params.NotSetHigh,
-		sitQueenInitiationPhase: 0.5,
-		sitQueenSocialPhase:     0.9,
-		sitPsith:                params.NotSetHigh,
-	},
-}
-
-// thresholdLevel returns the threshold of a task type in a situation.
-// An unknown type or situation is an assertion (NetLogo: "TH not set!").
-func thresholdLevel(thType, situation string) float64 {
-	th, ok := thresholdTable[thType][situation]
-	if !ok {
-		panic(fmt.Sprintf("Assertion violated in thresholdLevel: TH not set! (%s, %s)", thType, situation))
+// thresholds returns the four thresholds of a situation, from the values of the run file c. A task that is not
+// possible in a situation has the threshold NotSetHigh, i.e. never. An unknown situation is an assertion (NetLogo:
+// "TH not set!").
+func thresholds(c *params.Thresholds, situation string) comp.Thresholds {
+	never := params.NotSetHigh
+	switch situation {
+	case sitEgg, sitYoungQueen:
+		return comp.Thresholds{Egglaying: never, NectarForaging: never, PollenForaging: never, Nursing: never}
+	case sitWorker:
+		return comp.Thresholds{Egglaying: never, NectarForaging: c.NectarForaging.Worker,
+			PollenForaging: c.PollenForaging.Worker, Nursing: c.Nursing.Worker}
+	case sitQueenInitiationPhase:
+		return comp.Thresholds{Egglaying: c.EggLaying.QueenInitiationPhase,
+			NectarForaging: c.NectarForaging.QueenInitiationPhase, PollenForaging: c.PollenForaging.QueenInitiationPhase,
+			Nursing: c.Nursing.QueenInitiationPhase}
+	case sitQueenSocialPhase:
+		return comp.Thresholds{Egglaying: c.EggLaying.QueenSocialPhase, NectarForaging: never, PollenForaging: never,
+			Nursing: c.Nursing.QueenSocialPhase}
+	case sitPsith:
+		return comp.Thresholds{Egglaying: c.EggLaying.Psithyrus, NectarForaging: never, PollenForaging: never,
+			Nursing: never}
 	}
-	return th
-}
-
-// thresholds returns all four thresholds of a situation.
-func thresholds(situation string) comp.Thresholds {
-	return comp.Thresholds{
-		Egglaying:      thresholdLevel(thEggLaying, situation),
-		NectarForaging: thresholdLevel(thNectarForaging, situation),
-		PollenForaging: thresholdLevel(thPollenForaging, situation),
-		Nursing:        thresholdLevel(thNursing, situation),
-	}
+	panic(fmt.Sprintf("Assertion violated in thresholds: TH not set! (%s)", situation))
 }
 
 // proboscisLength returns the glossa length of a bee from her weight [mm]: linear between the minimum worker weight
@@ -93,18 +57,12 @@ func proboscisLength(weight float64, sp *params.Species) float64 {
 	return length
 }
 
-// Factors of the crop volume and the pollen load.
-const (
-	beeWeightToLoadFactor = 0.402      // Ings et al. 2006, nectar loads
-	cropToPelletFactor    = 0.015 / 50 // [g/µl], BEEHAVE: 50 microlitres nectar load, 0.015 g pollen load
-)
-
 // cropVolume returns the crop volume of a bee of weight weight_mg [µl]. A result of 0 (weight 0) is an
 // assertion, as in NetLogo. weight is in [mg].
 //
 // NetLogo: CropAndPelletSizeREP "nectar".
-func cropVolume(weight float64, sp *params.Species) float64 {
-	result := math.Min(sp.MaxCropVolume, weight*beeWeightToLoadFactor)
+func cropVolume(weight float64, sp *params.Species, c *params.ForagingConstants) float64 {
+	result := math.Min(sp.MaxCropVolume, weight*c.CropFactor)
 	if result == 0 {
 		panic("Assertion violated: Error in cropVolume")
 	}
@@ -115,8 +73,8 @@ func cropVolume(weight float64, sp *params.Species) float64 {
 // assertion, as in NetLogo. weight is in [mg].
 //
 // NetLogo: CropAndPelletSizeREP "pollen".
-func pollenLoad(weight float64, sp *params.Species) float64 {
-	result := math.Min(sp.MaxPollenPellets, weight*beeWeightToLoadFactor*cropToPelletFactor)
+func pollenLoad(weight float64, sp *params.Species, c *params.ForagingConstants) float64 {
+	result := math.Min(sp.MaxPollenPellets, weight*c.CropFactor*c.PelletFactor)
 	if result == 0 {
 		panic("Assertion violated: Error in pollenLoad")
 	}
@@ -124,7 +82,8 @@ func pollenLoad(weight float64, sp *params.Species) float64 {
 }
 
 // winterMortalityProb returns the probability of a queen to SURVIVE the winter (despite its name):
-// 0.64 / (1 + e^(-22 * (relative weight - 0.32))), the same curve for all species.
+// 0.64 / (1 + e^(-22 * (relative weight - 0.32))), the same curve for all species (Beekman et al. 1998). The
+// coefficients of the fitted curve stay in the code.
 // weight is in [mg].
 func winterMortalityProb(weight float64, sp *params.Species) float64 {
 	minW := sp.QueenPupationWeightMin

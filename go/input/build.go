@@ -18,13 +18,14 @@ func Build(c Config, landscapes map[string]Landscape) (params.Params, error) {
 	p := params.Default()
 	p.Parameters = c.Parameters
 	p.Output = c.Output
+	p.Constants = c.Constants
 	in := params.Input{}
 
 	species := make([]string, len(c.InitialQueens))
 	for i, q := range c.InitialQueens {
 		species[i] = q.Species
 	}
-	mortality, err := mortalityForager(c.Parameters.ForagingMortalityModel)
+	mortality, err := mortalityForager(c.Parameters.ForagingMortalityModel, &c.Constants.Foraging.Mortality)
 	if err != nil {
 		return p, err
 	}
@@ -77,16 +78,16 @@ func Build(c Config, landscapes map[string]Landscape) (params.Params, error) {
 	return p, nil
 }
 
-// mortalityForager returns the foraging mortality per second.
+// mortalityForager returns the foraging mortality per second of the model "high", "intermediate" or "low".
 // Any other model name is an error.
-func mortalityForager(model string) (float64, error) {
+func mortalityForager(model string, m *params.ForagingMortality) (float64, error) {
 	switch model {
 	case "high":
-		return 1.0e-05, nil // BEEHAVE value, Visscher & Dukas 1997
+		return m.High, nil
 	case "intermediate":
-		return 2.14e-06, nil // Schmid-Hempel & Heeb 1991
+		return m.Intermediate, nil
 	case "low":
-		return 2.75e-07, nil // Stelzer et al. 2010
+		return m.Low, nil
 	}
 	return 0, fmt.Errorf("unknown ForagingMortalityModel %q (expected \"high\", \"intermediate\" or \"low\")", model)
 }
@@ -119,22 +120,22 @@ func deriveSpecies(s Species, constants *params.Constants) params.Species {
 	sp := params.Species{SpeciesFile: s}
 	sp.NestHabitats = slices.Clone(s.NestHabitats)
 	sp.EmergenceDaySD = math.Floor(sp.EmergenceDaySD + 0.5) // rounded to a whole day, .5 up
-	sp.FlightCosts = constants.FlightMetabolicRate / sp.FlightVelocity / (1000 * 1000 * 1000)
+	sp.FlightCosts = constants.Foraging.FlightMetabolicRate / sp.FlightVelocity / (1000 * 1000 * 1000)
 
-	sp.DailyIncubationQuota = 10 / (1.5 * float64(sp.BatchSize))
+	sp.DailyIncubationQuota = constants.Colony.DailyIncubation / (constants.Colony.IncubationBatches * float64(sp.BatchSize))
 	sp.HatchingAgeMax = sp.HatchingAgeMin * sp.MinToMaxFactor
 	sp.PupationAgeMax = sp.PupationAgeMin*sp.MinToMaxFactor - sp.HatchingAgeMin
 	sp.EmergenceAgeMax = sp.EmergenceAgeMin*sp.MinToMaxFactor - sp.PupationAgeMin
 	sp.HatchingIncubation = sp.DailyIncubationQuota * sp.HatchingAgeMin
 	sp.PupationIncubation = sp.DailyIncubationQuota * sp.PupationAgeMin
 	sp.EmergenceIncubation = sp.DailyIncubationQuota * sp.EmergenceAgeMin
-	sp.QueenDeterminationAge = 3
+	sp.QueenDeterminationAge = constants.Colony.QueenDeterminationAge
 	sp.QueenPupationAgeMax = sp.QueenPupationAgeMin*sp.MinToMaxFactor - sp.HatchingAgeMin
 	sp.QueenEmergenceAgeMax = sp.QueenEmergenceAgeMin*sp.MinToMaxFactor - sp.QueenPupationAgeMin
 	sp.QueenPupationIncubation = sp.DailyIncubationQuota * sp.QueenPupationAgeMin
 	sp.QueenEmergenceIncubation = sp.DailyIncubationQuota * sp.QueenEmergenceAgeMin
 
-	sp.MinPollenStore = 0.5 * 0.001 * sp.PupationWeightMin * float64(sp.BatchSize) / sp.PollenToBodymassFactor
+	sp.MinPollenStore = constants.Colony.MinPollenStoreBatches * 0.001 * sp.PupationWeightMin * float64(sp.BatchSize) / sp.PollenToBodymassFactor
 	return sp
 }
 

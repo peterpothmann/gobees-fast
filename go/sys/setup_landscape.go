@@ -50,6 +50,7 @@ func (s *landscapeSetup) Finalize(w *ecs.World) {}
 // Called by landscapeSetup and by cropRotation.rotate.
 func createFoodsources(w *ecs.World, foodsourcesFile string, landscape *globals.Landscape) {
 	file := ecs.GetResource[params.Parameters](w)
+	constants := ecs.GetResource[params.Constants](w)
 	in := ecs.GetResource[params.Input](w)
 	derived := ecs.GetResource[params.Derived](w)
 	rng := rand.New(ecs.GetResource[resource.Rand](w))
@@ -77,14 +78,14 @@ func createFoodsources(w *ecs.World, foodsourcesFile string, landscape *globals.
 		kept[i] = p
 	}
 
-	// Merge small hedges into the nearest non-hedge flower patch of at least 6500 m2, and merge all hedges linked to the
+	// Merge small hedges into the nearest non-hedge flower patch of at least MinMergeArea, and merge all hedges linked to the
 	// same patch into the largest of them.
 	if file.MergeHedges {
-		mergeHedges(kept, rng)
+		mergeHedges(kept, constants.Landscape.MinMergeArea, rng)
 	}
 
 	// in.Flowers is nil if FlowerspeciesFile is "No Input File".
-	masterpatches, err := createLayers(w, kept, in.Flowers, file, derived.StewardshipOptions, rng)
+	masterpatches, err := createLayers(w, kept, in.Flowers, file, &constants.Landscape, derived.StewardshipOptions, rng)
 	if err != nil {
 		panic(err)
 	}
@@ -108,10 +109,9 @@ func precision(x float64, places int) float64 {
 	return math.Round(x*f) / f
 }
 
-// mergeHedges links every hedge to its nearest non-hedge flower patch of at least 6500 m2 and merges
+// mergeHedges links every hedge to its nearest non-hedge flower patch of at least minArea [m2] and merges
 // all hedges linked to the same patch into the largest of them.
-func mergeHedges(patches []*flowerPatch, rng *rand.Rand) {
-	const minArea = 6500 // [m2]
+func mergeHedges(patches []*flowerPatch, minArea float64, rng *rand.Rand) {
 
 	hedges := []*flowerPatch{}
 	fields := []*flowerPatch{}
@@ -199,12 +199,12 @@ func removeDuplicates[T comparable](list []T) []T {
 // patches (in NetLogo they get their who numbers before all layers), then the masterpatches of the split flower
 // patches, in the order of their creation.
 func createLayers(w *ecs.World, patches []*flowerPatch, flowers *params.FlowerSpeciesTable, file *params.Parameters,
-	cssOptions []string, rng *rand.Rand) ([]ecs.Entity, error) {
+	c *params.LandscapeConstants, cssOptions []string, rng *rand.Rand) ([]ecs.Entity, error) {
 
 	mapper := ecs.NewMap4[comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](w)
 
-	minNectar := file.FoodsourceLimit * 180  // [µl]
-	minPollen := file.FoodsourceLimit * 0.05 // [g]
+	minNectar := file.FoodsourceLimit * c.TripNectar // [µl]
+	minPollen := file.FoodsourceLimit * c.TripPollen // [g]
 
 	newFoodsource := func(p *flowerPatch, fs comp.Foodsource) ecs.Entity {
 		return mapper.NewEntity(&comp.Position{X: p.X, Y: p.Y}, &fs, &comp.FoodsourceState{}, &comp.Layer{})

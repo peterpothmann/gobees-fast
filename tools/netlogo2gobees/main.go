@@ -36,6 +36,9 @@ func (c *convertCmd) Run() error {
 	if err := writeFiles(c.Out, files); err != nil {
 		return err
 	}
+	for _, line := range converted.Report {
+		fmt.Println(line)
+	}
 	fmt.Printf("%d files written to %s\n", len(files), c.Out)
 	return nil
 }
@@ -45,7 +48,7 @@ type generateCmd struct {
 }
 
 func (c *generateCmd) Run() error {
-	files, err := Generate()
+	files, report, err := Generate()
 	if err != nil {
 		return err
 	}
@@ -57,6 +60,9 @@ func (c *generateCmd) Run() error {
 		if err := os.WriteFile(path, content, 0o644); err != nil {
 			return err
 		}
+	}
+	for _, line := range report {
+		fmt.Println(line)
 	}
 	fmt.Printf("%d files written\n", len(files))
 	return nil

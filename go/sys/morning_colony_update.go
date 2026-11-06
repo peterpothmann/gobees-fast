@@ -112,7 +112,7 @@ func (s *colonyUpdate) updateColony(w *ecs.World, col ecs.Entity, members []ecs.
 	// ORDER: irrelevant, each bee dies independently.
 	if colony.CompetitionPointDate.Before(ticks) && counts.Eggs+counts.Larvae+counts.Pupae == 0 {
 		for _, e := range ask(func(b *comp.Bee) bool {
-			return b.AdultAge > 10 && (b.Caste == caste.Worker || b.Caste == caste.Queen)
+			return b.AdultAge > s.constants.Colony.DeathAge && (b.Caste == caste.Worker || b.Caste == caste.Queen)
 		}) {
 			s.beeDeath.die(w, e, "Colony death after CP!")
 		}
@@ -144,8 +144,8 @@ func (s *colonyUpdate) updateColony(w *ecs.World, col ecs.Entity, members []ecs.
 	}
 	// ORDER: irrelevant, one independent draw per colony.
 	if !colony.SwitchPointDate.IsSet() {
-		if colony.EusocialPhaseDate.IsSet() && counts.LarvaWorkerRatio < s.constants.LarvaWorkerRatioLimit {
-			if s.rng.Float64() <= s.constants.DailySwitchProbability {
+		if colony.EusocialPhaseDate.IsSet() && counts.LarvaWorkerRatio < s.constants.Colony.LarvaWorkerRatioLimit {
+			if s.rng.Float64() <= s.constants.Colony.DailySwitchProbability {
 				colony.SwitchPointDate = day.At(ticks)
 			}
 		}
@@ -153,7 +153,7 @@ func (s *colonyUpdate) updateColony(w *ecs.World, col ecs.Entity, members []ecs.
 	if !colony.CompetitionPointDate.IsSet() &&
 		colony.EusocialPhaseDate.IsSet() &&
 		colony.QueenProductionDate.IsSet() {
-		colony.CompetitionPointDate = day.At(competitionPointDate(colony))
+		colony.CompetitionPointDate = day.At(competitionPointDate(colony, &s.constants.Colony))
 	}
 
 	if len(alive(all)) == 0 {
@@ -194,20 +194,21 @@ func (s *colonyUpdate) statistics(c *comp.ColonyCounts, members []ecs.Entity) {
 // Both dates must be set.
 //
 // NetLogo: CompetitionPointDateREP.
-func competitionPointDate(c *comp.Colony) day.Abs {
+func competitionPointDate(c *comp.Colony, cc *params.ColonyConstants) day.Abs {
 	// x: days from the first worker to the first queen-destined eggs (about -5 to 40).
 	// y: days from the first worker to the CP, linear in x (Duchateau & Velthuis 1988, Fig. 6).
-	// The CP is rounded to a whole day (.5 up) and lies at most 45 days after the first worker.
+	// The CP is rounded to a whole day (.5 up) and lies at most LatestCompetitionPoint days after the first worker.
+	// The coefficients 0.7 and 15.5 of the regression stay in the code.
 	eusocialPhaseDate := c.EusocialPhaseDate.Day()
 	x := float64(c.QueenProductionDate.Day() - eusocialPhaseDate)
 	// float64(...) forces Go to round after the multiplication, as Java does. Otherwise Go may compute
 	// 0.7*x + 15.5 in one step (fused multiply-add), which can change the last bit and thus the rounding.
 	y := float64(0.7*x) + 15.5
-	latestCPAfter := day.Abs(45) // [d]
+	latestCPAfter := day.Abs(cc.LatestCompetitionPoint) // [d]
 	compDate := day.Abs(round(float64(eusocialPhaseDate) + y))
-	// The CP is at most 45 days after the eusocial phase
+	// The CP is at most latestCPAfter days after the eusocial phase
 	if compDate-eusocialPhaseDate > latestCPAfter {
-		compDate = eusocialPhaseDate + latestCPAfter // set to 45 days after eusocial phase (first worker), as in NetLogo
+		compDate = eusocialPhaseDate + latestCPAfter // latestCPAfter days after the eusocial phase (first worker), as in NetLogo
 	}
 	return compDate
 }

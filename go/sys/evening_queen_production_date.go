@@ -54,7 +54,7 @@ func (s *queenProductionDate) Update(w *ecs.World) {
 		colony, counts := s.colonyMap.Get(col)
 
 		// 7 d + QueenDeterminationAge, or the largest broodAge of the larvae at larval day 3
-		averageEggTime := 7 // [d]
+		averageEggTime := s.constants.Colony.EggTime // [d]
 		timeEggToLarvalAgeAtQueenDetermination := averageEggTime + s.speciesMap.Get(colony.Species).QueenDeterminationAge
 		found := false
 		maxBroodAge := 0
@@ -75,8 +75,8 @@ func (s *queenProductionDate) Update(w *ecs.World) {
 		// without switch point the condition is false, as with the sentinel NotSetHigh in NetLogo
 		layingDate := ticks - day.Abs(timeEggToLarvalAgeAtQueenDetermination)
 		if !colony.QueenProduction && colony.SwitchPointDate.IsSet() &&
-			layingDate >= colony.SwitchPointDate.Day()-day.Abs(s.constants.QueenEggsBeforeSwitchPoint) &&
-			counts.LarvaWorkerRatio < s.constants.LarvaWorkerRatioLimit {
+			layingDate >= colony.SwitchPointDate.Day()-day.Abs(s.constants.Colony.QueenEggsBeforeSwitchPoint) &&
+			counts.LarvaWorkerRatio < s.constants.Colony.LarvaWorkerRatioLimit {
 			colony.QueenProduction = true
 			colony.QueenProductionDate = day.At(layingDate)
 		}

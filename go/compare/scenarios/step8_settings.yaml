@@ -16,6 +16,93 @@ parameters:
   winterMortality: false
 output:
   keepDeadColonies: false
+# Fixed in the NetLogo code, not settable in NetLogo's parameter files. Defaults: the NetLogo values.
+# Every key is needed. The comment at a key gives unit and source.
+constants:
+  activities:
+    getUpTime: 1 # [s] no source
+    getUpSpread: 1800 # [s] no source
+    sunrise: 28800 # [s] no source
+    callItADay: 86400 # [s] no source
+    pause: 1800 # [s] no source
+    eggLayingTime: 86400 # [s] no source
+    nursingTime: 2880 # [s] derivation in the NetLogo comment
+    incubationEnergy: 2.17013888e-07 # [kJ/(mg s)] derivation in the NetLogo comment
+  stimuli:
+    nectarStoreSize: 5 # [d] no source
+    minNectarStore: 20 # [kJ] no source
+    idealEnergyFactor: 6 # heuristic
+    nectarThreshold: 0.005 # heuristic
+    pollenStoreSize: 5 # [d] no source
+    pollenThreshold: 0.005 # heuristic
+  foraging:
+    maxForagingRange: 758 # [m] Knight et al. 2005. NetLogo parameter file: MaxForagingRange_m = 10000, without effect in NetLogo
+    energyFactorOnFlower: 0.3 # Kacelnik et al. 1986 (honeybees)
+    sucroseEnergy: 0.00582 # [kJ/µmol] BEEHAVE
+    flightMetabolicRate: 488.6 # [W/kg] Wolf et al. 1999
+    maxHandlingTime: 3600 # [s] Ings et al. 2006, Stelzer et al. 2010
+    pollenLoadTime: 257.4 # [s] Raine & Chittka 2007
+    flowersPerPollenLoad: 58 # Raine & Chittka 2007
+    preferCloseProb: 0.9 # heuristic
+    searchProb: 0.1 # no source
+    cropFactor: 0.402 # [µl/mg] Ings et al. 2006
+    pelletFactor: 0.0003 # [g/µl] BEEHAVE: 0.015 g pollen per 50 µl nectar
+    mortality:
+      high: 1e-05 # [1/s] Visscher & Dukas 1997 (BEEHAVE)
+      intermediate: 2.14e-06 # [1/s] Schmid-Hempel & Heeb 1991
+      low: 2.75e-07 # [1/s] Stelzer et al. 2010
+  colony:
+    pollenAssimilationEnergy: 6.2 # [kJ/g] Hrassnig & Crailsheim 2005
+    larvaWorkerRatioLimit: 3 # Duchateau & Velthuis 1988
+    dailySwitchProbability: 0.13 # [1/d] Duchateau & Velthuis 1988
+    queenEggsBeforeSwitchPoint: 5 # [d] Duchateau & Velthuis 1988
+    eggTime: 7 # [d] NetLogo: better sex ratio than 6
+    latestCompetitionPoint: 45 # [d] no source
+    deathAge: 10 # [d] no source
+    startNectar: 100 # [µl] NetLogo comment: about one crop
+    startConcentration: 1.5 # [mol/l] NetLogo comment
+    dailyIncubation: 10 # [kJ/d] Silvola 1984
+    incubationBatches: 1.5 # Silvola 1984
+    minPollenStoreBatches: 0.5 # no source
+    queenDeterminationAge: 3 # [d] Roeseler 1970
+  bees:
+    adultBackgroundMortality: 0 # [1/d] Plowright & Jay 1968
+    maxLifespanMales: 30 # [d] Duchateau & Marien 1995
+    foreignAlleles: 24 # Duchateau et al. 1994
+    nestSearchTime: 21600 # [s] no source
+  psithyrus:
+    findNestProb: 0.05 # arbitrary
+    accessProb: 0.25 # arbitrary
+    killedProb: 0.25 # arbitrary
+    killQueenProb: 0.5 # arbitrary
+  badgers:
+    range: 735 # [m] Kruuk & Parish 1982
+    encounterProb: 0.19 # [1/d] Kowalczyk et al. 2006
+    digUpProb: 0.1 # arbitrary
+    minDistance: 300 # [m] no source
+  landscape:
+    minMergeArea: 6500 # [m2] no source
+    tripNectar: 180 # [µl] no source
+    tripPollen: 0.05 # [g] no source
+  initialQueens:
+    adultAge: 180 # [d] NetLogo: exact age doesn't matter
+    broodAge: 36 # [d] NetLogo: exact age doesn't matter
+    alleleRange: 139.9 # NetLogo colours
+  thresholds:
+    eggLaying:
+      queenInitiationPhase: 0.1 # no source
+      queenSocialPhase: 0 # no source
+      psithyrus: 0.2 # no source
+    pollenForaging:
+      worker: 0.9 # no source
+      queenInitiationPhase: 0.7 # no source
+    nectarForaging:
+      worker: 0.9 # no source
+      queenInitiationPhase: 0.7 # no source
+    nursing:
+      worker: 0.9 # no source
+      queenInitiationPhase: 0.5 # no source
+      queenSocialPhase: 0.9 # no source
 initialQueens:
   - species: B_terrestris
     queens: 500

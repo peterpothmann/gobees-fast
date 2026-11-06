@@ -109,6 +109,7 @@ A run file has these sections. All keys are in lowerCamelCase, values are in the
 | -------------------- | ----------------------------------------------------------------------- | -------------------------------------- |
 | `parameters`         | the model parameters                                                    | the columns of the parameter file      |
 | `output`             | output options (`keepDeadColonies`), change no model value              | `KeepDeadColonies?`                    |
+| `constants`          | the values that NetLogo hard-codes, every key needed (see below)        | `ParametersProc` and local values of the procedures |
 | `initialQueens`      | species and number of initial queens                                    | `BeeSpeciesInitialQueensListAsString`  |
 | `foragingPeriod`     | foraging period [s], 365 values per year, one or more years, the years repeat | `Weather`                        |
 | `stewardshipOptions` | names of the stewardship options                                        | from the `HabitatsFile`                |
@@ -119,8 +120,18 @@ A run file has these sections. All keys are in lowerCamelCase, values are in the
 
 A landscape file holds `metresPerPatch` and the flower patches (`id`, `patchType`, `xcor`, `ycor`, `area`, `flowers`),
 the columns of the NetLogo foodsources file without the GUI columns. All files are read at the start (package `input`),
-also the landscapes of a crop rotation. An unknown key is an error, a missing key keeps its zero value. Unlike NetLogo,
+also the landscapes of a crop rotation. An unknown key is an error, a missing key keeps its zero value, except in
+`constants`. Unlike NetLogo,
 a missing file is an error at the start, also a landscape of the crop rotation (NetLogo: on its day 365).
+
+The section `constants` holds the values that NetLogo sets in its code and that NetLogo's parameter files cannot
+change: the values of `ParametersProc` and the local values of the procedures (e.g. the pause of a bee, the
+probabilities of the badgers and the cuckoo bumblebees, the task thresholds). It is grouped by part of the model
+(`activities`, `stimuli`, `foraging`, `colony`, `bees`, `psithyrus`, `badgers`, `landscape`, `initialQueens`,
+`thresholds`) and must hold every key: a run file without a key of `constants` is an error, so that no value of a
+run comes from the code unseen. The converter writes the NetLogo values (`params.DefaultConstants`) with unit and
+source as a comment at each key. The coefficients of fitted equations (handling time, competition point, winter
+survival) stay in the code.
 
 ### NetLogo input files
 
@@ -140,7 +151,10 @@ weather file in the folder of the NetLogo files: a CSV table with the columns `D
 code, is the file [netlogo/_SYSTEM_Weather_foragingHoursExample.csv](netlogo/_SYSTEM_Weather_foragingHoursExample.csv).
 A missing parameter file is an error (NetLogo loads `_SYSTEM_Parameters.csv` instead). Also an error: `COLONIES_IBM`
 other than 0, `MapAreaIncluded` other than `"complete"` (a part of a map is its own landscape file), and a species row
-whose columns `species` and `name` differ. The tests of the converter check
+whose columns `species` and `name` differ. The converter prints every column it does not take over, with the
+reason. NetLogo's parameter files set `MaxForagingRange_m` = 10000, which has no effect in NetLogo: NetLogo uses the
+constant `ForagingRangeMax_m` = 758 m. The converter writes 758 and says so, in its output and in the comment at
+`constants.foraging.maxForagingRange`. The tests of the converter check
 that the run files of the repository are the conversion of the NetLogo files.
 
 ### Daily output

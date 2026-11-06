@@ -48,7 +48,7 @@ func TestCreateInitialQueensExampleFarm(t *testing.T) {
 			t.Fatalf("weight = %v", b.Weight)
 		}
 		if f.GlossaLength != proboscisLength(b.Weight, sp) || f.CropVolume != 173 ||
-			f.PollenPellets != pollenLoad(b.Weight, sp) || !f.CurrentFoodsource.IsZero() {
+			f.PollenPellets != pollenLoad(b.Weight, sp, &defaults.Foraging) || !f.CurrentFoodsource.IsZero() {
 			t.Fatalf("forager: %+v", f)
 		}
 		sumWeight += b.Weight

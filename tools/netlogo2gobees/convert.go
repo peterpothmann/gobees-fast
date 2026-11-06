@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 
 	"gobees/input"
@@ -22,6 +23,8 @@ const noFlowerspeciesFile = "No Input File"
 type Converted struct {
 	Config     input.Config
 	Landscapes map[string]input.Landscape
+	Report     []string          // what the converter did beyond copying values, one line each
+	Notes      map[string]string // notes at keys of the section constants, by the path below constants
 }
 
 // Convert reads the NetLogo parameter file at path [INIT-04] and all files it names, relative to dir (the folder of
@@ -40,6 +43,12 @@ func Convert(dir, path, mapName string) (Converted, error) {
 func convert(dir string, file *netLogoParameters, mapName string) (Converted, error) {
 	c := input.Config{Parameters: file.Parameters}
 	c.Output.KeepDeadColonies = file.KeepDeadColonies // step F13
+	// the constants come from the code, as in NetLogo, never from the parameter file
+	c.Constants = params.DefaultConstants()
+	report, notes, err := reportSkipped(file.Skipped, &c.Constants)
+	if err != nil {
+		return Converted{}, err
+	}
 
 	// [PAR-01], [QINI]
 	queens, _, err := QueensInitialProc(file.BeeSpeciesInitialQueensListAsString)
@@ -94,7 +103,42 @@ func convert(dir string, file *netLogoParameters, mapName string) (Converted, er
 		}
 		landscapes[landscapeName(n)] = l
 	}
-	return Converted{Config: c, Landscapes: landscapes}, nil
+	return Converted{Config: c, Landscapes: landscapes, Report: report, Notes: notes}, nil
+}
+
+// reportSkipped returns the report lines and the notes for the constants: one line for the constants, one line for
+// each column not taken over (the GUI columns in one line), and for a shadowed column whose value differs from
+// the constant both values and what was written.
+func reportSkipped(skipped []skippedColumn, constants *params.Constants) ([]string, map[string]string, error) {
+	report := []string{"constants: the NetLogo values of the code (params.DefaultConstants), " +
+		"not from the parameter file, which cannot set them in NetLogo"}
+	notes := map[string]string{}
+	gui := []string{}
+	for _, s := range skipped {
+		if s.GUI {
+			gui = append(gui, s.Name)
+			continue
+		}
+		if sh, ok := shadowedParameters[strings.ToLower(strings.TrimSpace(s.Name))]; ok {
+			v, err := strconv.ParseFloat(strings.TrimSpace(s.Value), 64)
+			if err != nil {
+				return nil, nil, fmt.Errorf("parameter %q: expected a number, got %s", s.Name, s.Value)
+			}
+			if c := sh.value(constants); v != c {
+				report = append(report, fmt.Sprintf("%s = %s has no effect in NetLogo, which uses %s = %v. "+
+					"Written: constants.%s: %v", s.Name, s.Value, sh.constant, c, sh.key, c))
+				notes[sh.key] = fmt.Sprintf("NetLogo parameter file: %s = %s, without effect in NetLogo", s.Name,
+					s.Value)
+				continue
+			}
+		}
+		report = append(report, fmt.Sprintf("%s = %s not taken over: %s", s.Name, s.Value, s.Reason))
+	}
+	if len(gui) > 0 {
+		report = append(report, fmt.Sprintf("%d columns not taken over, only the NetLogo GUI reads them: %s", len(gui),
+			strings.Join(gui, ", ")))
+	}
+	return report, notes, nil
 }
 
 // landscapeName is the name of the landscape file of a NetLogo foodsources file: ".txt" becomes ".yaml".
@@ -145,7 +189,7 @@ func readFlowerspeciesFile(path string) (params.FlowerSpeciesTable, error) {
 func (c Converted) Files(run string) (map[string][]byte, error) {
 	files := map[string][]byte{}
 	var b bytes.Buffer
-	if err := input.WriteConfig(&b, c.Config); err != nil {
+	if err := input.WriteConfigNotes(&b, c.Config, c.Notes); err != nil {
 		return nil, err
 	}
 	files[run] = slices.Clone(b.Bytes())

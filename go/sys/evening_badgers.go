@@ -5,12 +5,14 @@ import (
 
 	"gobees/comp"
 	"gobees/globals"
+	"gobees/params"
 
 	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
 )
 
-// badgers lets every badger dig up each colony closer than 735 m with probability 0.19 * 0.1 = 0.019 per day: the
+// badgers lets every badger dig up each colony closer than Constants.Badgers.Range (735 m) with probability
+// EncounterProb * DigUpProb (0.19 * 0.1 = 0.019) per day: the
 // colony loses its stores and all its bees. The colony itself dies the next morning in colonyUpdate.
 //
 // NetLogo: BadgersOnTheProwlProc.
@@ -18,6 +20,7 @@ type badgers struct {
 	rng       *rand.Rand
 	landscape *globals.Landscape
 	death     beeDeath
+	constants *params.Constants
 
 	badgerFilter *ecs.Filter2[comp.Position, comp.Badger]
 	colonyFilter *ecs.Filter2[comp.Position, comp.Colony]
@@ -30,6 +33,7 @@ type badgers struct {
 func (s *badgers) Initialize(w *ecs.World) {
 	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.landscape = ecs.GetResource[globals.Landscape](w)
+	s.constants = ecs.GetResource[params.Constants](w)
 	s.death = newBeeDeath(w)
 	s.badgerFilter = ecs.NewFilter2[comp.Position, comp.Badger](w)
 	s.colonyFilter = ecs.NewFilter2[comp.Position, comp.Colony](w)
@@ -40,9 +44,9 @@ func (s *badgers) Initialize(w *ecs.World) {
 func (s *badgers) Update(w *ecs.World) {
 	// variables, not Go constants: NetLogo multiplies two doubles, 0.19 * 0.1 = 0.019000000000000003, whereas Go
 	// would multiply constants exactly (0.019).
-	foragingRange := 735.0 // [m], Kruuk & Parish 1982: territory ca. 170 ha, radius ca. 735 m
-	encounterProb := 0.19  // Kowalczyk et al. 2006: daily range 19 % of the home range
-	digUpProb := 0.1       // ARBITRARY VALUE (NetLogo comment)
+	foragingRange := s.constants.Badgers.Range         // [m], Kruuk & Parish 1982: territory ca. 170 ha, radius ca. 735 m
+	encounterProb := s.constants.Badgers.EncounterProb // Kowalczyk et al. 2006: daily range 19 % of the home range
+	digUpProb := s.constants.Badgers.DigUpProb
 
 	// ORDER: irrelevant for the state. A colony dug up twice in one evening has nothing left to lose.
 	type badger struct{ x, y float64 }

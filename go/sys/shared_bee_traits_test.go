@@ -4,6 +4,7 @@ import (
 	"math"
 	"testing"
 
+	"gobees/comp"
 	"gobees/input"
 	"gobees/params"
 )
@@ -29,44 +30,64 @@ func expectPanic(t *testing.T, name string, f func()) {
 	f()
 }
 
-func TestThresholdLevel(t *testing.T) {
-	// all 24 values of thresholdLevel
+// defaults are the NetLogo values of the constants, which the test worlds use.
+var defaults = params.DefaultConstants()
+
+func TestThresholds(t *testing.T) {
+	// all 24 values with the NetLogo values (NetLogo: ThresholdLevelREP)
 	h := params.NotSetHigh
-	want := map[string][6]float64{ // egg, worker, youngQueen, QueenInitiationPhase, QueenSocialPhase, Psith
-		thEggLaying:      {h, h, h, 0.1, 0, 0.2},
-		thPollenForaging: {h, 0.9, h, 0.7, h, h},
-		thNectarForaging: {h, 0.9, h, 0.7, h, h},
-		thNursing:        {h, 0.9, h, 0.5, 0.9, h},
+	want := map[string]comp.Thresholds{ // egg laying, nectar foraging, pollen foraging, nursing
+		sitEgg:                  {Egglaying: h, NectarForaging: h, PollenForaging: h, Nursing: h},
+		sitWorker:               {Egglaying: h, NectarForaging: 0.9, PollenForaging: 0.9, Nursing: 0.9},
+		sitYoungQueen:           {Egglaying: h, NectarForaging: h, PollenForaging: h, Nursing: h},
+		sitQueenInitiationPhase: {Egglaying: 0.1, NectarForaging: 0.7, PollenForaging: 0.7, Nursing: 0.5},
+		sitQueenSocialPhase:     {Egglaying: 0, NectarForaging: h, PollenForaging: h, Nursing: 0.9},
+		sitPsith:                {Egglaying: 0.2, NectarForaging: h, PollenForaging: h, Nursing: h},
 	}
-	situations := []string{sitEgg, sitWorker, sitYoungQueen, sitQueenInitiationPhase, sitQueenSocialPhase, sitPsith}
-	for thType, values := range want {
-		for i, sit := range situations {
-			if got := thresholdLevel(thType, sit); got != values[i] {
-				t.Errorf("thresholdLevel(%s, %s) = %v, want %v", thType, sit, got, values[i])
-			}
+	for sit, th := range want {
+		if got := thresholds(&defaults.Thresholds, sit); got != th {
+			t.Errorf("thresholds(&defaults.Thresholds, %s) = %+v, want %+v", sit, got, th)
 		}
 	}
-	expectPanic(t, "unknown situation", func() { thresholdLevel(thNursing, "drone") })
-	expectPanic(t, "unknown type", func() { thresholdLevel("guarding", sitWorker) })
+	expectPanic(t, "unknown situation", func() { thresholds(&defaults.Thresholds, "drone") })
+
+	// each value of the run file lands in its place
+	c := params.Thresholds{
+		EggLaying:      params.EggLayingThresholds{QueenInitiationPhase: 1, QueenSocialPhase: 2, Psithyrus: 3},
+		PollenForaging: params.ForagingThresholds{Worker: 4, QueenInitiationPhase: 5},
+		NectarForaging: params.ForagingThresholds{Worker: 6, QueenInitiationPhase: 7},
+		Nursing:        params.NursingThresholds{Worker: 8, QueenInitiationPhase: 9, QueenSocialPhase: 10},
+	}
+	set := map[string]comp.Thresholds{
+		sitWorker:               {Egglaying: h, NectarForaging: 6, PollenForaging: 4, Nursing: 8},
+		sitQueenInitiationPhase: {Egglaying: 1, NectarForaging: 7, PollenForaging: 5, Nursing: 9},
+		sitQueenSocialPhase:     {Egglaying: 2, NectarForaging: h, PollenForaging: h, Nursing: 10},
+		sitPsith:                {Egglaying: 3, NectarForaging: h, PollenForaging: h, Nursing: h},
+	}
+	for sit, th := range set {
+		if got := thresholds(&c, sit); got != th {
+			t.Errorf("thresholds(&defaults.Thresholds, %s) with set values = %+v, want %+v", sit, got, th)
+		}
+	}
 }
 
 func TestCropVolumeAndPollenLoad(t *testing.T) {
 	sp := terrestris(t)
 	// worked example: queen of 785 mg: min (173, 315.57) = 173, min (0.15, 315.57 * 0.0003) = 0.094671
-	if got := cropVolume(785, sp); got != 173 {
+	if got := cropVolume(785, sp, &defaults.Foraging); got != 173 {
 		t.Errorf("crop volume 785 mg = %v, want 173 (species maximum)", got)
 	}
-	if got := pollenLoad(785, sp); !almostEqual(got, 0.094671) {
+	if got := pollenLoad(785, sp, &defaults.Foraging); !almostEqual(got, 0.094671) {
 		t.Errorf("pollen pellets 785 mg = %v, want 0.094671", got)
 	}
 	// lightest worker, 62.4 mg: 62.4 * 0.402 = 25.0848 microlitres, 25.0848 * 0.0003 = 0.00752544 g
-	if got := cropVolume(62.4, sp); !almostEqual(got, 25.0848) {
+	if got := cropVolume(62.4, sp, &defaults.Foraging); !almostEqual(got, 25.0848) {
 		t.Errorf("crop volume 62.4 mg = %v, want 25.0848", got)
 	}
-	if got := pollenLoad(62.4, sp); !almostEqual(got, 0.00752544) {
+	if got := pollenLoad(62.4, sp, &defaults.Foraging); !almostEqual(got, 0.00752544) {
 		t.Errorf("pollen pellets 62.4 mg = %v, want 0.00752544", got)
 	}
-	expectPanic(t, "weight 0", func() { cropVolume(0, sp) })
+	expectPanic(t, "weight 0", func() { cropVolume(0, sp, &defaults.Foraging) })
 }
 
 func TestProboscisLength(t *testing.T) {

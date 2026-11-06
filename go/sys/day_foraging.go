@@ -192,7 +192,7 @@ func (f *forager) collect(e ecs.Entity) {
 		_, fs, state, _ := f.foodsourceMap.Get(fo.CurrentFoodsource)
 		if state.Nectar > 0 {
 			nectarRemoved := min(fo.CropVolume*float64(b.Number), state.Nectar)
-			fo.CarriedNectar = nectarRemoved * f.constants.SucroseEnergy * fs.NectarConcentration
+			fo.CarriedNectar = nectarRemoved * f.constants.Foraging.SucroseEnergy * fs.NectarConcentration
 			b.Activity = activity.BringingNectar
 			state.Nectar = state.Nectar - nectarRemoved
 		} else {
@@ -206,8 +206,8 @@ func (f *forager) collect(e ecs.Entity) {
 func (f *forager) handlingTime(e ecs.Entity, myPatch ecs.Entity, pollenPatch bool) float64 {
 	_, b, _, _, fo, _ := f.beeMap.Get(e)
 	_, fs, state, _ := f.foodsourceMap.Get(myPatch)
-	maxHandlingTime := 60.0 * 60 // [s]
-	handlingTime := -999.0       // [s]
+	maxHandlingTime := f.constants.Foraging.MaxHandlingTime // [s]
+	handlingTime := -999.0                                  // [s]
 	fillingLevel := 0.0
 
 	if !pollenPatch {
@@ -218,6 +218,7 @@ func (f *forager) handlingTime(e ecs.Entity, myPatch ecs.Entity, pollenPatch boo
 		glossaLength := fo.GlossaLength    // G [mm]
 		corollaDepth := fs.CorollaDepth    // C [mm]
 		nectarVolume := fs.NectarPerFlower // V [µl]
+		// The coefficients of the fitted equations stay in the code.
 		// float64(...): no fused multiply-add, so the result equals NetLogo (Java)
 		accessTime := 0.3 + float64(0.04*corollaDepth) // Ta [s]
 		numerator := log10(nectarVolume + 1)
@@ -240,8 +241,8 @@ func (f *forager) handlingTime(e ecs.Entity, myPatch ecs.Entity, pollenPatch boo
 		}
 		handlingTime = handlingTimePerFlower * flowersVisited
 	} else {
-		timeInFlowers := 257.4 // [s]
-		flowersNeededForPollenLoad := 58.0
+		timeInFlowers := f.constants.Foraging.PollenLoadTime // [s]
+		flowersNeededForPollenLoad := f.constants.Foraging.FlowersPerPollenLoad
 		if fs.PollenMax > 0 {
 			fillingLevel = state.Pollen / fs.PollenMax
 		} else {
@@ -290,9 +291,9 @@ func (f *forager) bestLayer(e ecs.Entity, myCurrentFoodsource ecs.Entity) ecs.En
 		if !fo.PollenForager && state.Nectar > 0 {
 			handlingTime := f.handlingTime(e, currentLayer, fo.PollenForager) // [s]
 			energyCosts := (float64(2*patchDistance) +
-				float64(handlingTime*sp.FlightVelocity*f.constants.EnergyFactorOnFlower)) *
+				float64(handlingTime*sp.FlightVelocity*f.constants.Foraging.EnergyFactorOnFlower)) *
 				sp.FlightCosts * b.Weight * float64(b.Number) // [kJ]
-			energyGain := fo.CropVolume * f.constants.SucroseEnergy * fs.NectarConcentration // [kJ]
+			energyGain := fo.CropVolume * f.constants.Foraging.SucroseEnergy * fs.NectarConcentration // [kJ]
 			eef := (energyGain - energyCosts) / energyCosts
 			if eef > memoBestEEF {
 				memoBestPatch = currentLayer
@@ -307,13 +308,13 @@ func (f *forager) bestLayer(e ecs.Entity, myCurrentFoodsource ecs.Entity) ecs.En
 // tripDuration is the duration of the trip just made [s].
 func (f *forager) choosePatch(e ecs.Entity, tripDuration float64) {
 	_, b, _, _, fo, _ := f.beeMap.Get(e)
-	preferenceClosePatchesProb := 0.9
+	preferenceClosePatchesProb := f.constants.Foraging.PreferCloseProb
 	happy := true
 	gotoNewLayergroup := false
 	bestLayer := ecs.Entity{}
 	myExpectation := fo.ExpectedNectarTrip // [s]
 	myKnownMasterpatchesList := fo.KnownNectarPatches
-	searchProbBase := 0.1
+	searchProbBase := f.constants.Foraging.SearchProb
 	if fo.PollenForager {
 		myExpectation = fo.ExpectedPollenTrip
 		myKnownMasterpatchesList = fo.KnownPollenPatches
@@ -434,7 +435,7 @@ func (f *forager) tripCosts(w *ecs.World, e ecs.Entity) bool {
 		scaling := f.landscape.Scale
 		stores.Energy = stores.Energy - float64(
 			(float64(2*distance/scaling)+
-				float64(handlingTime*spColony.FlightVelocity*f.constants.EnergyFactorOnFlower))*
+				float64(handlingTime*spColony.FlightVelocity*f.constants.Foraging.EnergyFactorOnFlower))*
 				saveFlightCosts*saveWeight*saveNumber)
 		tripDuration := (2 * distance / scaling / spColony.FlightVelocity) + handlingTime // [s]
 		b.PersonalTime = b.PersonalTime + tripDuration

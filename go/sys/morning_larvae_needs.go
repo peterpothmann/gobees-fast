@@ -58,7 +58,7 @@ func (s *larvaeNeeds) Update(w *ecs.World) {
 		stores.LarvaePollenNeedToday = pollenNeedMyColony
 		// NOTE: despite its name, EnergyNeedToday is only the energy for the larvae's pollen. Incubation and flights take
 		// energy from the store elsewhere.
-		stores.EnergyNeedToday = stores.LarvaePollenNeedToday * s.constants.PollenAssimilationEnergy
+		stores.EnergyNeedToday = stores.LarvaePollenNeedToday * s.constants.Colony.PollenAssimilationEnergy
 	}
 }
 

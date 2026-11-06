@@ -37,7 +37,7 @@ func TestEgglaying(t *testing.T) {
 		len(g.Spermatheca) != 0 {
 		t.Errorf("egg genetics %+v: want mtDNA 42, alleles [30 10|20], no spermatheca", *g)
 	}
-	if *th != thresholds(sitEgg) || f.CropVolume != 0 || f.KnownNectarPatches == nil || *d != (comp.Development{}) {
+	if *th != thresholds(&defaults.Thresholds, sitEgg) || f.CropVolume != 0 || f.KnownNectarPatches == nil || *d != (comp.Development{}) {
 		t.Errorf("egg thresholds %+v, forager %+v, development %+v", *th, *f, *d)
 	}
 	_, s, _ := bw.colony(col)

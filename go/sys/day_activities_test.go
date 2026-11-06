@@ -46,7 +46,7 @@ func (aw *activityWorld) adult(col ecs.Entity, c caste.Caste, number int, weight
 	e := aw.addBee(col, stage.Adult, c, number, 5)
 	b, _, th, _, _ := aw.bee(e)
 	b.Weight = weight
-	*th = thresholds(situation)
+	*th = thresholds(&defaults.Thresholds, situation)
 	return e
 }
 
@@ -166,7 +166,7 @@ func TestStimuli(t *testing.T) {
 		{39.44, 36000, 1}, {39.45, 36000, 0}, {0, 28799, 0}, {0, 28800, 1}, {0, 57600, 1}, {0, 57601, 0},
 	} {
 		stores := comp.ColonyStores{EnergyNeedToday: 0.65472, Energy: tc.store}
-		got := nectarStimulus(&stores, tc.daytime, sunrise, period)
+		got := nectarStimulus(&stores, &defaults.Stimuli, tc.daytime, sunrise, period)
 		if got != tc.want || !almostEqual(stores.IdealEnergy, 39.6416) {
 			t.Errorf("nectarStimulus store %v at %v s: %v (ideal %v), want %v (ideal 39.6416)",
 				tc.store, tc.daytime, got, stores.IdealEnergy, tc.want)
@@ -174,7 +174,7 @@ func TestStimuli(t *testing.T) {
 	}
 	for _, tc := range []struct{ store, daytime, want float64 }{{0.8978, 36000, 1}, {0.898, 36000, 0}, {0, 7200, 0}} {
 		stores := comp.ColonyStores{LarvaePollenNeedToday: 0.1056, Pollen: tc.store}
-		got := pollenStimulus(&stores, sp, tc.daytime, sunrise, period)
+		got := pollenStimulus(&stores, sp, &defaults.Stimuli, tc.daytime, sunrise, period)
 		if got != tc.want || !almostEqual(stores.IdealPollen, 0.9024) {
 			t.Errorf("pollenStimulus store %v at %v s: %v (ideal %v), want %v (ideal 0.9024)",
 				tc.store, tc.daytime, got, stores.IdealPollen, tc.want)
@@ -357,7 +357,7 @@ func TestActivitiesDay(t *testing.T) {
 	// the day ends when the first bee of the queue is beyond 24 h, then everybody rests
 	for _, e := range aw.active.List {
 		b, _, _, _, _ := aw.bee(e)
-		if b.PersonalTime <= aw.constants.CallItADay || b.Activity != activity.Resting {
+		if b.PersonalTime <= aw.constants.Activities.CallItADay || b.Activity != activity.Resting {
 			t.Errorf("after the loop: PersonalTime %v, activity %v", b.PersonalTime, b.Activity)
 		}
 	}
@@ -373,8 +373,8 @@ func TestActivitiesQueenWithoutColony(t *testing.T) {
 	b.Colony = ecs.Entity{}
 	aw.wake.Update(aw.w)
 	aw.loop.Update(aw.w)
-	if b, _, _, _, _ := aw.bee(searching); b.PersonalTime != aw.constants.CallItADay+1 {
-		t.Errorf("queen without colony: PersonalTime %v, want %v", b.PersonalTime, aw.constants.CallItADay+1)
+	if b, _, _, _, _ := aw.bee(searching); b.PersonalTime != aw.constants.Activities.CallItADay+1 {
+		t.Errorf("queen without colony: PersonalTime %v, want %v", b.PersonalTime, aw.constants.Activities.CallItADay+1)
 	}
 }
 

@@ -26,7 +26,7 @@ func (cw *colonyWorld) addYoungQueen(col ecs.Entity, number int) ecs.Entity {
 	e := cw.addBee(col, stage.Adult, caste.Queen, number, 0)
 	_, b, _, th, _, _ := cw.beeMap.Get(e)
 	b.Mated = false
-	*th = thresholds(sitYoungQueen)
+	*th = thresholds(&defaults.Thresholds, sitYoungQueen)
 	return e
 }
 
@@ -59,7 +59,7 @@ func TestQueensLeavingNestMating(t *testing.T) {
 		t.Errorf("spermathecaList %v, want [7]", g.Spermatheca)
 	}
 	// only the egg-laying threshold changes
-	want := thresholds(sitYoungQueen)
+	want := thresholds(&defaults.Thresholds, sitYoungQueen)
 	want.Egglaying = 0.1
 	if *th != want {
 		t.Errorf("thresholds %+v, want %+v", *th, want)
