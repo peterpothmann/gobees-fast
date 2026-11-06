@@ -35,10 +35,11 @@ func (s *badgersSetup) Finalize(w *ecs.World) {}
 
 // createBadgers creates n badgers on "Scrub" masterpatches [BADC], finding 48 (see
 // trans/netlogo-findings.md#finding-48).
-func createBadgers(w *ecs.World, n int, scaling_NLpatches_per_m float64, rng *rand.Rand) {
+// scale is in NetLogo patches per metre [1/m].
+func createBadgers(w *ecs.World, n int, scale float64, rng *rand.Rand) {
 	burrowHabitatsList := []string{"Scrub"} // case-sensitive, as member?
-	const distanceLimit_m = 300
-	distance_patches := distanceLimit_m * scaling_NLpatches_per_m
+	const distanceLimit = 300               // [m]
+	limitDistance := distanceLimit * scale  // [NetLogo patches]
 
 	type burrow struct {
 		e   ecs.Entity
@@ -87,7 +88,7 @@ func createBadgers(w *ecs.World, n int, scaling_NLpatches_per_m float64, rng *ra
 			for _, other := range placed {
 				p, _ := badgerMap.Get(other)
 				samePatch := util.Pcor(p.X) == util.Pcor(site.pos.X) && util.Pcor(p.Y) == util.Pcor(site.pos.Y)
-				if samePatch || util.Distance(site.pos.X, site.pos.Y, p.X, p.Y) <= distance_patches {
+				if samePatch || util.Distance(site.pos.X, site.pos.Y, p.X, p.Y) <= limitDistance {
 					free = false
 					break
 				}

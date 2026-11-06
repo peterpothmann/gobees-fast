@@ -229,6 +229,6 @@ func (o *DailyOutput) totalMapArea() float64 {
 	rightCor = min(rightCor, o.world.MaxPxcor)
 	leftCor = max(leftCor, o.world.MinPxcor)
 
-	area_m2 := ((topCor - bottomCor) * (rightCor - leftCor)) / (scaling * scaling)
-	return area_m2 / (1000 * 1000)
+	area := ((topCor - bottomCor) * (rightCor - leftCor)) / (scaling * scaling) // [m2]
+	return area / (1000 * 1000)
 }

@@ -76,7 +76,7 @@ func TestNestSitesSetupExampleFarm(t *testing.T) {
 	for _, m := range collectMasterpatches(w) {
 		if slices.Contains(wantHabitats, m.patchType) {
 			wantSites = append(wantSites, m.entity)
-			wantArea += m.area_sqm
+			wantArea += m.area
 		}
 	}
 	if len(wantSites) == 0 || !slices.Equal(ns.Sites, wantSites) || ns.Area != wantArea {

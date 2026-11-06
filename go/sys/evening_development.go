@@ -173,10 +173,11 @@ func (s *development) developPupa(e ecs.Entity) {
 // and her colony produces queens, else worker. dev_Q_DeterminationWeight_mg is 0 for all species, so every
 // female larva becomes a queen once the colony produces queens (finding 40, see
 // trans/netlogo-findings.md#finding-40).
-func determineCaste(weight_mg float64, sp *params.Species, col *comp.Colony) caste.Caste {
+// weight is in [mg].
+func determineCaste(weight float64, sp *params.Species, col *comp.Colony) caste.Caste {
 	// [CAST-01]
 	mycaste := caste.Worker
-	if weight_mg >= sp.QueenDeterminationWeight && col.QueenProduction {
+	if weight >= sp.QueenDeterminationWeight && col.QueenProduction {
 		mycaste = caste.Queen
 	}
 	return mycaste

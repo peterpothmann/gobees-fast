@@ -49,16 +49,16 @@ func (s *larvaeNeeds) Update(w *ecs.World) {
 	// The larvae are grouped by colony once: nothing changes stage or colony here.
 	s.larvae = beesByColony(s.larvae, s.beeFilter, func(b *comp.Bee) bool { return b.Stage == stage.Larva })
 	for _, col := range askColonies(s.colonyFilter, s.rng) {
-		pollenNeedMyColony_g := 0.0
+		pollenNeedMyColony := 0.0 // [g]
 		myLarvae := s.larvae[col]
 		util.Shuffle(s.rng, myLarvae)
 		for _, e := range myLarvae {
 			b := s.beeMap.Get(e)
 			sp := s.speciesMap.Get(b.Species)
-			pollenNeedMyColony_g = pollenNeedMyColony_g + float64(b.Number)*(maxWeightGainToday(b, sp)/sp.PollenToBodymassFactor)/1000
+			pollenNeedMyColony = pollenNeedMyColony + float64(b.Number)*(maxWeightGainToday(b, sp)/sp.PollenToBodymassFactor)/1000
 		}
 		stores := s.storesMap.Get(col)
-		stores.LarvaePollenNeedToday = pollenNeedMyColony_g
+		stores.LarvaePollenNeedToday = pollenNeedMyColony
 		// NOTE: only the energy for the larvae's pollen, see the annotation.
 		stores.EnergyNeedToday = stores.LarvaePollenNeedToday * s.constants.PollenAssimilationEnergy
 	}
@@ -75,12 +75,12 @@ func maxWeightGainToday(b *comp.Bee, sp *params.Species) float64 {
 	memoWPupationMax := sp.PupationWeightMax
 	// float64(...) forces rounding after the multiplication, as in Java (no fused multiply-add, see
 	// CompetitionPointDateREP).
-	maxWeightGain_mg := float64(b.Weight*sp.GrowthFactor) - b.Weight
-	if b.Caste == caste.Queen && b.Weight+maxWeightGain_mg > memoQPupationMax {
-		maxWeightGain_mg = memoQPupationMax - b.Weight
+	maxWeightGain := float64(b.Weight*sp.GrowthFactor) - b.Weight // [mg]
+	if b.Caste == caste.Queen && b.Weight+maxWeightGain > memoQPupationMax {
+		maxWeightGain = memoQPupationMax - b.Weight
 	}
-	if (b.Caste == caste.Worker || b.Caste == caste.Undefined || b.Caste == caste.Male) && b.Weight+maxWeightGain_mg > memoWPupationMax {
-		maxWeightGain_mg = memoWPupationMax - b.Weight
+	if (b.Caste == caste.Worker || b.Caste == caste.Undefined || b.Caste == caste.Male) && b.Weight+maxWeightGain > memoWPupationMax {
+		maxWeightGain = memoWPupationMax - b.Weight
 	}
-	return maxWeightGain_mg
+	return maxWeightGain
 }

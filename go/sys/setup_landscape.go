@@ -116,14 +116,14 @@ func precision(x float64, places int) float64 {
 // mergeHedges links every hedge to its nearest non-hedge flower patch of at least 6500 m2 and merges
 // all hedges linked to the same patch into the largest of them [HEDG], finding 14 (see trans/netlogo-findings.md#finding-14).
 func mergeHedges(patches []*flowerPatch, rng *rand.Rand) {
-	const areaTH_sqm = 6500 // [HEDG-01]
+	const minArea = 6500 // [m2], [HEDG-01]
 
 	hedges := []*flowerPatch{}
 	fields := []*flowerPatch{}
 	for _, p := range patches {
 		if p.PatchType == "Hedgerow" {
 			hedges = append(hedges, p)
-		} else if p.Area >= areaTH_sqm {
+		} else if p.Area >= minArea {
 			fields = append(fields, p)
 		}
 	}
@@ -210,8 +210,8 @@ func createLayers(w *ecs.World, patches []*flowerPatch, flowers *params.FlowerSp
 	mapper := ecs.NewMap4[comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](w)
 
 	// [LAYR-01]
-	minNectSize_myl := file.FoodsourceLimit * 180
-	minPolsize_g := file.FoodsourceLimit * 0.05
+	minNectar := file.FoodsourceLimit * 180  // [µl]
+	minPollen := file.FoodsourceLimit * 0.05 // [g]
 
 	newFoodsource := func(p *flowerPatch, fs comp.Foodsource) ecs.Entity {
 		return mapper.NewEntity(&comp.Position{X: p.X, Y: p.Y}, &fs, &comp.FoodsourceState{}, &comp.Layer{})
@@ -264,10 +264,10 @@ func createLayers(w *ecs.World, patches []*flowerPatch, flowers *params.FlowerSp
 			fs.NectarMax = p.Area * relAbundance * fs.NectarPerFlower
 
 			// [LAYR-06]
-			if file.LimitFoodsources && fs.NectarMax < minNectSize_myl {
+			if file.LimitFoodsources && fs.NectarMax < minNectar {
 				fs.NectarMax = 0
 			}
-			if file.LimitFoodsources && fs.PollenMax < minPolsize_g {
+			if file.LimitFoodsources && fs.PollenMax < minPollen {
 				fs.PollenMax = 0
 			}
 			// [LAYR-07] the removed layer has used up its who number (finding 18, no effect without who numbers)

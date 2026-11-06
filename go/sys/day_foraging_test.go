@@ -32,11 +32,11 @@ func alsike() comp.Foodsource {
 
 // flowerPatch adds a flower patch at (x, y) [NetLogo patches] with radius_m, one layer per foodsource. The first
 // layer is the masterpatch, all layers share PatchLayers (sorted by who = order of creation, as in [LAYR-10]).
-func (aw *activityWorld) flowerPatch(x, y, radius_m float64, layers ...comp.Foodsource) []ecs.Entity {
+func (aw *activityWorld) flowerPatch(x, y, radius float64, layers ...comp.Foodsource) []ecs.Entity {
 	m := ecs.NewMap4[comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](aw.w)
 	result := []ecs.Entity{}
 	for _, fs := range layers {
-		fs.Radius = radius_m
+		fs.Radius = radius
 		state := comp.FoodsourceState{Nectar: fs.NectarMax, Pollen: fs.PollenMax}
 		result = append(result, m.NewEntity(&comp.Position{X: x, Y: y}, &fs, &state, &comp.Layer{}))
 	}

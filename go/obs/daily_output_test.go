@@ -39,8 +39,9 @@ func addBee(w *ecs.World, b comp.Bee) ecs.Entity {
 }
 
 // addFoodsourceAt adds a foodsource with the given radius at (x, y).
-func addFoodsourceAt(w *ecs.World, x, y, radius_m float64) ecs.Entity {
-	return ecs.NewMap2[comp.Position, comp.Foodsource](w).NewEntity(&comp.Position{X: x, Y: y}, &comp.Foodsource{Radius: radius_m})
+// radius is in [m].
+func addFoodsourceAt(w *ecs.World, x, y, radius float64) ecs.Entity {
+	return ecs.NewMap2[comp.Position, comp.Foodsource](w).NewEntity(&comp.Position{X: x, Y: y}, &comp.Foodsource{Radius: radius})
 }
 
 func almostEqual(a, b float64) bool {

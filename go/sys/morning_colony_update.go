@@ -222,11 +222,11 @@ func competitionPointDate(c *comp.Colony) day.Abs {
 	// float64(...) forces Go to round after the multiplication, as Java does. Otherwise Go may compute
 	// 0.7*x + 15.5 in one step (fused multiply-add), which can change the last bit and thus the rounding.
 	y := float64(0.7*x) + 15.5
-	latestCPafter_d := day.Abs(45)
+	latestCPAfter := day.Abs(45) // [d]
 	compDate := day.Abs(util.Round(float64(eusocialPhaseDate) + y))
 	// The CP is at most 45 days after the eusocial phase
-	if compDate-eusocialPhaseDate > latestCPafter_d {
-		compDate = eusocialPhaseDate + latestCPafter_d // set to 45 days after eusocial phase (first worker), as in NetLogo
+	if compDate-eusocialPhaseDate > latestCPAfter {
+		compDate = eusocialPhaseDate + latestCPAfter // set to 45 days after eusocial phase (first worker), as in NetLogo
 	}
 	return compDate
 }

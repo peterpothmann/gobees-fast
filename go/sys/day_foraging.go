@@ -172,13 +172,13 @@ func (f *forager) search(e ecs.Entity) {
 func (f *forager) detectionProb(patchWho ecs.Entity, xcol, ycol float64) float64 {
 	// [DET-01]
 	pos, fs, _, _ := f.foodsourceMap.Get(patchWho)
-	dist_m := util.Distance(pos.X, pos.Y, xcol, ycol) / f.landscape.Scale
-	patchRadius_m := fs.Radius
-	relevantDistance_m := dist_m - patchRadius_m
-	if relevantDistance_m < 0 {
-		relevantDistance_m = 0
+	dist := util.Distance(pos.X, pos.Y, xcol, ycol) / f.landscape.Scale // [m]
+	patchRadius := fs.Radius                                            // [m]
+	relevantDistance := dist - patchRadius                              // [m]
+	if relevantDistance < 0 {
+		relevantDistance = 0
 	}
-	detProb := math.Pow(math.E, f.parameters.DetectionLambda*relevantDistance_m) // NetLogo: e ^ x
+	detProb := math.Pow(math.E, f.parameters.DetectionLambda*relevantDistance) // NetLogo: e ^ x
 	// [DET-02] NetLogo sets detProb to 0 beyond ForagingRangeMax_m. Never true here: the colony's lists hold only
 	// masterpatches in range [PRNG] (removed in step F3).
 	// [DET-03]
@@ -219,8 +219,8 @@ func (f *forager) collect(e ecs.Entity) {
 func (f *forager) handlingTime(e ecs.Entity, myPatch ecs.Entity, pollenPatch bool) float64 {
 	_, b, _, _, fo, _ := f.beeMap.Get(e)
 	_, fs, state, _ := f.foodsourceMap.Get(myPatch)
-	maxHandlingTime_s := 60.0 * 60
-	handlingTime_s := -999.0
+	maxHandlingTime := 60.0 * 60 // [s]
+	handlingTime := -999.0       // [s]
 	fillingLevel := 0.0
 
 	if !pollenPatch {
@@ -228,34 +228,34 @@ func (f *forager) handlingTime(e ecs.Entity, myPatch ecs.Entity, pollenPatch boo
 		if fs.NectarMax > 0 {
 			fillingLevel = state.Nectar / fs.NectarMax
 		}
-		W_beeWeight_g := b.Weight / 1000
-		G_lengthGlossa_mm := fo.GlossaLength
-		C_CorollaDepth_mm := fs.CorollaDepth
-		V_nectarVolume_myl := fs.NectarPerFlower
+		beeWeight := b.Weight / 1000       // W [g]
+		glossaLength := fo.GlossaLength    // G [mm]
+		corollaDepth := fs.CorollaDepth    // C [mm]
+		nectarVolume := fs.NectarPerFlower // V [µl]
 		// float64(...): no fused multiply-add, see CompetitionPointDateREP
-		Ta_accessTime_s := 0.3 + float64(0.04*C_CorollaDepth_mm)
-		numerator := log10(V_nectarVolume_myl + 1)
-		num := 0.3 * math.Pow(W_beeWeight_g, 0.3333) * G_lengthGlossa_mm
-		base := 1.41 - C_CorollaDepth_mm/G_lengthGlossa_mm
+		accessTime := 0.3 + float64(0.04*corollaDepth) // Ta [s]
+		numerator := log10(nectarVolume + 1)
+		num := 0.3 * math.Pow(beeWeight, 0.3333) * glossaLength
+		base := 1.41 - corollaDepth/glossaLength
 		if base < 0.001 {
 			base = 0.001
 		}
-		den := math.Pow(base, -0.4) - float64(0.3*Ta_accessTime_s)
+		den := math.Pow(base, -0.4) - float64(0.3*accessTime)
 		denominator := log10(num/den + 1)
-		Ti_ingestionTime_s := numerator / denominator
+		ingestionTime := numerator / denominator // Ti [s]
 
-		handlingTimePerFlower_s := maxHandlingTime_s
+		handlingTimePerFlower := maxHandlingTime // [s]
 		if fillingLevel > 0 {
-			handlingTimePerFlower_s = (fs.InterFlowerTime+Ta_accessTime_s)/fillingLevel + Ti_ingestionTime_s
+			handlingTimePerFlower = (fs.InterFlowerTime+accessTime)/fillingLevel + ingestionTime
 		}
 		flowersVisited := 1.0
-		if V_nectarVolume_myl < fo.CropVolume {
-			flowersVisited = fo.CropVolume / V_nectarVolume_myl
+		if nectarVolume < fo.CropVolume {
+			flowersVisited = fo.CropVolume / nectarVolume
 		}
-		handlingTime_s = handlingTimePerFlower_s * flowersVisited
+		handlingTime = handlingTimePerFlower * flowersVisited
 	} else {
 		// [HAND-02]
-		timeInFlowers_s := 257.4
+		timeInFlowers := 257.4 // [s]
 		flowersNeededForPollenLoad := 58.0
 		if fs.PollenMax > 0 {
 			fillingLevel = state.Pollen / fs.PollenMax
@@ -263,16 +263,16 @@ func (f *forager) handlingTime(e ecs.Entity, myPatch ecs.Entity, pollenPatch boo
 			fillingLevel = 0
 		}
 		if fillingLevel > 0 {
-			handlingTime_s = fs.InterFlowerTime*flowersNeededForPollenLoad/fillingLevel + timeInFlowers_s
+			handlingTime = fs.InterFlowerTime*flowersNeededForPollenLoad/fillingLevel + timeInFlowers
 		} else {
-			handlingTime_s = maxHandlingTime_s
+			handlingTime = maxHandlingTime
 		}
 	}
 	// [HAND-03]
-	if handlingTime_s > maxHandlingTime_s {
-		handlingTime_s = maxHandlingTime_s
+	if handlingTime > maxHandlingTime {
+		handlingTime = maxHandlingTime
 	}
-	return handlingTime_s
+	return handlingTime
 }
 
 // log10 is NetLogo's "log x 10": ln x / ln 10 (math.Log10 can differ in the last digits).
@@ -290,27 +290,27 @@ func (f *forager) bestLayer(e ecs.Entity, myCurrentFoodsource ecs.Entity) ecs.En
 	// [BLYR-01]
 	colPos, _, _, _ := f.colonyMap.Get(b.Colony)
 	fsPos, _, _, layer := f.foodsourceMap.Get(myCurrentFoodsource)
-	distanceColonyFoodpatch_m := util.Distance(colPos.X, colPos.Y, fsPos.X, fsPos.Y) / f.landscape.Scale
+	patchDistance := util.Distance(colPos.X, colPos.Y, fsPos.X, fsPos.Y) / f.landscape.Scale // [m]
 	sp := f.speciesMap.Get(b.Species)
 
 	for _, currentLayer := range layer.PatchLayers {
 		_, fs, state, _ := f.foodsourceMap.Get(currentLayer)
 		// [BLYR-02]
 		if fo.PollenForager && state.Pollen > 0 {
-			handlingTime_s := f.handlingTime(e, currentLayer, fo.PollenForager)
-			if handlingTime_s < memoBestHandlingtime {
+			handlingTime := f.handlingTime(e, currentLayer, fo.PollenForager) // [s]
+			if handlingTime < memoBestHandlingtime {
 				memoBestPatch = currentLayer
-				memoBestHandlingtime = handlingTime_s
+				memoBestHandlingtime = handlingTime
 			}
 		}
 		// [BLYR-03] cost for the cohort, gain for one bee (no effect on the choice, see the annotation)
 		if !fo.PollenForager && state.Nectar > 0 {
-			handlingTime_s := f.handlingTime(e, currentLayer, fo.PollenForager)
-			energyCostsThisLayer_kJ := (float64(2*distanceColonyFoodpatch_m) +
-				float64(handlingTime_s*sp.FlightVelocity*f.constants.EnergyFactorOnFlower)) *
-				sp.FlightCosts * b.Weight * float64(b.Number)
-			energyGainThisLayer_kJ := fo.CropVolume * f.constants.SucroseEnergy * fs.NectarConcentration
-			eef := (energyGainThisLayer_kJ - energyCostsThisLayer_kJ) / energyCostsThisLayer_kJ
+			handlingTime := f.handlingTime(e, currentLayer, fo.PollenForager) // [s]
+			energyCosts := (float64(2*patchDistance) +
+				float64(handlingTime*sp.FlightVelocity*f.constants.EnergyFactorOnFlower)) *
+				sp.FlightCosts * b.Weight * float64(b.Number) // [kJ]
+			energyGain := fo.CropVolume * f.constants.SucroseEnergy * fs.NectarConcentration // [kJ]
+			eef := (energyGain - energyCosts) / energyCosts
 			if eef > memoBestEEF {
 				memoBestPatch = currentLayer
 				memoBestEEF = eef
@@ -321,18 +321,19 @@ func (f *forager) bestLayer(e ecs.Entity, myCurrentFoodsource ecs.Entity) ecs.En
 }
 
 // choosePatch lets the bee e choose the foodsource of her next trip of this forage [PCH].
-func (f *forager) choosePatch(e ecs.Entity, currentTripDuration_s float64) {
+// tripDuration is the duration of the trip just made [s].
+func (f *forager) choosePatch(e ecs.Entity, tripDuration float64) {
 	_, b, _, _, fo, _ := f.beeMap.Get(e)
 	// [PCH-01]
 	preferenceClosePatchesProb := 0.9
 	happy := true
 	gotoNewLayergroup := false
 	bestLayer := ecs.Entity{}
-	myExpectation_s := fo.ExpectedNectarTrip
+	myExpectation := fo.ExpectedNectarTrip // [s]
 	myKnownMasterpatchesList := fo.KnownNectarPatches
 	searchProbBase := 0.1
 	if fo.PollenForager {
-		myExpectation_s = fo.ExpectedPollenTrip
+		myExpectation = fo.ExpectedPollenTrip
 		myKnownMasterpatchesList = fo.KnownPollenPatches
 	}
 	myCurrentPatchPosition := -1.0
@@ -351,14 +352,14 @@ func (f *forager) choosePatch(e ecs.Entity, currentTripDuration_s float64) {
 			panic("No number for myMasterpatchID (Foraging_PatchChoiceProc): the current foodsource belongs to no known flower patch")
 		}
 		myCurrentPatchPosition = float64(position)
-		unhappyProb := (currentTripDuration_s - myExpectation_s) / currentTripDuration_s
+		unhappyProb := (tripDuration - myExpectation) / tripDuration
 		if unhappyProb < 0 {
 			unhappyProb = 0
 		}
 		if f.rng.Float64() < searchProbBase+unhappyProb {
 			happy = false
 		}
-		newExpectation := (myExpectation_s + currentTripDuration_s) / 2
+		newExpectation := (myExpectation + tripDuration) / 2
 		if fo.PollenForager {
 			fo.ExpectedPollenTrip = newExpectation
 		} else {
@@ -410,13 +411,13 @@ func (f *forager) tripCosts(w *ecs.World, e ecs.Entity) bool {
 	_, b, _, _, fo, _ := f.beeMap.Get(e)
 	persTimeSave := b.PersonalTime
 	saveNumber := float64(b.Number)
-	saveWeight_mg := b.Weight
-	saveFlightCosts_kJ_per_m_per_mg := f.speciesMap.Get(b.Species).FlightCosts
+	saveWeight := b.Weight                                     // [mg]
+	saveFlightCosts := f.speciesMap.Get(b.Species).FlightCosts // [kJ/(m mg)]
 
 	if b.Caste != caste.Worker && b.Caste != caste.Queen {
 		panic(fmt.Sprintf("%v %v %d shouldn't be foraging (Foraging_costs&timeProc)", b.Stage, b.Caste, e.ID())) // Ark entity ID, not NetLogo's who (step F12)
 	}
-	if saveFlightCosts_kJ_per_m_per_mg < 0 {
+	if saveFlightCosts < 0 {
 		panic("saveFlightCosts local variable not set (Foraging_costs&timeProc)")
 	}
 	colPos, colony, stores, _ := f.colonyMap.Get(b.Colony)
@@ -426,10 +427,10 @@ func (f *forager) tripCosts(w *ecs.World, e ecs.Entity) bool {
 
 	// [COST-01]
 	if b.Activity == activity.ReturningEmpty {
-		stores.Energy = stores.Energy - float64(spColony.SearchLength*saveFlightCosts_kJ_per_m_per_mg*saveNumber*saveWeight_mg)
-		tripDuration_s := spColony.SearchLength / spColony.FlightVelocity
-		b.PersonalTime = b.PersonalTime + tripDuration_s
-		survivalChance := math.Pow(survivalPerSecond, tripDuration_s)
+		stores.Energy = stores.Energy - float64(spColony.SearchLength*saveFlightCosts*saveNumber*saveWeight)
+		tripDuration := spColony.SearchLength / spColony.FlightVelocity // [s]
+		b.PersonalTime = b.PersonalTime + tripDuration
+		survivalChance := math.Pow(survivalPerSecond, tripDuration)
 		mortalityRisk := 1 - survivalChance
 		if f.rng.Float64() < mortalityRisk {
 			f.died.Emit(e) // output only, not in NetLogo
@@ -440,14 +441,14 @@ func (f *forager) tripCosts(w *ecs.World, e ecs.Entity) bool {
 
 	// [COST-02] the handling time uses the foodsource after the load was taken (finding 47, see
 	// trans/netlogo-findings.md#finding-47)
-	handlingTime_s := 0.0
+	handlingTime := 0.0 // [s]
 	if b.Activity == activity.BringingNectar || b.Activity == activity.BringingPollen {
 		if b.Activity == activity.BringingNectar {
-			handlingTime_s = f.handlingTime(e, fo.CurrentFoodsource, fo.PollenForager)
+			handlingTime = f.handlingTime(e, fo.CurrentFoodsource, fo.PollenForager)
 			b.Activity = activity.ReturningHappyNectar
 		}
 		if b.Activity == activity.BringingPollen {
-			handlingTime_s = f.handlingTime(e, fo.CurrentFoodsource, fo.PollenForager)
+			handlingTime = f.handlingTime(e, fo.CurrentFoodsource, fo.PollenForager)
 			b.Activity = activity.ReturningHappyPollen
 		}
 		fsPos, _, _, _ := f.foodsourceMap.Get(fo.CurrentFoodsource)
@@ -455,11 +456,11 @@ func (f *forager) tripCosts(w *ecs.World, e ecs.Entity) bool {
 		scaling := f.landscape.Scale
 		stores.Energy = stores.Energy - float64(
 			(float64(2*distance/scaling)+
-				float64(handlingTime_s*spColony.FlightVelocity*f.constants.EnergyFactorOnFlower))*
-				saveFlightCosts_kJ_per_m_per_mg*saveWeight_mg*saveNumber)
-		tripDuration_s := (2 * distance / scaling / spColony.FlightVelocity) + handlingTime_s
-		b.PersonalTime = b.PersonalTime + tripDuration_s
-		survivalChance := math.Pow(survivalPerSecond, tripDuration_s)
+				float64(handlingTime*spColony.FlightVelocity*f.constants.EnergyFactorOnFlower))*
+				saveFlightCosts*saveWeight*saveNumber)
+		tripDuration := (2 * distance / scaling / spColony.FlightVelocity) + handlingTime // [s]
+		b.PersonalTime = b.PersonalTime + tripDuration
+		survivalChance := math.Pow(survivalPerSecond, tripDuration)
 		mortalityRisk := 1 - survivalChance
 		if f.rng.Float64() < mortalityRisk {
 			f.died.Emit(e) // output only, not in NetLogo

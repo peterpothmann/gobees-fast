@@ -55,13 +55,13 @@ func (l *eggLayer) layEggs(e ecs.Entity) []ecs.Entity {
 	// cohorts of 1 egg in NetLogo (findings 30, 43, see trans/netlogo-findings.md#finding-43).
 	motherCaste := mother.Caste
 	beesInCohort := sp.BatchSize
-	pollenCost_g := float64(beesInCohort) * sp.EggWeight * sp.PollenToBodymassFactor / 1000
-	energyCost_kJ := pollenCost_g * l.constants.PollenAssimilationEnergy
+	pollenCost := float64(beesInCohort) * sp.EggWeight * sp.PollenToBodymassFactor / 1000 // [g]
+	energyCost := pollenCost * l.constants.PollenAssimilationEnergy                       // [kJ]
 
 	// [EGG-02]
 	var eggs []ecs.Entity
 	_, stores := l.colonyMap.Get(colonyID)
-	if stores.Pollen > pollenCost_g && stores.Energy > energyCost_kJ {
+	if stores.Pollen > pollenCost && stores.Energy > energyCost {
 		// NetLogo shuffles the new cohorts (decision C). One cohort draws no random number.
 		egg := l.hatch(e)
 		eggs = []ecs.Entity{egg}
@@ -80,8 +80,8 @@ func (l *eggLayer) layEggs(e ecs.Entity) []ecs.Entity {
 		}
 		l.initEggs(egg, beesInCohort, diploid)
 		_, stores := l.colonyMap.Get(colonyID)
-		stores.Pollen = stores.Pollen - pollenCost_g
-		stores.Energy = stores.Energy - energyCost_kJ
+		stores.Pollen = stores.Pollen - pollenCost
+		stores.Energy = stores.Energy - energyCost
 	}
 
 	// [EGG-03] also if no eggs were laid

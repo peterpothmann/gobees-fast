@@ -86,7 +86,7 @@ func (t *speciesTable) all() []int {
 type masterpatch struct {
 	entity    ecs.Entity
 	patchType string
-	area_sqm  float64
+	area      float64 // [m2]
 }
 
 // collectMasterpatches returns all masterpatches, sorted by who: in the order of globals.Landscape.Masterpatches
@@ -143,7 +143,7 @@ func nestSites(habitats []string, masterpatches []masterpatch) ([]ecs.Entity, fl
 	for _, m := range masterpatches {
 		if slices.Contains(habitats, m.patchType) {
 			sites = append(sites, m.entity)
-			area += m.area_sqm
+			area += m.area
 		}
 	}
 	return sites, area

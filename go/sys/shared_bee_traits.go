@@ -81,21 +81,22 @@ func thresholds(situation string) comp.Thresholds {
 
 // proboscisLength returns the glossa length of a bee from her weight [mm] [PROB], finding 34
 // (see trans/netlogo-findings.md#finding-34): linear between the minimum worker weight and the maximum queen weight.
-func proboscisLength(weight_mg float64, sp *params.Species) float64 {
-	minWeight_mg := sp.PupationWeightMin
-	maxWeight_mg := sp.QueenPupationWeightMax
-	slope := (sp.ProboscisMax - sp.ProboscisMin) / (maxWeight_mg - minWeight_mg)
-	length := sp.ProboscisMin + (weight_mg-minWeight_mg)*slope
-	if weight_mg < minWeight_mg || weight_mg > maxWeight_mg {
-		panic(fmt.Sprintf("Wrong bee weight in ProboscisLengthREP: %v mg", weight_mg))
+// weight is in [mg].
+func proboscisLength(weight float64, sp *params.Species) float64 {
+	minWeight := sp.PupationWeightMin      // [mg]
+	maxWeight := sp.QueenPupationWeightMax // [mg]
+	slope := (sp.ProboscisMax - sp.ProboscisMin) / (maxWeight - minWeight)
+	length := sp.ProboscisMin + (weight-minWeight)*slope
+	if weight < minWeight || weight > maxWeight {
+		panic(fmt.Sprintf("Wrong bee weight in ProboscisLengthREP: %v mg", weight))
 	}
 	return length
 }
 
 // Factors of the crop volume and the pollen load [LOAD].
 const (
-	beeWeightToLoadFactor             = 0.402      // Ings et al. 2006, nectar loads
-	beehaveCropToPelletFactor_ul_to_g = 0.015 / 50 // BEEHAVE: 50 microlitres nectar load, 0.015 g pollen load
+	beeWeightToLoadFactor = 0.402      // Ings et al. 2006, nectar loads
+	cropToPelletFactor    = 0.015 / 50 // [g/µl], BEEHAVE: 50 microlitres nectar load, 0.015 g pollen load
 )
 
 // cropVolume returns the crop volume of a bee of weight weight_mg [µl] [LOAD]. A result of 0 (weight 0) is an
@@ -103,8 +104,9 @@ const (
 //
 // NetLogo: CropAndPelletSizeREP "nectar". Since step F15 one function per forage, so the case of an unknown forage
 // (an assertion in NetLogo) no longer exists.
-func cropVolume(weight_mg float64, sp *params.Species) float64 {
-	result := math.Min(sp.MaxCropVolume, weight_mg*beeWeightToLoadFactor)
+// weight is in [mg].
+func cropVolume(weight float64, sp *params.Species) float64 {
+	result := math.Min(sp.MaxCropVolume, weight*beeWeightToLoadFactor)
 	if result == 0 {
 		panic("Assertion violated: Error in CropAndPelletSizeREP")
 	}
@@ -115,8 +117,9 @@ func cropVolume(weight_mg float64, sp *params.Species) float64 {
 // assertion, as in NetLogo.
 //
 // NetLogo: CropAndPelletSizeREP "pollen".
-func pollenLoad(weight_mg float64, sp *params.Species) float64 {
-	result := math.Min(sp.MaxPollenPellets, weight_mg*beeWeightToLoadFactor*beehaveCropToPelletFactor_ul_to_g)
+// weight is in [mg].
+func pollenLoad(weight float64, sp *params.Species) float64 {
+	result := math.Min(sp.MaxPollenPellets, weight*beeWeightToLoadFactor*cropToPelletFactor)
 	if result == 0 {
 		panic("Assertion violated: Error in CropAndPelletSizeREP")
 	}
@@ -125,12 +128,13 @@ func pollenLoad(weight_mg float64, sp *params.Species) float64 {
 
 // winterMortalityProb returns the probability of a queen to SURVIVE the winter [WMOR], finding 33
 // (see trans/netlogo-findings.md#finding-33): 0.64 / (1 + e^(-22 * (relative weight - 0.32))).
-func winterMortalityProb(weight_mg float64, sp *params.Species) float64 {
+// weight is in [mg].
+func winterMortalityProb(weight float64, sp *params.Species) float64 {
 	minW := sp.QueenPupationWeightMin
 	maxW := sp.QueenPupationWeightMax
-	relWeight := (weight_mg - minW) / (maxW - minW)
+	relWeight := (weight - minW) / (maxW - minW)
 	if relWeight < 0 || relWeight > 1 {
-		panic(fmt.Sprintf("Wrong weight! (WintermortalityProbREP): %v mg", weight_mg))
+		panic(fmt.Sprintf("Wrong weight! (WintermortalityProbREP): %v mg", weight))
 	}
 	return 0.64 / (1 + math.Exp(-22*(relWeight-0.32)))
 }

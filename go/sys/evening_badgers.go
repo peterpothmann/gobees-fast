@@ -44,9 +44,9 @@ func (s *badgers) Initialize(w *ecs.World) {
 func (s *badgers) Update(w *ecs.World) {
 	// variables, not Go constants: NetLogo multiplies two doubles, 0.19 * 0.1 = 0.019000000000000003, whereas Go
 	// would multiply constants exactly (0.019).
-	foragingRange_m := 735.0 // Kruuk & Parish 1982: territory ca. 170 ha, radius ca. 735 m
-	encounterProb := 0.19    // Kowalczyk et al. 2006: daily range 19 % of the home range
-	digUpProb := 0.1         // ARBITRARY VALUE (NetLogo comment)
+	foragingRange := 735.0 // [m], Kruuk & Parish 1982: territory ca. 170 ha, radius ca. 735 m
+	encounterProb := 0.19  // Kowalczyk et al. 2006: daily range 19 % of the home range
+	digUpProb := 0.1       // ARBITRARY VALUE (NetLogo comment)
 
 	// [BADG-01] ORDER: irrelevant for the state. A colony dug up twice in one evening has nothing left to lose.
 	type badger struct{ x, y float64 }
@@ -70,7 +70,7 @@ func (s *badgers) Update(w *ecs.World) {
 		cq := s.colonyFilter.Query()
 		for cq.Next() {
 			pos, _ := cq.Get()
-			if util.Distance(pos.X, pos.Y, b.x, b.y) < s.landscape.Scale*foragingRange_m {
+			if util.Distance(pos.X, pos.Y, b.x, b.y) < s.landscape.Scale*foragingRange {
 				inRange = append(inRange, cq.Entity())
 			}
 		}

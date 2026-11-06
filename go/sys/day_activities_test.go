@@ -41,10 +41,11 @@ func newActivityWorld(t *testing.T, seed uint64) *activityWorld {
 }
 
 // adult adds an adult bee with the thresholds of a situation [THR].
-func (aw *activityWorld) adult(col ecs.Entity, c caste.Caste, number int, weight_mg float64, situation string) ecs.Entity {
+// weight is in [mg].
+func (aw *activityWorld) adult(col ecs.Entity, c caste.Caste, number int, weight float64, situation string) ecs.Entity {
 	e := aw.addBee(col, stage.Adult, c, number, 5)
 	b, _, th, _, _ := aw.bee(e)
-	b.Weight = weight_mg
+	b.Weight = weight
 	*th = thresholds(situation)
 	return e
 }

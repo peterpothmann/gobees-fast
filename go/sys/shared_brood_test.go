@@ -72,10 +72,11 @@ func (bw *broodWorld) bee(e ecs.Entity) (*comp.Bee, *comp.Genetics, *comp.Thresh
 }
 
 // addBrood adds brood of a colony with the given caste, broodAge, weight and incubation.
-func (bw *broodWorld) addBrood(col ecs.Entity, st stage.Stage, c caste.Caste, number, broodAge int, weight_mg, incubation_kJ float64) ecs.Entity {
+// weight [mg], incubation [kJ].
+func (bw *broodWorld) addBrood(col ecs.Entity, st stage.Stage, c caste.Caste, number, broodAge int, weight, incubation float64) ecs.Entity {
 	e := bw.addBee(col, st, c, number, 0)
 	b, _, _, _, d := bw.bee(e)
-	b.BroodAge, b.Weight, d.IncubationReceived = broodAge, weight_mg, incubation_kJ
+	b.BroodAge, b.Weight, d.IncubationReceived = broodAge, weight, incubation
 	return e
 }
 

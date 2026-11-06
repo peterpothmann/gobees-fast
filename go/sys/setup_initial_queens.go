@@ -74,10 +74,10 @@ func (s *initialQueensSetup) Initialize(w *ecs.World) {
 			}
 			bee.EmergenceDate = day.At(emerging)
 			// [IQUE-09]
-			minWeight_mg := sp.QueenPupationWeightMin
-			maxWeight_mg := sp.QueenPupationWeightMax
-			bee.Weight = util.RandomNormal(rng, (maxWeight_mg+minWeight_mg)/2, (maxWeight_mg-minWeight_mg)/4)
-			bee.Weight = min(max(bee.Weight, minWeight_mg), maxWeight_mg)
+			minWeight := sp.QueenPupationWeightMin // [mg]
+			maxWeight := sp.QueenPupationWeightMax // [mg]
+			bee.Weight = util.RandomNormal(rng, (maxWeight+minWeight)/2, (maxWeight-minWeight)/4)
+			bee.Weight = min(max(bee.Weight, minWeight), maxWeight)
 
 			// [IQUE-08] no foodsource known yet (zero entities, empty lists)
 			forager := comp.Forager{

@@ -54,8 +54,8 @@ func (s *queenProductionDate) Update(w *ecs.World) {
 		colony, counts := s.colonyMap.Get(col)
 
 		// [QPD-01] 7 d + dev_larvalAge_QueenDetermination_d, or the largest broodAge of the larvae at larval day 3
-		averageCumulTimeEgg_d := 7
-		timeEggToLarvalAgeAtQueenDetermination := averageCumulTimeEgg_d + s.speciesMap.Get(colony.Species).QueenDeterminationAge
+		averageEggTime := 7 // [d]
+		timeEggToLarvalAgeAtQueenDetermination := averageEggTime + s.speciesMap.Get(colony.Species).QueenDeterminationAge
 		found := false
 		maxBroodAge := 0
 		for _, e := range s.larvae[col] {

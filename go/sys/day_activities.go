@@ -135,13 +135,13 @@ func (s *activities) nextActiveBee() ecs.Entity {
 	list := s.active.List
 	// [NEXT-01]
 	activeBee := list[0]
-	persTime_activeBee := time(activeBee)
+	activeBeeTime := time(activeBee) // [s]
 	// [NEXT-02]
 	minPosition := 0.0
 	maxPosition := float64(len(list) - 1)
 	currentPosition := util.Round(maxPosition / 2)
 	for maxPosition-minPosition > 1 {
-		if time(list[int(currentPosition)]) > persTime_activeBee {
+		if time(list[int(currentPosition)]) > activeBeeTime {
 			maxPosition = currentPosition
 			currentPosition = util.Round((currentPosition + minPosition) / 2)
 		} else {
@@ -160,7 +160,7 @@ func (s *activities) nextActiveBee() ecs.Entity {
 	// [NEXT-04] in place, without a new list (step F10): beginningList moves one position to the front into the place
 	// of activeBee, endList stays where it is. Same order as NetLogo's sentence.
 	// SIMPLIFY: a priority queue (trans/data-model.md).
-	if len(endList) == 1 && persTime_activeBee > time(endList[0]) {
+	if len(endList) == 1 && activeBeeTime > time(endList[0]) {
 		copy(list, list[1:])
 		list[len(list)-1] = activeBee
 	} else {
@@ -173,7 +173,7 @@ func (s *activities) nextActiveBee() ecs.Entity {
 // act lets the bee e choose one task and do it [ACT].
 func (s *activities) act(w *ecs.World, e ecs.Entity) {
 	// [ACT-01]
-	break_s := 0.5 * 3600
+	pause := 0.5 * 3600 // [s]
 	_, b, _, th, _, _ := s.beeMap.Get(e)
 	b.Activity = activity.Resting
 	if !b.Colony.IsZero() {
@@ -210,7 +210,7 @@ func (s *activities) act(w *ecs.World, e ecs.Entity) {
 	// [ACT-05] at most one task runs, see the annotation
 	switch b.Activity {
 	case activity.Resting:
-		b.PersonalTime = b.PersonalTime + break_s
+		b.PersonalTime = b.PersonalTime + pause
 	case activity.Egglaying:
 		col := b.Colony
 		eggs := s.eggs.layEggs(e)
@@ -224,17 +224,17 @@ func (s *activities) act(w *ecs.World, e ecs.Entity) {
 
 // incubateBrood lets the nurse e heat the brood of her colony for 48 min [INC].
 func (s *activities) incubateBrood(w *ecs.World, e ecs.Entity) {
-	heatingPeriod_s := 2880.0
-	incubationEnergy_kJ_per_mg_s := 0.000000217013888
+	heatingPeriod := 2880.0               // [s]
+	incubationEnergy := 0.000000217013888 // [kJ/(mg s)]
 	_, b, _, _, _, _ := s.beeMap.Get(e)
 	// [INC-01]
-	heatProvided_kJ := heatingPeriod_s * incubationEnergy_kJ_per_mg_s * b.Weight * float64(b.Number)
+	heatProvided := heatingPeriod * incubationEnergy * b.Weight * float64(b.Number) // [kJ]
 	// [INC-02] the divisor uses this morning's counts, brood laid today is not in it (finding 46, see
 	// trans/netlogo-findings.md#finding-46)
-	heatProvidedPerBrood_kJ := 0.0
+	heatPerBrood := 0.0 // [kJ]
 	_, stores, _, counts := s.colonyMap.Get(b.Colony)
 	if counts.Eggs+counts.Larvae+counts.Pupae > 0 {
-		heatProvidedPerBrood_kJ = heatProvided_kJ / float64(counts.Eggs+counts.Larvae+counts.Pupae)
+		heatPerBrood = heatProvided / float64(counts.Eggs+counts.Larvae+counts.Pupae)
 	}
 	// ORDER: irrelevant, each brood agent only changes itself. Shuffled (decision C).
 	brood := s.broodOf[b.Colony]
@@ -244,10 +244,10 @@ func (s *activities) incubateBrood(w *ecs.World, e ecs.Entity) {
 			continue
 		}
 		_, _, _, _, _, dev := s.beeMap.Get(x)
-		dev.IncubationReceived = dev.IncubationReceived + heatProvidedPerBrood_kJ
+		dev.IncubationReceived = dev.IncubationReceived + heatPerBrood
 	}
-	stores.IncubationToday = stores.IncubationToday + heatProvided_kJ
-	stores.Energy = stores.Energy - heatProvided_kJ
+	stores.IncubationToday = stores.IncubationToday + heatProvided
+	stores.Energy = stores.Energy - heatProvided
 	// [INC-03]
-	b.PersonalTime = b.PersonalTime + heatingPeriod_s
+	b.PersonalTime = b.PersonalTime + heatingPeriod
 }

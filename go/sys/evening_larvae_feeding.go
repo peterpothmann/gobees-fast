@@ -79,37 +79,37 @@ func (s *larvaeFeeding) feedColony(col ecs.Entity, myLarvae []ecs.Entity) {
 
 	// [FEED-02] ORDER: irrelevant, the store does not change within the loop, each larva changes only itself.
 	// The cap compares the pollen of ONE larva with the whole store (see the annotation).
-	totalPollenFedToday_g := 0.0
+	totalPollenFedToday := 0.0 // [g]
 	util.Shuffle(s.rng, myLarvae)
 	for _, e := range myLarvae {
 		b := s.beeMap.Get(e)
 		sp := s.speciesMap.Get(b.Species)
-		pollenReceivedToday_mg := growthLimitingFactor * (maxWeightGainToday(b, sp) / sp.PollenToBodymassFactor)
-		if pollenReceivedToday_mg > stores.Pollen*1000 {
-			pollenReceivedToday_mg = stores.Pollen * 1000
-			if pollenReceivedToday_mg < 0 {
-				pollenReceivedToday_mg = 0
+		pollenReceivedToday := growthLimitingFactor * (maxWeightGainToday(b, sp) / sp.PollenToBodymassFactor) // [mg]
+		if pollenReceivedToday > stores.Pollen*1000 {
+			pollenReceivedToday = stores.Pollen * 1000
+			if pollenReceivedToday < 0 {
+				pollenReceivedToday = 0
 			}
 		}
-		oldWeight_mg := b.Weight
+		oldWeight := b.Weight // [mg]
 		// float64(...): no fused multiply-add, see CompetitionPointDateREP
-		b.Weight = b.Weight + float64(pollenReceivedToday_mg*sp.PollenToBodymassFactor)
+		b.Weight = b.Weight + float64(pollenReceivedToday*sp.PollenToBodymassFactor)
 		if b.Weight < 0 {
 			panic("BUG in FeedPOLLENProc")
 		}
-		if b.Weight < oldWeight_mg {
+		if b.Weight < oldWeight {
 			panic("BUG in FeedPOLLENProc: WeightLoss")
 		}
-		totalPollenFedToday_g = totalPollenFedToday_g + (float64(b.Number) * pollenReceivedToday_mg / 1000)
+		totalPollenFedToday = totalPollenFedToday + (float64(b.Number) * pollenReceivedToday / 1000)
 	}
 
 	// [FEED-03]
-	totalEnergyFedToday_kJ := totalPollenFedToday_g * s.constants.PollenAssimilationEnergy
-	stores.Pollen = stores.Pollen - totalPollenFedToday_g
+	totalEnergyFedToday := totalPollenFedToday * s.constants.PollenAssimilationEnergy // [kJ]
+	stores.Pollen = stores.Pollen - totalPollenFedToday
 	if stores.Pollen < 0 {
 		// NetLogo: type "negative pollen store! Ticks: " show ticks (show adds the calling agent, by its who number).
 		// gobees-fast names the Ark entity ID of the colony instead (step F12).
 		fmt.Printf("negative pollen store! Ticks: (colony %d): %d\n", col.ID(), s.ticks.Ticks)
 	}
-	stores.Energy = stores.Energy - totalEnergyFedToday_kJ
+	stores.Energy = stores.Energy - totalEnergyFedToday
 }
