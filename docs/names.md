@@ -375,3 +375,11 @@ The keys `x` and `y` would need quotes (`y` is a boolean in YAML 1.1), so `xcor`
 Unchanged: `DailySwitchProbability`, `EnergyFactorOnFlower`, `MaxLifespanMales`, `NotSetHigh`, `NotSetLow`.
 Values that the code still converts at run time (`NestSearchTime` in hours, `nectarPerFlower` in ml, the
 constants written as `24 * 3600`) keep their unit until a step of their own.
+
+## Step F15d: local names
+
+The local variables, parameters and constants in `go/sys`, `go/obs` and the converter lose their unit suffix too
+(e.g. `handlingTime_s` → `handlingTime`). The unit stands in a comment at the declaration. The symbols of the
+handling time formula [HAND] stay in that comment: `beeWeight` (W), `glossaLength` (G), `corollaDepth` (C),
+`nectarVolume` (V), `accessTime` (Ta), `ingestionTime` (Ti). `break_s` is `pause` (`break` is a Go keyword).
+Only the fields of `obs.DailyTotals` keep a unit in their name: they are the output columns.
