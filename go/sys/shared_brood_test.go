@@ -58,7 +58,7 @@ func (bw *broodWorld) eggsOf(col ecs.Entity) []ecs.Entity {
 	result := []ecs.Entity{}
 	query := bw.beeFilter().Query()
 	for query.Next() {
-		if b := query.Get(); b.Stage == stage.Egg && b.ColonyID == col {
+		if b := query.Get(); b.Stage == stage.Egg && b.Colony == col {
 			result = append(result, query.Entity())
 		}
 	}
@@ -75,7 +75,7 @@ func (bw *broodWorld) bee(e ecs.Entity) (*comp.Bee, *comp.Genetics, *comp.Thresh
 func (bw *broodWorld) addBrood(col ecs.Entity, st stage.Stage, c caste.Caste, number, broodAge int, weight_mg, incubation_kJ float64) ecs.Entity {
 	e := bw.addBee(col, st, c, number, 0)
 	b, _, _, _, d := bw.bee(e)
-	b.BroodAge, b.Weight_mg, d.CumulIncubationReceived_kJ = broodAge, weight_mg, incubation_kJ
+	b.BroodAge, b.Weight, d.IncubationReceived = broodAge, weight_mg, incubation_kJ
 	return e
 }
 

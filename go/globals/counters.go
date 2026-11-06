@@ -19,5 +19,5 @@ type ActiveBees struct {
 // Daytime is the time of day of the event loop: the personalTime_s of the bee whose turn it is [GO-09].
 // Read by the foraging stimuli [STNE-03], [STPO-03].
 type Daytime struct {
-	Daytime_s float64
+	Time float64 // [s]. NetLogo: Daytime_s
 }

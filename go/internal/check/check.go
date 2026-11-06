@@ -26,7 +26,7 @@ func Day(w *ecs.World, seasonEnd bool) error {
 	for query.Next() {
 		b := query.Get()
 		member := b.Stage != stage.Adult || b.Caste == caste.Worker || b.Caste == caste.Male
-		if member && (b.ColonyID.IsZero() || !w.Alive(b.ColonyID) || !colonies.HasAll(b.ColonyID)) {
+		if member && (b.Colony.IsZero() || !w.Alive(b.Colony) || !colonies.HasAll(b.Colony)) {
 			err := fmt.Errorf("[CHK-03] bee %v (stage %v, caste %v, number %v) belongs to no living colony",
 				query.Entity(), b.Stage, b.Caste, b.Number)
 			query.Close()

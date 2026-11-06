@@ -13,7 +13,7 @@ import (
 // addScrub adds a Scrub masterpatch at (x, y).
 func addScrub(w *ecs.World, x, y float64) ecs.Entity {
 	return ecs.NewMap3[comp.Position, comp.Foodsource, comp.Layer](w).NewEntity(
-		&comp.Position{X: x, Y: y}, &comp.Foodsource{PatchType: "Scrub"}, &comp.Layer{Masterpatch: true})
+		&comp.Position{X: x, Y: y}, &comp.Foodsource{PatchType: "Scrub"}, &comp.Layer{IsMasterpatch: true})
 }
 
 // badgerPositions returns the positions of all badgers.

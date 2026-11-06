@@ -59,7 +59,7 @@ func (s *development) Update(w *ecs.World) {
 	s.bees = askAllBees(s.bees, s.beeFilter, s.rng)
 	for _, e := range s.bees {
 		_, bee, _, _, _, _ := s.beeMap.Get(e)
-		whoCol := bee.ColonyID
+		whoCol := bee.Colony
 		if bee.Stage == stage.Adult {
 			// [DEV-02]
 			bee.AdultAge = bee.AdultAge + 1
@@ -93,7 +93,7 @@ func (s *development) ageAdult(w *ecs.World, e ecs.Entity) {
 	_, bee, _, th, _, _ := s.beeMap.Get(e)
 	// [MORA-01] DieProc ends the bee's code (finding 28, see trans/netlogo-findings.md#finding-28)
 	if bee.Caste == caste.Worker {
-		if bee.AdultAge > s.speciesMap.Get(bee.SpeciesID).MaxLifespanWorkers {
+		if bee.AdultAge > s.speciesMap.Get(bee.Species).MaxLifespanWorkers {
 			s.death.die(w, e, "Worker: adultAge > maxLifespanWorkers")
 			return
 		}
@@ -106,8 +106,8 @@ func (s *development) ageAdult(w *ecs.World, e ecs.Entity) {
 	}
 
 	// [MORA-02] no species check: also a Psithyrus queen (finding 44, see trans/netlogo-findings.md#finding-44)
-	if bee.Caste == caste.Queen && bee.Mated && !bee.ColonyID.IsZero() {
-		if _, counts := s.colonyMap.Get(bee.ColonyID); counts.AllAdultWorkers > 0 {
+	if bee.Caste == caste.Queen && bee.Mated && !bee.Colony.IsZero() {
+		if _, counts := s.colonyMap.Get(bee.Colony); counts.AdultWorkers > 0 {
 			*th = thresholds(sitQueenSocialPhase)
 		}
 	}
@@ -123,43 +123,43 @@ func (s *development) ageAdult(w *ecs.World, e ecs.Entity) {
 // totalAdultsProduced of the colony: read only by the egg accounting [CHK-04], removed in step F4.
 func (s *development) developPupa(e ecs.Entity) {
 	_, bee, _, th, forager, dev := s.beeMap.Get(e)
-	sp := s.speciesMap.Get(bee.SpeciesID)
+	sp := s.speciesMap.Get(bee.Species)
 	// [DEVP-01] cumulTimePupa_d: never read, removed in step F3.
 
 	// [DEVP-02]
 	if bee.Caste == caste.Worker {
-		if dev.CumulIncubationReceived_kJ >= sp.DevIncubationEmergingTH_kJ && float64(bee.BroodAge) >= sp.DevAgeEmergingMin_d {
+		if dev.IncubationReceived >= sp.DevIncubationEmergingTH_kJ && float64(bee.BroodAge) >= sp.DevAgeEmergingMin_d {
 			bee.Stage = stage.Adult
-			forager.Cropvolume_myl = cropVolume(bee.Weight_mg, sp)
-			forager.PollenPellets_g = pollenLoad(bee.Weight_mg, sp)
+			forager.CropVolume = cropVolume(bee.Weight, sp)
+			forager.PollenPellets = pollenLoad(bee.Weight, sp)
 			*th = thresholds(sitWorker)
-			forager.GlossaLength_mm = proboscisLength(bee.Weight_mg, sp)
+			forager.GlossaLength = proboscisLength(bee.Weight, sp)
 		}
 	}
 
 	// [DEVP-03] males get no crop, pollen load, thresholds or proboscis
 	if bee.Caste == caste.Male {
-		if dev.CumulIncubationReceived_kJ >= sp.DevIncubationEmergingTH_kJ && float64(bee.BroodAge) >= sp.DevAgeEmergingMin_d {
+		if dev.IncubationReceived >= sp.DevIncubationEmergingTH_kJ && float64(bee.BroodAge) >= sp.DevAgeEmergingMin_d {
 			bee.Stage = stage.Adult
 		}
 	}
 
 	// [DEVP-04]
 	if bee.Caste == caste.Queen {
-		if dev.CumulIncubationReceived_kJ >= sp.DevIncubation_Q_EmergingTH_kJ && float64(bee.BroodAge) >= sp.DevAge_Q_EmergingMin_d {
+		if dev.IncubationReceived >= sp.DevIncubation_Q_EmergingTH_kJ && float64(bee.BroodAge) >= sp.DevAge_Q_EmergingMin_d {
 			// The emerging date of a new queen is unset (NetLogo: NotSetLow, set in EggsParameterSettingProc), so it is
 			// drawn at least once.
 			yearStartSeason := day.YearEnd(s.ticks.Ticks)
 			yearEndSeason := yearStartSeason + day.Abs(sp.SeasonStop)
-			for !bee.EmergingDate.IsSet() || bee.EmergingDate.Day() <= yearStartSeason || bee.EmergingDate.Day() > yearEndSeason {
-				bee.EmergingDate = day.At(yearStartSeason + day.Abs(util.Round(util.RandomNormal(s.rng, sp.EmergingDay_mean, sp.EmergingDay_sd))))
+			for !bee.EmergenceDate.IsSet() || bee.EmergenceDate.Day() <= yearStartSeason || bee.EmergenceDate.Day() > yearEndSeason {
+				bee.EmergenceDate = day.At(yearStartSeason + day.Abs(util.Round(util.RandomNormal(s.rng, sp.EmergingDay_mean, sp.EmergingDay_sd))))
 			}
 			bee.Stage = stage.Adult
 			s.queenEmerged.Emit(e) // totalAdultQueensEverProduced: output only, counted by the observers (step F4)
-			forager.Cropvolume_myl = cropVolume(bee.Weight_mg, sp)
-			forager.PollenPellets_g = pollenLoad(bee.Weight_mg, sp)
+			forager.CropVolume = cropVolume(bee.Weight, sp)
+			forager.PollenPellets = pollenLoad(bee.Weight, sp)
 			*th = thresholds(sitYoungQueen)
-			forager.GlossaLength_mm = proboscisLength(bee.Weight_mg, sp)
+			forager.GlossaLength = proboscisLength(bee.Weight, sp)
 		}
 	}
 
@@ -186,14 +186,14 @@ func determineCaste(weight_mg float64, sp *params.Species, col *comp.Colony) cas
 // is old enough, incubated enough and heavy enough [DEVL]. whoCol is the larva's own colony.
 func (s *development) developLarva(e ecs.Entity, whoCol ecs.Entity) {
 	_, bee, _, _, _, dev := s.beeMap.Get(e)
-	sp := s.speciesMap.Get(bee.SpeciesID)
+	sp := s.speciesMap.Get(bee.Species)
 	// [DEVL-01]
-	dev.CumulTimeLarva_d = dev.CumulTimeLarva_d + 1
+	dev.LarvaTime = dev.LarvaTime + 1
 
 	// [DEVL-02]
-	if bee.Caste == caste.Undefined && dev.CumulTimeLarva_d == sp.Dev_larvalAge_QueenDetermination_d {
+	if bee.Caste == caste.Undefined && dev.LarvaTime == sp.Dev_larvalAge_QueenDetermination_d {
 		colony, _ := s.colonyMap.Get(whoCol)
-		bee.Caste = determineCaste(bee.Weight_mg, sp, colony)
+		bee.Caste = determineCaste(bee.Weight, sp, colony)
 		if bee.Caste == caste.Undefined {
 			panic("Assertion violated: undefined caste! (Development_LarvaeProc)")
 		}
@@ -202,16 +202,16 @@ func (s *development) developLarva(e ecs.Entity, whoCol ecs.Entity) {
 	// [DEVL-03] the brackets around (worker || male) are required (finding 41, see
 	// trans/netlogo-findings.md#finding-41)
 	if (bee.Caste == caste.Worker || bee.Caste == caste.Male) &&
-		dev.CumulIncubationReceived_kJ >= sp.DevIncubationPupationTH_kJ &&
+		dev.IncubationReceived >= sp.DevIncubationPupationTH_kJ &&
 		float64(bee.BroodAge) >= sp.DevAgePupationMin_d &&
-		bee.Weight_mg >= sp.DevWeightPupationMin_mg {
+		bee.Weight >= sp.DevWeightPupationMin_mg {
 		bee.Stage = stage.Pupa // totalPupaeProduced: never read, removed in step F3
 	}
 
 	if bee.Caste == caste.Queen &&
-		dev.CumulIncubationReceived_kJ >= sp.DevIncubation_Q_PupationTH_kJ &&
+		dev.IncubationReceived >= sp.DevIncubation_Q_PupationTH_kJ &&
 		float64(bee.BroodAge) >= sp.DevAge_Q_PupationMin_d &&
-		bee.Weight_mg >= sp.DevWeight_Q_PupationMin_mg {
+		bee.Weight >= sp.DevWeight_Q_PupationMin_mg {
 		bee.Stage = stage.Pupa
 	}
 }
@@ -219,9 +219,9 @@ func (s *development) developLarva(e ecs.Entity, whoCol ecs.Entity) {
 // developEgg lets an egg hatch into a larva once it is old enough and incubated enough [DEVE].
 func (s *development) developEgg(e ecs.Entity) {
 	_, bee, _, _, _, dev := s.beeMap.Get(e)
-	sp := s.speciesMap.Get(bee.SpeciesID)
+	sp := s.speciesMap.Get(bee.Species)
 	// [DEVE-01] cumulTimeEgg_d and totalLarvaeProduced: never read, removed in step F3.
-	if dev.CumulIncubationReceived_kJ >= sp.DevIncubationHatchingTH_kJ && float64(bee.BroodAge) >= sp.DevAgeHatchingMin_d {
+	if dev.IncubationReceived >= sp.DevIncubationHatchingTH_kJ && float64(bee.BroodAge) >= sp.DevAgeHatchingMin_d {
 		bee.Stage = stage.Larva
 	}
 }

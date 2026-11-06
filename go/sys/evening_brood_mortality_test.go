@@ -34,7 +34,7 @@ func TestBroodMortality(t *testing.T) {
 	bw.addBee(bw.addColony(nil), stage.Adult, caste.Queen, 1, 300)
 	queenWithoutColony := bw.addBee(col, stage.Adult, caste.Queen, 1, 300)
 	b, _, _, _, _ := bw.bee(queenWithoutColony)
-	b.ColonyID = ecs.Entity{}
+	b.Colony = ecs.Entity{}
 
 	bw.morb.Update(bw.w)
 

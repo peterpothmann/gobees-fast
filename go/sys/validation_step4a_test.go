@@ -91,8 +91,8 @@ func (s *foodsourceTotals) Update(w *ecs.World) {
 	query := s.filter.Query()
 	for query.Next() {
 		st := query.Get()
-		s.nectar_l += st.Nectar_myl / (1000 * 1000)
-		s.pollen_kg += st.Pollen_g / 1000
+		s.nectar_l += st.Nectar / (1000 * 1000)
+		s.pollen_kg += st.Pollen / 1000
 	}
 }
 

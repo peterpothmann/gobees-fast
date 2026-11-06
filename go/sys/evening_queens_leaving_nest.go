@@ -48,7 +48,7 @@ func (s *queensLeavingNest) Initialize(w *ecs.World) {
 func (s *queensLeavingNest) Update(w *ecs.World) {
 	// [QLN-01] ORDER: irrelevant. Each queen only changes herself, and mating does not use up the male.
 	s.queens = askBees(s.queens, s.beeFilter, s.rng, func(b *comp.Bee) bool {
-		return b.Stage == stage.Adult && b.Caste == caste.Queen && !b.Mated && !b.ColonyID.IsZero()
+		return b.Stage == stage.Adult && b.Caste == caste.Queen && !b.Mated && !b.Colony.IsZero()
 	})
 	if len(s.queens) == 0 {
 		return
@@ -59,17 +59,17 @@ func (s *queensLeavingNest) Update(w *ecs.World) {
 	query := s.beeFilter.Query()
 	for query.Next() {
 		if b := query.Get(); b.Caste == caste.Male && b.Stage == stage.Adult {
-			males[b.SpeciesID] = append(males[b.SpeciesID], query.Entity())
+			males[b.Species] = append(males[b.Species], query.Entity())
 		}
 	}
 
 	for _, e := range s.queens {
 		bee, gen, th := s.beeMap.Get(e)
 		// [QLN-02]
-		if candidates := males[bee.SpeciesID]; len(candidates) > 0 {
+		if candidates := males[bee.Species]; len(candidates) > 0 {
 			// one-of: a random male of her species, haploid or diploid
 			_, maleGen, _ := s.beeMap.Get(candidates[s.rng.IntN(len(candidates))])
-			gen.SpermathecaList = slices.Clone(maleGen.AllelesList)
+			gen.Spermatheca = slices.Clone(maleGen.Alleles)
 		} else {
 			// mating with a male from outside
 			if !s.file.UnlimitedMales {
@@ -77,18 +77,18 @@ func (s *queensLeavingNest) Update(w *ecs.World) {
 				continue // finding 28 (see trans/netlogo-findings.md#finding-28)
 			}
 			foreignAllele := -1*util.RandomInt(s.rng, s.constants.N_ForeignAlleles) - 1 // -1, -2, ... -N_ForeignAlleles
-			gen.SpermathecaList = append([]float64{foreignAllele}, gen.SpermathecaList...)
-			if len(gen.SpermathecaList) > 1 {
-				panic(fmt.Sprintf("Assertion violated in QueensLeavingNestProc: too many alleles here! %v", gen.SpermathecaList))
+			gen.Spermatheca = append([]float64{foreignAllele}, gen.Spermatheca...)
+			if len(gen.Spermatheca) > 1 {
+				panic(fmt.Sprintf("Assertion violated in QueensLeavingNestProc: too many alleles here! %v", gen.Spermatheca))
 			}
 		}
 		// [QLN-03] the other three thresholds stay "youngQueen" until she emerges next year [EMER-01]
 		bee.Mated = true
-		th.ThEgglaying = thresholdLevel(thEggLaying, sitQueenInitiationPhase)
+		th.Egglaying = thresholdLevel(thEggLaying, sitQueenInitiationPhase)
 		bee.Activity = activity.Hibernate
-		bee.ColonyID = ecs.Entity{}
+		bee.Colony = ecs.Entity{}
 		// [QLN-04] mated with a diploid male: she could not found a colony
-		if len(gen.SpermathecaList) == 2 {
+		if len(gen.Spermatheca) == 2 {
 			s.death.die(w, e, "Queen: mating with diploid male")
 		}
 	}

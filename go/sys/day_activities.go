@@ -78,11 +78,11 @@ func (s *activities) Update(w *ecs.World) {
 		e := s.nextActiveBee()
 		_, b, _, _, _, _ := s.beeMap.Get(e)
 		// [GO-08]
-		if b.PersonalTime_s > s.constants.CallItaDay_s {
+		if b.PersonalTime > s.constants.CallItaDay_s {
 			continueWorking = false
 		} else {
 			// [GO-09] activityList: GUI log, not translated.
-			s.daytime.Daytime_s = b.PersonalTime_s // Model has no global time, each bee has her own personalTime_s and the one with the lowest is next
+			s.daytime.Time = b.PersonalTime // Model has no global time, each bee has her own personalTime_s and the one with the lowest is next
 			s.act(w, e)
 			if !w.Alive(e) {
 				continue // died during her task (foraging, step 6): DieProc ends her code, [GO-10] is skipped (finding 28)
@@ -91,8 +91,8 @@ func (s *activities) Update(w *ecs.World) {
 		// [GO-10] get the bee again: ActivityProc may have created entities
 		_, b, _, _, _, _ = s.beeMap.Get(e)
 		// Queens without a colony are inactive for the rest of the day.
-		if b.ColonyID.IsZero() {
-			b.PersonalTime_s = s.constants.CallItaDay_s + 1
+		if b.Colony.IsZero() {
+			b.PersonalTime = s.constants.CallItaDay_s + 1
 		}
 	}
 }
@@ -130,7 +130,7 @@ func (s *activities) colonies() int {
 func (s *activities) nextActiveBee() ecs.Entity {
 	time := func(e ecs.Entity) float64 {
 		_, b, _, _, _, _ := s.beeMap.Get(e)
-		return b.PersonalTime_s
+		return b.PersonalTime
 	}
 	list := s.active.List
 	// [NEXT-01]
@@ -176,26 +176,26 @@ func (s *activities) act(w *ecs.World, e ecs.Entity) {
 	break_s := 0.5 * 3600
 	_, b, _, th, _, _ := s.beeMap.Get(e)
 	b.Activity = activity.Resting
-	if !b.ColonyID.IsZero() {
+	if !b.Colony.IsZero() {
 		// [ACT-02] ORDER of the four: irrelevant.
-		colony, stores, stim, counts := s.colonyMap.Get(b.ColonyID)
-		sp := s.speciesMap.Get(colony.SpeciesIDcolony)
-		stim.StimEgglaying = egglayingStimulus(stores, counts, sp)
-		stim.StimNectarForaging = nectarStimulus(stores, s.daytime.Daytime_s, s.constants.Sunrise_s, s.calendar.DailyForagingPeriod_s)
-		stim.StimPollenForaging = pollenStimulus(stores, sp, s.daytime.Daytime_s, s.constants.Sunrise_s, s.calendar.DailyForagingPeriod_s)
-		stim.StimNursing = nursingStimulus(stores, counts, sp)
+		colony, stores, stim, counts := s.colonyMap.Get(b.Colony)
+		sp := s.speciesMap.Get(colony.Species)
+		stim.Egglaying = egglayingStimulus(stores, counts, sp)
+		stim.NectarForaging = nectarStimulus(stores, s.daytime.Time, s.constants.Sunrise_s, s.calendar.ForagingPeriod)
+		stim.PollenForaging = pollenStimulus(stores, sp, s.daytime.Time, s.constants.Sunrise_s, s.calendar.ForagingPeriod)
+		stim.Nursing = nursingStimulus(stores, counts, sp)
 
 		// [ACT-03] the last matching task wins (finding 11, see trans/netlogo-findings.md#finding-11): no "else if".
-		if stim.StimEgglaying > th.ThEgglaying {
+		if stim.Egglaying > th.Egglaying {
 			b.Activity = activity.Egglaying
 		}
-		if stim.StimNursing > th.ThNursing {
+		if stim.Nursing > th.Nursing {
 			b.Activity = activity.Nursing
 		}
-		if stim.StimPollenForaging > th.ThForagingPollen {
+		if stim.PollenForaging > th.PollenForaging {
 			b.Activity = activity.PollenForaging
 		}
-		if stim.StimNectarForaging > th.ThForagingNectar {
+		if stim.NectarForaging > th.NectarForaging {
 			b.Activity = activity.NectarForaging
 		}
 	}
@@ -203,16 +203,16 @@ func (s *activities) act(w *ecs.World, e ecs.Entity) {
 	// [ACT-04] speciesName = "Psithyrus": the flag of the bee's species (step F9). The task is tested first, so the
 	// species is looked up only for nursing and foraging (no side effects, same result).
 	if (b.Activity == activity.Nursing || b.Activity == activity.PollenForaging || b.Activity == activity.NectarForaging) &&
-		s.speciesMap.Get(b.SpeciesID).Parasitic {
+		s.speciesMap.Get(b.Species).Parasitic {
 		b.Activity = activity.Resting
 	}
 
 	// [ACT-05] at most one task runs, see the annotation
 	switch b.Activity {
 	case activity.Resting:
-		b.PersonalTime_s = b.PersonalTime_s + break_s
+		b.PersonalTime = b.PersonalTime + break_s
 	case activity.Egglaying:
-		col := b.ColonyID
+		col := b.Colony
 		eggs := s.eggs.layEggs(e)
 		s.broodOf[col] = append(s.broodOf[col], eggs...)
 	case activity.Nursing:
@@ -228,26 +228,26 @@ func (s *activities) incubateBrood(w *ecs.World, e ecs.Entity) {
 	incubationEnergy_kJ_per_mg_s := 0.000000217013888
 	_, b, _, _, _, _ := s.beeMap.Get(e)
 	// [INC-01]
-	heatProvided_kJ := heatingPeriod_s * incubationEnergy_kJ_per_mg_s * b.Weight_mg * float64(b.Number)
+	heatProvided_kJ := heatingPeriod_s * incubationEnergy_kJ_per_mg_s * b.Weight * float64(b.Number)
 	// [INC-02] the divisor uses this morning's counts, brood laid today is not in it (finding 46, see
 	// trans/netlogo-findings.md#finding-46)
 	heatProvidedPerBrood_kJ := 0.0
-	_, stores, _, counts := s.colonyMap.Get(b.ColonyID)
-	if counts.AllEggs+counts.AllLarvae+counts.AllPupae > 0 {
-		heatProvidedPerBrood_kJ = heatProvided_kJ / float64(counts.AllEggs+counts.AllLarvae+counts.AllPupae)
+	_, stores, _, counts := s.colonyMap.Get(b.Colony)
+	if counts.Eggs+counts.Larvae+counts.Pupae > 0 {
+		heatProvidedPerBrood_kJ = heatProvided_kJ / float64(counts.Eggs+counts.Larvae+counts.Pupae)
 	}
 	// ORDER: irrelevant, each brood agent only changes itself. Shuffled (decision C).
-	brood := s.broodOf[b.ColonyID]
+	brood := s.broodOf[b.Colony]
 	util.Shuffle(s.rng, brood)
 	for _, x := range brood {
 		if !w.Alive(x) {
 			continue
 		}
 		_, _, _, _, _, dev := s.beeMap.Get(x)
-		dev.CumulIncubationReceived_kJ = dev.CumulIncubationReceived_kJ + heatProvidedPerBrood_kJ
+		dev.IncubationReceived = dev.IncubationReceived + heatProvidedPerBrood_kJ
 	}
-	stores.SummedIncubationToday_kJ = stores.SummedIncubationToday_kJ + heatProvided_kJ
-	stores.EnergyStore_kJ = stores.EnergyStore_kJ - heatProvided_kJ
+	stores.IncubationToday = stores.IncubationToday + heatProvided_kJ
+	stores.Energy = stores.Energy - heatProvided_kJ
 	// [INC-03]
-	b.PersonalTime_s = b.PersonalTime_s + heatingPeriod_s
+	b.PersonalTime = b.PersonalTime + heatingPeriod_s
 }

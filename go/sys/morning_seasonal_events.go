@@ -29,7 +29,7 @@ type seasonalEvents struct {
 	rng      *rand.Rand
 	calendar *globals.Calendar
 	file     *params.ParameterFile
-	totals   ecs.Resource[globals.Totals] // set by broodTotals
+	totals   ecs.Resource[globals.BroodTotals] // set by broodTotals
 	death    beeDeath
 
 	beeFilter  *ecs.Filter1[comp.Bee]
@@ -43,7 +43,7 @@ func (s *seasonalEvents) Initialize(w *ecs.World) {
 	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.calendar = ecs.GetResource[globals.Calendar](w)
 	s.file = ecs.GetResource[params.ParameterFile](w)
-	s.totals = ecs.NewResource[globals.Totals](w)
+	s.totals = ecs.NewResource[globals.BroodTotals](w)
 	s.death = newBeeDeath(w)
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
 	s.speciesMap = newSpeciesTable(w)
@@ -64,7 +64,7 @@ func (s *seasonalEvents) Update(w *ecs.World) {
 			continue
 		}
 		s.bees = askBees(s.bees, s.beeFilter, s.rng, func(b *comp.Bee) bool {
-			return b.SpeciesID == sp && b.Activity != activity.Hibernate
+			return b.Species == sp && b.Activity != activity.Hibernate
 		})
 		for _, e := range s.bees {
 			// broodDeathEndSeason of the colony: read only by the egg accounting [CHK-04], removed in step F4
@@ -75,7 +75,7 @@ func (s *seasonalEvents) Update(w *ecs.World) {
 	// [SEAS-02] totals of two different times: OutputDailyProc of the previous evening [OUT-01] and broodTotals of the
 	// previous morning [CHK-02], finding 39 (see trans/netlogo-findings.md#finding-39). ORDER: irrelevant.
 	totals := s.totals.Get()
-	if totalHibernatingQueens == totalQueens && totals.TotalEggs+totals.TotalLarvae+totals.TotalPupae == 0 &&
+	if totalHibernatingQueens == totalQueens && totals.Eggs+totals.Larvae+totals.Pupae == 0 &&
 		totalMales > 0 {
 		s.bees = askBees(s.bees, s.beeFilter, s.rng, func(b *comp.Bee) bool { return b.Caste == caste.Male })
 		for _, e := range s.bees {

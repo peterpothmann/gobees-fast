@@ -12,39 +12,39 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// Foraging tests: the colony is at (0, 0), Scaling_NLpatches_per_m = 0.1 (10 m per NetLogo patch).
+// Foraging tests: the colony is at (0, 0), Landscape.Scale = 0.1 (10 m per NetLogo patch).
 // Flower species values from netlogo/_SYSTEM_Flowerspecies.csv.
 
 // willowherb is American_willowherb: nectar_ml/flower 0.00035, concentration_mol/l 1.34, corollaDepth_mm 3.5,
 // intFlowerTime_s 0.6. nectarMax and pollenMax are chosen by hand.
 func willowherb() comp.Foodsource {
-	return comp.Foodsource{NectarFlowerVolume_myl: 0.35,
-		NectarConcentration_mol_per_l: 1.34, CorollaDepth_mm: 3.5, InterFlowerTime_s: 0.6,
-		NectarMax_myl: 1000, PollenMax_g: 10}
+	return comp.Foodsource{NectarPerFlower: 0.35,
+		NectarConcentration: 1.34, CorollaDepth: 3.5, InterFlowerTime: 0.6,
+		NectarMax: 1000, PollenMax: 10}
 }
 
 // alsike is Alsike_clover: nectar_ml/flower 0.00046, concentration_mol/l 0.7, corollaDepth_mm 10, intFlowerTime_s 0.6.
 func alsike() comp.Foodsource {
-	return comp.Foodsource{NectarFlowerVolume_myl: 0.46,
-		NectarConcentration_mol_per_l: 0.7, CorollaDepth_mm: 10, InterFlowerTime_s: 0.6,
-		NectarMax_myl: 1000, PollenMax_g: 10}
+	return comp.Foodsource{NectarPerFlower: 0.46,
+		NectarConcentration: 0.7, CorollaDepth: 10, InterFlowerTime: 0.6,
+		NectarMax: 1000, PollenMax: 10}
 }
 
 // flowerPatch adds a flower patch at (x, y) [NetLogo patches] with radius_m, one layer per foodsource. The first
-// layer is the masterpatch, all layers share LayersInPatchList (sorted by who = order of creation, as in [LAYR-10]).
+// layer is the masterpatch, all layers share PatchLayers (sorted by who = order of creation, as in [LAYR-10]).
 func (aw *activityWorld) flowerPatch(x, y, radius_m float64, layers ...comp.Foodsource) []ecs.Entity {
 	m := ecs.NewMap4[comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](aw.w)
 	result := []ecs.Entity{}
 	for _, fs := range layers {
-		fs.Radius_m = radius_m
-		state := comp.FoodsourceState{Nectar_myl: fs.NectarMax_myl, Pollen_g: fs.PollenMax_g}
+		fs.Radius = radius_m
+		state := comp.FoodsourceState{Nectar: fs.NectarMax, Pollen: fs.PollenMax}
 		result = append(result, m.NewEntity(&comp.Position{X: x, Y: y}, &fs, &state, &comp.Layer{}))
 	}
 	for i, e := range result {
 		_, _, _, l := m.Get(e)
-		l.Masterpatch = i == 0
-		l.MasterpatchID = result[0]
-		l.LayersInPatchList = result
+		l.IsMasterpatch = i == 0
+		l.Masterpatch = result[0]
+		l.PatchLayers = result
 	}
 	return result
 }
@@ -58,11 +58,11 @@ func (aw *activityWorld) state(e ecs.Entity) *comp.FoodsourceState {
 func (aw *activityWorld) worker(col ecs.Entity, number int) ecs.Entity {
 	e := aw.adult(col, caste.Worker, number, 100, sitWorker)
 	_, _, _, fo, _ := aw.bee(e)
-	fo.GlossaLength_mm = proboscisLength(100, aw.sp)
-	fo.Cropvolume_myl = cropVolume(100, aw.sp)
-	fo.PollenPellets_g = pollenLoad(100, aw.sp)
-	fo.KnownMasterpatchesNectarList = []ecs.Entity{}
-	fo.KnownMasterpatchesPollenList = []ecs.Entity{}
+	fo.GlossaLength = proboscisLength(100, aw.sp)
+	fo.CropVolume = cropVolume(100, aw.sp)
+	fo.PollenPellets = pollenLoad(100, aw.sp)
+	fo.KnownNectarPatches = []ecs.Entity{}
+	fo.KnownPollenPatches = []ecs.Entity{}
 	return e
 }
 
@@ -73,7 +73,7 @@ func newForagingWorld(t *testing.T, seed uint64) (*activityWorld, ecs.Entity, *f
 	aw.file.Lambda_detectProb = -0.005
 	aw.file.ForagingMortalityFactor = 1
 	ecs.GetResource[params.Derived](aw.w).MortalityForager_per_s = 0 // deterministic trips; mortality is tested separately
-	col := aw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) { s.EnergyStore_kJ = 100 })
+	col := aw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) { s.Energy = 100 })
 	return aw, col, &aw.loop.foraging
 }
 
@@ -120,8 +120,8 @@ func TestHandlingTime(t *testing.T) {
 	} {
 		p := aw.flowerPatch(5, 0, 10, tc.fs)[0]
 		s := aw.state(p)
-		s.Nectar_myl *= tc.fill
-		s.Pollen_g *= tc.fill
+		s.Nectar *= tc.fill
+		s.Pollen *= tc.fill
 		if got := f.handlingTime(bee, p, tc.pollen); math.Abs(got-tc.want) > 1e-6 {
 			t.Errorf("%s: %v s, want %v", tc.name, got, tc.want)
 		}
@@ -134,7 +134,7 @@ func TestBestLayer(t *testing.T) {
 	bee := aw.worker(col, 1)
 	_, _, _, fo, _ := aw.bee(bee)
 	slow := willowherb()
-	slow.InterFlowerTime_s = 2
+	slow.InterFlowerTime = 2
 	layers := aw.flowerPatch(30, 0, 50, slow, willowherb(), alsike())
 	fo.PollenForager = true
 	if got := f.bestLayer(bee, layers[0]); got != layers[1] {
@@ -144,12 +144,12 @@ func TestBestLayer(t *testing.T) {
 	if got := f.bestLayer(bee, layers[2]); got != layers[1] {
 		t.Errorf("nectar: best layer %v, want the faster willowherb (%v)", got, layers[1])
 	}
-	aw.state(layers[1]).Nectar_myl = 0
+	aw.state(layers[1]).Nectar = 0
 	if got := f.bestLayer(bee, layers[0]); got != layers[0] {
 		t.Errorf("nectar without the emptied layer: %v, want the slow willowherb (%v)", got, layers[0])
 	}
 	for _, l := range layers {
-		aw.state(l).Nectar_myl = 0
+		aw.state(l).Nectar = 0
 	}
 	if got := f.bestLayer(bee, layers[0]); !got.IsZero() {
 		t.Errorf("no nectar left: %v, want none", got)
@@ -183,35 +183,35 @@ func TestForagingTripPollen(t *testing.T) {
 	aw, col, f := newForagingWorld(t, 1)
 	bee := aw.worker(col, 1)
 	fs := willowherb()
-	fs.PollenMax_g = 1000 // one load (0.01206 g) hardly changes the filling level
+	fs.PollenMax = 1000 // one load (0.01206 g) hardly changes the filling level
 	p := aw.flowerPatch(30, 0, 10, fs)[0]
 	b, _, _, fo, _ := aw.bee(bee)
 	b.Activity = activity.PollenForaging
-	fo.PollensourceToGoTo = p
-	fo.KnownMasterpatchesPollenList = []ecs.Entity{p}
-	fo.Expectation_PollenTrip_s = 412.2
+	fo.PollenSource = p
+	fo.KnownPollenPatches = []ecs.Entity{p}
+	fo.ExpectedPollenTrip = 412.2
 
 	f.forage(aw.w, bee)
 
 	b, _, _, fo, _ = aw.bee(bee)
 	_, s, _ := aw.colony(col)
-	if !almostEqual(s.PollenStore_g, 0.01206) {
-		t.Errorf("pollen store %v g, want 0.01206", s.PollenStore_g)
+	if !almostEqual(s.Pollen, 0.01206) {
+		t.Errorf("pollen store %v g, want 0.01206", s.Pollen)
 	}
-	if math.Abs(100-s.EnergyStore_kJ-0.0101) > 0.0001 {
-		t.Errorf("energy paid %v kJ, want about 0.0101", 100-s.EnergyStore_kJ)
+	if math.Abs(100-s.Energy-0.0101) > 0.0001 {
+		t.Errorf("energy paid %v kJ, want about 0.0101", 100-s.Energy)
 	}
-	if math.Abs(b.PersonalTime_s-(412.2+165)) > 0.01 {
-		t.Errorf("personalTime_s %v, want about %v", b.PersonalTime_s, 412.2+165)
+	if math.Abs(b.PersonalTime-(412.2+165)) > 0.01 {
+		t.Errorf("personalTime_s %v, want about %v", b.PersonalTime, 412.2+165)
 	}
-	if st := aw.state(p); !almostEqual(st.Pollen_g, 1000-0.01206) {
-		t.Errorf("foodsource: %v g", st.Pollen_g)
+	if st := aw.state(p); !almostEqual(st.Pollen, 1000-0.01206) {
+		t.Errorf("foodsource: %v g", st.Pollen)
 	}
-	if fo.PollenLoadSquadron_g != 0 || aw.tally.trips != 1 {
-		t.Errorf("load %v, trips %v", fo.PollenLoadSquadron_g, aw.tally.trips)
+	if fo.CarriedPollen != 0 || aw.tally.trips != 1 {
+		t.Errorf("load %v, trips %v", fo.CarriedPollen, aw.tally.trips)
 	}
-	if !almostEqual(fo.Expectation_PollenTrip_s, (412.2+b.PersonalTime_s-165)/2) {
-		t.Errorf("expectation %v", fo.Expectation_PollenTrip_s)
+	if !almostEqual(fo.ExpectedPollenTrip, (412.2+b.PersonalTime-165)/2) {
+		t.Errorf("expectation %v", fo.ExpectedPollenTrip)
 	}
 }
 
@@ -220,26 +220,26 @@ func TestForagingEmptiesFoodsource(t *testing.T) {
 	aw, col, f := newForagingWorld(t, 1)
 	bee := aw.worker(col, 3) // a cohort of 3 takes up to 120.6 microlitres
 	p := aw.flowerPatch(30, 0, 10, willowherb())[0]
-	aw.state(p).Nectar_myl = 100
+	aw.state(p).Nectar = 100
 	b, _, _, fo, _ := aw.bee(bee)
 	b.Activity = activity.NectarForaging
-	fo.NectarsourceToGoTo = p
-	fo.KnownMasterpatchesNectarList = []ecs.Entity{p}
+	fo.NectarSource = p
+	fo.KnownNectarPatches = []ecs.Entity{p}
 
 	f.forage(aw.w, bee)
 
 	b, _, _, _, _ = aw.bee(bee)
 	trip := 2*300/5.0 + 3600
-	if !almostEqual(b.PersonalTime_s, trip+165) {
-		t.Errorf("personalTime_s %v, want %v (handling time 3600 s)", b.PersonalTime_s, trip+165)
+	if !almostEqual(b.PersonalTime, trip+165) {
+		t.Errorf("personalTime_s %v, want %v (handling time 3600 s)", b.PersonalTime, trip+165)
 	}
 	_, s, _ := aw.colony(col)
 	want := 100 + 100*0.00582*1.34 - (600+3600*5*0.3)*aw.sp.FlightCosts_kJ_per_m_per_mg*100*3
-	if !almostEqual(s.EnergyStore_kJ, want) {
-		t.Errorf("energy store %v kJ, want %v", s.EnergyStore_kJ, want)
+	if !almostEqual(s.Energy, want) {
+		t.Errorf("energy store %v kJ, want %v", s.Energy, want)
 	}
-	if st := aw.state(p); st.Nectar_myl != 0 {
-		t.Errorf("foodsource: %v microlitres, want 0", st.Nectar_myl)
+	if st := aw.state(p); st.Nectar != 0 {
+		t.Errorf("foodsource: %v microlitres, want 0", st.Nectar)
 	}
 }
 
@@ -249,23 +249,23 @@ func TestForagingSearch(t *testing.T) {
 	aw, col, f := newForagingWorld(t, 1)
 	layers := aw.flowerPatch(1, 0, 50, willowherb(), alsike())
 	_, _, _, _, _, r := aw.colonyMap.Get(col)
-	r.MasterpatchesWithNectarlayersInFlowerAndRangeList = []ecs.Entity{layers[0]}
+	r.NectarPatches = []ecs.Entity{layers[0]}
 	bee := aw.worker(col, 1)
 	b, _, _, fo, _ := aw.bee(bee)
 	b.Activity = activity.NectarForaging
-	nectarBefore := [2]float64{aw.state(layers[0]).Nectar_myl, aw.state(layers[1]).Nectar_myl}
+	nectarBefore := [2]float64{aw.state(layers[0]).Nectar, aw.state(layers[1]).Nectar}
 
 	f.forage(aw.w, bee)
 
 	b, _, _, fo, _ = aw.bee(bee)
-	if len(fo.KnownMasterpatchesNectarList) != 1 || fo.KnownMasterpatchesNectarList[0] != layers[0] {
-		t.Errorf("known nectar patches %v, want [%v]", fo.KnownMasterpatchesNectarList, layers[0])
+	if len(fo.KnownNectarPatches) != 1 || fo.KnownNectarPatches[0] != layers[0] {
+		t.Errorf("known nectar patches %v, want [%v]", fo.KnownNectarPatches, layers[0])
 	}
-	if b.Activity != activity.ReturningUnhappyN {
+	if b.Activity != activity.ReturningUnhappyNectar {
 		t.Errorf("activity %v, want returningUnhappyN (novice)", b.Activity)
 	}
 	// [BLYR-03] willowherb: more energy per load and a shorter handling time than alsike
-	if aw.state(layers[0]).Nectar_myl >= nectarBefore[0] || aw.state(layers[1]).Nectar_myl != nectarBefore[1] {
+	if aw.state(layers[0]).Nectar >= nectarBefore[0] || aw.state(layers[1]).Nectar != nectarBefore[1] {
 		t.Error("the bee did not collect at the best layer (willowherb)")
 	}
 }
@@ -279,11 +279,11 @@ func TestForagingSearchFails(t *testing.T) {
 	f.forage(aw.w, bee)
 	b, _, _, fo, _ = aw.bee(bee)
 	_, s, _ := aw.colony(col)
-	if b.Activity != activity.ReturningEmpty || b.PersonalTime_s != 500 || !fo.PollensourceToGoTo.IsZero() {
-		t.Errorf("activity %v, personalTime_s %v, next foodsource %v", b.Activity, b.PersonalTime_s, fo.PollensourceToGoTo)
+	if b.Activity != activity.ReturningEmpty || b.PersonalTime != 500 || !fo.PollenSource.IsZero() {
+		t.Errorf("activity %v, personalTime_s %v, next foodsource %v", b.Activity, b.PersonalTime, fo.PollenSource)
 	}
-	if !almostEqual(100-s.EnergyStore_kJ, 2500*aw.sp.FlightCosts_kJ_per_m_per_mg*100) {
-		t.Errorf("energy paid %v kJ, want 0.0244", 100-s.EnergyStore_kJ)
+	if !almostEqual(100-s.Energy, 2500*aw.sp.FlightCosts_kJ_per_m_per_mg*100) {
+		t.Errorf("energy paid %v kJ, want 0.0244", 100-s.Energy)
 	}
 }
 
@@ -321,13 +321,13 @@ func TestChoosePatch(t *testing.T) {
 	p := aw.flowerPatch(30, 0, 10, willowherb())[0]
 	bee := aw.worker(col, 1)
 	b, _, _, fo, _ := aw.bee(bee)
-	fo.KnownMasterpatchesNectarList = []ecs.Entity{p}
+	fo.KnownNectarPatches = []ecs.Entity{p}
 	fo.CurrentFoodsource = p
-	fo.Expectation_NectarTrip_s = 300
-	b.Activity = activity.ExpForagingN
+	fo.ExpectedNectarTrip = 300
+	b.Activity = activity.ReturningHappyNectar
 	f.choosePatch(bee, 400)
-	if fo.Expectation_NectarTrip_s != 350 {
-		t.Errorf("expectation %v, want 350", fo.Expectation_NectarTrip_s)
+	if fo.ExpectedNectarTrip != 350 {
+		t.Errorf("expectation %v, want 350", fo.ExpectedNectarTrip)
 	}
 
 	closest := 0
@@ -335,7 +335,7 @@ func TestChoosePatch(t *testing.T) {
 	for range n {
 		b.Activity = activity.ReturningEmpty
 		f.choosePatch(bee, 500)
-		if fo.NectarsourceToGoTo == p {
+		if fo.NectarSource == p {
 			closest++
 		}
 	}

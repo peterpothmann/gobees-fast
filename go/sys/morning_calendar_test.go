@@ -78,13 +78,13 @@ func TestCalendarUpdateForagingPeriod(t *testing.T) {
 	s.Initialize(w) // Setup, ticks = 0 [INIT-10]
 	cal := ecs.GetResource[globals.Calendar](w)
 	// finding 4 (see trans/netlogo-findings.md#finding-4): Day 0, no foraging period in Setup
-	if cal.Day != 0 || cal.DailyForagingPeriod_s != 0 {
-		t.Errorf("Setup: Day %v, DailyForagingPeriod_s %v, want 0 and 0", cal.Day, cal.DailyForagingPeriod_s)
+	if cal.Day != 0 || cal.ForagingPeriod != 0 {
+		t.Errorf("Setup: Day %v, ForagingPeriod %v, want 0 and 0", cal.Day, cal.ForagingPeriod)
 	}
 	ticks.Ticks = 1
 	s.Update(w)
-	if cal.Day != 1 || cal.DailyForagingPeriod_s != 8*3600 {
-		t.Errorf("day 1: Day %v, DailyForagingPeriod_s %v, want 1 and 28800", cal.Day, cal.DailyForagingPeriod_s)
+	if cal.Day != 1 || cal.ForagingPeriod != 8*3600 {
+		t.Errorf("day 1: Day %v, ForagingPeriod %v, want 1 and 28800", cal.Day, cal.ForagingPeriod)
 	}
 	ticks.Ticks = 366
 	s.Update(w)
@@ -101,8 +101,8 @@ func TestCalendarUpdateForagingHoursExample(t *testing.T) {
 	s.Initialize(w)
 	ticks.Ticks = 365 + 43 // second year: a file of one year repeats, read by Day, not by ticks
 	s.Update(w)
-	if got := ecs.GetResource[globals.Calendar](w).DailyForagingPeriod_s; got != 0.5*3600 {
-		t.Errorf("ticks %d (Day 43): DailyForagingPeriod_s %v, want 1800", ticks.Ticks, got)
+	if got := ecs.GetResource[globals.Calendar](w).ForagingPeriod; got != 0.5*3600 {
+		t.Errorf("ticks %d (Day 43): ForagingPeriod %v, want 1800", ticks.Ticks, got)
 	}
 }
 
@@ -134,22 +134,22 @@ func TestFlowerRefill(t *testing.T) {
 	entities := map[string]ecs.Entity{}
 	for i, n := range names {
 		fs := comp.Foodsource{StartDay: periods[n][0], StopDay: periods[n][1],
-			NectarMax_myl: float64(i+1) * 1e6, PollenMax_g: float64(i+1) * 1000}
+			NectarMax: float64(i+1) * 1e6, PollenMax: float64(i+1) * 1000}
 		// state left over from the day before: is overwritten every morning
-		entities[n] = fsMap.NewEntity(&fs, &comp.FoodsourceState{Nectar_myl: 7, Pollen_g: 7})
+		entities[n] = fsMap.NewEntity(&fs, &comp.FoodsourceState{Nectar: 7, Pollen: 7})
 	}
 	morning := &calendarUpdate{}
 	morning.Initialize(w)
 	s := &flowerRefill{}
 	s.Initialize(w)
-	today := ecs.GetResource[globals.FoodsourcesToday](w)
+	today := ecs.GetResource[globals.Flowering](w)
 
 	inFlower := func(n string) bool {
 		fs, st := fsMap.Get(entities[n])
-		full := st.Nectar_myl == fs.NectarMax_myl && st.Pollen_g == fs.PollenMax_g
-		empty := st.Nectar_myl == 0 && st.Pollen_g == 0
+		full := st.Nectar == fs.NectarMax && st.Pollen == fs.PollenMax
+		empty := st.Nectar == 0 && st.Pollen == 0
 		if full == empty {
-			t.Fatalf("%s: nectar %v, pollen %v is neither full nor empty", n, st.Nectar_myl, st.Pollen_g)
+			t.Fatalf("%s: nectar %v, pollen %v is neither full nor empty", n, st.Nectar, st.Pollen)
 		}
 		return full
 	}
@@ -176,8 +176,8 @@ func TestFlowerRefill(t *testing.T) {
 			t.Errorf("ticks %d: in flower Dandelion %v, Daisy %v, Crop_Cereals %v; want %v, %v, %v", c.ticks,
 				inFlower("Dandelion"), inFlower("Daisy"), inFlower("Crop_Cereals"), c.dandelion, c.daisy, c.cereal)
 		}
-		if today.FoodsourcesInFlowerUpdate != c.update {
-			t.Errorf("ticks %d: FoodsourcesInFlowerUpdate %v, want %v", c.ticks, today.FoodsourcesInFlowerUpdate, c.update)
+		if today.Changed != c.update {
+			t.Errorf("ticks %d: Flowering.Changed %v, want %v", c.ticks, today.Changed, c.update)
 		}
 	}
 

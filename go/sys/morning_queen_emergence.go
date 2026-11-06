@@ -67,7 +67,7 @@ func (s *queenEmergence) Update(w *ecs.World) {
 	ticks := s.ticks.Ticks
 
 	// [EMER-01] emergence, cohorts are split into identical copies (finding 32, see trans/netlogo-findings.md#finding-32)
-	for _, e := range s.collectBees(func(b *comp.Bee) bool { return b.EmergingDate.Is(ticks) }) {
+	for _, e := range s.collectBees(func(b *comp.Bee) bool { return b.EmergenceDate.Is(ticks) }) {
 		_, bee, _, th, _, _ := s.beeMap.Get(e)
 		if bee.Caste != caste.Queen {
 			fmt.Println("WARNING! Something else than a queen emerged from hibernation! (1)")
@@ -86,17 +86,17 @@ func (s *queenEmergence) Update(w *ecs.World) {
 			fmt.Println("WARNING! Something else than a queen emerged from hibernation! (2)")
 		}
 		// [EMER-03] finding 33 (see trans/netlogo-findings.md#finding-33)
-		if s.file.WinterMortality && s.rng.Float64() > winterMortalityProb(bee.Weight_mg, s.speciesMap.Get(bee.SpeciesID)) {
+		if s.file.WinterMortality && s.rng.Float64() > winterMortalityProb(bee.Weight, s.speciesMap.Get(bee.Species)) {
 			s.death.die(w, e, "winter mortality")
 			continue // finding 28 (see trans/netlogo-findings.md#finding-28)
 		}
 		bee.Activity = activity.Resting
-		bee.ColonyID = ecs.Entity{}
+		bee.Colony = ecs.Entity{}
 	}
 
 	// [EMER-04] ORDER: irrelevant for social species, see the annotation.
 	searching := s.collectBees(func(b *comp.Bee) bool {
-		return b.Caste == caste.Queen && b.ColonyID.IsZero() && b.Activity != activity.Hibernate
+		return b.Caste == caste.Queen && b.Colony.IsZero() && b.Activity != activity.Hibernate
 	})
 	if len(searching) == 0 {
 		return
@@ -106,9 +106,9 @@ func (s *queenEmergence) Update(w *ecs.World) {
 			continue // killed by a cuckoo bee of this loop
 		}
 		_, bee, _, _, _, _ := s.beeMap.Get(e)
-		sp := s.speciesMap.Get(bee.SpeciesID)
-		ns := &s.nestSites.BySpecies[bee.SpeciesID]
-		if len(ns.NestsiteFoodsourceList) == 0 {
+		sp := s.speciesMap.Get(bee.Species)
+		ns := &s.nestSites.BySpecies[bee.Species]
+		if len(ns.Sites) == 0 {
 			s.death.die(w, e, "no suitable foodsources for nesting exist for "+sp.Name)
 			continue
 		}
@@ -154,10 +154,10 @@ func (s *queenEmergence) copyBee(e ecs.Entity, n int) {
 	p, b, g, t, f, d := *pos, *bee, *gen, *th, *forager, *dev
 	for range n {
 		gc, fc := g, f
-		gc.AllelesList = slices.Clone(g.AllelesList)
-		gc.SpermathecaList = slices.Clone(g.SpermathecaList)
-		fc.KnownMasterpatchesNectarList = slices.Clone(f.KnownMasterpatchesNectarList)
-		fc.KnownMasterpatchesPollenList = slices.Clone(f.KnownMasterpatchesPollenList)
+		gc.Alleles = slices.Clone(g.Alleles)
+		gc.Spermatheca = slices.Clone(g.Spermatheca)
+		fc.KnownNectarPatches = slices.Clone(f.KnownNectarPatches)
+		fc.KnownPollenPatches = slices.Clone(f.KnownPollenPatches)
 		pc, bc, tc, dc := p, b, t, d
 		s.beeMap.NewEntity(&pc, &bc, &gc, &tc, &fc, &dc)
 	}
@@ -171,7 +171,7 @@ func (s *queenEmergence) searchNestSite(w *ecs.World, e ecs.Entity, sp *params.S
 		fsE := s.chooseNestSite(ns)
 		fsPos, fs := s.foodsourceMap.Get(fsE)
 		// [NEST-03] a random patch centre within the circle, finding 25 (see trans/netlogo-findings.md#finding-25)
-		candidates := util.PatchCentresWithin(fsPos.X, fsPos.Y, fs.Radius_m*s.landscape.Scaling_NLpatches_per_m,
+		candidates := util.PatchCentresWithin(fsPos.X, fsPos.Y, fs.Radius*s.landscape.Scale,
 			int(s.world.MinPxcor), int(s.world.MaxPxcor), int(s.world.MinPycor), int(s.world.MaxPycor))
 		// No patch centre within the circle: the nearest patch centre, the one of the patch cell of the
 		// foodsource, without a random number. NetLogo: runtime error. Fixed in step F5.
@@ -198,14 +198,14 @@ func (s *queenEmergence) searchMortality() float64 {
 
 // chooseNestSite chooses a nest site, weighted by area [NSFS].
 func (s *queenEmergence) chooseNestSite(ns *globals.SpeciesNestSites) ecs.Entity {
-	// [NSFS-01] NestsiteFoodsourceList is sorted by who. SIMPLIFY: shuffle not needed for the distribution.
-	list := slices.Clone(ns.NestsiteFoodsourceList)
+	// [NSFS-01] Sites is sorted by who. SIMPLIFY: shuffle not needed for the distribution.
+	list := slices.Clone(ns.Sites)
 	util.Shuffle(s.rng, list)
 	p := s.rng.Float64()
 	probsSummedUp := 0.0
 	for _, e := range list {
 		_, fs := s.foodsourceMap.Get(e)
-		probsSummedUp += fs.Area_sqm / ns.NestSiteArea
+		probsSummedUp += fs.Area / ns.Area
 		if probsSummedUp > p {
 			return e
 		}
@@ -244,7 +244,7 @@ func (s *queenEmergence) searchHostColony(w *ecs.World, e ecs.Entity) {
 			}
 			host = colonies[s.rng.IntN(len(colonies))]
 			pos, bee, _, th, _, _ := s.beeMap.Get(e)
-			bee.ColonyID = host
+			bee.Colony = host
 			*pos = colonyPos[host]
 			*th = thresholds(sitPsith)
 		}
@@ -252,7 +252,7 @@ func (s *queenEmergence) searchHostColony(w *ecs.World, e ecs.Entity) {
 
 	if !host.IsZero() {
 		// [PSI-03] ORDER: irrelevant, each queen draws independently.
-		victims := s.collectBees(func(b *comp.Bee) bool { return b.ColonyID == host && b.Caste == caste.Queen && b.Mated })
+		victims := s.collectBees(func(b *comp.Bee) bool { return b.Colony == host && b.Caste == caste.Queen && b.Mated })
 		for _, v := range victims {
 			if v != e && s.rng.Float64() < killQueenProb {
 				s.death.die(w, v, "Queen killed by cuckoo bee!")

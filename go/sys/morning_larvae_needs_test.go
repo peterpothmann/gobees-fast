@@ -18,14 +18,14 @@ func TestMaxWeightGainToday(t *testing.T) {
 		capped int // feeding on which the cap binds
 		cap    float64
 	}{{caste.Worker, 9, 249.5}, {caste.Male, 9, 249.5}, {caste.Undefined, 9, 249.5}, {caste.Queen, 11, 980}} {
-		b := comp.Bee{Caste: tc.caste, Weight_mg: sp.DevWeightEgg_mg}
+		b := comp.Bee{Caste: tc.caste, Weight: sp.DevWeightEgg_mg}
 		for k := 1; k <= 12; k++ {
-			b.Weight_mg += maxWeightGainToday(&b, sp)
+			b.Weight += maxWeightGainToday(&b, sp)
 			want := math.Min(1.5*math.Pow(1.88, float64(k)), tc.cap)
-			if !almostEqual(b.Weight_mg, want) {
-				t.Errorf("%v after %d feedings: %v mg, want %v", tc.caste, k, b.Weight_mg, want)
+			if !almostEqual(b.Weight, want) {
+				t.Errorf("%v after %d feedings: %v mg, want %v", tc.caste, k, b.Weight, want)
 			}
-			if k == tc.capped-1 && b.Weight_mg >= tc.cap {
+			if k == tc.capped-1 && b.Weight >= tc.cap {
 				t.Errorf("%v reached the cap before feeding %d", tc.caste, tc.capped)
 			}
 		}
@@ -43,11 +43,11 @@ func TestLarvaeNeeds(t *testing.T) {
 	bw.addBrood(other, stage.Larva, caste.Worker, 1, 10, 100, 0) // other colony: 88 mg
 	bw.need.Update(bw.w)
 	_, s, _ := bw.colony(col)
-	if !almostEqual(s.PollenNeedLarvaeToday_g, 0.1056) || !almostEqual(s.EnergyNeedToday_kJ, 0.1056*6.2) {
-		t.Errorf("pollen need %v g, energy need %v kJ; want 0.1056, 0.65472", s.PollenNeedLarvaeToday_g, s.EnergyNeedToday_kJ)
+	if !almostEqual(s.LarvaePollenNeedToday, 0.1056) || !almostEqual(s.EnergyNeedToday, 0.1056*6.2) {
+		t.Errorf("pollen need %v g, energy need %v kJ; want 0.1056, 0.65472", s.LarvaePollenNeedToday, s.EnergyNeedToday)
 	}
 	_, s, _ = bw.colony(other)
-	if !almostEqual(s.PollenNeedLarvaeToday_g, 0.088) {
-		t.Errorf("other colony: pollen need %v g, want 0.088", s.PollenNeedLarvaeToday_g)
+	if !almostEqual(s.LarvaePollenNeedToday, 0.088) {
+		t.Errorf("other colony: pollen need %v g, want 0.088", s.LarvaePollenNeedToday)
 	}
 }

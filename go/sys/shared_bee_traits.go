@@ -72,10 +72,10 @@ func thresholdLevel(thType, situation string) float64 {
 // thresholds returns all four thresholds of a situation, as set in [IQUE-05], [EMER-01] and [PSI-02].
 func thresholds(situation string) comp.Thresholds {
 	return comp.Thresholds{
-		ThEgglaying:      thresholdLevel(thEggLaying, situation),
-		ThForagingNectar: thresholdLevel(thNectarForaging, situation),
-		ThForagingPollen: thresholdLevel(thPollenForaging, situation),
-		ThNursing:        thresholdLevel(thNursing, situation),
+		Egglaying:      thresholdLevel(thEggLaying, situation),
+		NectarForaging: thresholdLevel(thNectarForaging, situation),
+		PollenForaging: thresholdLevel(thPollenForaging, situation),
+		Nursing:        thresholdLevel(thNursing, situation),
 	}
 }
 

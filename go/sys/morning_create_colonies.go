@@ -72,23 +72,23 @@ func (c *colonyFounder) found(w *ecs.World) {
 	for _, q := range queens {
 		qPos, qBee := c.beeMap.Get(q)
 		pos := *qPos
-		speciesID := qBee.SpeciesID
+		speciesID := qBee.Species
 
 		// [CCOL-05] not translated: gobees-fast has only cohort-based colonies (finding 30, see
 		// trans/netlogo-findings.md#finding-30).
 		// [CCOL-04]
 		// The four dates start unset (NetLogo: NotSetHigh), the zero value of day.Date.
 		colony := comp.Colony{
-			SpeciesIDcolony: speciesID,
+			Species:         speciesID,
 			QueenProduction: false,
 		}
-		stores := comp.ColonyStores{EnergyStore_kJ: 100 * c.constants.EnergySucrose_kJ_per_mymol * 1.5}
+		stores := comp.ColonyStores{Energy: 100 * c.constants.EnergySucrose_kJ_per_mymol * 1.5}
 		counts := comp.ColonyCounts{}
 		e := c.colonyMap.NewEntity(&pos, &colony, &stores, &comp.ColonyStimuli{}, &counts, &comp.ColonyRange{})
 
 		// [CCOL-03] the queen joins the colony (get her again, creating the colony may move components)
 		_, qBee = c.beeMap.Get(q)
-		qBee.ColonyID = e
+		qBee.Colony = e
 		qBee.Activity = activity.Resting
 
 		// [CCOL-06]
@@ -104,7 +104,7 @@ func (c *colonyFounder) found(w *ecs.World) {
 // masterpatchesInRangeList is not translated (finding 23, see trans/netlogo-findings.md#finding-23).
 func (c *colonyFounder) patchesInRange(colony ecs.Entity) {
 	pos := *c.positionMap.Get(colony)
-	maxDist := c.constants.ForagingRangeMax_m * c.landscape.Scaling_NLpatches_per_m
+	maxDist := c.constants.ForagingRangeMax_m * c.landscape.Scale
 
 	// [PRNG-01] ORDER: MATTERS for the list order (finding 29, see trans/netlogo-findings.md#finding-29).
 	// NetLogo: fput in random ask order. Here: shuffle, then append. Both give a list in random order.
@@ -125,7 +125,7 @@ func (c *colonyFounder) patchesInRange(colony ecs.Entity) {
 			list = append(list, it.e)
 		}
 	}
-	c.rangeMap.Get(colony).AllPatchesInRangeList = list
+	c.rangeMap.Get(colony).Layers = list
 }
 
 // flowersInRange sets the lists of masterpatches in range that offer pollen or nectar now [FRNG].
@@ -135,15 +135,15 @@ func (c *colonyFounder) flowersInRange(colony ecs.Entity) {
 	r := c.rangeMap.Get(colony)
 	polM, necM := []ecs.Entity{}, []ecs.Entity{}
 	// [FRNG-01] ORDER: irrelevant, foreach over a list.
-	for _, fs := range r.AllPatchesInRangeList {
+	for _, fs := range r.Layers {
 		state, layer := c.foodsourceMap.Get(fs)
-		if state.Pollen_g > 0 {
-			polM = append(polM, layer.MasterpatchID)
+		if state.Pollen > 0 {
+			polM = append(polM, layer.Masterpatch)
 		}
-		if state.Nectar_myl > 0 {
-			necM = append(necM, layer.MasterpatchID)
+		if state.Nectar > 0 {
+			necM = append(necM, layer.Masterpatch)
 		}
 	}
-	r.MasterpatchesWithPollenlayersInFlowerAndRangeList = removeDuplicates(polM)
-	r.MasterpatchesWithNectarlayersInFlowerAndRangeList = removeDuplicates(necM)
+	r.PollenPatches = removeDuplicates(polM)
+	r.NectarPatches = removeDuplicates(necM)
 }

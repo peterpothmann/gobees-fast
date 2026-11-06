@@ -63,7 +63,7 @@ func TestNestSitesSetupExampleFarm(t *testing.T) {
 
 	// [SPEC-04] the example farm has the habitat types Crop_Cereals, Grass_improved, Grassland, Hedgerow, Scrub,
 	// Woodland. "Grassland*" matches only "Grassland" ("Grass_improved" does not contain "Grassland").
-	gotHabitats := slices.Clone(ns.NestHabitatsList)
+	gotHabitats := slices.Clone(ns.Habitats)
 	slices.Sort(gotHabitats)
 	wantHabitats := []string{"Garden", "Grassland", "Hedgerow", "Nestboxes", "Scrub", "Woodland"}
 	if !slices.Equal(gotHabitats, wantHabitats) {
@@ -79,11 +79,11 @@ func TestNestSitesSetupExampleFarm(t *testing.T) {
 			wantArea += m.area_sqm
 		}
 	}
-	if len(wantSites) == 0 || !slices.Equal(ns.NestsiteFoodsourceList, wantSites) || ns.NestSiteArea != wantArea {
-		t.Errorf("nest sites: %d with %v m2, want %d with %v m2", len(ns.NestsiteFoodsourceList), ns.NestSiteArea, len(wantSites), wantArea)
+	if len(wantSites) == 0 || !slices.Equal(ns.Sites, wantSites) || ns.Area != wantArea {
+		t.Errorf("nest sites: %d with %v m2, want %d with %v m2", len(ns.Sites), ns.Area, len(wantSites), wantArea)
 	}
 	// the species keep the list of the run file
-	if slices.Equal(species[0].NestHabitatsList, ns.NestHabitatsList) {
+	if slices.Equal(species[0].NestHabitatsList, ns.Habitats) {
 		t.Errorf("params.Input.Species holds the expanded list %q", species[0].NestHabitatsList)
 	}
 }

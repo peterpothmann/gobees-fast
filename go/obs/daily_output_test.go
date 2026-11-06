@@ -26,7 +26,7 @@ func newWorld(t *testing.T) *ecs.World {
 	ecs.AddResource(w, &globals.Calendar{Day: 1})
 	world := params.Default().World
 	ecs.AddResource(w, &world)
-	ecs.AddResource(w, &globals.Landscape{Scaling_NLpatches_per_m: 0.1})
+	ecs.AddResource(w, &globals.Landscape{Scale: 0.1})
 	ecs.AddResource(w, &globals.ActiveBees{})
 	ecs.AddResource(w, &params.ParameterFile{})
 	ecs.AddResource(w, &params.Output{})
@@ -40,7 +40,7 @@ func addBee(w *ecs.World, b comp.Bee) ecs.Entity {
 
 // addFoodsourceAt adds a foodsource with the given radius at (x, y).
 func addFoodsourceAt(w *ecs.World, x, y, radius_m float64) ecs.Entity {
-	return ecs.NewMap2[comp.Position, comp.Foodsource](w).NewEntity(&comp.Position{X: x, Y: y}, &comp.Foodsource{Radius_m: radius_m})
+	return ecs.NewMap2[comp.Position, comp.Foodsource](w).NewEntity(&comp.Position{X: x, Y: y}, &comp.Foodsource{Radius: radius_m})
 }
 
 func almostEqual(a, b float64) bool {
@@ -55,14 +55,14 @@ func TestDailyOutputTotals(t *testing.T) {
 	colonies.NewEntity(&comp.Colony{})
 	rest := activity.Resting // the zero value of Activity is Hibernate
 	for _, b := range []comp.Bee{
-		{Stage: stage.Adult, Caste: caste.Queen, Number: 3, Mated: true, Activity: activity.Hibernate, Weight_mg: 600},
-		{Stage: stage.Adult, Caste: caste.Queen, Number: 1, Mated: true, Activity: rest, Weight_mg: 800}, // mother queen
-		{Stage: stage.Adult, Caste: caste.Queen, Number: 1, Activity: rest, Weight_mg: 500},              // young queen, unmated
-		{Stage: stage.Pupa, Caste: caste.Queen, Number: 2, Activity: rest},                               // queen brood, unmated
-		{Stage: stage.Adult, Caste: caste.Male, Number: 4, Activity: rest, Weight_mg: 100},
+		{Stage: stage.Adult, Caste: caste.Queen, Number: 3, Mated: true, Activity: activity.Hibernate, Weight: 600},
+		{Stage: stage.Adult, Caste: caste.Queen, Number: 1, Mated: true, Activity: rest, Weight: 800}, // mother queen
+		{Stage: stage.Adult, Caste: caste.Queen, Number: 1, Activity: rest, Weight: 500},              // young queen, unmated
+		{Stage: stage.Pupa, Caste: caste.Queen, Number: 2, Activity: rest},                            // queen brood, unmated
+		{Stage: stage.Adult, Caste: caste.Male, Number: 4, Activity: rest, Weight: 100},
 		{Stage: stage.Larva, Caste: caste.Male, Number: 2, Activity: rest},
-		{Stage: stage.Adult, Caste: caste.Worker, Number: 1, Activity: rest, Weight_mg: 100},
-		{Stage: stage.Adult, Caste: caste.Worker, Number: 5, Activity: rest, Weight_mg: 200},
+		{Stage: stage.Adult, Caste: caste.Worker, Number: 1, Activity: rest, Weight: 100},
+		{Stage: stage.Adult, Caste: caste.Worker, Number: 5, Activity: rest, Weight: 200},
 		{Stage: stage.Egg, Caste: caste.Undefined, Number: 5, Activity: rest},
 	} {
 		addBee(w, b)
@@ -100,7 +100,7 @@ func TestDailyOutputTotals(t *testing.T) {
 	}
 }
 
-func TestTotalMapAreaREP(t *testing.T) {
+func TestTotalMapArea(t *testing.T) {
 	// [OUT-02], [AREA]. Worked example (positions chosen by hand), Scaling 0.1 patches per m:
 	// A (100, 100), radius 100 m = 10 patches; B (150, 120), radius 50 m = 5 patches.
 	// top: B 120 + 5 = 125, bottom: A 100 - 10 = 90, right: B 150 + 5 = 155, left: A 100 - 10 = 90.
@@ -132,7 +132,7 @@ func TestTotalMapAreaREP(t *testing.T) {
 	addFoodsourceAt(w, 295, 5, 100)
 	o = &DailyOutput{}
 	o.Initialize(w)
-	if got := o.TotalMapAreaREP(); !almostEqual(got, 2.625) {
+	if got := o.totalMapArea(); !almostEqual(got, 2.625) {
 		t.Errorf("area limited to the world: %v km2, want 2.625", got)
 	}
 
@@ -148,7 +148,7 @@ func TestTotalMapAreaREP(t *testing.T) {
 
 func TestDailyOutputCSV(t *testing.T) {
 	w := newWorld(t)
-	ecs.GetResource[globals.Landscape](w).Scaling_NLpatches_per_m = 1
+	ecs.GetResource[globals.Landscape](w).Scale = 1
 	addFoodsourceAt(w, 100, 100, 100) // 200 x 200 patches = 200 m x 200 m = 0.04 km2
 	queens := addBee(w, comp.Bee{Stage: stage.Adult, Caste: caste.Queen, Number: 500, Mated: true, Activity: activity.Hibernate})
 
@@ -162,7 +162,7 @@ func TestDailyOutputCSV(t *testing.T) {
 	colonies := ecs.NewMap1[comp.Colony](w)
 	colonies.NewEntity(&comp.Colony{})
 	colonies.NewEntity(&comp.Colony{})
-	addBee(w, comp.Bee{Stage: stage.Adult, Caste: caste.Queen, Number: 1, Mated: true, Weight_mg: 600, Activity: activity.Resting})
+	addBee(w, comp.Bee{Stage: stage.Adult, Caste: caste.Queen, Number: 1, Mated: true, Weight: 600, Activity: activity.Resting})
 	csv.Update(w) // day 2
 	csv.Finalize(w)
 

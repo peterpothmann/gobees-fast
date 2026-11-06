@@ -15,12 +15,12 @@ import (
 
 // seasWorld is a colonyWorld with the brood totals of the previous morning (broodTotals), set by hand, and the
 // seasonalEvents system. The totals of the previous evening (OutputDailyProc) are counted from the bees.
-func seasWorld(t *testing.T, d day.OfYear) (*colonyWorld, *seasonalEvents, *globals.Totals) {
+func seasWorld(t *testing.T, d day.OfYear) (*colonyWorld, *seasonalEvents, *globals.BroodTotals) {
 	t.Helper()
 	cw := newColonyWorld(t, 1)
 	cw.ticks.Ticks = day.Abs(d) // the first year
 	cw.cal.Day = d
-	totals := &globals.Totals{}
+	totals := &globals.BroodTotals{}
 	ecs.AddResource(cw.w, totals)
 	s := &seasonalEvents{}
 	s.Initialize(cw.w)
@@ -75,7 +75,7 @@ func TestSeasonalEventsSeasonStopOtherSpecies(t *testing.T) {
 	cw.input.Species[other].SeasonStop = 330
 	e := cw.addBee(ecs.Entity{}, stage.Adult, caste.Queen, 1, 0)
 	_, b, _, _, _, _ := cw.beeMap.Get(e)
-	b.SpeciesID = other
+	b.Species = other
 	s.Update(cw.w)
 	if !cw.w.Alive(e) {
 		t.Errorf("queen of a species with seasonStop 330 died on day 305")
@@ -99,7 +99,7 @@ func TestSeasonalEventsMalesDie(t *testing.T) {
 	}
 	for _, c := range cases {
 		cw, s, totals := seasWorld(t, 250)
-		totals.TotalEggs, totals.TotalLarvae, totals.TotalPupae = c.eggs, c.larvae, c.pupae
+		totals.Eggs, totals.Larvae, totals.Pupae = c.eggs, c.larvae, c.pupae
 		col := cw.addColony(nil)
 		males := []ecs.Entity{}
 		if c.males {
@@ -129,7 +129,7 @@ func TestSeasonalEventsTotalsBeforeSeasonStop(t *testing.T) {
 	cw.input.Species[other].SeasonStop = 330
 	male := cw.addMale(ecs.Entity{}, 2)
 	_, b, _, _, _, _ := cw.beeMap.Get(male)
-	b.SpeciesID = other // survives [SEAS-01]
+	b.Species = other // survives [SEAS-01]
 	cw.addHibernatingQueen(4)
 	cw.addBee(ecs.Entity{}, stage.Adult, caste.Queen, 1, 0) // dies in [SEAS-01]
 	s.Update(cw.w)

@@ -54,13 +54,13 @@ func (s *larvaeNeeds) Update(w *ecs.World) {
 		util.Shuffle(s.rng, myLarvae)
 		for _, e := range myLarvae {
 			b := s.beeMap.Get(e)
-			sp := s.speciesMap.Get(b.SpeciesID)
+			sp := s.speciesMap.Get(b.Species)
 			pollenNeedMyColony_g = pollenNeedMyColony_g + float64(b.Number)*(maxWeightGainToday(b, sp)/sp.PollenToBodymassFactor)/1000
 		}
 		stores := s.storesMap.Get(col)
-		stores.PollenNeedLarvaeToday_g = pollenNeedMyColony_g
+		stores.LarvaePollenNeedToday = pollenNeedMyColony_g
 		// NOTE: only the energy for the larvae's pollen, see the annotation.
-		stores.EnergyNeedToday_kJ = stores.PollenNeedLarvaeToday_g * s.constants.EnergyRequiredForPollenAssimilation_kJ_per_g
+		stores.EnergyNeedToday = stores.LarvaePollenNeedToday * s.constants.EnergyRequiredForPollenAssimilation_kJ_per_g
 	}
 }
 
@@ -75,12 +75,12 @@ func maxWeightGainToday(b *comp.Bee, sp *params.Species) float64 {
 	memoWPupationMax := sp.DevWeightPupationMax_mg
 	// float64(...) forces rounding after the multiplication, as in Java (no fused multiply-add, see
 	// CompetitionPointDateREP).
-	maxWeightGain_mg := float64(b.Weight_mg*sp.GrowthFactor) - b.Weight_mg
-	if b.Caste == caste.Queen && b.Weight_mg+maxWeightGain_mg > memoQPupationMax {
-		maxWeightGain_mg = memoQPupationMax - b.Weight_mg
+	maxWeightGain_mg := float64(b.Weight*sp.GrowthFactor) - b.Weight
+	if b.Caste == caste.Queen && b.Weight+maxWeightGain_mg > memoQPupationMax {
+		maxWeightGain_mg = memoQPupationMax - b.Weight
 	}
-	if (b.Caste == caste.Worker || b.Caste == caste.Undefined || b.Caste == caste.Male) && b.Weight_mg+maxWeightGain_mg > memoWPupationMax {
-		maxWeightGain_mg = memoWPupationMax - b.Weight_mg
+	if (b.Caste == caste.Worker || b.Caste == caste.Undefined || b.Caste == caste.Male) && b.Weight+maxWeightGain_mg > memoWPupationMax {
+		maxWeightGain_mg = memoWPupationMax - b.Weight
 	}
 	return maxWeightGain_mg
 }

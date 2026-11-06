@@ -50,7 +50,7 @@ func foodsourceSummary(w *ecs.World) (int, map[string]int) {
 	for q.Next() {
 		fs, layer := q.Get()
 		n++
-		if layer.Masterpatch {
+		if layer.IsMasterpatch {
 			masters[fs.PatchType]++
 		}
 	}
@@ -81,13 +81,13 @@ func TestCropRotation(t *testing.T) {
 		bee = bq.Entity()
 	}
 	f := ecs.NewMap1[comp.Forager](w).Get(bee)
-	f.KnownMasterpatchesNectarList = []ecs.Entity{anyFs}
-	f.KnownMasterpatchesPollenList = []ecs.Entity{anyFs}
-	f.NectarsourceToGoTo, f.PollensourceToGoTo, f.CurrentFoodsource = anyFs, anyFs, anyFs
+	f.KnownNectarPatches = []ecs.Entity{anyFs}
+	f.KnownPollenPatches = []ecs.Entity{anyFs}
+	f.NectarSource, f.PollenSource, f.CurrentFoodsource = anyFs, anyFs, anyFs
 	inRange := []ecs.Entity{anyFs}
 	col := ecs.NewMap6[comp.Position, comp.Colony, comp.ColonyStores, comp.ColonyStimuli, comp.ColonyCounts, comp.ColonyRange](w).NewEntity(&comp.Position{}, &comp.Colony{}, &comp.ColonyStores{}, &comp.ColonyStimuli{}, &comp.ColonyCounts{},
-		&comp.ColonyRange{AllPatchesInRangeList: inRange,
-			MasterpatchesWithPollenlayersInFlowerAndRangeList: inRange, MasterpatchesWithNectarlayersInFlowerAndRangeList: inRange})
+		&comp.ColonyRange{Layers: inRange,
+			PollenPatches: inRange, NectarPatches: inRange})
 
 	// [MORN-09] only on Day 365
 	setDay(w, 364)
@@ -120,16 +120,16 @@ func TestCropRotation(t *testing.T) {
 
 	// [CROP-02] the bee forgets her foodsources
 	f = ecs.NewMap1[comp.Forager](w).Get(bee)
-	if len(f.KnownMasterpatchesNectarList)+len(f.KnownMasterpatchesPollenList) != 0 ||
-		!f.NectarsourceToGoTo.IsZero() || !f.PollensourceToGoTo.IsZero() || !f.CurrentFoodsource.IsZero() {
+	if len(f.KnownNectarPatches)+len(f.KnownPollenPatches) != 0 ||
+		!f.NectarSource.IsZero() || !f.PollenSource.IsZero() || !f.CurrentFoodsource.IsZero() {
 		t.Errorf("bee still knows foodsources: %+v", *f)
 	}
 	// the colony empties its in-flower lists, but keeps allPatchesInRangeList
 	r := ecs.NewMap1[comp.ColonyRange](w).Get(col)
-	if len(r.MasterpatchesWithPollenlayersInFlowerAndRangeList)+len(r.MasterpatchesWithNectarlayersInFlowerAndRangeList) != 0 {
+	if len(r.PollenPatches)+len(r.NectarPatches) != 0 {
 		t.Errorf("in-flower lists not empty: %+v", *r)
 	}
-	if !slices.Equal(r.AllPatchesInRangeList, inRange) || w.Alive(anyFs) {
+	if !slices.Equal(r.Layers, inRange) || w.Alive(anyFs) {
 		t.Errorf("allPatchesInRangeList must keep the dead foodsource")
 	}
 	// [FRNG] reads the dead foodsources: NetLogo runtime error, gobees panics
@@ -138,8 +138,8 @@ func TestCropRotation(t *testing.T) {
 
 	// [SPEC-06] for B_terrestris: Scrub and Garden are nest habitats. [SPEC-07] is not computed again (step F11).
 	for i, ns := range ecs.GetResource[globals.NestSites](w).BySpecies {
-		if len(ns.NestsiteFoodsourceList) != 2 || ns.NestSiteArea != 150000 {
-			t.Errorf("species %d: %d nest sites, area %v; want 2 and 150000", i, len(ns.NestsiteFoodsourceList), ns.NestSiteArea)
+		if len(ns.Sites) != 2 || ns.Area != 150000 {
+			t.Errorf("species %d: %d nest sites, area %v; want 2 and 150000", i, len(ns.Sites), ns.Area)
 		}
 	}
 

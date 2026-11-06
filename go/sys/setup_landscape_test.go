@@ -86,7 +86,7 @@ func testFlower(fs comp.Foodsource) string {
 		return "Scrub" // not split, NetLogo: flowerSpecies_relativeAbundanceList (list patchType 1)
 	case fs.StartDay == 100:
 		return "A"
-	case fs.NectarFlowerVolume_myl == 0:
+	case fs.NectarPerFlower == 0:
 		return "C"
 	}
 	return "B"
@@ -128,30 +128,30 @@ func TestCreateLayers(t *testing.T) {
 	a, c, crop, scrub := byKey["Grassland/A"], byKey["Grassland/C"], byKey["Crop_Cereals/B"], byKey["Scrub/Scrub"]
 
 	// [LAYR-05] A: pollen 100 * 2 * 0.01 = 2 g, nectar 100 * 2 * 1 microlitre = 200 microlitres, flowering period from the table
-	if a.fs.PollenMax_g != 2 || a.fs.NectarMax_myl != 200 || a.fs.NectarFlowerVolume_myl != 1 || a.fs.StartDay != 100 || a.fs.StopDay != 200 {
+	if a.fs.PollenMax != 2 || a.fs.NectarMax != 200 || a.fs.NectarPerFlower != 1 || a.fs.StartDay != 100 || a.fs.StopDay != 200 {
 		t.Errorf("layer A = %+v", a.fs)
 	}
 	// [LAYR-04] the stewardship option "Margin" gets no layer: 4 foodsources (checked above)
 	// [LAYR-06] C: nectar 0 below the limit, pollen 1 g kept
-	if c.fs.NectarMax_myl != 0 || c.fs.PollenMax_g != 1 {
-		t.Errorf("layer C nectar %v, pollen %v; want 0, 1", c.fs.NectarMax_myl, c.fs.PollenMax_g)
+	if c.fs.NectarMax != 0 || c.fs.PollenMax != 1 {
+		t.Errorf("layer C nectar %v, pollen %v; want 0, 1", c.fs.NectarMax, c.fs.PollenMax)
 	}
 	// [LAYR-07] B on the grassland is removed (both below the limits), but kept on the crop field ("Crop_")
 	if _, ok := byKey["Grassland/B"]; ok {
 		t.Error("layer B on Grassland should be removed")
 	}
-	if crop.fs.NectarMax_myl != 0 || crop.fs.PollenMax_g != 0 {
+	if crop.fs.NectarMax != 0 || crop.fs.PollenMax != 0 {
 		t.Errorf("crop layer B = %+v, want no food", crop.fs)
 	}
 	// [LAYR-08] masterpatches
-	if !a.l.Masterpatch || a.l.MasterpatchID != a.e || c.l.Masterpatch || c.l.MasterpatchID != a.e {
-		t.Errorf("A master %v -> %v, C master %v -> %v", a.l.Masterpatch, a.l.MasterpatchID, c.l.Masterpatch, c.l.MasterpatchID)
+	if !a.l.IsMasterpatch || a.l.Masterpatch != a.e || c.l.IsMasterpatch || c.l.Masterpatch != a.e {
+		t.Errorf("A master %v -> %v, C master %v -> %v", a.l.IsMasterpatch, a.l.Masterpatch, c.l.IsMasterpatch, c.l.Masterpatch)
 	}
-	if !crop.l.Masterpatch || crop.l.MasterpatchID != crop.e {
+	if !crop.l.IsMasterpatch || crop.l.Masterpatch != crop.e {
 		t.Error("the crop layer must be its own masterpatch")
 	}
 	// [LAYR-09] finding 19 (see trans/netlogo-findings.md#finding-19): a flower patch with an empty list stays, without food
-	if !scrub.l.Masterpatch || scrub.fs.NectarMax_myl != 0 || scrub.fs.PollenMax_g != 0 ||
+	if !scrub.l.IsMasterpatch || scrub.fs.NectarMax != 0 || scrub.fs.PollenMax != 0 ||
 		scrub.fs.StartDay != 0 || scrub.fs.StopDay != 0 {
 		t.Errorf("scrub = %+v %+v", scrub.fs, scrub.l)
 	}
@@ -159,15 +159,15 @@ func TestCreateLayers(t *testing.T) {
 	// in the same patch cell (10, 20). A and C share the list of the grassland, sorted by who (A before C: order of
 	// creation, step F12). The crop layer has its own list (NetLogo: one list of all three).
 	for _, l := range []testLayer{a, c} {
-		if want := []ecs.Entity{a.e, c.e}; !slices.Equal(l.l.LayersInPatchList, want) {
-			t.Errorf("%s/%s: layersInPatchList %v, want %v", l.fs.PatchType, testFlower(l.fs), l.l.LayersInPatchList, want)
+		if want := []ecs.Entity{a.e, c.e}; !slices.Equal(l.l.PatchLayers, want) {
+			t.Errorf("%s/%s: layersInPatchList %v, want %v", l.fs.PatchType, testFlower(l.fs), l.l.PatchLayers, want)
 		}
 	}
-	if !slices.Equal(crop.l.LayersInPatchList, []ecs.Entity{crop.e}) {
-		t.Errorf("crop: layersInPatchList %v, want %v", crop.l.LayersInPatchList, []ecs.Entity{crop.e})
+	if !slices.Equal(crop.l.PatchLayers, []ecs.Entity{crop.e}) {
+		t.Errorf("crop: layersInPatchList %v, want %v", crop.l.PatchLayers, []ecs.Entity{crop.e})
 	}
-	if !slices.Equal(scrub.l.LayersInPatchList, []ecs.Entity{scrub.e}) {
-		t.Errorf("scrub: layersInPatchList %v", scrub.l.LayersInPatchList)
+	if !slices.Equal(scrub.l.PatchLayers, []ecs.Entity{scrub.e}) {
+		t.Errorf("scrub: layersInPatchList %v", scrub.l.PatchLayers)
 	}
 	// step F12: the masterpatches in who order. The scrub is not split and took its who number in [FSRC-04], before
 	// all layers, so it comes first. The grassland and the crop field follow in the shuffled order of [LAYR-03].
@@ -248,8 +248,8 @@ func TestCreateFoodsourcesExampleFarm(t *testing.T) {
 		a := newExampleFarmSetup(t, float64(seed))
 		w := a.World
 		landscape := ecs.GetResource[globals.Landscape](w)
-		if landscape.Scaling_NLpatches_per_m != 0.1 {
-			t.Fatalf("Scaling_NLpatches/m = %v, want 0.1 (1 / 10 m)", landscape.Scaling_NLpatches_per_m)
+		if landscape.Scale != 0.1 {
+			t.Fatalf("Scaling_NLpatches/m = %v, want 0.1 (1 / 10 m)", landscape.Scale)
 		}
 
 		masterpatches := collectMasterpatches(w)
@@ -260,8 +260,8 @@ func TestCreateFoodsourcesExampleFarm(t *testing.T) {
 		query := ecs.NewFilter3[comp.Position, comp.Foodsource, comp.Layer](w).Query()
 		for query.Next() {
 			pos, fs, l := query.Get()
-			mpos, mfs := posMap.Get(l.MasterpatchID)
-			if *mpos != *pos || mfs.PatchType != fs.PatchType || mfs.Area_sqm != fs.Area_sqm {
+			mpos, mfs := posMap.Get(l.Masterpatch)
+			if *mpos != *pos || mfs.PatchType != fs.PatchType || mfs.Area != fs.Area {
 				t.Errorf("layer %s at %v points to masterpatch %s at %v", fs.PatchType, *pos, mfs.PatchType, *mpos)
 			}
 		}

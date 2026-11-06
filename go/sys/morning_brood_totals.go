@@ -19,7 +19,7 @@ import (
 //
 // NetLogo: CheckNumbersProc.
 type broodTotals struct {
-	totals globals.Totals
+	totals globals.BroodTotals
 
 	colonyFilter *ecs.Filter1[comp.ColonyCounts]
 }
@@ -35,13 +35,13 @@ func (s *broodTotals) Update(w *ecs.World) {
 	// [CHK-02] finding 39 (see trans/netlogo-findings.md#finding-39). totalForagingTripsToday: output only, counted
 	// by the observers (step F4).
 	t := &s.totals
-	t.TotalEggs, t.TotalLarvae, t.TotalPupae = 0, 0, 0
+	t.Eggs, t.Larvae, t.Pupae = 0, 0, 0
 	colonies := s.colonyFilter.Query()
 	for colonies.Next() {
 		c := colonies.Get()
-		t.TotalEggs += c.AllEggs
-		t.TotalLarvae += c.AllLarvae
-		t.TotalPupae += c.AllPupae
+		t.Eggs += c.Eggs
+		t.Larvae += c.Larvae
+		t.Pupae += c.Pupae
 	}
 }
 

@@ -36,12 +36,12 @@ func TestBroodTotals(t *testing.T) {
 	cw, col := checkWorld(t)
 	s := &broodTotals{}
 	s.Initialize(cw.w)
-	got := ecs.GetResource[globals.Totals](cw.w)
+	got := ecs.GetResource[globals.BroodTotals](cw.w)
 	// [CHK-02] the totals of the colonies of this morning, finding 39 (see trans/netlogo-findings.md#finding-39):
 	// an egg laid after the morning statistics is not counted
 	cw.addBee(col, stage.Egg, caste.Undefined, 2, 0)
 	s.Update(cw.w)
-	want := globals.Totals{TotalEggs: 5, TotalLarvae: 4, TotalPupae: 3}
+	want := globals.BroodTotals{Eggs: 5, Larvae: 4, Pupae: 3}
 	if *got != want {
 		t.Errorf("totals:\n got %+v\nwant %+v", *got, want)
 	}
@@ -62,7 +62,7 @@ func TestMorningExampleFarm(t *testing.T) {
 		sum := 0.0
 		q := states.Query()
 		for q.Next() {
-			sum += q.Get().Nectar_myl
+			sum += q.Get().Nectar
 		}
 		return sum
 	}
@@ -81,11 +81,11 @@ func TestMorningExampleFarm(t *testing.T) {
 		q := filter.Query()
 		for q.Next() {
 			c, n, r := q.Get()
-			if n.AllAdults != 1 || c.EusocialPhaseDate.IsSet() {
-				t.Fatalf("colony: allAdults %v, eusocialPhaseDate %v", n.AllAdults, c.EusocialPhaseDate)
+			if n.Adults != 1 || c.EusocialPhaseDate.IsSet() {
+				t.Fatalf("colony: allAdults %v, eusocialPhaseDate %v", n.Adults, c.EusocialPhaseDate)
 			}
-			if len(r.MasterpatchesWithPollenlayersInFlowerAndRangeList)+
-				len(r.MasterpatchesWithNectarlayersInFlowerAndRangeList) > 0 {
+			if len(r.PollenPatches)+
+				len(r.NectarPatches) > 0 {
 				withLists++
 			}
 		}

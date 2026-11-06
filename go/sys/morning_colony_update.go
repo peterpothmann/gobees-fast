@@ -27,7 +27,7 @@ type colonyUpdate struct {
 	rng       *rand.Rand
 	ticks     *globals.Ticks
 	calendar  *globals.Calendar
-	today     *globals.FoodsourcesToday
+	today     *globals.Flowering
 	file      *params.ParameterFile
 	constants *params.Constants
 	beeDeath  beeDeath
@@ -47,7 +47,7 @@ func (s *colonyUpdate) Initialize(w *ecs.World) {
 	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.ticks = ecs.GetResource[globals.Ticks](w)
 	s.calendar = ecs.GetResource[globals.Calendar](w)
-	s.today = ecs.GetResource[globals.FoodsourcesToday](w)
+	s.today = ecs.GetResource[globals.Flowering](w)
 	s.file = ecs.GetResource[params.ParameterFile](w)
 	s.constants = ecs.GetResource[params.Constants](w)
 	s.beeDeath = newBeeDeath(w)
@@ -110,18 +110,18 @@ func (s *colonyUpdate) updateColony(w *ecs.World, col ecs.Entity, members []ecs.
 	// countBroodMort_NA, countBroodMort_ES: read only by the egg accounting [CHK-04], removed in step F4
 
 	// [UCOL-01]
-	if s.today.FoodsourcesInFlowerUpdate {
+	if s.today.Changed {
 		s.colonies.flowersInRange(col)
 	}
 	colony, stores, counts := s.colonyMap.Get(col)
 
 	// [UCOL-02] after the competition point and without brood, the workers and queens older than 10 days die.
 	// Males survive (finding 38, see trans/netlogo-findings.md#finding-38).
-	// counts.AllEggs, AllLarvae and AllPupae are set further below in [UCOL-06]. Here they still hold the values
+	// counts.Eggs, Larvae and Pupae are set further below in [UCOL-06]. Here they still hold the values
 	// of yesterday morning: brood that emerged or died since then still counts as brood. The adults therefore die
 	// one day later than with today's numbers (finding 37, see trans/netlogo-findings.md#finding-37).
 	// ORDER: irrelevant, each bee dies independently.
-	if colony.CompetitionPointDate.Before(ticks) && counts.AllEggs+counts.AllLarvae+counts.AllPupae == 0 {
+	if colony.CompetitionPointDate.Before(ticks) && counts.Eggs+counts.Larvae+counts.Pupae == 0 {
 		for _, e := range ask(func(b *comp.Bee) bool {
 			return b.AdultAge > 10 && (b.Caste == caste.Worker || b.Caste == caste.Queen)
 		}) {
@@ -129,7 +129,7 @@ func (s *colonyUpdate) updateColony(w *ecs.World, col ecs.Entity, members []ecs.
 		}
 	}
 	// [UCOL-03]
-	if stores.EnergyStore_kJ <= 0 {
+	if stores.Energy <= 0 {
 		for _, e := range ask(all) {
 			s.beeDeath.die(w, e, "Colony's energy store depleted!")
 		}
@@ -149,13 +149,13 @@ func (s *colonyUpdate) updateColony(w *ecs.World, col ecs.Entity, members []ecs.
 	colony, stores, counts = s.colonyMap.Get(col)
 
 	// [UCOL-05] broodDeathsNoAdults, broodDeathsEnergyStores: removed in step F4
-	stores.SummedIncubationToday_kJ = 0
+	stores.IncubationToday = 0
 
 	// [UCOL-06]
 	s.statistics(counts, alive(all))
 
 	// [UCOL-07]
-	if !colony.EusocialPhaseDate.IsSet() && counts.AllAdultWorkers > 0 {
+	if !colony.EusocialPhaseDate.IsSet() && counts.AdultWorkers > 0 {
 		colony.EusocialPhaseDate = day.At(ticks)
 	}
 	// [UCOL-08] ORDER: irrelevant, one independent draw per colony.
@@ -185,25 +185,25 @@ func (s *colonyUpdate) updateColony(w *ecs.World, col ecs.Entity, members []ecs.
 // statistics sets the colony statistics from the living members of the colony [UCOL-06].
 func (s *colonyUpdate) statistics(c *comp.ColonyCounts, members []ecs.Entity) {
 	// allAdultMales: read only by [CHK-03], removed in step F4
-	c.AllEggs, c.AllLarvae, c.AllPupae, c.AllAdults, c.AllAdultWorkers = 0, 0, 0, 0, 0
+	c.Eggs, c.Larvae, c.Pupae, c.Adults, c.AdultWorkers = 0, 0, 0, 0, 0
 	for _, e := range members {
 		b := s.beeMap.Get(e)
 		switch b.Stage {
 		case stage.Egg:
-			c.AllEggs += b.Number
+			c.Eggs += b.Number
 		case stage.Larva:
-			c.AllLarvae += b.Number
+			c.Larvae += b.Number
 		case stage.Pupa:
-			c.AllPupae += b.Number
+			c.Pupae += b.Number
 		case stage.Adult:
-			c.AllAdults += b.Number
+			c.Adults += b.Number
 			if b.Caste == caste.Worker {
-				c.AllAdultWorkers += b.Number
+				c.AdultWorkers += b.Number
 			}
 		}
 	}
-	if c.AllAdultWorkers > 0 {
-		c.LarvaWorkerRatio = float64(c.AllLarvae) / float64(c.AllAdultWorkers)
+	if c.AdultWorkers > 0 {
+		c.LarvaWorkerRatio = float64(c.Larvae) / float64(c.AdultWorkers)
 	} else {
 		c.LarvaWorkerRatio = params.NotSetHigh
 	}

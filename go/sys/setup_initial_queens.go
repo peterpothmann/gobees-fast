@@ -55,16 +55,16 @@ func (s *initialQueensSetup) Initialize(w *ecs.World) {
 				Mated:    true,
 				Number:   1,
 				// [IQUE-04]
-				SpeciesID: spIndex,
-				Stage:     stage.Adult,
-				Activity:  activity.Hibernate,
+				Species:  spIndex,
+				Stage:    stage.Adult,
+				Activity: activity.Hibernate,
 				// [IQUE-06] -3599 to 3600 s, no effect (finding 31, see trans/netlogo-findings.md#finding-31)
-				PersonalTime_s: util.RandomInt(rng, 2*3600) + (constants.GetUpTime_s - 3600),
+				PersonalTime: util.RandomInt(rng, 2*3600) + (constants.GetUpTime_s - 3600),
 			}
 			genetics := comp.Genetics{
-				MtDNA:           util.RandomFloat(rng, 139.9),
-				AllelesList:     []float64{util.RandomFloat(rng, 139.9), util.RandomFloat(rng, 139.9)},
-				SpermathecaList: []float64{util.RandomFloat(rng, 139.9)},
+				MtDNA:       util.RandomFloat(rng, 139.9),
+				Alleles:     []float64{util.RandomFloat(rng, 139.9), util.RandomFloat(rng, 139.9)},
+				Spermatheca: []float64{util.RandomFloat(rng, 139.9)},
 			}
 			// [IQUE-07] emergingDate starts at 0, so it is drawn at least once. In the first year the absolute day
 			// is the day of the year.
@@ -72,20 +72,20 @@ func (s *initialQueensSetup) Initialize(w *ecs.World) {
 			for emerging <= 0 || emerging >= day.Abs(sp.SeasonStop) {
 				emerging = day.Abs(util.Round(util.RandomNormal(rng, sp.EmergingDay_mean, sp.EmergingDay_sd)))
 			}
-			bee.EmergingDate = day.At(emerging)
+			bee.EmergenceDate = day.At(emerging)
 			// [IQUE-09]
 			minWeight_mg := sp.DevWeight_Q_PupationMin_mg
 			maxWeight_mg := sp.DevWeight_Q_PupationMax_mg
-			bee.Weight_mg = util.RandomNormal(rng, (maxWeight_mg+minWeight_mg)/2, (maxWeight_mg-minWeight_mg)/4)
-			bee.Weight_mg = min(max(bee.Weight_mg, minWeight_mg), maxWeight_mg)
+			bee.Weight = util.RandomNormal(rng, (maxWeight_mg+minWeight_mg)/2, (maxWeight_mg-minWeight_mg)/4)
+			bee.Weight = min(max(bee.Weight, minWeight_mg), maxWeight_mg)
 
 			// [IQUE-08] no foodsource known yet (zero entities, empty lists)
 			forager := comp.Forager{
-				GlossaLength_mm:              proboscisLength(bee.Weight_mg, sp),
-				Cropvolume_myl:               cropVolume(bee.Weight_mg, sp),
-				PollenPellets_g:              pollenLoad(bee.Weight_mg, sp),
-				KnownMasterpatchesNectarList: []ecs.Entity{},
-				KnownMasterpatchesPollenList: []ecs.Entity{},
+				GlossaLength:       proboscisLength(bee.Weight, sp),
+				CropVolume:         cropVolume(bee.Weight, sp),
+				PollenPellets:      pollenLoad(bee.Weight, sp),
+				KnownNectarPatches: []ecs.Entity{},
+				KnownPollenPatches: []ecs.Entity{},
 			}
 			th := thresholds(sitQueenInitiationPhase) // [IQUE-05]
 			beeMapper.NewEntity(&comp.Position{}, &bee, &genetics, &th, &forager, &comp.Development{})

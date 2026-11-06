@@ -28,8 +28,8 @@ func step6Metrics(w *ecs.World, counters *obs.Counters) map[string]float64 {
 	for cols.Next() {
 		c, s := cols.Get()
 		m["colonies"]++
-		m["energy_kJ"] += s.EnergyStore_kJ
-		m["pollen_g"] += s.PollenStore_g
+		m["energy_kJ"] += s.Energy
+		m["pollen_g"] += s.Pollen
 		if c.SwitchPointDate.IsSet() {
 			m["switch_point"]++
 		}
@@ -65,8 +65,8 @@ func step6Metrics(w *ecs.World, counters *obs.Counters) map[string]float64 {
 	fs := ecs.NewFilter1[comp.FoodsourceState](w).Query()
 	for fs.Next() {
 		s := fs.Get()
-		m["nectar_left_l"] += s.Nectar_myl
-		m["pollen_left_kg"] += s.Pollen_g
+		m["nectar_left_l"] += s.Nectar
+		m["pollen_left_kg"] += s.Pollen
 	}
 	m["nectar_left_l"] /= 1000000
 	m["pollen_left_kg"] /= 1000

@@ -65,7 +65,7 @@ func createFoodsources(w *ecs.World, foodsourcesFile string, landscape *globals.
 		panic(fmt.Errorf("landscape file %q was not read by package input", foodsourcesFile))
 	}
 	landscape.FoodsourcesFile = foodsourcesFile // the landscape of the current year [PAR-05], [CROP-01]
-	landscape.Scaling_NLpatches_per_m = precision(1/read.MetresPerPatch, 8)
+	landscape.Scale = precision(1/read.MetresPerPatch, 8)
 	// copies, because the setup changes them (radius, merged hedges), and a crop rotation can use a file twice
 	patches := make([]flowerPatch, len(read.Patches))
 	for i := range read.Patches {
@@ -249,29 +249,29 @@ func createLayers(w *ecs.World, patches []*flowerPatch, flowers *params.FlowerSp
 			}
 			relAbundance := file.AbundanceBoost * e.Value
 			fs := comp.Foodsource{
-				Id_Beescout:                   p.Id_Beescout,
-				PatchType:                     p.PatchType,
-				Area_sqm:                      p.Area_sqm,
-				Radius_m:                      p.Radius_m,
-				PollenMax_g:                   p.Area_sqm * relAbundance * data.Pollen_g_per_flower,
-				NectarFlowerVolume_myl:        data.Nectar_ml_per_flower * 1000,
-				NectarConcentration_mol_per_l: data.Concentration_mol_per_l,
-				StartDay:                      data.StartDay,
-				StopDay:                       data.StopDay,
-				CorollaDepth_mm:               data.CorollaDepth_mm,
-				InterFlowerTime_s:             data.IntFlowerTime_s,
+				ID:                  p.Id_Beescout,
+				PatchType:           p.PatchType,
+				Area:                p.Area_sqm,
+				Radius:              p.Radius_m,
+				PollenMax:           p.Area_sqm * relAbundance * data.Pollen_g_per_flower,
+				NectarPerFlower:     data.Nectar_ml_per_flower * 1000,
+				NectarConcentration: data.Concentration_mol_per_l,
+				StartDay:            data.StartDay,
+				StopDay:             data.StopDay,
+				CorollaDepth:        data.CorollaDepth_mm,
+				InterFlowerTime:     data.IntFlowerTime_s,
 			}
-			fs.NectarMax_myl = p.Area_sqm * relAbundance * fs.NectarFlowerVolume_myl
+			fs.NectarMax = p.Area_sqm * relAbundance * fs.NectarPerFlower
 
 			// [LAYR-06]
-			if file.MinSizeFoodSources && fs.NectarMax_myl < minNectSize_myl {
-				fs.NectarMax_myl = 0
+			if file.MinSizeFoodSources && fs.NectarMax < minNectSize_myl {
+				fs.NectarMax = 0
 			}
-			if file.MinSizeFoodSources && fs.PollenMax_g < minPolsize_g {
-				fs.PollenMax_g = 0
+			if file.MinSizeFoodSources && fs.PollenMax < minPolsize_g {
+				fs.PollenMax = 0
 			}
 			// [LAYR-07] the removed layer has used up its who number (finding 18, no effect without who numbers)
-			if fs.NectarMax_myl == 0 && fs.PollenMax_g == 0 && file.RemoveEmptyFoodSources &&
+			if fs.NectarMax == 0 && fs.PollenMax == 0 && file.RemoveEmptyFoodSources &&
 				!strings.Contains(p.PatchType, "Crop_") {
 				continue
 			}
@@ -281,15 +281,15 @@ func createLayers(w *ecs.World, patches []*flowerPatch, flowers *params.FlowerSp
 			l := layerMapper.Get(layer)
 			if master.IsZero() {
 				master = layer
-				l.Masterpatch = true
+				l.IsMasterpatch = true
 				splitMasterpatches = append(splitMasterpatches, layer)
 			}
-			l.MasterpatchID = master
+			l.Masterpatch = master
 			layers = append(layers, layer)
 		}
 		// [LAYR-10] every layer of the flower patch gets the same list
 		for _, layer := range layers {
-			layerMapper.Get(layer).LayersInPatchList = layers
+			layerMapper.Get(layer).PatchLayers = layers
 		}
 		// [LAYR-09] the flower patch itself is removed
 	}
@@ -303,17 +303,17 @@ func createLayers(w *ecs.World, patches []*flowerPatch, flowers *params.FlowerSp
 			continue
 		}
 		e := newFoodsource(p, comp.Foodsource{
-			Id_Beescout:   p.Id_Beescout,
-			PatchType:     p.PatchType,
-			Area_sqm:      p.Area_sqm,
-			Radius_m:      p.Radius_m,
-			NectarMax_myl: p.NectarMax_myl,
-			PollenMax_g:   p.PollenMax_g,
+			ID:        p.Id_Beescout,
+			PatchType: p.PatchType,
+			Area:      p.Area_sqm,
+			Radius:    p.Radius_m,
+			NectarMax: p.NectarMax_myl,
+			PollenMax: p.PollenMax_g,
 		})
 		l := layerMapper.Get(e)
-		l.Masterpatch = true
-		l.MasterpatchID = e
-		l.LayersInPatchList = []ecs.Entity{e} // [LAYR-10]
+		l.IsMasterpatch = true
+		l.Masterpatch = e
+		l.PatchLayers = []ecs.Entity{e} // [LAYR-10]
 		masterpatches = append(masterpatches, e)
 	}
 

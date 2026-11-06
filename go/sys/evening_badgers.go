@@ -70,7 +70,7 @@ func (s *badgers) Update(w *ecs.World) {
 		cq := s.colonyFilter.Query()
 		for cq.Next() {
 			pos, _ := cq.Get()
-			if util.Distance(pos.X, pos.Y, b.x, b.y) < s.landscape.Scaling_NLpatches_per_m*foragingRange_m {
+			if util.Distance(pos.X, pos.Y, b.x, b.y) < s.landscape.Scale*foragingRange_m {
 				inRange = append(inRange, cq.Entity())
 			}
 		}
@@ -81,8 +81,8 @@ func (s *badgers) Update(w *ecs.World) {
 				continue
 			}
 			stores := s.colonyMap.Get(col)
-			stores.EnergyStore_kJ = 0
-			stores.PollenStore_g = 0
+			stores.Energy = 0
+			stores.Pollen = 0
 			// every bee of the colony dies, in random order. Each bee dies independently.
 			victims := []ecs.Entity{}
 			for _, e := range s.beesOf[col] {

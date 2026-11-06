@@ -43,11 +43,11 @@ func (s *nestSitesSetup) Initialize(w *ecs.World) {
 		if err != nil {
 			panic(err)
 		}
-		ns.NestHabitatsList = expanded
+		ns.Habitats = expanded
 		// [SPEC-06]
-		ns.NestsiteFoodsourceList, ns.NestSiteArea = nestSites(ns.NestHabitatsList, masterpatches)
+		ns.Sites, ns.Area = nestSites(ns.Habitats, masterpatches)
 		// [SPEC-08] message only
-		if len(ns.NestsiteFoodsourceList) == 0 && !sp.Parasitic {
+		if len(ns.Sites) == 0 && !sp.Parasitic {
 			log.Printf("%s has no suitable nesting foodsources. No colonies will form", sp.Name)
 		}
 	}
@@ -58,7 +58,7 @@ func (s *nestSitesSetup) Update(w *ecs.World) {}
 
 func (s *nestSitesSetup) Finalize(w *ecs.World) {}
 
-// speciesTable gives a species by its index, the SpeciesID of bees and SpeciesIDcolony of colonies (step F11).
+// speciesTable gives a species by its index, the Species of bees and colonies (step F11).
 // It reads params.Input.Species at each call, so species added later (tests) are found too.
 type speciesTable struct {
 	in *params.Input
@@ -97,7 +97,7 @@ func collectMasterpatches(w *ecs.World) []masterpatch {
 	result := make([]masterpatch, len(landscape.Masterpatches))
 	for i, e := range landscape.Masterpatches {
 		fs := fsMap.Get(e)
-		result[i] = masterpatch{e, fs.PatchType, fs.Area_sqm}
+		result[i] = masterpatch{e, fs.PatchType, fs.Area}
 	}
 	return result
 }

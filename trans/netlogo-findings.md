@@ -135,8 +135,8 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Checked from the input file (2026-10-23, PP):** the 73 flower patches of `_SYSTEM_Example_Farm_Foodsources.txt` lie in 73 different patch cells, with every rounding rule for coordinates ending in .5 (finding 24). The case does not occur for the example farm.
 - **Consequence for gobees:** compute the list by patch cell exactly as NetLogo does (rounded coordinates, see the patch cells in `trans/data-model.md`), not by masterpatch. Translate the assertion, so that gobees stops in the same situation.
 - **Second Check**: 23.10.2026, PP
-- **Implemented:** `setLayersInPatchList` in `sys/setup_landscape.go`, grouped by `util.Pcor`. Test: `TestCreateLayers` (two flower patches in cell (10, 20) share one list). The assertion in `choosePatch` comes with step 6. Step 6: the assertion in `forager.choosePatch` (`sys/day_foraging.go`, `[PCH-03]`) panics. `bestLayer` reads `LayersInPatchList`.
-- **gobees-fast:** fixed in step F5. `setLayersInPatchList` groups by `MasterpatchID`: the list holds the layers of the same flower patch, sorted by `who`. The assertion in [PCH-03] stays as a check of the state. Same lists as before for the example farm and `Example_Farm_PlotTest` (no patch cell with two flower patches). Test: `TestCreateLayersProc` (two flower patches in cell (10, 20) get two lists).
+- **Implemented:** `setLayersInPatchList` in `sys/setup_landscape.go`, grouped by `util.Pcor`. Test: `TestCreateLayers` (two flower patches in cell (10, 20) share one list). The assertion in `choosePatch` comes with step 6. Step 6: the assertion in `forager.choosePatch` (`sys/day_foraging.go`, `[PCH-03]`) panics. `bestLayer` reads `Layer.PatchLayers` (`LayersInPatchList` until step F15b).
+- **gobees-fast:** fixed in step F5. `setLayersInPatchList` groups by `Layer.Masterpatch` (`MasterpatchID` until step F15b): the list holds the layers of the same flower patch, sorted by `who`. The assertion in [PCH-03] stays as a check of the state. Same lists as before for the example farm and `Example_Farm_PlotTest` (no patch cell with two flower patches). Test: `TestCreateLayersProc` (two flower patches in cell (10, 20) get two lists).
 
 <a id="finding-16"></a>
 
@@ -166,7 +166,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Finding:** A flower patch outside `MapAreaIncluded` and a layer without nectar and pollen are first created and then removed with `die`. Each has already used up a `who` number. NetLogo never reuses `who` numbers within a run.
 - **Consequence for gobees:** the `Who` counter must also count these removed foodsources, otherwise the `who` order differs from NetLogo whenever it matters (finding 16).
 - **Second Check**: 23.10.2026, PP
-- **Implemented:** in gobees `globals.WhoCounter`, which counted every flower patch, also outside `MapAreaIncluded`, and every removed layer (test: gap between layers A and C). gobees-fast keeps no `who` numbers since step F12: `createLayers` keeps the foodsources in the order of creation, which is the `who` order (`globals.Landscape.Masterpatches`, `LayersInPatchList`). `MapAreaIncluded` is removed since step F13. Test: `TestCreateLayers` (order of the masterpatches).
+- **Implemented:** in gobees `globals.WhoCounter`, which counted every flower patch, also outside `MapAreaIncluded`, and every removed layer (test: gap between layers A and C). gobees-fast keeps no `who` numbers since step F12: `createLayers` keeps the foodsources in the order of creation, which is the `who` order (`globals.Landscape.Masterpatches`, `Layer.PatchLayers`). `MapAreaIncluded` is removed since step F13. Test: `TestCreateLayers` (order of the masterpatches).
 
 <a id="finding-19"></a>
 
@@ -520,7 +520,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Who reads `deadCols`:** checked on 2026-10-23. Only three places: the egg accounting assertion in `CheckNumbersProc` on day 364, `UpdateColoniesProc` (deletes all dead colonies on 1 January unless `KeepDeadColonies?`), and the GUI (white dots if `ShowDeadCols?`). No output, plot or BehaviorSpace experiment reads `deadCols`, and no model procedure iterates over all `turtles`. Nobody reads `speciesNameColony` of a dead colony, so the loss has no effect.
 - **Consequence for gobees:** no effect on the dynamics. gobees deletes the colony entity at death and writes its data into a record of dead colonies, including `speciesNameColony` (decision E in `trans/data-model.md`). The egg accounting check runs at death instead of on day 364.
 - **Second Check**: 23.10.2026, PP
-- **gobees-fast:** colonies have no `speciesNameColony` since step F3 (never read). The record keeps the species as `SpeciesIDcolony`.
+- **gobees-fast:** colonies have no `speciesNameColony` since step F3 (never read). The record keeps the species as `SpeciesIDcolony` (`Colony.Species` since step F15b).
 
 <a id="finding-10"></a>
 

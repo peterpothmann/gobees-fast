@@ -64,11 +64,11 @@ func layAndRaise(t *testing.T, queenProduction bool) (bw *broodWorld, eggs ecs.E
 	bw = newBroodWorld(t, 3)
 	col := bw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) {
 		c.QueenProduction = queenProduction
-		s.PollenStore_g, s.IdealPollenStore_g, s.EnergyStore_kJ, s.IdealEnergyStore_kJ = 1000, 1, 1000, 1
+		s.Pollen, s.IdealPollen, s.Energy, s.IdealEnergy = 1000, 1, 1000, 1
 	})
 	queen := bw.addBee(col, stage.Adult, caste.Queen, 1, 30)
 	_, g, _, _, _ := bw.bee(queen)
-	g.AllelesList, g.SpermathecaList = []float64{10, 20}, []float64{30}
+	g.Alleles, g.Spermatheca = []float64{10, 20}, []float64{30}
 
 	bw.eggs.layEggs(queen)
 	eggs = ecs.Entity{}
@@ -92,7 +92,7 @@ func layAndRaise(t *testing.T, queenProduction bool) (bw *broodWorld, eggs ecs.E
 		if b.Stage == stage.Adult {
 			break
 		}
-		d.CumulIncubationReceived_kJ += quota // during the day (BroodIncubationProc, step 5)
+		d.IncubationReceived += quota // during the day (BroodIncubationProc, step 5)
 		before := *b
 		bw.evening()
 		b, _, _, _, _ = bw.bee(eggs)
@@ -104,7 +104,7 @@ func layAndRaise(t *testing.T, queenProduction bool) (bw *broodWorld, eggs ecs.E
 			events[b.Caste.String()] = k
 		}
 		if b.Stage == stage.Pupa && before.Stage == stage.Larva {
-			events["pupationWeight"] = int(math.Round(b.Weight_mg * 100))
+			events["pupationWeight"] = int(math.Round(b.Weight * 100))
 		}
 		bw.ticks.Ticks++
 	}
@@ -125,8 +125,8 @@ func TestDevelopmentWorkerTimeline(t *testing.T) {
 	if b.Stage != stage.Adult || b.Number != 12 || b.AdultAge != 0 || *th != thresholds(sitWorker) {
 		t.Errorf("new workers: stage %v, number %v, adultAge %v, thresholds %+v", b.Stage, b.Number, b.AdultAge, *th)
 	}
-	if f.Cropvolume_myl != cropVolume(b.Weight_mg, bw.sp) || f.GlossaLength_mm != proboscisLength(b.Weight_mg, bw.sp) {
-		t.Errorf("crop %v, glossa %v", f.Cropvolume_myl, f.GlossaLength_mm)
+	if f.CropVolume != cropVolume(b.Weight, bw.sp) || f.GlossaLength != proboscisLength(b.Weight, bw.sp) {
+		t.Errorf("crop %v, glossa %v", f.CropVolume, f.GlossaLength)
 	}
 	if bw.tally.queensEmerged != 0 {
 		t.Errorf("%v queens emerged, want 0", bw.tally.queensEmerged)
@@ -144,11 +144,11 @@ func TestDevelopmentQueenTimeline(t *testing.T) {
 		}
 	}
 	b, _, th, f, _ := bw.bee(e)
-	if !b.EmergingDate.IsSet() || b.EmergingDate.Day() <= 365 || b.EmergingDate.Day() > 365+305 {
-		t.Errorf("emergingDate %v, want a day in (365, 670]", b.EmergingDate)
+	if !b.EmergenceDate.IsSet() || b.EmergenceDate.Day() <= 365 || b.EmergenceDate.Day() > 365+305 {
+		t.Errorf("emergingDate %v, want a day in (365, 670]", b.EmergenceDate)
 	}
-	if *th != thresholds(sitYoungQueen) || f.PollenPellets_g != pollenLoad(980, bw.sp) {
-		t.Errorf("thresholds %+v, pollen load %v", *th, f.PollenPellets_g)
+	if *th != thresholds(sitYoungQueen) || f.PollenPellets != pollenLoad(980, bw.sp) {
+		t.Errorf("thresholds %+v, pollen load %v", *th, f.PollenPellets)
 	}
 	// event.QueenEmerged for the output (obs.Counters.TotalAdultQueensEverProduced)
 	if bw.tally.queensEmerged != 12 {
@@ -165,13 +165,13 @@ func TestQueenEmergingDateDistribution(t *testing.T) {
 	for range n {
 		e := bw.addBrood(col, stage.Pupa, caste.Queen, 1, 40, 980, 100)
 		b, _, _, _, _ := bw.bee(e)
-		b.EmergingDate = day.Date{}
+		b.EmergenceDate = day.Date{}
 		bw.dev.developPupa(e)
 		b, _, _, _, _ = bw.bee(e)
-		if !b.EmergingDate.IsSet() || b.EmergingDate.Day() <= 365 || b.EmergingDate.Day() > 670 {
-			t.Fatalf("emergingDate %v outside (365, 670]", b.EmergingDate)
+		if !b.EmergenceDate.IsSet() || b.EmergenceDate.Day() <= 365 || b.EmergenceDate.Day() > 670 {
+			t.Fatalf("emergingDate %v outside (365, 670]", b.EmergenceDate)
 		}
-		sum += float64(b.EmergingDate.Day())
+		sum += float64(b.EmergenceDate.Day())
 	}
 	if mean := sum / float64(n); math.Abs(mean-456) > 2 {
 		t.Errorf("mean emergingDate %v, want about 456", mean)
@@ -212,14 +212,14 @@ func TestDevelopmentAdultMortality(t *testing.T) {
 func TestDevelopmentSocialPhaseThresholds(t *testing.T) {
 	// [MORA-02] finding 44 (see trans/netlogo-findings.md#finding-44): also a Psithyrus queen
 	bw := newBroodWorld(t, 1)
-	social := bw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) { n.AllAdultWorkers = 5 })
+	social := bw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) { n.AdultWorkers = 5 })
 	founding := bw.addColony(nil)
 	host := bw.addBee(social, stage.Adult, caste.Queen, 1, 30)
 	psith := bw.addBee(social, stage.Adult, caste.Queen, 1, 30)
 	alone := bw.addBee(founding, stage.Adult, caste.Queen, 1, 30)
 	psithSpecies := addParasiticSpecies(bw.w, bw.sp)
 	b, _, th, _, _ := bw.bee(psith)
-	b.SpeciesID = psithSpecies
+	b.Species = psithSpecies
 	*th = thresholds(sitPsith)
 	for _, e := range []ecs.Entity{host, alone} {
 		_, _, th, _, _ := bw.bee(e)

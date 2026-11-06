@@ -144,14 +144,14 @@ func (o *DailyOutput) update() {
 		}
 		if b.Stage == stage.Adult { // brood? = false
 			adults++
-			adultWeight += b.Weight_mg
+			adultWeight += b.Weight
 			switch b.Caste {
 			case caste.Worker:
 				workers++
-				workerWeight += b.Weight_mg
+				workerWeight += b.Weight
 			case caste.Queen:
 				queens++
-				queenWeight += b.Weight_mg
+				queenWeight += b.Weight
 			}
 		}
 	}
@@ -183,13 +183,13 @@ func (o *DailyOutput) mapArea() {
 	foodsources := fsQuery.Count()
 	fsQuery.Close()
 	if foodsources > 0 {
-		o.Totals.TotalMapArea_km2 = o.TotalMapAreaREP()
+		o.Totals.TotalMapArea_km2 = o.totalMapArea()
 	}
 }
 
-// TotalMapAreaREP returns the area [km2] of the box around all foodsources (centre +- radius), limited to the
+// totalMapArea returns the area [km2] of the box around all foodsources (centre +- radius), limited to the
 // world [AREA]. SIMPLIFY: output only.
-func (o *DailyOutput) TotalMapAreaREP() float64 {
+func (o *DailyOutput) totalMapArea() float64 {
 	// [AREA-01] max-one-of / min-one-of choose randomly among ties (with the local random seed of OutputDailyProc).
 	// gobees takes the first one in storage order. Tied foodsources share the coordinate, but their radius_m can
 	// differ, so the area can differ from NetLogo's in that case.
@@ -199,7 +199,7 @@ func (o *DailyOutput) TotalMapAreaREP() float64 {
 	query := o.fsFilter.Query()
 	for query.Next() {
 		pos, fs := query.Get()
-		src := source{pos.X, pos.Y, fs.Radius_m}
+		src := source{pos.X, pos.Y, fs.Radius}
 		if first {
 			top, bottom, right, left = src, src, src, src
 			first = false
@@ -218,7 +218,7 @@ func (o *DailyOutput) TotalMapAreaREP() float64 {
 			left = src
 		}
 	}
-	scaling := o.landscape.Scaling_NLpatches_per_m
+	scaling := o.landscape.Scale
 	topCor := top.y + top.r*scaling
 	bottomCor := bottom.y - bottom.r*scaling
 	rightCor := right.x + right.r*scaling

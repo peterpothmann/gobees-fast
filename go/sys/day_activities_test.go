@@ -30,7 +30,7 @@ func newActivityWorld(t *testing.T, seed uint64) *activityWorld {
 	t.Helper()
 	aw := &activityWorld{broodWorld: newBroodWorld(t, seed), wake: &wakeUp{},
 		loop: &activities{CheckActiveCount: true}, eod: &nightRest{}}
-	aw.cal.DailyForagingPeriod_s = 8 * 3600
+	aw.cal.ForagingPeriod = 8 * 3600
 	ecs.AddResource(aw.w, &params.Derived{MortalityForager_per_s: 1e-05}) // ForagingMortalityModel "high" [PAR-04]
 	aw.wake.Initialize(aw.w)
 	aw.loop.Initialize(aw.w)
@@ -44,7 +44,7 @@ func newActivityWorld(t *testing.T, seed uint64) *activityWorld {
 func (aw *activityWorld) adult(col ecs.Entity, c caste.Caste, number int, weight_mg float64, situation string) ecs.Entity {
 	e := aw.addBee(col, stage.Adult, c, number, 5)
 	b, _, th, _, _ := aw.bee(e)
-	b.Weight_mg = weight_mg
+	b.Weight = weight_mg
 	*th = thresholds(situation)
 	return e
 }
@@ -71,7 +71,7 @@ func TestNextActiveBee(t *testing.T) {
 		for i, time := range tc.times {
 			e := aw.adult(col, caste.Worker, 1, 100, sitWorker)
 			b, _, _, _, _ := aw.bee(e)
-			b.PersonalTime_s = time
+			b.PersonalTime = time
 			names[e] = string(rune('A' + i))
 			list = append(list, e)
 		}
@@ -98,7 +98,7 @@ func TestWakeUp(t *testing.T) {
 	young := aw.adult(col, caste.Queen, 1, 800, sitYoungQueen)
 	searching := aw.adult(col, caste.Queen, 1, 800, sitQueenInitiationPhase)
 	b, _, _, _, _ := aw.bee(searching)
-	b.ColonyID = ecs.Entity{}
+	b.Colony = ecs.Entity{}
 	want = append(want, young, searching)
 	aw.adult(col, caste.Male, 1, 100, sitEgg)
 	hibernating := aw.adult(ecs.Entity{}, caste.Queen, 1, 800, sitYoungQueen)
@@ -117,13 +117,13 @@ func TestWakeUp(t *testing.T) {
 			t.Errorf("bee %v should not be in the queue", e)
 		}
 		b, _, _, _, _ := aw.bee(e)
-		if b.PersonalTime_s < 1 || b.PersonalTime_s > 1800 || b.PersonalTime_s != float64(int(b.PersonalTime_s)) {
-			t.Errorf("personalTime_s %v, want a whole second from 1 to 1800", b.PersonalTime_s)
+		if b.PersonalTime < 1 || b.PersonalTime > 1800 || b.PersonalTime != float64(int(b.PersonalTime)) {
+			t.Errorf("personalTime_s %v, want a whole second from 1 to 1800", b.PersonalTime)
 		}
-		if b.PersonalTime_s < last {
-			t.Errorf("queue not sorted: %v after %v", b.PersonalTime_s, last)
+		if b.PersonalTime < last {
+			t.Errorf("queue not sorted: %v after %v", b.PersonalTime, last)
 		}
-		last = b.PersonalTime_s
+		last = b.PersonalTime
 	}
 }
 
@@ -139,22 +139,22 @@ func TestStimuli(t *testing.T) {
 		counts comp.ColonyCounts
 		want   float64
 	}{
-		{"founding, pollen above minimum", 0.375, comp.ColonyCounts{AllAdults: 1}, 1},
-		{"founding, pollen at minimum", sp.MinPollenStore_g, comp.ColonyCounts{AllAdults: 1}, 0},
-		{"founding, larvae present", 1, comp.ColonyCounts{AllAdults: 1, AllLarvae: 12}, 0},
-		{"workers present", 0, comp.ColonyCounts{AllAdults: 2, AllEggs: 12}, 1},
+		{"founding, pollen above minimum", 0.375, comp.ColonyCounts{Adults: 1}, 1},
+		{"founding, pollen at minimum", sp.MinPollenStore_g, comp.ColonyCounts{Adults: 1}, 0},
+		{"founding, larvae present", 1, comp.ColonyCounts{Adults: 1, Larvae: 12}, 0},
+		{"workers present", 0, comp.ColonyCounts{Adults: 2, Eggs: 12}, 1},
 		// finding 45 (see trans/netlogo-findings.md#finding-45): a male counts like a worker
-		{"queen and one male", 0, comp.ColonyCounts{AllAdults: 2, AllEggs: 12}, 1},
+		{"queen and one male", 0, comp.ColonyCounts{Adults: 2, Eggs: 12}, 1},
 	} {
-		stores := comp.ColonyStores{PollenStore_g: tc.pollen}
+		stores := comp.ColonyStores{Pollen: tc.pollen}
 		if got := egglayingStimulus(&stores, &tc.counts, sp); got != tc.want {
 			t.Errorf("StimEgglayingREP %s: %v, want %v", tc.name, got, tc.want)
 		}
 	}
 
-	eggs := comp.ColonyCounts{AllEggs: 12}
+	eggs := comp.ColonyCounts{Eggs: 12}
 	for _, tc := range []struct{ summed, want float64 }{{6.6, 1}, {6.7, 0}} {
-		stores := comp.ColonyStores{SummedIncubationToday_kJ: tc.summed}
+		stores := comp.ColonyStores{IncubationToday: tc.summed}
 		if got := nursingStimulus(&stores, &eggs, sp); got != tc.want {
 			t.Errorf("StimNursingREP, 12 eggs need 6.67 kJ, %v kJ received: %v, want %v", tc.summed, got, tc.want)
 		}
@@ -164,19 +164,19 @@ func TestStimuli(t *testing.T) {
 	for _, tc := range []struct{ store, daytime, want float64 }{
 		{39.44, 36000, 1}, {39.45, 36000, 0}, {0, 28799, 0}, {0, 28800, 1}, {0, 57600, 1}, {0, 57601, 0},
 	} {
-		stores := comp.ColonyStores{EnergyNeedToday_kJ: 0.65472, EnergyStore_kJ: tc.store}
+		stores := comp.ColonyStores{EnergyNeedToday: 0.65472, Energy: tc.store}
 		got := nectarStimulus(&stores, tc.daytime, sunrise, period)
-		if got != tc.want || !almostEqual(stores.IdealEnergyStore_kJ, 39.6416) {
+		if got != tc.want || !almostEqual(stores.IdealEnergy, 39.6416) {
 			t.Errorf("StimForagingNectarREP store %v at %v s: %v (ideal %v), want %v (ideal 39.6416)",
-				tc.store, tc.daytime, got, stores.IdealEnergyStore_kJ, tc.want)
+				tc.store, tc.daytime, got, stores.IdealEnergy, tc.want)
 		}
 	}
 	for _, tc := range []struct{ store, daytime, want float64 }{{0.8978, 36000, 1}, {0.898, 36000, 0}, {0, 7200, 0}} {
-		stores := comp.ColonyStores{PollenNeedLarvaeToday_g: 0.1056, PollenStore_g: tc.store}
+		stores := comp.ColonyStores{LarvaePollenNeedToday: 0.1056, Pollen: tc.store}
 		got := pollenStimulus(&stores, sp, tc.daytime, sunrise, period)
-		if got != tc.want || !almostEqual(stores.IdealPollenStore_g, 0.9024) {
+		if got != tc.want || !almostEqual(stores.IdealPollen, 0.9024) {
 			t.Errorf("StimForagingPollenREP store %v at %v s: %v (ideal %v), want %v (ideal 0.9024)",
-				tc.store, tc.daytime, got, stores.IdealPollenStore_g, tc.want)
+				tc.store, tc.daytime, got, stores.IdealPollen, tc.want)
 		}
 	}
 }
@@ -210,30 +210,30 @@ func TestActChoice(t *testing.T) {
 	} {
 		aw := newActivityWorld(t, 1)
 		col := aw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) {
-			s.PollenStore_g, s.EnergyStore_kJ = 1000, 1000
+			s.Pollen, s.Energy = 1000, 1000
 			if tc.lowStores {
-				s.PollenStore_g, s.EnergyStore_kJ = 0.3, 10
+				s.Pollen, s.Energy = 0.3, 10
 			}
-			n.AllEggs, n.AllAdults = 12, 3
+			n.Eggs, n.Adults = 12, 3
 			if !tc.heatNeed {
-				s.SummedIncubationToday_kJ = 100
+				s.IncubationToday = 100
 			}
 		})
 		e := aw.adult(col, caste.Queen, 1, 800, tc.situation)
 		psithSpecies := addParasiticSpecies(aw.w, aw.sp)
 		b, g, _, _, _ := aw.bee(e)
-		g.AllelesList, g.SpermathecaList = []float64{10, 20}, []float64{30}
+		g.Alleles, g.Spermatheca = []float64{10, 20}, []float64{30}
 		if tc.situation == sitWorker {
 			b.Caste = caste.Worker
 		}
 		if tc.psithyrus {
-			b.SpeciesID = psithSpecies // in the host colony of species aw.species
+			b.Species = psithSpecies // in the host colony of species aw.species
 		}
 		if tc.noColony {
-			b.ColonyID = ecs.Entity{}
+			b.Colony = ecs.Entity{}
 		}
-		b.PersonalTime_s = tc.daytime
-		aw.daytime.Daytime_s = tc.daytime
+		b.PersonalTime = tc.daytime
+		aw.daytime.Time = tc.daytime
 		aw.loop.act(aw.w, e)
 		if !aw.w.Alive(e) {
 			continue // died on a search flight [COST-01]
@@ -269,18 +269,18 @@ func TestActTime(t *testing.T) {
 	} {
 		aw := newActivityWorld(t, 1)
 		col := aw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) {
-			n.AllEggs, n.AllAdults = 12, 3
+			n.Eggs, n.Adults = 12, 3
 			if !tc.heatNeed {
-				s.SummedIncubationToday_kJ = 100
+				s.IncubationToday = 100
 			}
 		})
 		e := aw.adult(col, caste.Queen, 1, 800, tc.situation)
 		b, _, _, _, _ := aw.bee(e)
-		b.PersonalTime_s = tc.daytime
-		aw.daytime.Daytime_s = tc.daytime
+		b.PersonalTime = tc.daytime
+		aw.daytime.Time = tc.daytime
 		aw.loop.act(aw.w, e)
-		if b, _, _, _, _ := aw.bee(e); b.PersonalTime_s != tc.want {
-			t.Errorf("%s: personalTime_s %v, want %v", tc.name, b.PersonalTime_s, tc.want)
+		if b, _, _, _, _ := aw.bee(e); b.PersonalTime != tc.want {
+			t.Errorf("%s: personalTime_s %v, want %v", tc.name, b.PersonalTime, tc.want)
 		}
 	}
 }
@@ -291,8 +291,8 @@ func TestIncubateBrood(t *testing.T) {
 	heat := 2880 * 0.000000217013888 * 800.0
 	aw := newActivityWorld(t, 1)
 	col := aw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) {
-		s.EnergyStore_kJ = 10
-		n.AllEggs = 12
+		s.Energy = 10
+		n.Eggs = 12
 	})
 	other := aw.addColony(nil)
 	eggs := aw.addBrood(col, stage.Egg, caste.Undefined, 12, 2, 1.5, 0.1)
@@ -302,21 +302,21 @@ func TestIncubateBrood(t *testing.T) {
 
 	aw.loop.incubateBrood(aw.w, queen)
 
-	if _, _, _, _, d := aw.bee(eggs); !almostEqual(d.CumulIncubationReceived_kJ, 0.1+heat/12) {
-		t.Errorf("egg incubation %v kJ, want %v", d.CumulIncubationReceived_kJ, 0.1+heat/12)
+	if _, _, _, _, d := aw.bee(eggs); !almostEqual(d.IncubationReceived, 0.1+heat/12) {
+		t.Errorf("egg incubation %v kJ, want %v", d.IncubationReceived, 0.1+heat/12)
 	}
-	if _, _, _, _, d := aw.bee(foreign); d.CumulIncubationReceived_kJ != 0.1 {
-		t.Errorf("egg of another colony was heated: %v kJ", d.CumulIncubationReceived_kJ)
+	if _, _, _, _, d := aw.bee(foreign); d.IncubationReceived != 0.1 {
+		t.Errorf("egg of another colony was heated: %v kJ", d.IncubationReceived)
 	}
 	_, s, _ := aw.colony(col)
 	if heat < 0.4999999 || heat > 0.5 {
 		t.Errorf("heat %v kJ, want about 0.5", heat)
 	}
-	if !almostEqual(s.SummedIncubationToday_kJ, heat) || !almostEqual(s.EnergyStore_kJ, 10-heat) {
-		t.Errorf("summedIncubationToday_kJ %v, energy store %v; want %v, %v", s.SummedIncubationToday_kJ, s.EnergyStore_kJ, heat, 10-heat)
+	if !almostEqual(s.IncubationToday, heat) || !almostEqual(s.Energy, 10-heat) {
+		t.Errorf("summedIncubationToday_kJ %v, energy store %v; want %v, %v", s.IncubationToday, s.Energy, heat, 10-heat)
 	}
-	if b, _, _, _, _ := aw.bee(queen); b.PersonalTime_s != 2880 {
-		t.Errorf("personalTime_s %v, want 2880", b.PersonalTime_s)
+	if b, _, _, _, _ := aw.bee(queen); b.PersonalTime != 2880 {
+		t.Errorf("personalTime_s %v, want 2880", b.PersonalTime)
 	}
 }
 
@@ -325,13 +325,13 @@ func TestActivitiesDay(t *testing.T) {
 	// Finding 46 (see trans/netlogo-findings.md#finding-46): the new eggs get no heat today.
 	aw := newActivityWorld(t, 4)
 	col := aw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) {
-		s.PollenStore_g, s.EnergyStore_kJ = 1000, 1000 // no foraging
-		n.AllEggs, n.AllAdults, n.AllAdultWorkers = 12, 21, 20
+		s.Pollen, s.Energy = 1000, 1000 // no foraging
+		n.Eggs, n.Adults, n.AdultWorkers = 12, 21, 20
 	})
 	old := aw.addBrood(col, stage.Egg, caste.Undefined, 12, 2, 1.5, 0)
 	queen := aw.adult(col, caste.Queen, 1, 800, sitQueenSocialPhase)
 	_, g, _, _, _ := aw.bee(queen)
-	g.AllelesList, g.SpermathecaList = []float64{10, 20}, []float64{30}
+	g.Alleles, g.Spermatheca = []float64{10, 20}, []float64{30}
 	for range 20 {
 		aw.adult(col, caste.Worker, 1, 100, sitWorker)
 	}
@@ -346,18 +346,18 @@ func TestActivitiesDay(t *testing.T) {
 	}
 	for _, e := range eggs {
 		_, _, _, _, d := aw.bee(e)
-		if e == old && d.CumulIncubationReceived_kJ < aw.sp.DevQuotaIncubationToday_kJ {
-			t.Errorf("old eggs got %v kJ, want at least the quota %v", d.CumulIncubationReceived_kJ, aw.sp.DevQuotaIncubationToday_kJ)
+		if e == old && d.IncubationReceived < aw.sp.DevQuotaIncubationToday_kJ {
+			t.Errorf("old eggs got %v kJ, want at least the quota %v", d.IncubationReceived, aw.sp.DevQuotaIncubationToday_kJ)
 		}
-		if e != old && d.CumulIncubationReceived_kJ != 0 {
-			t.Errorf("new eggs got %v kJ, want 0", d.CumulIncubationReceived_kJ)
+		if e != old && d.IncubationReceived != 0 {
+			t.Errorf("new eggs got %v kJ, want 0", d.IncubationReceived)
 		}
 	}
 	// [GO-08] the day ends when the first bee of the queue is beyond 24 h; [GO-11] everybody rests
 	for _, e := range aw.active.List {
 		b, _, _, _, _ := aw.bee(e)
-		if b.PersonalTime_s <= aw.constants.CallItaDay_s || b.Activity != activity.Resting {
-			t.Errorf("after the loop: personalTime_s %v, activity %v", b.PersonalTime_s, b.Activity)
+		if b.PersonalTime <= aw.constants.CallItaDay_s || b.Activity != activity.Resting {
+			t.Errorf("after the loop: personalTime_s %v, activity %v", b.PersonalTime, b.Activity)
 		}
 	}
 }
@@ -369,11 +369,11 @@ func TestActivitiesQueenWithoutColony(t *testing.T) {
 	aw.adult(col, caste.Queen, 1, 800, sitQueenInitiationPhase)
 	searching := aw.adult(col, caste.Queen, 1, 800, sitQueenInitiationPhase)
 	b, _, _, _, _ := aw.bee(searching)
-	b.ColonyID = ecs.Entity{}
+	b.Colony = ecs.Entity{}
 	aw.wake.Update(aw.w)
 	aw.loop.Update(aw.w)
-	if b, _, _, _, _ := aw.bee(searching); b.PersonalTime_s != aw.constants.CallItaDay_s+1 {
-		t.Errorf("queen without colony: personalTime_s %v, want %v", b.PersonalTime_s, aw.constants.CallItaDay_s+1)
+	if b, _, _, _, _ := aw.bee(searching); b.PersonalTime != aw.constants.CallItaDay_s+1 {
+		t.Errorf("queen without colony: personalTime_s %v, want %v", b.PersonalTime, aw.constants.CallItaDay_s+1)
 	}
 }
 
@@ -400,9 +400,9 @@ func TestActivitiesExampleFarm(t *testing.T) {
 	if maxQueue == 0 {
 		t.Error("no bee was ever active")
 	}
-	totals := ecs.GetResource[globals.Totals](a.World)
+	totals := ecs.GetResource[globals.BroodTotals](a.World)
 	t.Logf("largest activity queue: %d bees. Day 200: brood %v/%v/%v",
-		maxQueue, totals.TotalEggs, totals.TotalLarvae, totals.TotalPupae)
+		maxQueue, totals.Eggs, totals.Larvae, totals.Pupae)
 }
 
 func TestNextActiveBeeAfterDeath(t *testing.T) {
@@ -415,7 +415,7 @@ func TestNextActiveBeeAfterDeath(t *testing.T) {
 	for i := range 4 {
 		e := aw.adult(col, caste.Worker, 1, 100, sitWorker)
 		b, _, _, _, _ := aw.bee(e)
-		b.PersonalTime_s = 10
+		b.PersonalTime = 10
 		names[e] = string(rune('A' + i))
 		list = append(list, e)
 	}

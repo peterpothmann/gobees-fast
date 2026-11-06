@@ -12,7 +12,7 @@ import (
 func egglayingStimulus(stores *comp.ColonyStores, counts *comp.ColonyCounts, sp *params.Species) float64 {
 	// [STEG-01]
 	egglayingStim := 0.0
-	if (stores.PollenStore_g > sp.MinPollenStore_g && (counts.AllEggs+counts.AllLarvae) == 0) || counts.AllAdults > 1 {
+	if (stores.Pollen > sp.MinPollenStore_g && (counts.Eggs+counts.Larvae) == 0) || counts.Adults > 1 {
 		egglayingStim = 1
 	}
 	return egglayingStim
@@ -22,8 +22,8 @@ func egglayingStimulus(stores *comp.ColonyStores, counts *comp.ColonyCounts, sp 
 func nursingStimulus(stores *comp.ColonyStores, counts *comp.ColonyCounts, sp *params.Species) float64 {
 	// [STNU-01] NetLogo sets nursingStim to 0 twice, gobees-fast once.
 	nursingStim := 0.0
-	incubationRequiredToday_kJ := sp.DevQuotaIncubationToday_kJ * float64(counts.AllEggs+counts.AllLarvae+counts.AllPupae)
-	if incubationRequiredToday_kJ > stores.SummedIncubationToday_kJ {
+	incubationRequiredToday_kJ := sp.DevQuotaIncubationToday_kJ * float64(counts.Eggs+counts.Larvae+counts.Pupae)
+	if incubationRequiredToday_kJ > stores.IncubationToday {
 		nursingStim = 1
 	}
 	return nursingStim
@@ -37,12 +37,12 @@ func nectarStimulus(stores *comp.ColonyStores, daytime_s, sunrise_s, dailyForagi
 	idealEnergyFactor := 6.0
 	// [STNE-01]
 	// float64(...): no fused multiply-add, see CompetitionPointDateREP
-	stores.IdealEnergyStore_kJ = float64(idealEnergyFactor*stores.EnergyNeedToday_kJ*storeSize_d) + minNectarStore_kJ
-	if stores.IdealEnergyStore_kJ < 0 {
+	stores.IdealEnergy = float64(idealEnergyFactor*stores.EnergyNeedToday*storeSize_d) + minNectarStore_kJ
+	if stores.IdealEnergy < 0 {
 		panic("Negative idealEnergyStore_kJ! (StimForagingNectarREP)")
 	}
 	// [STNE-02]
-	nectarStim := (stores.IdealEnergyStore_kJ - stores.EnergyStore_kJ) / stores.IdealEnergyStore_kJ
+	nectarStim := (stores.IdealEnergy - stores.Energy) / stores.IdealEnergy
 	if nectarStim > nectarStimTH {
 		nectarStim = 1
 	} else {
@@ -61,12 +61,12 @@ func pollenStimulus(stores *comp.ColonyStores, sp *params.Species, daytime_s, su
 	storeSize_d := 5.0
 	pollenStimTH := 0.005
 	// [STPO-01]
-	stores.IdealPollenStore_g = float64(stores.PollenNeedLarvaeToday_g*storeSize_d) + sp.MinPollenStore_g
-	if stores.IdealPollenStore_g < 0 {
+	stores.IdealPollen = float64(stores.LarvaePollenNeedToday*storeSize_d) + sp.MinPollenStore_g
+	if stores.IdealPollen < 0 {
 		panic("Negative idealPollenStore_kJ! (StimForagingPollenREP)")
 	}
 	// [STPO-02]
-	pollenStim := (stores.IdealPollenStore_g - stores.PollenStore_g) / stores.IdealPollenStore_g
+	pollenStim := (stores.IdealPollen - stores.Pollen) / stores.IdealPollen
 	if pollenStim > pollenStimTH {
 		pollenStim = 1
 	} else {

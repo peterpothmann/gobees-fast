@@ -48,8 +48,8 @@ func newEggLayer(w *ecs.World, rng *rand.Rand) eggLayer {
 // 24 h of her time [EGG]. It returns the new egg cohorts (none if the stores were too small).
 func (l *eggLayer) layEggs(e ecs.Entity) []ecs.Entity {
 	_, mother, _, _, _, _ := l.beeMap.Get(e)
-	sp := l.speciesMap.Get(mother.SpeciesID)
-	colonyID := mother.ColonyID
+	sp := l.speciesMap.Get(mother.Species)
+	colonyID := mother.Colony
 
 	// [EGG-01] one cohort of batchsize eggs. gobees-fast has no individual-based colonies, which lay batchsize
 	// cohorts of 1 egg in NetLogo (findings 30, 43, see trans/netlogo-findings.md#finding-43).
@@ -61,7 +61,7 @@ func (l *eggLayer) layEggs(e ecs.Entity) []ecs.Entity {
 	// [EGG-02]
 	var eggs []ecs.Entity
 	_, stores := l.colonyMap.Get(colonyID)
-	if stores.PollenStore_g > pollenCost_g && stores.EnergyStore_kJ > energyCost_kJ {
+	if stores.Pollen > pollenCost_g && stores.Energy > energyCost_kJ {
 		// NetLogo shuffles the new cohorts (decision C). One cohort draws no random number.
 		egg := l.hatch(e)
 		eggs = []ecs.Entity{egg}
@@ -80,13 +80,13 @@ func (l *eggLayer) layEggs(e ecs.Entity) []ecs.Entity {
 		}
 		l.initEggs(egg, beesInCohort, diploid)
 		_, stores := l.colonyMap.Get(colonyID)
-		stores.PollenStore_g = stores.PollenStore_g - pollenCost_g
-		stores.EnergyStore_kJ = stores.EnergyStore_kJ - energyCost_kJ
+		stores.Pollen = stores.Pollen - pollenCost_g
+		stores.Energy = stores.Energy - energyCost_kJ
 	}
 
 	// [EGG-03] also if no eggs were laid
 	_, mother, _, _, _, _ = l.beeMap.Get(e)
-	mother.PersonalTime_s = mother.PersonalTime_s + 24*3600
+	mother.PersonalTime = mother.PersonalTime + 24*3600
 	return eggs
 }
 
@@ -96,10 +96,10 @@ func (l *eggLayer) hatch(e ecs.Entity) ecs.Entity {
 	pos, bee, gen, th, forager, dev := l.beeMap.Get(e)
 	// copy the values first: creating entities can move the components in memory
 	p, b, g, t, f, d := *pos, *bee, *gen, *th, *forager, *dev
-	g.AllelesList = slices.Clone(g.AllelesList)
-	g.SpermathecaList = slices.Clone(g.SpermathecaList)
-	f.KnownMasterpatchesNectarList = slices.Clone(f.KnownMasterpatchesNectarList)
-	f.KnownMasterpatchesPollenList = slices.Clone(f.KnownMasterpatchesPollenList)
+	g.Alleles = slices.Clone(g.Alleles)
+	g.Spermatheca = slices.Clone(g.Spermatheca)
+	f.KnownNectarPatches = slices.Clone(f.KnownNectarPatches)
+	f.KnownPollenPatches = slices.Clone(f.KnownPollenPatches)
 	return l.beeMap.NewEntity(&p, &b, &g, &t, &f, &d)
 }
 
@@ -107,49 +107,49 @@ func (l *eggLayer) hatch(e ecs.Entity) ecs.Entity {
 // still holds all values of its mother. diploid is the ploidy of [EGG-02] (false: 1, true: 2).
 func (l *eggLayer) initEggs(e ecs.Entity, beesInCohort int, diploid bool) {
 	_, b, g, th, f, dev := l.beeMap.Get(e)
-	sp := l.speciesMap.Get(b.SpeciesID)
+	sp := l.speciesMap.Get(b.Species)
 
 	// [EGGP-01] one allele of the mother; diploid: one of the spermatheca in front (item 0 = father)
-	myAllelesList := []float64{g.AllelesList[l.rng.IntN(len(g.AllelesList))]}
-	g.AllelesList = myAllelesList
+	myAllelesList := []float64{g.Alleles[l.rng.IntN(len(g.Alleles))]}
+	g.Alleles = myAllelesList
 	b.Caste = caste.Undefined
 	// assertion Wrong ploidy! (neither 1 nor 2): a bool has no third value (step F9)
 	if !diploid {
 		b.Caste = caste.Male
 	} else {
-		g.AllelesList = append([]float64{g.SpermathecaList[l.rng.IntN(len(g.SpermathecaList))]}, g.AllelesList...)
-		if l.file.SexLocus && g.AllelesList[0] == g.AllelesList[1] {
+		g.Alleles = append([]float64{g.Spermatheca[l.rng.IntN(len(g.Spermatheca))]}, g.Alleles...)
+		if l.file.SexLocus && g.Alleles[0] == g.Alleles[1] {
 			b.Caste = caste.Male
 		}
 	}
 
-	// [EGGP-02], [EGGP-03] kept from the mother: ColonyID, SpeciesID (speciesName: from the species), MtDNA (and
+	// [EGGP-02], [EGGP-03] kept from the mother: Colony, Species (speciesName: from the species), MtDNA (and
 	// the position, GUI only). activityList: GUI log, not translated. brood? true: the stage egg (step F9).
-	g.SpermathecaList = []float64{}
+	g.Spermatheca = []float64{}
 	b.Number = beesInCohort // totalBeesEverProduced: read only by [CHK-01], removed in step F4
 	b.Activity = activity.Resting
 	b.AdultAge = 0
 	b.BroodAge = 0
-	dev.CumulTimeLarva_d = 0
-	f.Cropvolume_myl = 0
-	f.PollenPellets_g = 0
+	dev.LarvaTime = 0
+	f.CropVolume = 0
+	f.PollenPellets = 0
 	f.CurrentFoodsource = ecs.Entity{}
-	f.NectarsourceToGoTo = ecs.Entity{}
-	f.PollensourceToGoTo = ecs.Entity{}
+	f.NectarSource = ecs.Entity{}
+	f.PollenSource = ecs.Entity{}
 	b.Stage = stage.Egg
 	b.Mated = false
 	*th = thresholds(sitEgg)
-	f.KnownMasterpatchesNectarList = []ecs.Entity{}
-	f.KnownMasterpatchesPollenList = []ecs.Entity{}
-	b.Weight_mg = sp.DevWeightEgg_mg
-	dev.CumulIncubationReceived_kJ = 0
-	b.EmergingDate = day.Date{} // unset (NetLogo: NotSetLow), drawn when the queen emerges [DEVP-04]
-	f.Expectation_NectarTrip_s = 0
-	f.Expectation_PollenTrip_s = 0
-	f.GlossaLength_mm = 0
-	f.NectarLoadSquadron_kJ = 0
-	b.PersonalTime_s = 0
+	f.KnownNectarPatches = []ecs.Entity{}
+	f.KnownPollenPatches = []ecs.Entity{}
+	b.Weight = sp.DevWeightEgg_mg
+	dev.IncubationReceived = 0
+	b.EmergenceDate = day.Date{} // unset (NetLogo: NotSetLow), drawn when the queen emerges [DEVP-04]
+	f.ExpectedNectarTrip = 0
+	f.ExpectedPollenTrip = 0
+	f.GlossaLength = 0
+	f.CarriedNectar = 0
+	b.PersonalTime = 0
 	f.PollenForager = false
-	f.PollenLoadSquadron_g = 0
+	f.CarriedPollen = 0
 	// totalEggsProduced of the colony: read only by the egg accounting [CHK-04], removed in step F4
 }

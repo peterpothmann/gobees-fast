@@ -85,23 +85,23 @@ func (s *cropRotation) rotate(w *ecs.World) {
 	s.bees = askAllBees(s.bees, s.beeFilter, s.rng)
 	for _, e := range s.bees {
 		f := s.foragerMap.Get(e)
-		f.KnownMasterpatchesNectarList = []ecs.Entity{}
-		f.KnownMasterpatchesPollenList = []ecs.Entity{}
-		f.NectarsourceToGoTo = ecs.Entity{}
-		f.PollensourceToGoTo = ecs.Entity{}
+		f.KnownNectarPatches = []ecs.Entity{}
+		f.KnownPollenPatches = []ecs.Entity{}
+		f.NectarSource = ecs.Entity{}
+		f.PollenSource = ecs.Entity{}
 		f.CurrentFoodsource = ecs.Entity{}
 	}
-	// every colony empties its in-flower lists of masterpatches, but NOT AllPatchesInRangeList [PRNG]: it keeps the
+	// every colony empties its in-flower lists of masterpatches, but NOT ColonyRange.Layers [PRNG]: it keeps the
 	// dead foodsources. FoodsourcesInFlowerAndRangeProc [FRNG] reads
-	// AllPatchesInRangeList on the next flowering change and panics there (Ark: "can't get components of a dead
+	// Layers on the next flowering change and panics there (Ark: "can't get components of a dead
 	// entity", NetLogo: runtime error on a dead turtle). Needs a colony alive on Day 365, which the species of
 	// netlogo/_SYSTEM_BumbleSpecies_UK_01.csv cannot have (seasonStop 305).
 	// masterpatchesInRangeList is not translated (finding 23, see trans/netlogo-findings.md#finding-23).
 	// ORDER: irrelevant, each colony only changes itself. Shuffled (decision C).
 	for _, e := range askColonies(s.colonyFilter, s.rng) {
 		r := s.rangeMap.Get(e)
-		r.MasterpatchesWithNectarlayersInFlowerAndRangeList = []ecs.Entity{}
-		r.MasterpatchesWithPollenlayersInFlowerAndRangeList = []ecs.Entity{}
+		r.NectarPatches = []ecs.Entity{}
+		r.PollenPatches = []ecs.Entity{}
 	}
 
 	// [CROP-03] the new landscape: new who numbers, random numbers for the hedges and layers
@@ -117,8 +117,8 @@ func (s *cropRotation) rotate(w *ecs.World) {
 	masterpatches := collectMasterpatches(w)
 	for _, i := range species {
 		ns := &s.nestSites.BySpecies[i]
-		ns.NestsiteFoodsourceList, ns.NestSiteArea = nestSites(ns.NestHabitatsList, masterpatches)
-		if sp := s.speciesMap.Get(i); len(ns.NestsiteFoodsourceList) == 0 && !sp.Parasitic {
+		ns.Sites, ns.Area = nestSites(ns.Habitats, masterpatches)
+		if sp := s.speciesMap.Get(i); len(ns.Sites) == 0 && !sp.Parasitic {
 			log.Printf("%s has no suitable nesting habitat", sp.Name)
 		}
 	}

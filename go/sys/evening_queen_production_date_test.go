@@ -36,11 +36,11 @@ func TestQueenProductionDate(t *testing.T) {
 		if tc.larvalAge3 > 0 {
 			e := bw.addBrood(col, stage.Larva, caste.Worker, 12, tc.larvalAge3, 50, 0)
 			_, _, _, _, d := bw.bee(e)
-			d.CumulTimeLarva_d = 3
+			d.LarvaTime = 3
 			// a larva at another larval day is ignored
 			e = bw.addBrood(col, stage.Larva, caste.Undefined, 12, 20, 50, 0)
 			_, _, _, _, d = bw.bee(e)
-			d.CumulTimeLarva_d = 2
+			d.LarvaTime = 2
 		}
 		bw.qpd.Update(bw.w)
 		c, _, _ := bw.colony(col)
@@ -60,10 +60,10 @@ func TestQueenProductionDateBeforeDevelopment(t *testing.T) {
 	})
 	worker := bw.addBrood(col, stage.Larva, caste.Worker, 12, 8, 30, 0) // larval day 3 since last evening
 	_, _, _, _, d := bw.bee(worker)
-	d.CumulTimeLarva_d = 3
+	d.LarvaTime = 3
 	female := bw.addBrood(col, stage.Larva, caste.Undefined, 12, 7, 20, 0) // reaches larval day 3 tonight
 	_, _, _, _, d = bw.bee(female)
-	d.CumulTimeLarva_d = 2
+	d.LarvaTime = 2
 
 	bw.qpd.Update(bw.w)
 	bw.dev.Update(bw.w)

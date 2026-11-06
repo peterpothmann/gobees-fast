@@ -26,7 +26,7 @@ func (s *badgersSetup) Initialize(w *ecs.World) {
 	file := ecs.GetResource[params.ParameterFile](w)
 	landscape := ecs.GetResource[globals.Landscape](w)
 	rng := rand.New(ecs.GetResource[resource.Rand](w))
-	createBadgers(w, file.N_Badgers, landscape.Scaling_NLpatches_per_m, rng)
+	createBadgers(w, file.N_Badgers, landscape.Scale, rng)
 }
 
 func (s *badgersSetup) Update(w *ecs.World) {}
@@ -49,7 +49,7 @@ func createBadgers(w *ecs.World, n int, scaling_NLpatches_per_m float64, rng *ra
 	query := ecs.NewFilter3[comp.Position, comp.Foodsource, comp.Layer](w).Query()
 	for query.Next() {
 		pos, fs, layer := query.Get()
-		if layer.Masterpatch && slices.Contains(burrowHabitatsList, fs.PatchType) {
+		if layer.IsMasterpatch && slices.Contains(burrowHabitatsList, fs.PatchType) {
 			sites = append(sites, burrow{query.Entity(), *pos})
 		}
 	}

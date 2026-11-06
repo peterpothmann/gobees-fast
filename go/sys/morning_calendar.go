@@ -44,7 +44,7 @@ func (s *calendarUpdate) Update(w *ecs.World) {
 	if s.calendar.Day > 0 {
 		// [FPER] year of the run: 1 for ticks 1 to 365, 2 for 366 to 730, ...
 		year := int((s.ticks.Ticks-1)/365) + 1
-		s.calendar.DailyForagingPeriod_s = s.weather.ForagingPeriod_s(year, int(s.calendar.Day))
+		s.calendar.ForagingPeriod = s.weather.ForagingPeriod_s(year, int(s.calendar.Day))
 	}
 }
 
