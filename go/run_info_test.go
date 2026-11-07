@@ -7,9 +7,12 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 
 	"gobees/input"
+	"gobees/obs"
 )
 
 func TestRunInfoPath(t *testing.T) {
@@ -75,7 +78,7 @@ func TestRunInfoRepeatsRun(t *testing.T) {
 				}
 			}
 			if run.Config != config || run.Output != first || run.Version == nil || run.Started == "" ||
-				len(run.Command) == 0 || len(run.Columns) == 0 || run.Columns[0] != "t" {
+				len(run.Command) == 0 || !slices.Equal(info.Config.Output.Columns, obs.AllColumns()) {
 				t.Errorf("run = %+v, want the record of the run", run)
 			}
 
@@ -121,6 +124,54 @@ func TestRunInfoRepeatsRun(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRunInfoColumns(t *testing.T) {
+	// A selection of columns (flag): the output holds t, ticks and these columns, the run info holds them in
+	// output.columns, and the run repeated from the run info writes the same file.
+	dir := t.TempDir()
+	first := filepath.Join(dir, "first.csv")
+	c := parse(t, "--days", "5", "-s", "4", "-f", first, "--columns", "colonies,eggs,TotalColonies")
+	if err := c.run(io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"ticks", "colonies", "eggs", "TotalColonies"}
+	if got := header(t, first); !slices.Equal(got, append([]string{"t"}, want...)) {
+		t.Errorf("header = %v, want t and %v", got, want)
+	}
+	info, err := input.Read(runInfoPath(first))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(info.Config.Output.Columns, want) {
+		t.Errorf("output.columns = %v, want %v", info.Config.Output.Columns, want)
+	}
+
+	second := filepath.Join(dir, "second.csv")
+	c = parse(t, "-c", runInfoPath(first), "-f", second)
+	if err := c.run(io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(readFile(t, first), readFile(t, second)) {
+		t.Error("the run repeated from the run info has a different daily output")
+	}
+
+	// the flag overrides output.columns of the run file
+	third := filepath.Join(dir, "third.csv")
+	c = parse(t, "-c", runInfoPath(first), "-f", third, "--columns", "males")
+	if err := c.run(io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	if got := header(t, third); !slices.Equal(got, []string{"t", "ticks", "males"}) {
+		t.Errorf("header = %v, want t, ticks, males", got)
+	}
+}
+
+// header returns the column names in the first row of the output file at path.
+func header(t *testing.T, path string) []string {
+	t.Helper()
+	first, _, _ := strings.Cut(string(readFile(t, path)), "\n")
+	return strings.Split(strings.TrimSuffix(first, "\r"), "\t")
 }
 
 func TestRunInfoOnlyWithOutput(t *testing.T) {

@@ -2,7 +2,8 @@ package input
 
 // Run is the section run of a run file: the seed and the days of the run, and a record of how a run went. gobees
 // writes it into the run info next to the daily output (main.go), so that the run info repeats the run as a run
-// file. Build reads only Seed and Days, the other keys are a record.
+// file. Build reads only Seed and Days, the other keys are a record. The columns of the output are in the key columns
+// of the section output.
 type Run struct {
 	// Seed is the random seed. 0 or no key: a random seed. The flag -s overrides it.
 	Seed int64 `yaml:"seed,omitempty"`
@@ -19,8 +20,6 @@ type Run struct {
 	Config string `yaml:"config,omitempty"`
 	// Output is the daily output file.
 	Output string `yaml:"output,omitempty"`
-	// Columns are the columns of the daily output, in this order.
-	Columns []string `yaml:"columns,omitempty,flow"`
 	// Landscapes are the copies of the landscape files next to the run info.
 	Landscapes []LandscapeCopy `yaml:"landscapes,omitempty"`
 }

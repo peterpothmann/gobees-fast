@@ -45,7 +45,8 @@ type runInfo struct {
 
 // newRunInfo returns the run info of a run with the files f (read from the run file config, "" for the example farm)
 // and the parameters p, which hold the seed and the days actually used. output is the daily output file with the
-// columns columns. The landscape files are copied next to output, byte for byte.
+// columns columns (the key output.columns of the run info, always written in full). The landscape files are copied
+// next to output, byte for byte.
 func newRunInfo(f input.Files, config string, p *params.Params, output string, columns []string,
 	started time.Time) runInfo {
 	c := f.Config
@@ -61,8 +62,8 @@ func newRunInfo(f input.Files, config string, p *params.Params, output string, c
 		Version: buildVersion(),
 		Config:  config,
 		Output:  output,
-		Columns: slices.Clone(columns),
 	}
+	c.Output.Columns = slices.Clone(columns)
 
 	// The landscape files in the order of the run file. Their copies get the name of the output in front, so that
 	// the run infos of several outputs in one folder do not overwrite each other's copies.

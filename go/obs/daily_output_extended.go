@@ -42,7 +42,14 @@ var netLogoSpecies = []string{"B_terrestris", "B_pascuorum", "B_lapidarius", "B_
 //   - MeanCompetitionPointDate: mean competition point date (ticks) of the living colonies that have one, 0 if none
 //
 // Update must run once at the end of every day (reporter.CSV calls it on every tick), for the counters.
+//
+// Columns selects the columns written (see SelectColumns). Every value is computed on every day, also those of
+// columns not selected, because some are differences to the previous day.
 type DailyOutputExtended struct {
+	// Columns are the names of the columns written, in this order. Set it to the result of SelectColumns before
+	// Initialize. nil: all columns.
+	Columns []string
+
 	daily       DailyOutput
 	counters    Counters
 	calendar    ecs.Resource[globals.Calendar]
@@ -52,7 +59,9 @@ type DailyOutputExtended struct {
 	foodsources *ecs.Filter1[comp.Foodsource]
 	stocks      *ecs.Filter1[comp.FoodsourceState]
 	badgers     *ecs.Filter1[comp.Badger]
-	values      []float64
+	values      []float64 // all columns of the day
+	selected    []int     // index in values of each column written, nil: all
+	out         []float64 // the columns written
 	// lastForagerDeaths is the counter of foragers that died on a trip at the end of the previous day.
 	lastForagerDeaths float64
 }
@@ -67,19 +76,46 @@ func (o *DailyOutputExtended) Initialize(w *ecs.World) {
 	o.foodsources = ecs.NewFilter1[comp.Foodsource](w)
 	o.stocks = ecs.NewFilter1[comp.FoodsourceState](w)
 	o.badgers = ecs.NewFilter1[comp.Badger](w)
-	o.values = make([]float64, len(o.Header()))
+	all := AllColumns()
+	o.values = make([]float64, len(all))
+	if len(o.Columns) > 0 {
+		o.selected = make([]int, len(o.Columns))
+		for i, name := range o.Columns {
+			o.selected[i] = slices.Index(all, name)
+			if o.selected[i] < 0 {
+				panic("obs: unknown output column " + name)
+			}
+		}
+		o.out = make([]float64, len(o.Columns))
+	}
 }
 
 func (o *DailyOutputExtended) Update(w *ecs.World) {
 	o.counters.Update(w)
 }
 
+// Header returns the names of the columns written: Columns, or all columns.
 func (o *DailyOutputExtended) Header() []string {
-	h := append(o.daily.Header(), NetLogoMetrics...)
-	return append(h, "ForagerDeathsToday", "TotalAdultQueensEverProduced", "MeanCompetitionPointDate")
+	if len(o.Columns) > 0 {
+		return slices.Clone(o.Columns)
+	}
+	return AllColumns()
 }
 
+// Values returns the values of the columns written, in the order of Header.
 func (o *DailyOutputExtended) Values(w *ecs.World) []float64 {
+	all := o.allValues(w)
+	if o.selected == nil {
+		return all
+	}
+	for i, j := range o.selected {
+		o.out[i] = all[j]
+	}
+	return o.out
+}
+
+// allValues returns the values of all columns, in the order of AllColumns.
+func (o *DailyOutputExtended) allValues(w *ecs.World) []float64 {
 	n := copy(o.values, o.daily.Values(w))
 
 	// the species with Parasitic (Psithyrus), usually 0 or 1

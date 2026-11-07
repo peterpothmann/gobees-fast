@@ -2,12 +2,15 @@ package main
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"gobees/input"
+	"gobees/obs"
 	"gobees/params"
 	"gobees/schedule"
 
@@ -41,6 +44,67 @@ func TestCLIDefaults(t *testing.T) {
 	c = parse(t, "-s", "0", "--days", "0")
 	if c.Seed == nil || *c.Seed != 0 || c.Days == nil || *c.Days != 0 {
 		t.Errorf("Seed, Days = %v, %v, want 0, 0", c.Seed, c.Days)
+	}
+}
+
+func TestCLIColumns(t *testing.T) {
+	// --columns is comma separated, in the order given. Not set: nil, the run file or all columns apply
+	if c := parse(t); c.Columns != nil || c.ListColumns {
+		t.Errorf("Columns, ListColumns = %v, %v, want nil, false", c.Columns, c.ListColumns)
+	}
+	c := parse(t, "--columns", "eggs,colonies")
+	if !slices.Equal(c.Columns, []string{"eggs", "colonies"}) {
+		t.Errorf("Columns = %v, want [eggs colonies]", c.Columns)
+	}
+	p, _, err := c.parameters()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(p.Output.Columns, []string{"eggs", "colonies"}) {
+		t.Errorf("Output.Columns = %v, want the flag", p.Output.Columns)
+	}
+}
+
+func TestColumnsUnknown(t *testing.T) {
+	// an unknown name is an error with the list of columns, from the flag and from the run file, also without output
+	c := parse(t, "--columns", "eggs,egg")
+	if _, _, err := c.parameters(); err == nil || !strings.Contains(err.Error(), "larvae") {
+		t.Errorf("flag: error = %v, want the name and the list of columns", err)
+	}
+
+	cfg, landscapes := input.ExampleFarmConfig()
+	cfg.Output.Columns = []string{"nonsense"}
+	dir := t.TempDir()
+	writeRunFile(t, dir, "run.yaml", cfg, map[string]input.Landscape{cfg.Landscape: landscapes[cfg.Landscape]})
+	c = parse(t, "-c", filepath.Join(dir, "run.yaml"), "--days", "1")
+	err := c.run(io.Discard)
+	if err == nil || !strings.Contains(err.Error(), `"nonsense"`) {
+		t.Errorf("run file: error = %v, want the unknown name", err)
+	}
+}
+
+func TestColumnsNeedOutput(t *testing.T) {
+	c := parse(t, "--columns", "eggs", "--days", "1")
+	if err := c.run(io.Discard); err == nil {
+		t.Error("want an error for --columns without -o or -f")
+	}
+}
+
+func TestListColumns(t *testing.T) {
+	var b bytes.Buffer
+	c := parse(t, "--list-columns")
+	if err := c.run(&b); err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSpace(b.String()), "\n")
+	all := obs.AllColumns()
+	if len(lines) != len(all) {
+		t.Fatalf("%d lines, want %d", len(lines), len(all))
+	}
+	for i, name := range all {
+		if !strings.HasPrefix(lines[i], name+" ") || !strings.HasSuffix(lines[i], obs.ColumnDoc(name)) {
+			t.Errorf("line %d = %q, want the name %s and its description", i, lines[i], name)
+		}
 	}
 }
 

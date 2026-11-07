@@ -27,4 +27,9 @@ type Output struct {
 	// KeepDeadColonies counts the dead colonies of all years in the output column DeadColonies, not only those since
 	// the last 1 January. NetLogo: the parameter KeepDeadColonies?, which keeps the dead colonies as agents.
 	KeepDeadColonies bool `yaml:"keepDeadColonies"`
+
+	// Columns are the columns of the daily output, in this order (names: gobees --list-columns, obs.AllColumns). The
+	// column ticks is always the first. No key: all columns. The flag --columns overrides it. The column t, which
+	// the CSV reporter writes in front, is not listed.
+	Columns []string `yaml:"columns,omitempty,flow"`
 }
