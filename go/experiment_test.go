@@ -154,7 +154,7 @@ func TestSeveralRunFiles(t *testing.T) {
 	if err := os.MkdirAll(other, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	same :=writeExampleFarm(t, other, "a.yaml", input.Run{Seed: 1, Days: &days, Runs: 1, Threads: 3}, nil)
+	same := writeExampleFarm(t, other, "a.yaml", input.Run{Seed: 1, Days: &days, Runs: 1, Threads: 3}, nil)
 	c = parse(t, "-c", a, "-c", same, "-f", out)
 	if err := c.run(&bytes.Buffer{}); err == nil || !strings.Contains(err.Error(), "same name") {
 		t.Errorf("same name: error = %v", err)
