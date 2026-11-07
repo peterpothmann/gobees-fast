@@ -4,41 +4,40 @@ import (
 	"math/rand/v2"
 
 	"gobees/comp"
-	"gobees/util"
 
 	"github.com/mlange-42/ark/ecs"
 )
 
-// Helpers shared by the brood systems of step 4b.
+// Helpers that collect the colonies and bees a part asks.
 //
-// askAllBees, askBees and beesByColony fill a buffer of the calling system instead of a new list (step F10). The
+// askAllBees, askBees and beesByColony fill a buffer of the calling system instead of a new list. The
 // caller keeps the returned list as its buffer for the next call. A list is valid until the next call with the same
 // buffer.
 
-// askColonies returns all colonies in random order. NetLogo: ask colonies (decision C in trans/data-model.md).
+// askColonies returns all colonies in random order. NetLogo: ask colonies.
 func askColonies(filter *ecs.Filter1[comp.Colony], rng *rand.Rand) []ecs.Entity {
 	result := []ecs.Entity{}
 	query := filter.Query()
 	for query.Next() {
 		result = append(result, query.Entity())
 	}
-	util.Shuffle(rng, result)
+	shuffle(rng, result)
 	return result
 }
 
-// askAllBees returns all bees in random order, in buf. NetLogo: ask bees (decision C).
+// askAllBees returns all bees in random order, in buf. NetLogo: ask bees.
 func askAllBees(buf []ecs.Entity, filter *ecs.Filter1[comp.Bee], rng *rand.Rand) []ecs.Entity {
 	result := buf[:0]
 	query := filter.Query()
 	for query.Next() {
 		result = append(result, query.Entity())
 	}
-	util.Shuffle(rng, result)
+	shuffle(rng, result)
 	return result
 }
 
-// askBees returns the bees for which keep is true in random order, in buf. NetLogo: ask bees with [ ... ]
-// (decision C). The filter selects by component (all bees), keep by value, e.g. the stage (decision A).
+// askBees returns the bees for which keep is true in random order, in buf. The filter selects by component
+// (all bees), keep by value, e.g. the stage. NetLogo: ask bees with [ ... ].
 func askBees(buf []ecs.Entity, filter *ecs.Filter1[comp.Bee], rng *rand.Rand, keep func(b *comp.Bee) bool) []ecs.Entity {
 	result := buf[:0]
 	query := filter.Query()
@@ -47,7 +46,7 @@ func askBees(buf []ecs.Entity, filter *ecs.Filter1[comp.Bee], rng *rand.Rand, ke
 			result = append(result, query.Entity())
 		}
 	}
-	util.Shuffle(rng, result)
+	shuffle(rng, result)
 	return result
 }
 

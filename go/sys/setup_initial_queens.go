@@ -10,13 +10,12 @@ import (
 	"gobees/enum/caste"
 	"gobees/enum/stage"
 	"gobees/params"
-	"gobees/util"
 
 	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
 )
 
-// initialQueensSetup creates the hibernating, mated queens of the first year [INIT-09].
+// initialQueensSetup creates the hibernating, mated queens of the first year.
 //
 // NetLogo: CreateInitialQueensProc.
 type initialQueensSetup struct{}
@@ -30,56 +29,53 @@ func (s *initialQueensSetup) Initialize(w *ecs.World) {
 	speciesByName := speciesIndices(w)
 	speciesMap := newSpeciesTable(w)
 
-	// [IQUE-01]
 	for _, sq := range derived.InitialQueens {
 		if file.InitialQueensFactor == 0 {
 			file.InitialQueensFactor = 1 // changes the parameter, as NetLogo changes the global
 		}
-		newQueens := int(util.Round(float64(sq.Queens) * file.InitialQueensFactor))
+		newQueens := int(round(float64(sq.Queens) * file.InitialQueensFactor))
 
-		// [IQUE-04] one-of the species with this name
+		// one-of the species with this name
 		candidates := speciesByName[sq.Species]
 		if len(candidates) == 0 {
-			panic(fmt.Sprintf("species %q of initialQueens does not exist (see [SPEC-02])", sq.Species))
+			panic(fmt.Sprintf("species %q of initialQueens does not exist", sq.Species))
 		}
 		spIndex := candidates[rng.IntN(len(candidates))]
 		sp := speciesMap.Get(spIndex)
 
-		// [IQUE-02] ORDER: irrelevant, each queen only uses her own random draws.
+		// ORDER: irrelevant, each queen only uses her own random draws.
 		for range newQueens {
 			bee := comp.Bee{
-				// [IQUE-03]
 				AdultAge: 180,
 				BroodAge: 36,
 				Caste:    caste.Queen,
 				Mated:    true,
 				Number:   1,
-				// [IQUE-04]
 				Species:  spIndex,
 				Stage:    stage.Adult,
 				Activity: activity.Hibernate,
-				// [IQUE-06] -3599 to 3600 s, no effect (finding 31, see trans/netlogo-findings.md#finding-31)
-				PersonalTime: util.RandomInt(rng, 2*3600) + (constants.GetUpTime - 3600),
+				// -3599 to 3600 s, no effect: the morning routine sets a new personal time for every
+				// active bee, and hibernating queens are not active.
+				PersonalTime: randomInt(rng, 2*3600) + (constants.GetUpTime - 3600),
 			}
 			genetics := comp.Genetics{
-				MtDNA:       util.RandomFloat(rng, 139.9),
-				Alleles:     []float64{util.RandomFloat(rng, 139.9), util.RandomFloat(rng, 139.9)},
-				Spermatheca: []float64{util.RandomFloat(rng, 139.9)},
+				MtDNA:       randomFloat(rng, 139.9),
+				Alleles:     []float64{randomFloat(rng, 139.9), randomFloat(rng, 139.9)},
+				Spermatheca: []float64{randomFloat(rng, 139.9)},
 			}
-			// [IQUE-07] emergingDate starts at 0, so it is drawn at least once. In the first year the absolute day
+			// emergingDate starts at 0, so it is drawn at least once. In the first year the absolute day
 			// is the day of the year.
 			emerging := day.Abs(0)
 			for emerging <= 0 || emerging >= day.Abs(sp.SeasonStop) {
-				emerging = day.Abs(util.Round(util.RandomNormal(rng, sp.EmergenceDayMean, sp.EmergenceDaySD)))
+				emerging = day.Abs(round(randomNormal(rng, sp.EmergenceDayMean, sp.EmergenceDaySD)))
 			}
 			bee.EmergenceDate = day.At(emerging)
-			// [IQUE-09]
 			minWeight := sp.QueenPupationWeightMin // [mg]
 			maxWeight := sp.QueenPupationWeightMax // [mg]
-			bee.Weight = util.RandomNormal(rng, (maxWeight+minWeight)/2, (maxWeight-minWeight)/4)
+			bee.Weight = randomNormal(rng, (maxWeight+minWeight)/2, (maxWeight-minWeight)/4)
 			bee.Weight = min(max(bee.Weight, minWeight), maxWeight)
 
-			// [IQUE-08] no foodsource known yet (zero entities, empty lists)
+			// no foodsource known yet (zero entities, empty lists)
 			forager := comp.Forager{
 				GlossaLength:       proboscisLength(bee.Weight, sp),
 				CropVolume:         cropVolume(bee.Weight, sp),
@@ -87,7 +83,7 @@ func (s *initialQueensSetup) Initialize(w *ecs.World) {
 				KnownNectarPatches: []ecs.Entity{},
 				KnownPollenPatches: []ecs.Entity{},
 			}
-			th := thresholds(sitQueenInitiationPhase) // [IQUE-05]
+			th := thresholds(sitQueenInitiationPhase)
 			beeMapper.NewEntity(&comp.Position{}, &bee, &genetics, &th, &forager, &comp.Development{})
 		}
 	}

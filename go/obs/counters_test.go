@@ -20,7 +20,7 @@ func TestCountersEvents(t *testing.T) {
 	c := Counters{}
 	c.Initialize(w)
 
-	// [DIE-01] removed bees count with their number, [CCOL-08] new colonies, [DEVP-04] queens emerged
+	// removed bees count with their number new colonies queens emerged
 	colonies := ecs.NewMap1[comp.Colony](w)
 	col := colonies.NewEntity(&comp.Colony{})
 	colonies.NewEntity(&comp.Colony{})
@@ -49,7 +49,7 @@ func TestCountersEvents(t *testing.T) {
 		t.Errorf("trips of the next day %v, want 0", c.TotalForagingTripsToday)
 	}
 
-	// [DIE-02] the dead colonies (on day 2, day 1 removes them [UCOL-12])
+	// the dead colonies (on day 2, day 1 removes them)
 	ecs.GetResource[globals.Calendar](w).Day = 2
 	w.RemoveEntity(col)
 	c.Update(w)
@@ -59,7 +59,7 @@ func TestCountersEvents(t *testing.T) {
 }
 
 func TestCountersDeadColoniesNewYear(t *testing.T) {
-	// [UCOL-12] on 1 January the dead colonies are removed unless KeepDeadColonies?, also those of that day
+	// on 1 January the dead colonies are removed unless KeepDeadColonies?, also those of that day
 	for _, keep := range []bool{false, true} {
 		w := newWorld(t)
 		ecs.GetResource[params.Output](w).KeepDeadColonies = keep
@@ -91,7 +91,7 @@ func TestCountersDeadColoniesNewYear(t *testing.T) {
 }
 
 func TestCountersHibernatingQueensRemoved(t *testing.T) {
-	// [SEAS-03] the planned number from the hibernating queens of the evening before day 1, added on day 1
+	// the planned number from the hibernating queens of the evening before day 1, added on day 1
 	w := newWorld(t)
 	ecs.GetResource[params.Parameters](w).MaxHibernatingQueens = 10
 	calendar := ecs.GetResource[globals.Calendar](w)
@@ -136,7 +136,7 @@ func TestCountersHibernatingQueensRemoved(t *testing.T) {
 }
 
 func TestCountersTimeToExtinction(t *testing.T) {
-	// [GO-20] the first day without colonies and bees
+	// the first day without colonies and bees
 	w := newWorld(t)
 	ticks := ecs.GetResource[globals.Ticks](w)
 	bee := addBee(w, comp.Bee{Stage: stage.Adult, Caste: caste.Queen, Number: 1})

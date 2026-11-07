@@ -25,8 +25,7 @@ func TestCreateInitialQueensExampleFarm(t *testing.T) {
 	for query.Next() {
 		_, b, g, th, f, _ := query.Get()
 		n++
-		// [IQUE-03], [IQUE-04]
-		// brood? false: stage adult, ploidy 2: 2 alleles (below), speciesName: the species (step F9)
+		// brood? false: stage adult, ploidy 2: 2 alleles (below), speciesName: the species
 		if b.Caste != caste.Queen || b.Stage != stage.Adult || b.Activity != activity.Hibernate || !b.Mated ||
 			b.Number != 1 || b.AdultAge != 180 || b.BroodAge != 36 || !b.Colony.IsZero() || b.Species != spIndex {
 			t.Fatalf("queen state: %+v", b)
@@ -34,19 +33,17 @@ func TestCreateInitialQueensExampleFarm(t *testing.T) {
 		if len(g.Alleles) != 2 || len(g.Spermatheca) != 1 || g.MtDNA < 0 || g.MtDNA >= 139.9 {
 			t.Fatalf("genetics: %+v", g)
 		}
-		// [IQUE-05]
 		if *th != (comp.Thresholds{Egglaying: 0.1, NectarForaging: 0.7, PollenForaging: 0.7, Nursing: 0.5}) {
 			t.Fatalf("thresholds: %+v", th)
 		}
-		// [IQUE-06] whole seconds from -3599 to 3600 (finding 31)
+		// whole seconds from -3599 to 3600
 		if b.PersonalTime < -3599 || b.PersonalTime > 3600 || b.PersonalTime != math.Trunc(b.PersonalTime) {
-			t.Fatalf("personalTime_s = %v", b.PersonalTime)
+			t.Fatalf("PersonalTime = %v", b.PersonalTime)
 		}
-		// [IQUE-07] whole days, > 0 and < seasonStop (305)
+		// whole days, > 0 and < seasonStop (305)
 		if !b.EmergenceDate.IsSet() || b.EmergenceDate.Day() <= 0 || b.EmergenceDate.Day() >= 305 {
-			t.Fatalf("emergingDate = %v", b.EmergenceDate)
+			t.Fatalf("EmergenceDate = %v", b.EmergenceDate)
 		}
-		// [IQUE-09]
 		if b.Weight < 590 || b.Weight > 980 {
 			t.Fatalf("weight = %v", b.Weight)
 		}
@@ -70,7 +67,7 @@ func TestCreateInitialQueensExampleFarm(t *testing.T) {
 }
 
 func TestCreateInitialQueensModifier(t *testing.T) {
-	// [IQUE-01] modifier 0 counts as 1 and changes the parameter; the number is rounded, .5 up: 500 * 0.501 = 250.5 -> 251
+	// modifier 0 counts as 1 and changes the parameter. The number is rounded, .5 up: 500 * 0.501 = 250.5 -> 251
 	for _, c := range []struct{ modifier, want float64 }{{0, 500}, {0.501, 251}} {
 		a := newExampleFarmSetupWithModifier(t, c.modifier)
 		q := ecs.NewFilter1[comp.Bee](a.World).Query()

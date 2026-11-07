@@ -10,7 +10,7 @@ import (
 )
 
 func TestQueenProductionDate(t *testing.T) {
-	// [QPD-02] worked example: switch point on day 100
+	// worked example: switch point on day 100
 	for _, tc := range []struct {
 		name       string
 		ticks      day.Abs
@@ -51,7 +51,7 @@ func TestQueenProductionDate(t *testing.T) {
 }
 
 func TestQueenProductionDateBeforeDevelopment(t *testing.T) {
-	// finding 42 (see trans/netlogo-findings.md#finding-42): the date is the laying day of the last worker larvae
+	// the date is the laying day of the last worker larvae, not of the first queen larvae
 	bw := newBroodWorld(t, 1)
 	bw.ticks.Ticks = 110
 	col := bw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) {

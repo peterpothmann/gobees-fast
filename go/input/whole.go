@@ -13,7 +13,7 @@ import (
 var unmarshalerType = reflect.TypeFor[yaml.Unmarshaler]()
 
 // checkWhole returns an error if the YAML tree n holds a number with a fraction where the Go type t has an integer.
-// yaml.v3 truncates such a number silently (12.5 becomes 12). Counts and days are whole numbers (step F8), so a
+// yaml.v3 truncates such a number silently (12.5 becomes 12). Counts and days are whole numbers, so a
 // fraction there is an error in the file. A whole number written as a float (12.0) is accepted. path names the key
 // in the error message. Types that read themselves (yaml.Unmarshaler) are not checked.
 func checkWhole(n *yaml.Node, t reflect.Type, path string) error {

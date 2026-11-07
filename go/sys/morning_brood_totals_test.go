@@ -37,7 +37,7 @@ func TestBroodTotals(t *testing.T) {
 	s := &broodTotals{}
 	s.Initialize(cw.w)
 	got := ecs.GetResource[globals.BroodTotals](cw.w)
-	// [CHK-02] the totals of the colonies of this morning, finding 39 (see trans/netlogo-findings.md#finding-39):
+	// the totals of the colonies of this morning:
 	// an egg laid after the morning statistics is not counted
 	cw.addBee(col, stage.Egg, caste.Undefined, 2, 0)
 	s.Update(cw.w)
@@ -48,15 +48,14 @@ func TestBroodTotals(t *testing.T) {
 }
 
 func TestMorningExampleFarm(t *testing.T) {
-	// The morning systems on the example farm for one year, with the queens of step 3. Without brood and
+	// The morning systems on the example farm for one year, with the initial queens. Without brood and
 	// foraging every colony consists of its queen only and keeps its start energy, so no colony dies.
 	a := newExampleFarmSetup(t, 1, &initialQueensSetup{}, &tick{}, &calendarUpdate{}, &flowerRefill{},
 		&queenEmergence{}, &colonyUpdate{}, &broodTotals{})
 	w := a.World
 	tally := newTally(w) // Setup kills no colony
 	cal := ecs.GetResource[globals.Calendar](w)
-	// the nectar of all foodsources (NetLogo: NectarAvailableTotalToday_l, removed in step F4). Without foraging the
-	// value of the morning stays until the evening.
+	// the nectar of all foodsources. Without foraging the value of the morning stays until the evening.
 	states := ecs.NewFilter1[comp.FoodsourceState](w)
 	nectar := func() float64 {
 		sum := 0.0

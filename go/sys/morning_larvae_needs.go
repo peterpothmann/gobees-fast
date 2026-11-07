@@ -7,17 +7,14 @@ import (
 	"gobees/enum/caste"
 	"gobees/enum/stage"
 	"gobees/params"
-	"gobees/util"
 
 	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
 )
 
-// larvaeNeeds [GO-05].
-//
-// Calculates per colony the pollen its larvae need today for the largest possible growth, and the energy to
-// assimilate it [NEED]. Read by the foraging stimuli (step 5), which set the ideal stores, and these limit the
-// feeding in the evening [FEED-01].
+// larvaeNeeds calculates per colony the pollen its larvae need today for the largest possible growth, and the
+// energy to assimilate it. Read by the foraging stimuli, which set the ideal stores, and these limit the
+// feeding in the evening.
 //
 // NetLogo: NeedNectarPollenLarvaeTodayProc.
 type larvaeNeeds struct {
@@ -45,13 +42,13 @@ func (s *larvaeNeeds) Initialize(w *ecs.World) {
 }
 
 func (s *larvaeNeeds) Update(w *ecs.World) {
-	// [NEED-01] ORDER: irrelevant, sums. Shuffled (decision C).
+	// ORDER: irrelevant, sums. Shuffled, as NetLogo asks the colonies and the larvae in random order.
 	// The larvae are grouped by colony once: nothing changes stage or colony here.
 	s.larvae = beesByColony(s.larvae, s.beeFilter, func(b *comp.Bee) bool { return b.Stage == stage.Larva })
 	for _, col := range askColonies(s.colonyFilter, s.rng) {
 		pollenNeedMyColony := 0.0 // [g]
 		myLarvae := s.larvae[col]
-		util.Shuffle(s.rng, myLarvae)
+		shuffle(s.rng, myLarvae)
 		for _, e := range myLarvae {
 			b := s.beeMap.Get(e)
 			sp := s.speciesMap.Get(b.Species)
@@ -59,22 +56,24 @@ func (s *larvaeNeeds) Update(w *ecs.World) {
 		}
 		stores := s.storesMap.Get(col)
 		stores.LarvaePollenNeedToday = pollenNeedMyColony
-		// NOTE: only the energy for the larvae's pollen, see the annotation.
+		// NOTE: despite its name, EnergyNeedToday is only the energy for the larvae's pollen. Incubation and flights take
+		// energy from the store elsewhere.
 		stores.EnergyNeedToday = stores.LarvaePollenNeedToday * s.constants.PollenAssimilationEnergy
 	}
 }
 
 func (s *larvaeNeeds) Finalize(w *ecs.World) {}
 
-// maxWeightGainToday returns the largest weight gain of a larva in one day [mg] [WGAIN]: weight * (growthFactor
-// - 1), but not beyond the maximum pupation weight of its caste. NetLogo calls it only for the larva itself
-// (myID = who), so it takes the larva and its species.
+// maxWeightGainToday returns the largest weight gain of a larva in one day [mg]: weight * (growthFactor
+// - 1), but not beyond the maximum pupation weight of its caste. NetLogo calls it only for the larva itself,
+// so it takes the larva and its species.
+//
+// NetLogo: MaxWeightGainToday_mg_REP.
 func maxWeightGainToday(b *comp.Bee, sp *params.Species) float64 {
-	// [WGAIN-01]
 	memoQPupationMax := sp.QueenPupationWeightMax
 	memoWPupationMax := sp.PupationWeightMax
 	// float64(...) forces rounding after the multiplication, as in Java (no fused multiply-add, see
-	// CompetitionPointDateREP).
+	// competitionPointDate).
 	maxWeightGain := float64(b.Weight*sp.GrowthFactor) - b.Weight // [mg]
 	if b.Caste == caste.Queen && b.Weight+maxWeightGain > memoQPupationMax {
 		maxWeightGain = memoQPupationMax - b.Weight

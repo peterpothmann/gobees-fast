@@ -32,8 +32,7 @@ func Load(path string) (params.Params, error) {
 	})
 }
 
-// ExampleFarm returns the parameters of the example farm, the run without a run file. NetLogo reads
-// _SYSTEM_Example_Farm_Parameters.csv with the default interface settings [INIT-02].
+// ExampleFarm returns the parameters of the example farm, the run without a run file.
 func ExampleFarm() params.Params {
 	p, err := load(ExampleFarmFile, openExampleFarm)
 	if err != nil {

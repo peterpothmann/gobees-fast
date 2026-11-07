@@ -23,11 +23,11 @@ func TestMergeHedges(t *testing.T) {
 	h2 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 3, Y: 0, Area: 200}}
 	mergeHedges([]*flowerPatch{field, small, h1, h2, big}, rand.New(rand.NewPCG(1, 2)))
 
-	// [HEDG-04] the largest hedge is the master hedge, it keeps its position and gets the area of the others.
+	// the largest hedge is the master hedge, it keeps its position and gets the area of the others.
 	if big.Area != 1000 || h1.Area != 0 || h2.Area != 0 {
 		t.Errorf("areas: big %v, h1 %v, h2 %v; want 1000, 0, 0", big.Area, h1.Area, h2.Area)
 	}
-	// [HEDG-05] new radius
+	// new radius
 	if math.Abs(big.Radius-math.Sqrt(1000/math.Pi)) > 1e-12 || h1.Radius != 0 {
 		t.Errorf("radius: big %v, h1 %v", big.Radius, h1.Radius)
 	}
@@ -37,7 +37,7 @@ func TestMergeHedges(t *testing.T) {
 }
 
 func TestMergeHedgesEqualAreaIsRandom(t *testing.T) {
-	// Finding 14 (see trans/netlogo-findings.md#finding-14): sort-on breaks ties randomly, so either of two equally large hedges can be the master.
+	// ties are broken randomly, as by NetLogo's sort-on, so either of two equally large hedges can be the master.
 	masters := map[string]int{}
 	for seed := range uint64(50) {
 		field := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Woodland", X: 0, Y: 0, Area: 7000}}
@@ -59,7 +59,7 @@ func TestMergeHedgesEqualAreaIsRandom(t *testing.T) {
 }
 
 func TestMergeHedgesEquallyNearFieldIsRandom(t *testing.T) {
-	// [HEDG-03] min-one-of picks a random one among equally near fields.
+	// a random one among equally near fields, as by NetLogo's min-one-of.
 	linked := map[string]int{}
 	for seed := range uint64(50) {
 		left := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Woodland", X: -5, Y: 0, Area: 7000}}
@@ -79,7 +79,7 @@ func TestMergeHedgesEquallyNearFieldIsRandom(t *testing.T) {
 }
 
 // testFlower returns the flower species of a layer of TestCreateLayers, from its values in the test table:
-// the foodsource does not store its flower species (removed in step F3).
+// the foodsource does not store its flower species.
 func testFlower(fs comp.Foodsource) string {
 	switch {
 	case fs.PatchType == "Scrub":
@@ -103,7 +103,7 @@ func TestCreateLayers(t *testing.T) {
 		},
 	}
 	file := &params.Parameters{AbundanceBoost: 1, FoodsourceLimit: 1, LimitFoodsources: true, RemoveEmptyFoodsources: true}
-	// limits [LAYR-01]: 180 microlitres nectar, 0.05 g pollen
+	// limits: 180 microlitres nectar, 0.05 g pollen
 	p1 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Grassland", X: 10.2, Y: 20.4,
 		Area: 100, Flowers: []params.FlowerEntry{{Name: "A", Value: 2, HasValue: true}, {Name: "Margin"},
 			{Name: "B", Value: 1, HasValue: true}, {Name: "C", Value: 1, HasValue: true}}}}
@@ -127,37 +127,36 @@ func TestCreateLayers(t *testing.T) {
 	}
 	a, c, crop, scrub := byKey["Grassland/A"], byKey["Grassland/C"], byKey["Crop_Cereals/B"], byKey["Scrub/Scrub"]
 
-	// [LAYR-05] A: pollen 100 * 2 * 0.01 = 2 g, nectar 100 * 2 * 1 microlitre = 200 microlitres, flowering period from the table
+	// A: pollen 100 * 2 * 0.01 = 2 g, nectar 100 * 2 * 1 microlitre = 200 microlitres, flowering period from the table
 	if a.fs.PollenMax != 2 || a.fs.NectarMax != 200 || a.fs.NectarPerFlower != 1 || a.fs.StartDay != 100 || a.fs.StopDay != 200 {
 		t.Errorf("layer A = %+v", a.fs)
 	}
-	// [LAYR-04] the stewardship option "Margin" gets no layer: 4 foodsources (checked above)
-	// [LAYR-06] C: nectar 0 below the limit, pollen 1 g kept
+	// the stewardship option "Margin" gets no layer: 4 foodsources (checked above)
+	// C: nectar 0 below the limit, pollen 1 g kept
 	if c.fs.NectarMax != 0 || c.fs.PollenMax != 1 {
 		t.Errorf("layer C nectar %v, pollen %v; want 0, 1", c.fs.NectarMax, c.fs.PollenMax)
 	}
-	// [LAYR-07] B on the grassland is removed (both below the limits), but kept on the crop field ("Crop_")
+	// B on the grassland is removed (both below the limits), but kept on the crop field ("Crop_")
 	if _, ok := byKey["Grassland/B"]; ok {
 		t.Error("layer B on Grassland should be removed")
 	}
 	if crop.fs.NectarMax != 0 || crop.fs.PollenMax != 0 {
 		t.Errorf("crop layer B = %+v, want no food", crop.fs)
 	}
-	// [LAYR-08] masterpatches
+	// masterpatches
 	if !a.l.IsMasterpatch || a.l.Masterpatch != a.e || c.l.IsMasterpatch || c.l.Masterpatch != a.e {
 		t.Errorf("A master %v -> %v, C master %v -> %v", a.l.IsMasterpatch, a.l.Masterpatch, c.l.IsMasterpatch, c.l.Masterpatch)
 	}
 	if !crop.l.IsMasterpatch || crop.l.Masterpatch != crop.e {
 		t.Error("the crop layer must be its own masterpatch")
 	}
-	// [LAYR-09] finding 19 (see trans/netlogo-findings.md#finding-19): a flower patch with an empty list stays, without food
+	// a flower patch with an empty list stays, without food
 	if !scrub.l.IsMasterpatch || scrub.fs.NectarMax != 0 || scrub.fs.PollenMax != 0 ||
 		scrub.fs.StartDay != 0 || scrub.fs.StopDay != 0 {
 		t.Errorf("scrub = %+v %+v", scrub.fs, scrub.l)
 	}
-	// [LAYR-10] finding 15 (see trans/netlogo-findings.md#finding-15), fixed in step F5: A, C and the crop layer lie
-	// in the same patch cell (10, 20). A and C share the list of the grassland, sorted by who (A before C: order of
-	// creation, step F12). The crop layer has its own list (NetLogo: one list of all three).
+	// A, C and the crop layer lie in the same patch cell (10, 20). A and C share the list of the grassland, in the
+	// order of creation (A before C). The crop layer has its own list (NetLogo: one list of all three).
 	for _, l := range []testLayer{a, c} {
 		if want := []ecs.Entity{a.e, c.e}; !slices.Equal(l.l.PatchLayers, want) {
 			t.Errorf("%s/%s: layersInPatchList %v, want %v", l.fs.PatchType, testFlower(l.fs), l.l.PatchLayers, want)
@@ -169,8 +168,8 @@ func TestCreateLayers(t *testing.T) {
 	if !slices.Equal(scrub.l.PatchLayers, []ecs.Entity{scrub.e}) {
 		t.Errorf("scrub: layersInPatchList %v", scrub.l.PatchLayers)
 	}
-	// step F12: the masterpatches in who order. The scrub is not split and took its who number in [FSRC-04], before
-	// all layers, so it comes first. The grassland and the crop field follow in the shuffled order of [LAYR-03].
+	// the masterpatches in NetLogo's who order. The scrub is not split and gets its who number before all layers,
+	// so it comes first. The grassland and the crop field follow in shuffled order.
 	if len(masterpatches) != 3 || masterpatches[0] != scrub.e ||
 		!slices.Contains(masterpatches[1:], a.e) || !slices.Contains(masterpatches[1:], crop.e) {
 		t.Errorf("masterpatches %v, want scrub %v first, then A %v and crop %v", masterpatches, scrub.e, a.e, crop.e)
@@ -184,7 +183,7 @@ type testLayer struct {
 	l  comp.Layer
 }
 
-// newExampleFarmSetup runs the initialisation systems of steps 1 and 2 on the example farm (the run file built into
+// newExampleFarmSetup runs landscapeSetup and nestSitesSetup on the example farm (the run file built into
 // package input) with the given seed, followed by the extra parts.
 func newExampleFarmSetup(t *testing.T, seed float64, extra ...app.System) *app.App {
 	t.Helper()
@@ -266,7 +265,7 @@ func TestCreateFoodsourcesExampleFarm(t *testing.T) {
 			}
 		}
 	}
-	// Finding 21 (see trans/netlogo-findings.md#finding-21): NetLogo gave 36 masterpatches after Setup. gobees gives 36 with every seed: the random
+	// NetLogo gives 36 masterpatches after the setup. 36 with every seed: the random
 	// hedge merge order does not change the number for the example farm.
 	if counts[36] != 20 {
 		t.Errorf("masterpatches over 20 seeds: %v, want always 36 as in NetLogo", counts)

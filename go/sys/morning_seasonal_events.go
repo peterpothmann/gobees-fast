@@ -9,20 +9,17 @@ import (
 	"gobees/enum/caste"
 	"gobees/globals"
 	"gobees/params"
-	"gobees/util"
 
 	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
 )
 
 // seasonalEvents handles the end of the season per species, the death of the males once all queens
-// hibernate, and on 1 January the limit of hibernating queens [SEAS].
+// hibernate, and on 1 January the limit of hibernating queens.
 //
-// Part of the morning routine [MORN-06], after flowerRefill and before queenEmergence.
-// In Setup (Day 0, [INIT-10]) nothing happens: Day is neither seasonStop nor 1, and TotalMales is 0. So it does not
+// Part of the morning routine, after flowerRefill and before queenEmergence.
+// In Setup (Day 0) nothing happens: Day is neither seasonStop nor 1, and TotalMales is 0. So it does not
 // run at ticks = 0, and the totals of broodTotals need not exist yet.
-// Not translated: moving the hibernating queens to (0, 0) on 1 January (GUI only, their position is never read)
-// and the message in the output area.
 //
 // NetLogo: UpdateSeasonalEventsProc.
 type seasonalEvents struct {
@@ -51,14 +48,14 @@ func (s *seasonalEvents) Initialize(w *ecs.World) {
 }
 
 func (s *seasonalEvents) Update(w *ecs.World) {
-	// The totals of OutputDailyProc of the previous evening [OUT-01] that [SEAS-02] and [SEAS-03] read. gobees counts
-	// them here, before [SEAS-01] (step F4). The same values: between OutputDailyProc and this point only the
-	// extinction check, tick, the calendar and the foodsources are updated, and no bee changes.
+	// NetLogo reads the totals of its daily output of the previous evening. They are counted here and have the same
+	// values: between the daily output and this point only the extinction check, tick, the calendar and the
+	// foodsources are updated, and no bee changes.
 	totalQueens, totalHibernatingQueens, totalMales := s.dailyTotals()
 
-	// [SEAS-01] ORDER: irrelevant, each bee dies independently, the colony counters are sums.
+	// ORDER: irrelevant, each bee dies independently, the colony counters are sums.
 	species := s.speciesMap.all()
-	util.Shuffle(s.rng, species)
+	shuffle(s.rng, species)
 	for _, sp := range species {
 		if s.calendar.Day != s.speciesMap.Get(sp).SeasonStop {
 			continue
@@ -67,13 +64,12 @@ func (s *seasonalEvents) Update(w *ecs.World) {
 			return b.Species == sp && b.Activity != activity.Hibernate
 		})
 		for _, e := range s.bees {
-			// broodDeathEndSeason of the colony: read only by the egg accounting [CHK-04], removed in step F4
 			s.death.die(w, e, "End of season")
 		}
 	}
 
-	// [SEAS-02] totals of two different times: OutputDailyProc of the previous evening [OUT-01] and broodTotals of the
-	// previous morning [CHK-02], finding 39 (see trans/netlogo-findings.md#finding-39). ORDER: irrelevant.
+	// totals of two different times: the daily output of the previous evening and broodTotals of the
+	// previous morning. ORDER: irrelevant.
 	totals := s.totals.Get()
 	if totalHibernatingQueens == totalQueens && totals.Eggs+totals.Larvae+totals.Pupae == 0 &&
 		totalMales > 0 {
@@ -83,15 +79,11 @@ func (s *seasonalEvents) Update(w *ecs.World) {
 		}
 	}
 
-	// [SEAS-03]
 	if s.calendar.Day == 1 {
-		// populationSizeDay365List: output only, never read, removed in step F3
-
-		// the limit of hibernating queens, with TotalHibernatingQueens of the previous evening [OUT-01]
-		// totalHibernatingQueensEverRemoved (the planned number): output only, computed by the observers (step F4)
+		// the limit of hibernating queens, with TotalHibernatingQueens of the previous evening
 		queensToKill := totalHibernatingQueens - s.parameters.MaxHibernatingQueens
 		// ORDER: the random choice of the queens matters only through the random numbers.
-		// NetLogo: one-of the hibernating queens per round. Removing the chosen one from the list gives the same
+		// NetLogo picks one-of the hibernating queens per round. Removing the chosen one from the list gives the same
 		// distribution. A cohort can remove more queens than needed.
 		hibernating := []ecs.Entity{}
 		if queensToKill > 0 {
@@ -104,7 +96,7 @@ func (s *seasonalEvents) Update(w *ecs.World) {
 			if len(hibernating) == 0 {
 				// NetLogo: ask one-of an empty agentset is a runtime error. Cannot happen: no hibernating queen dies
 				// between dailyTotals at the start of Update and this point.
-				panic(fmt.Sprintf("UpdateSeasonalEventsProc: %v queens to kill, but no hibernating queen left", queensToKill))
+				panic(fmt.Sprintf("seasonalEvents: %v queens to kill, but no hibernating queen left", queensToKill))
 			}
 			i := s.rng.IntN(len(hibernating))
 			e := hibernating[i]
@@ -113,14 +105,13 @@ func (s *seasonalEvents) Update(w *ecs.World) {
 			queensToKill -= s.beeMap.Get(e).Number
 			s.death.die(w, e, "max. number of hibernating queens")
 		}
-		// reset of the visit counters with CumulVisitsOnlyLastYear?: the counters are never read, removed in step F3
 	}
 }
 
 func (s *seasonalEvents) Finalize(w *ecs.World) {}
 
 // dailyTotals returns the numbers of queens (all stages), hibernating bees (only queens hibernate) and males (all
-// stages), as OutputDailyProc sets TotalQueens, TotalHibernatingQueens and TotalMales [OUT-01].
+// stages), as the daily output of NetLogo sets TotalQueens, TotalHibernatingQueens and TotalMales.
 // ORDER: irrelevant, only sums.
 func (s *seasonalEvents) dailyTotals() (queens, hibernating, males int) {
 	query := s.beeFilter.Query()

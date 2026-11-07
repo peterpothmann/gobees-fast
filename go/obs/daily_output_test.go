@@ -49,7 +49,6 @@ func almostEqual(a, b float64) bool {
 }
 
 func TestDailyOutputTotals(t *testing.T) {
-	// [OUT-01]
 	w := newWorld(t)
 	colonies := ecs.NewMap1[comp.Colony](w)
 	colonies.NewEntity(&comp.Colony{})
@@ -102,7 +101,7 @@ func TestDailyOutputTotals(t *testing.T) {
 }
 
 func TestTotalMapArea(t *testing.T) {
-	// [OUT-02], [AREA]. Worked example (positions chosen by hand), Scaling 0.1 patches per m:
+	// Worked example (positions chosen by hand), Scale 0.1 patches per m:
 	// A (100, 100), radius 100 m = 10 patches; B (150, 120), radius 50 m = 5 patches.
 	// top: B 120 + 5 = 125, bottom: A 100 - 10 = 90, right: B 150 + 5 = 155, left: A 100 - 10 = 90.
 	// (125 - 90) * (155 - 90) = 2275 patches^2 = 227500 m2 = 0.2275 km2.
@@ -113,7 +112,7 @@ func TestTotalMapArea(t *testing.T) {
 	colonies.NewEntity(&comp.Colony{})
 	colonies.NewEntity(&comp.Colony{})
 	o := &DailyOutput{}
-	o.Initialize(w) // [INIT-12] the area of the landscape after Setup
+	o.Initialize(w) // the area of the landscape after Setup
 	o.Values(w)
 	if d := o.Totals; !almostEqual(d.TotalMapArea_km2, 0.2275) || !almostEqual(d.ColonyDensity_km2, 2/0.2275) {
 		t.Errorf("area %v km2, density %v; want 0.2275 and %v", d.TotalMapArea_km2, d.ColonyDensity_km2, 2/0.2275)
@@ -171,7 +170,6 @@ func TestDailyOutputCSV(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// TotalIBMColonies of NetLogo is not written: gobees-fast has no individual-based colonies (step F1)
 	want := "t\tticks\tTotalQueens\tTotalMatedQueens\tTotalUnmatedQueens\tTotalHibernatingQueens\t" +
 		"TotalColonies\tTotalBeeAgents\tTotalMales\tTotalActiveBees\tMeanWorkerWeight_mg\tMeanQueenWeight_mg\t" +
 		"MeanAdultWeight_mg\tTotalMapArea_km2\tColonyDensity_km2\n" +

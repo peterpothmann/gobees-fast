@@ -10,7 +10,7 @@ import (
 )
 
 func TestEgglaying(t *testing.T) {
-	// [EGG-01] worked example: 12 eggs cost 0.018 g pollen and 0.1116 kJ. [EGGP-01] to [EGGP-03]
+	// worked example: 12 eggs cost 0.018 g pollen and 0.1116 kJ.
 	bw := newBroodWorld(t, 7)
 	col := bw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) {
 		s.Pollen, s.Energy = 1, 1
@@ -44,14 +44,13 @@ func TestEgglaying(t *testing.T) {
 	if !almostEqual(s.Pollen, 1-0.018) || !almostEqual(s.Energy, 1-0.1116) {
 		t.Errorf("stores %v g, %v kJ; want 0.982, 0.8884", s.Pollen, s.Energy)
 	}
-	// [EGG-03]
 	if qb, _, _, _, _ := bw.bee(queen); qb.PersonalTime != 1000+86400 || qb.EmergenceDate != day.At(120) {
-		t.Errorf("queen personalTime_s %v, emergingDate %v", qb.PersonalTime, qb.EmergenceDate)
+		t.Errorf("queen PersonalTime %v, EmergenceDate %v", qb.PersonalTime, qb.EmergenceDate)
 	}
 }
 
 func TestEgglayingNotEnoughStores(t *testing.T) {
-	// [EGG-02] strict >: a store equal to the cost lays nothing. [EGG-03] the 24 h are used anyway
+	// strict >: a store equal to the cost lays nothing. the 24 h are used anyway
 	bw := newBroodWorld(t, 1)
 	col := bw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) {
 		s.Pollen, s.Energy = 0.018, 10
@@ -62,7 +61,7 @@ func TestEgglayingNotEnoughStores(t *testing.T) {
 		t.Error("eggs laid without enough pollen")
 	}
 	if b, _, _, _, _ := bw.bee(queen); b.PersonalTime != 86400 {
-		t.Errorf("personalTime_s %v, want 86400", b.PersonalTime)
+		t.Errorf("PersonalTime %v, want 86400", b.PersonalTime)
 	}
 	if _, s, _ := bw.colony(col); s.Pollen != 0.018 {
 		t.Errorf("pollen store %v, want 0.018", s.Pollen)
@@ -70,8 +69,8 @@ func TestEgglayingNotEnoughStores(t *testing.T) {
 }
 
 func TestEgglayingPloidy(t *testing.T) {
-	// [EGG-02] haploid eggs only after the switch point day. SexLocus? with equal alleles: diploid male [EGGP-01].
-	// The ploidy is the number of alleles (step F9).
+	// haploid eggs only after the switch point day. SexLocus? with equal alleles: diploid male.
+	// The ploidy is the number of alleles.
 	for _, tc := range []struct {
 		name      string
 		switchDay day.Date
@@ -101,8 +100,8 @@ func TestEgglayingPloidy(t *testing.T) {
 }
 
 func TestEgglayingOneCohort(t *testing.T) {
-	// [EGG-01] one cohort of batchsize (12) eggs for the cost of 12 eggs (0.0015 g pollen each). gobees-fast has
-	// no individual-based colonies, which in NetLogo lay 12 cohorts of 1 egg for the cost of 1 egg (finding 43).
+	// one cohort of batchsize (12) eggs for the cost of 12 eggs (0.0015 g pollen each). There are
+	// no individual-based colonies, which in NetLogo lay 12 cohorts of 1 egg for the cost of 1 egg.
 	bw := newBroodWorld(t, 1)
 	col := bw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) {
 		s.Pollen, s.Energy = 1, 1

@@ -6,15 +6,14 @@ import (
 
 	"gobees/comp"
 	"gobees/globals"
-	"gobees/util"
 
 	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
 )
 
-// flowerRefill fills every foodsource in flower up to its maximum and empties all others [UFS].
+// flowerRefill fills every foodsource in flower up to its maximum and empties all others.
 //
-// Part of the morning routine [MORN-05]. Initialize runs it also at ticks = 0, i.e. Day = 0 [INIT-10].
+// Part of the morning routine. Initialize runs it also at ticks = 0, i.e. Day = 0.
 //
 // NetLogo: UpdateFoodsourcesProc.
 type flowerRefill struct {
@@ -32,26 +31,25 @@ func (s *flowerRefill) Initialize(w *ecs.World) {
 	ecs.AddResource(w, &s.today)
 	s.filter = ecs.NewFilter2[comp.Foodsource, comp.FoodsourceState](w)
 	s.fsMap = ecs.NewMap2[comp.Foodsource, comp.FoodsourceState](w)
-	s.Update(w) // run at ticks = 0 [INIT-10]
+	s.Update(w) // run at ticks = 0
 }
 
 func (s *flowerRefill) Update(w *ecs.World) {
 	day := s.calendar.Day
-	// [UFS-01] pollenAvailableTotalToday_kg, nectarAvailableTotalToday_l: output only, removed in step F4
 	s.today.Changed = false
 
-	// [UFS-02] ORDER: irrelevant, each foodsource only changes itself.
+	// ORDER: irrelevant, each foodsource only changes itself.
 	foodsources := []ecs.Entity{}
 	query := s.filter.Query()
 	for query.Next() {
 		foodsources = append(foodsources, query.Entity())
 	}
-	util.Shuffle(s.rng, foodsources)
+	shuffle(s.rng, foodsources)
 
 	for _, e := range foodsources {
 		fs, state := s.fsMap.Get(e)
 		if fs.StartDay > fs.StopDay {
-			panic(fmt.Sprintf("Foodsource: startDay > StopDay! (UpdateFoodsourcesProc): startDay %v, stopDay %v", fs.StartDay, fs.StopDay))
+			panic(fmt.Sprintf("Foodsource: startDay > StopDay! (flowerRefill): startDay %v, stopDay %v", fs.StartDay, fs.StopDay))
 		}
 		if day == fs.StartDay || day == fs.StopDay {
 			s.today.Changed = true

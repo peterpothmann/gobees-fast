@@ -10,33 +10,33 @@ import (
 )
 
 // A bee entity has the components Position, Bee, Genetics, Thresholds, Forager and Development.
-// It is one bee or a cohort of Number bees (trans/data-model.md).
-// NetLogo: bees-own. Not translated: activityList (a log for the GUI, [GO-09]).
+// It is one bee or a cohort of Number bees.
+// NetLogo: bees-own.
 
 // Bee holds the state of a bee or cohort.
 type Bee struct {
 	Number        int               // bees in this agent: 1, or the cohort size
-	Stage         stage.Stage       // egg, larva, pupa, adult (decision A). NetLogo brood?: Stage != stage.Adult (step F9)
+	Stage         stage.Stage       // egg, larva, pupa, adult. NetLogo brood?: Stage != stage.Adult
 	Caste         caste.Caste       // undefined, queen, worker, male
 	Activity      activity.Activity // current task
-	Colony        ecs.Entity        // the colony, zero entity for none. NetLogo: colonyID (-1 for none)
-	Species       int               // index in params.Input.Species (step F11). NetLogo: speciesID; speciesName is the Name of the species (step F9)
+	Colony        ecs.Entity        // the colony, zero entity for none. NetLogo: colonyID
+	Species       int               // index in params.Input.Species. NetLogo: speciesID, speciesName
 	Mated         bool              // mated?
 	AdultAge      int               // [d]
 	BroodAge      int               // [d]
-	EmergenceDate day.Date          // day of emergence from hibernation, unset for brood. NetLogo: emergingDate (NotSetLow)
+	EmergenceDate day.Date          // day of emergence from hibernation, unset for brood. NetLogo: emergingDate
 	PersonalTime  float64           // the bee's own time of day, used by the daily activity queue [s]. NetLogo: personalTime_s
 	Weight        float64           // [mg]. NetLogo: weight_mg
 }
 
-// Genetics holds the alleles. Allele values are random-float 139.9 (a NetLogo colour, also used for display).
+// Genetics holds the alleles. Allele values are random numbers below 139.9 (in NetLogo a colour).
 type Genetics struct {
 	MtDNA       float64
-	Alleles     []float64 // 1 allele (haploid male) or 2 (female, diploid male). NetLogo: allelesList; ploidy is len(Alleles) (step F9)
+	Alleles     []float64 // 1 allele (haploid male) or 2 (female, diploid male). NetLogo: allelesList, ploidy
 	Spermatheca []float64 // allele(s) of the male the queen mated with. NetLogo: spermathecaList
 }
 
-// Thresholds are the task thresholds of a bee [THR]. NetLogo: thEgglaying, thForagingNectar, thForagingPollen,
+// Thresholds are the task thresholds of a bee. NetLogo: thEgglaying, thForagingNectar, thForagingPollen,
 // thNursing.
 type Thresholds struct {
 	Egglaying      float64
@@ -47,9 +47,9 @@ type Thresholds struct {
 
 // Forager holds the foraging state and capacities of a bee.
 type Forager struct {
-	CropVolume         float64 // crop capacity [µl] [LOAD]. NetLogo: cropvolume_myl
-	PollenPellets      float64 // pollen load capacity [g] [LOAD]. NetLogo: pollenPellets_g
-	GlossaLength       float64 // [mm] [PROB]. NetLogo: glossaLength_mm
+	CropVolume         float64 // crop capacity [µl]. NetLogo: cropvolume_myl
+	PollenPellets      float64 // pollen load capacity [g]. NetLogo: pollenPellets_g
+	GlossaLength       float64 // [mm]. NetLogo: glossaLength_mm
 	CurrentFoodsource  ecs.Entity
 	NectarSource       ecs.Entity // the nectar layer of the next trip. NetLogo: nectarsourceToGoTo
 	PollenSource       ecs.Entity // the pollen layer of the next trip. NetLogo: pollensourceToGoTo
@@ -62,7 +62,7 @@ type Forager struct {
 	ExpectedPollenTrip float64      // expected duration of a pollen trip [s]. NetLogo: expectation_PollenTrip_s
 }
 
-// Development holds the brood development state of a bee (translated in step 4).
+// Development holds the brood development state of a bee.
 type Development struct {
 	IncubationReceived float64 // incubation received since the egg was laid [kJ]. NetLogo: cumulIncubationReceived_kJ
 	LarvaTime          int     // days spent as a larva [d]. NetLogo: cumulTimeLarva_d

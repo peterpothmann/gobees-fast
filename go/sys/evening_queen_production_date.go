@@ -13,11 +13,10 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// queenProductionDate [GO-14].
-//
-// Starts the queen production of a colony [QPD]: queenProduction? becomes true, and queenProductionDate is
-// back-calculated as the laying day of the larvae now at the caste determination age (finding 42, see
-// trans/netlogo-findings.md#finding-42). No queen is created here. Must run before development.
+// queenProductionDate starts the queen production of a colony: QueenProduction becomes true, and
+// QueenProductionDate is back-calculated as the laying day of the larvae now at the caste determination age. These
+// larvae got their caste on the previous evening, as workers, so the date is the laying day of the last worker
+// larvae. No queen is created here. Must run before development.
 //
 // NetLogo: QueenProductionDateProc.
 type queenProductionDate struct {
@@ -48,19 +47,20 @@ func (s *queenProductionDate) Initialize(w *ecs.World) {
 
 func (s *queenProductionDate) Update(w *ecs.World) {
 	ticks := s.ticks.Ticks
-	// ORDER: irrelevant, each colony only reads its own larvae and changes itself. Shuffled (decision C).
+	// ORDER: irrelevant, each colony only reads its own larvae and changes itself. Shuffled, as NetLogo asks the
+	// colonies in random order.
 	s.larvae = beesByColony(s.larvae, s.beeFilter, func(b *comp.Bee) bool { return b.Stage == stage.Larva })
 	for _, col := range askColonies(s.colonyFilter, s.rng) {
 		colony, counts := s.colonyMap.Get(col)
 
-		// [QPD-01] 7 d + dev_larvalAge_QueenDetermination_d, or the largest broodAge of the larvae at larval day 3
+		// 7 d + QueenDeterminationAge, or the largest broodAge of the larvae at larval day 3
 		averageEggTime := 7 // [d]
 		timeEggToLarvalAgeAtQueenDetermination := averageEggTime + s.speciesMap.Get(colony.Species).QueenDeterminationAge
 		found := false
 		maxBroodAge := 0
 		for _, e := range s.larvae[col] {
 			b, dev := s.beeMap.Get(e)
-			// speciesID of the larva, as in NetLogo (the same species as the colony's)
+			// the species of the larva, as in NetLogo (the same as the colony's)
 			if dev.LarvaTime == s.speciesMap.Get(b.Species).QueenDeterminationAge {
 				if !found || b.BroodAge > maxBroodAge {
 					maxBroodAge = b.BroodAge
@@ -72,7 +72,7 @@ func (s *queenProductionDate) Update(w *ecs.World) {
 			timeEggToLarvalAgeAtQueenDetermination = maxBroodAge
 		}
 
-		// [QPD-02] without switch point (NetLogo: NotSetHigh) the condition is false
+		// without switch point the condition is false, as with the sentinel NotSetHigh in NetLogo
 		layingDate := ticks - day.Abs(timeEggToLarvalAgeAtQueenDetermination)
 		if !colony.QueenProduction && colony.SwitchPointDate.IsSet() &&
 			layingDate >= colony.SwitchPointDate.Day()-day.Abs(s.constants.QueenEggsBeforeSwitchPoint) &&

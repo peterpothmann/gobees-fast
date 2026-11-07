@@ -14,7 +14,7 @@ import (
 )
 
 // NetLogoMetrics are the columns of DailyOutputExtended with the metrics of the NetLogo experiments in
-// go/validation/experiments (step7 to step8): same names and definitions as the NetLogo reporters in the experiment
+// go/validation/experiments: same names and definitions as the NetLogo reporters in the experiment
 // files. go/compare compares them with the NetLogo reference of each scenario.
 var NetLogoMetrics = []string{
 	"colonies", "dead_colonies", "colonies_founded", "eggs", "larvae", "pupae", "workers", "males", "young_queens",
@@ -32,7 +32,7 @@ var netLogoSpecies = []string{"B_terrestris", "B_pascuorum", "B_lapidarius", "B_
 // gobees-fast. It is the output of the comparisons (go/compare) and of the command line (-o).
 //
 // The comparison matches the columns by name. A column is removed only together with its model branch, and is
-// then listed in REMOVED_COLUMNS of go/compare/commits.env (e.g. TotalIBMColonies and ibm_colonies, step F1).
+// then listed in REMOVED_COLUMNS of go/compare/commits.env (e.g. TotalIBMColonies and ibm_colonies).
 // The first 14 columns (ticks and 13 totals) are those of DailyOutput, so that a version without the further
 // columns (e.g. gobees) can be compared on them. Then follow the columns of NetLogoMetrics, then, all at the end of
 // the day:
@@ -48,7 +48,7 @@ type DailyOutputExtended struct {
 	calendar    ecs.Resource[globals.Calendar]
 	bees        *ecs.Filter2[comp.Bee, comp.Genetics]
 	colonies    *ecs.Filter2[comp.Colony, comp.ColonyStores]
-	input       ecs.Resource[params.Input] // the species (step F11)
+	input       ecs.Resource[params.Input] // the species
 	foodsources *ecs.Filter1[comp.Foodsource]
 	stocks      *ecs.Filter1[comp.FoodsourceState]
 	badgers     *ecs.Filter1[comp.Badger]
@@ -116,11 +116,11 @@ func (o *DailyOutputExtended) Values(w *ecs.World) []float64 {
 		if b.Activity == activity.Hibernate {
 			hibernating += float64(b.Number)
 		}
-		// NetLogo: ploidy = 2, the number of alleles since step F9
+		// NetLogo: ploidy = 2
 		if b.Caste == caste.Male && len(g.Alleles) == 2 {
 			diploidMales += float64(b.Number)
 		}
-		// NetLogo: speciesName = "Psithyrus", the flag of the species since step F9
+		// NetLogo: speciesName = "Psithyrus"
 		if slices.Contains(parasitic, b.Species) {
 			psithyrus += float64(b.Number)
 		}

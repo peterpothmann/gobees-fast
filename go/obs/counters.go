@@ -11,7 +11,7 @@ import (
 )
 
 // Counters counts what happened during the run and is not held by the state: the NetLogo globals that only the
-// output reads, and further counters of gobees-fast. It registers Ark observers in Initialize: OnRemoveEntity for
+// output reads, and further counters. It registers Ark observers in Initialize: OnRemoveEntity for
 // dead bees and colonies, OnCreateEntity for new colonies, and the custom events of package event.
 //
 // Initialize must run after Setup, e.g. as a system added after the model systems, or in the Initialize of an
@@ -19,23 +19,21 @@ import (
 // Update must run once at the end of every day, after all model systems. Counters is an app system and is also
 // used by other observers (DailyOutputExtended).
 type Counters struct {
-	TotalBeesEverDied            float64 // [DIE-01], sum of Number of the removed bees
-	TotalColoniesEverProduced    float64 // [CCOL-08]
-	TotalAdultQueensEverProduced float64 // [DEVP-04]
-	// TotalHibernatingQueensEverRemoved adds up the planned number of queens to kill on 1 January [SEAS-03], not
+	TotalBeesEverDied            float64 // sum of Number of the removed bees
+	TotalColoniesEverProduced    float64
+	TotalAdultQueensEverProduced float64
+	// TotalHibernatingQueensEverRemoved adds up the planned number of queens to kill on 1 January, not
 	// the removed number: max(0, hibernating queens of the previous evening - MaxHibernatingQueens). Added at the
 	// end of day 1, as NetLogo adds it in the morning of day 1.
 	TotalHibernatingQueensEverRemoved int
-	// TotalForagersEverDiedForaging adds up the bees that died on a foraging trip [COST-01], [COST-02]. Not in
-	// NetLogo.
+	// TotalForagersEverDiedForaging adds up the bees that died on a foraging trip. Not in NetLogo.
 	TotalForagersEverDiedForaging float64
-	// TotalForagingTripsToday is the number of foraging trips of the day that ended last [FOR-01] (NetLogo resets
-	// it every morning in CheckNumbersProc [CHK-02]).
+	// TotalForagingTripsToday is the number of foraging trips of the day that ended last.
 	TotalForagingTripsToday float64
-	// DeadColonies is the number of dead colonies that NetLogo keeps as deadCols [DIE-02]: since the last 1 January,
-	// or since the start with the output option KeepDeadColonies? [UCOL-12] (params.Output, step F13).
+	// DeadColonies is the number of dead colonies that NetLogo keeps as deadCols: since the last 1 January,
+	// or since the start with the output option KeepDeadColonies (params.Output).
 	DeadColonies int
-	// TimeToExtinction is the ticks of the first day without colonies and bees, 0 before [GO-20].
+	// TimeToExtinction is the ticks of the first day without colonies and bees, 0 before.
 	TimeToExtinction float64
 
 	ticks      *globals.Ticks
@@ -48,7 +46,7 @@ type Counters struct {
 
 	tripsToday        float64 // trips since the last Update
 	deadColoniesToday int     // colonies removed since the last Update
-	queensToBeRemoved int     // planned number of [SEAS-03] for the next day 1
+	queensToBeRemoved int     // planned number of queens to remove on the next day 1
 }
 
 func (c *Counters) Initialize(w *ecs.World) {
@@ -84,7 +82,7 @@ func (c *Counters) Initialize(w *ecs.World) {
 func (c *Counters) Update(w *ecs.World) {
 	c.TotalForagingTripsToday, c.tripsToday = c.tripsToday, 0
 
-	// [UCOL-12] colonyUpdate removes the dead colonies on day 1 after the colonies of that day have died
+	// colonyUpdate removes the dead colonies on day 1 after the colonies of that day have died
 	if c.calendar.Day == 1 && !c.output.KeepDeadColonies {
 		c.DeadColonies = 0
 	} else {
@@ -92,7 +90,6 @@ func (c *Counters) Update(w *ecs.World) {
 	}
 	c.deadColoniesToday = 0
 
-	// [SEAS-03]
 	if c.calendar.Day == 1 {
 		c.TotalHibernatingQueensEverRemoved += c.queensToBeRemoved
 		c.queensToBeRemoved = 0
@@ -101,7 +98,7 @@ func (c *Counters) Update(w *ecs.World) {
 		c.planQueenRemoval()
 	}
 
-	// [GO-20] count Colonies + count Bees = 0
+	// count Colonies + count Bees = 0
 	if c.TimeToExtinction <= 0 {
 		colonies := c.colonyFilter.Query()
 		n := colonies.Count()
@@ -117,8 +114,8 @@ func (c *Counters) Update(w *ecs.World) {
 
 func (c *Counters) Finalize(w *ecs.World) {}
 
-// planQueenRemoval sets the number of queens that [SEAS-03] plans to kill on the next day 1, from the hibernating
-// queens of this evening (TotalHibernatingQueens of OutputDailyProc).
+// planQueenRemoval sets the number of queens that the model kills on the next day 1, from the hibernating queens
+// of this evening (DailyTotals.TotalHibernatingQueens).
 func (c *Counters) planQueenRemoval() {
 	hibernating := 0
 	query := c.beeFilter.Query()

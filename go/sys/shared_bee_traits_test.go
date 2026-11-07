@@ -30,7 +30,7 @@ func expectPanic(t *testing.T, name string, f func()) {
 }
 
 func TestThresholdLevel(t *testing.T) {
-	// [THR] all 24 values of ThresholdLevelREP
+	// all 24 values of thresholdLevel
 	h := params.NotSetHigh
 	want := map[string][6]float64{ // egg, worker, youngQueen, QueenInitiationPhase, QueenSocialPhase, Psith
 		thEggLaying:      {h, h, h, 0.1, 0, 0.2},
@@ -42,7 +42,7 @@ func TestThresholdLevel(t *testing.T) {
 	for thType, values := range want {
 		for i, sit := range situations {
 			if got := thresholdLevel(thType, sit); got != values[i] {
-				t.Errorf("ThresholdLevelREP(%s, %s) = %v, want %v", thType, sit, got, values[i])
+				t.Errorf("thresholdLevel(%s, %s) = %v, want %v", thType, sit, got, values[i])
 			}
 		}
 	}
@@ -52,7 +52,7 @@ func TestThresholdLevel(t *testing.T) {
 
 func TestCropVolumeAndPollenLoad(t *testing.T) {
 	sp := terrestris(t)
-	// [LOAD] worked example: queen of 785 mg: min (173, 315.57) = 173, min (0.15, 315.57 * 0.0003) = 0.094671
+	// worked example: queen of 785 mg: min (173, 315.57) = 173, min (0.15, 315.57 * 0.0003) = 0.094671
 	if got := cropVolume(785, sp); got != 173 {
 		t.Errorf("crop volume 785 mg = %v, want 173 (species maximum)", got)
 	}
@@ -71,11 +71,11 @@ func TestCropVolumeAndPollenLoad(t *testing.T) {
 
 func TestProboscisLength(t *testing.T) {
 	sp := terrestris(t)
-	// [PROB] finding 34: 6.9 mm at 62.4 mg (lightest worker), 11.1 mm at 980 mg (heaviest queen)
+	// 6.9 mm at 62.4 mg (lightest worker), 11.1 mm at 980 mg (heaviest queen)
 	cases := map[float64]float64{62.4: 6.9, 980: 11.1, (62.4 + 980) / 2: 9.0}
 	for weight, want := range cases {
 		if got := proboscisLength(weight, sp); !almostEqual(got, want) {
-			t.Errorf("ProboscisLengthREP(%v) = %v, want %v", weight, got, want)
+			t.Errorf("proboscisLength(%v) = %v, want %v", weight, got, want)
 		}
 	}
 	expectPanic(t, "weight below the lightest worker", func() { proboscisLength(50, sp) })
@@ -84,7 +84,7 @@ func TestProboscisLength(t *testing.T) {
 
 func TestWinterMortalityProb(t *testing.T) {
 	sp := terrestris(t) // queen weights 590 to 980 mg
-	// [WMOR] 0.64 / (1 + e^(-22 * (relative weight - 0.32)))
+	// 0.64 / (1 + e^(-22 * (relative weight - 0.32)))
 	cases := map[float64]float64{
 		590 + 0.32*390: 0.32,                               // relative weight 0.32: half of 0.64
 		980:            0.64 / (1 + math.Exp(-22*0.68)),    // heaviest: 0.6399998
@@ -92,11 +92,11 @@ func TestWinterMortalityProb(t *testing.T) {
 	}
 	for weight, want := range cases {
 		if got := winterMortalityProb(weight, sp); !almostEqual(got, want) {
-			t.Errorf("WintermortalityProbREP(%v) = %v, want %v", weight, got, want)
+			t.Errorf("winterMortalityProb(%v) = %v, want %v", weight, got, want)
 		}
 	}
 	if got := winterMortalityProb(980, sp); got > 0.64 {
-		t.Errorf("survival must stay below 0.64 (finding 33), got %v", got)
+		t.Errorf("survival must stay below 0.64, got %v", got)
 	}
 	expectPanic(t, "weight above the maximum", func() { winterMortalityProb(981, sp) })
 }

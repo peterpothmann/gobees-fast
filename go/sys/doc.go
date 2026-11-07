@@ -1,9 +1,9 @@
 // Package sys holds the systems of the model.
 //
-// Four systems run a day in the order of the NetLogo procedure Go (schedule.go, step F14): Setup (the world at
+// Four systems run a day in the order of the NetLogo procedure Go (schedule.go): Setup (the world at
 // the start), Morning (the day counter and the morning routine), Day (the activities of the bees) and Evening
 // (feeding, development, mortality, badgers, end of the run). Each system calls its parts in order. A part is one
-// NetLogo procedure (e.g. colonyUpdate for UpdateColoniesProc) with Initialize and Update like an Ark system, but
+// NetLogo procedure with Initialize and Update like an Ark system, but
 // only its group adds and calls it. Helpers that several parts use (beeDeath, colonyFounder, eggLayer, forager,
 // speciesTable) are small structs held by each part.
 //
@@ -12,5 +12,6 @@
 // several groups the prefix shared_. schedule.go holds the groups, validation_*_test.go the tests that chain parts of
 // several groups.
 //
-// Every part and function names the codes of the NetLogo annotations it translates, e.g. [UCOL-02].
+// The doc comment of a part or function may end with a line "NetLogo: ..." that names the NetLogo procedures or
+// variables it corresponds to.
 package sys

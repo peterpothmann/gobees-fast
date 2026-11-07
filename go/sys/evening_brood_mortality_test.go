@@ -12,7 +12,7 @@ import (
 )
 
 func TestBroodMortality(t *testing.T) {
-	// [MORB-01] to [MORB-04], maximum ages from the worked example: eggs 10, larvae 20.8, pupae 34.7, queen
+	// maximum ages from the worked example: eggs 10, larvae 20.8, pupae 34.7, queen
 	// larvae 29, queen pupae 47
 	bw := newBroodWorld(t, 1)
 	sp := bw.sp
@@ -53,7 +53,7 @@ func TestBroodMortality(t *testing.T) {
 		t.Errorf("%v bees died, want 26", bw.tally.beesDied)
 	}
 
-	// [MORB-02] assertion: a larva that would have pupated
+	// assertion: a larva that would have pupated
 	expectPanic(t, "larva with enough weight and incubation", func() {
 		bw.addBrood(col, stage.Larva, caste.Worker, 1, 21, 100, 100)
 		bw.morb.Update(bw.w)
@@ -61,7 +61,7 @@ func TestBroodMortality(t *testing.T) {
 }
 
 func TestBroodMortalityCompetitionPoint(t *testing.T) {
-	// [MORB-04] after the competition point every egg dies, larvae survive
+	// after the competition point every egg dies, larvae survive
 	bw := newBroodWorld(t, 1)
 	after := bw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) { c.CompetitionPointDate = day.At(199) })
 	onCP := bw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) { c.CompetitionPointDate = day.At(200) })

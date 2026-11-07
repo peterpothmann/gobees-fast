@@ -7,17 +7,16 @@ import (
 )
 
 // A colony entity has the components Position, Colony, ColonyStores, ColonyStimuli, ColonyCounts and
-// ColonyRange. NetLogo: colonies-own (56 variables), split by topic (trans/data-model.md).
-// Not translated: masterpatchesInRangeList (never read, finding 23, see trans/netlogo-findings.md#finding-23).
+// ColonyRange. NetLogo: colonies-own, split by topic.
 
 // Colony holds identity, phenology and flags of a colony.
 type Colony struct {
-	Species              int      // index in params.Input.Species (step F11). NetLogo: speciesIDcolony
+	Species              int      // index in params.Input.Species. NetLogo: speciesIDcolony
 	QueenProduction      bool     // queenProduction?
-	QueenProductionDate  day.Date // unset until set (NetLogo: NotSetHigh)
-	SwitchPointDate      day.Date // unset until set (NetLogo: NotSetHigh)
-	CompetitionPointDate day.Date // unset until set (NetLogo: NotSetHigh)
-	EusocialPhaseDate    day.Date // unset until set (NetLogo: NotSetHigh)
+	QueenProductionDate  day.Date // unset until set
+	SwitchPointDate      day.Date // unset until set
+	CompetitionPointDate day.Date // unset until set
+	EusocialPhaseDate    day.Date // unset until set
 }
 
 // ColonyStores holds the stores and the daily needs of a colony.
@@ -31,8 +30,8 @@ type ColonyStores struct {
 	IncubationToday       float64 // incubation provided today [kJ]. NetLogo: summedIncubationToday_kJ
 }
 
-// ColonyStimuli holds the task stimuli of a colony (ActivityProc, step 5). NetLogo: stimEgglaying,
-// stimNectarForaging, stimNursing, stimPollenForaging.
+// ColonyStimuli holds the task stimuli of a colony. NetLogo: stimEgglaying, stimNectarForaging, stimNursing,
+// stimPollenForaging.
 type ColonyStimuli struct {
 	Egglaying      float64
 	NectarForaging float64
@@ -40,10 +39,7 @@ type ColonyStimuli struct {
 	PollenForaging float64
 }
 
-// ColonyCounts holds the numbers of bees of a colony, set in [UCOL-06].
-// The brood death counters (broodDeath..., ...DeathsIncubation, larvaDeathsWeight), totalEggsProduced and
-// totalAdultsProduced: read only by the egg accounting [CHK-04], allAdultMales: read only by [CHK-03]. Removed in
-// step F4 together with the checks.
+// ColonyCounts holds the numbers of bees of a colony, set by the colony update in the morning.
 // NetLogo: allEggs, allLarvae, allPupae, allAdults, allAdultWorkers.
 type ColonyCounts struct {
 	LarvaWorkerRatio float64
@@ -54,9 +50,9 @@ type ColonyCounts struct {
 	AdultWorkers     int
 }
 
-// ColonyRange holds the foodsources within the foraging range of a colony [PRNG], [FRNG].
+// ColonyRange holds the foodsources within the foraging range of a colony.
 type ColonyRange struct {
-	Layers        []ecs.Entity // all foodsources (layers) in range, random order (finding 29). NetLogo: allPatchesInRangeList
+	Layers        []ecs.Entity // all foodsources (layers) in range, random order. NetLogo: allPatchesInRangeList
 	PollenPatches []ecs.Entity // masterpatches in range with a pollen layer in flower. NetLogo: masterpatchesWithPollenlayersInFlowerAndRangeList
 	NectarPatches []ecs.Entity // masterpatches in range with a nectar layer in flower. NetLogo: masterpatchesWithNectarlayersInFlowerAndRangeList
 }

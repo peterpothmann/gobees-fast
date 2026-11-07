@@ -7,17 +7,13 @@ import (
 	"gobees/comp"
 	"gobees/globals"
 	"gobees/params"
-	"gobees/util"
 
 	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
 )
 
-// badgersSetup [INIT-08].
-//
-// Creates Parameters.Badgers badgers, each in the centre of the patch cell of a "Scrub" masterpatch, at least 300 m from
-// the badgers placed before. N_Badgers is 0 in netlogo/_SYSTEM_Example_Farm_Parameters.csv.
-// Not translated: size, shape (GUI).
+// badgersSetup creates Parameters.Badgers badgers, each in the centre of the patch cell of a "Scrub" masterpatch,
+// more than 300 m from the badgers placed before. The example farm has no badgers.
 //
 // NetLogo: CreateBadgersProc.
 type badgersSetup struct{}
@@ -33,8 +29,7 @@ func (s *badgersSetup) Update(w *ecs.World) {}
 
 func (s *badgersSetup) Finalize(w *ecs.World) {}
 
-// createBadgers creates n badgers on "Scrub" masterpatches [BADC], finding 48 (see
-// trans/netlogo-findings.md#finding-48).
+// createBadgers creates n badgers on "Scrub" masterpatches.
 // scale is in NetLogo patches per metre [1/m].
 func createBadgers(w *ecs.World, n int, scale float64, rng *rand.Rand) {
 	burrowHabitatsList := []string{"Scrub"} // case-sensitive, as member?
@@ -55,16 +50,15 @@ func createBadgers(w *ecs.World, n int, scale float64, rng *rand.Rand) {
 		}
 	}
 
-	// [BADC-01] create-badgers creates ALL badgers first, at the origin (0, 0), each with a who number (not
-	// kept, step F12). Then each
-	// runs the block, in random order (as ask).
+	// ALL badgers are created first, at the origin (0, 0). Then each is placed, in random order, as NetLogo asks
+	// them in random order.
 	badgerMap := ecs.NewMap2[comp.Position, comp.Badger](w)
 	badgers := make([]ecs.Entity, n)
 	for i := range badgers {
 		badgers[i] = badgerMap.NewEntity(&comp.Position{}, &comp.Badger{})
 	}
 	placed := []ecs.Entity{}
-	util.Shuffle(rng, badgers)
+	shuffle(rng, badgers)
 
 	// burrowFsSet before the badgers were created: every Scrub masterpatch
 	burrowFsSet := slices.Clone(sites)
@@ -76,19 +70,19 @@ func createBadgers(w *ecs.World, n int, scale float64, rng *rand.Rand) {
 		chosenFs := burrowFsSet[rng.IntN(len(burrowFsSet))]
 		// the badger moves to the centre of the patch cell of the foodsource (pxcor, pycor)
 		pos, _ := badgerMap.Get(b)
-		pos.X, pos.Y = float64(util.Pcor(chosenFs.pos.X)), float64(util.Pcor(chosenFs.pos.Y))
+		pos.X, pos.Y = float64(pcor(chosenFs.pos.X)), float64(pcor(chosenFs.pos.Y))
 		placed = append(placed, b)
 
 		// recomputed with the badgers placed so far: no badger on the patch cell of the foodsource (badgers-here)
-		// and none within distance_patches (in-radius: <=). NetLogo also counts the badgers that still sit at the
-		// origin, which blocks the Scrub patches near the origin (finding 48). Fixed in step F5.
+		// and none within limitDistance (in-radius: <=). Only the placed badgers count. NetLogo also counts the
+		// badgers that still sit at the origin, which blocks the Scrub patches near the origin.
 		burrowFsSet = burrowFsSet[:0]
 		for _, site := range sites {
 			free := true
 			for _, other := range placed {
 				p, _ := badgerMap.Get(other)
-				samePatch := util.Pcor(p.X) == util.Pcor(site.pos.X) && util.Pcor(p.Y) == util.Pcor(site.pos.Y)
-				if samePatch || util.Distance(site.pos.X, site.pos.Y, p.X, p.Y) <= limitDistance {
+				samePatch := pcor(p.X) == pcor(site.pos.X) && pcor(p.Y) == pcor(site.pos.Y)
+				if samePatch || distanceBetween(site.pos.X, site.pos.Y, p.X, p.Y) <= limitDistance {
 					free = false
 					break
 				}

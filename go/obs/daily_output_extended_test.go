@@ -77,7 +77,6 @@ func TestDailyOutputExtended(t *testing.T) {
 
 	// day 1: 2 trips of the squadron of 20 workers, the single worker dies on her trip, the queen pupa emerges, a
 	// colony is founded. MaxHibernatingQueens is 0, so the 1 hibernating queen of the setup is planned for removal
-	// [SEAS-03].
 	emit(w, event.ForagingTrip, bees[4])
 	emit(w, event.ForagingTrip, bees[4])
 	emit(w, event.ForagingTrip, bees[5])

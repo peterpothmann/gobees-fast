@@ -11,8 +11,7 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// DailyTotals are the daily totals of OutputDailyProc [OUT-01], [OUT-02]. The names are the NetLogo names of the
-// globals.
+// DailyTotals are the daily totals of the output. The names are the NetLogo names of the globals.
 type DailyTotals struct {
 	TotalQueens            float64 // all queens, all stages (queen brood too)
 	TotalMatedQueens       float64
@@ -21,27 +20,24 @@ type DailyTotals struct {
 	TotalColonies          float64
 	TotalBeeAgents         float64 // number of bee agents (cohorts count once)
 	TotalMales             float64 // all males, all stages (male brood too)
-	TotalActiveBees        float64 // length of ActiveBeesSortedList after the event loop
+	TotalActiveBees        float64 // length of the activity queue after the activity loop
 	MeanWorkerWeight_mg    float64 // 0 without adult workers
 	MeanQueenWeight_mg     float64 // 0 without adult queens
 	MeanAdultWeight_mg     float64 // 0 without adults
-	TotalMapArea_km2       float64 // set once [OUT-02], [AREA]
-	ColonyDensity_km2      float64 // [OUT-02]
+	TotalMapArea_km2       float64 // set once
+	ColonyDensity_km2      float64
 }
 
-// DailyOutput observes the daily totals of OutputDailyProc [GO-18], [INIT-12].
+// DailyOutput observes the daily totals.
 //
-// NetLogo sets them at the end of each day and once in Setup. The observer computes them from the state when its
-// values are read. Initialize computes the map area, i.e. after Setup when the observer is added after the model
-// systems, as OutputDailyProc in Setup. NetLogo runs OutputDailyProc inside with-local-randomness: nothing here
-// changes the random numbers of the model, and the observer draws none.
-// Not translated: plots (PlottingProc) and weather signs [OUT-03], GUI only.
+// The observer computes them from the state when its values are read. Initialize computes the map area, i.e. after
+// Setup when the observer is added after the model systems. The observer draws no random number.
 //
 // One row per day: ticks, then the totals. The column names are the NetLogo names of the globals.
 // reporter.CSV adds its own first column t, which counts its updates from 0 and is therefore ticks - 1 (see
 // globals.Ticks). The column ticks gives the NetLogo day.
 //
-// NetLogo: OutputDailyProc, TotalMapAreaREP.
+// NetLogo: OutputDailyProc.
 type DailyOutput struct {
 	// Totals holds the totals of the last call of Values.
 	Totals DailyTotals
@@ -66,7 +62,7 @@ func (o *DailyOutput) Initialize(w *ecs.World) {
 	o.colonyFilter = ecs.NewFilter1[comp.Colony](w)
 	o.fsFilter = ecs.NewFilter2[comp.Position, comp.Foodsource](w)
 	o.values = make([]float64, 14)
-	o.mapArea() // [INIT-12]
+	o.mapArea()
 }
 
 func (o *DailyOutput) Update(w *ecs.World) {}
@@ -113,8 +109,6 @@ func (o *DailyOutput) Values(w *ecs.World) []float64 {
 // update sets the totals from the state. ORDER irrelevant, only sums.
 func (o *DailyOutput) update() {
 	d := &o.Totals
-	// [OUT-01]
-	// TotalIBMColonies is not translated: gobees-fast has only cohort-based colonies.
 	colonies := o.colonyFilter.Query()
 	d.TotalColonies = float64(colonies.Count())
 	colonies.Close()
@@ -167,14 +161,14 @@ func (o *DailyOutput) update() {
 		d.MeanAdultWeight_mg = adultWeight / float64(adults)
 	}
 
-	// [OUT-02] the map area once (not again after a crop rotation), then the colony density
+	// the map area once (not again after a crop rotation), then the colony density
 	o.mapArea()
 	if d.TotalMapArea_km2 > 0 {
 		d.ColonyDensity_km2 = d.TotalColonies / d.TotalMapArea_km2
 	}
 }
 
-// mapArea sets the map area the first time that there are foodsources [OUT-02].
+// mapArea sets the map area the first time that there are foodsources.
 func (o *DailyOutput) mapArea() {
 	if o.Totals.TotalMapArea_km2 != 0 {
 		return
@@ -188,11 +182,10 @@ func (o *DailyOutput) mapArea() {
 }
 
 // totalMapArea returns the area [km2] of the box around all foodsources (centre +- radius), limited to the
-// world [AREA]. SIMPLIFY: output only.
+// world.
 func (o *DailyOutput) totalMapArea() float64 {
-	// [AREA-01] max-one-of / min-one-of choose randomly among ties (with the local random seed of OutputDailyProc).
-	// gobees takes the first one in storage order. Tied foodsources share the coordinate, but their radius_m can
-	// differ, so the area can differ from NetLogo's in that case.
+	// Among tied foodsources the first one in storage order counts (NetLogo: one at random). Tied foodsources share
+	// the coordinate, but their radius can differ, so the area can differ from NetLogo's in that case.
 	type source struct{ x, y, r float64 }
 	var top, bottom, right, left source
 	first := true

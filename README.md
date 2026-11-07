@@ -46,7 +46,6 @@ The reference is written in NetLogo 5.3.1.
 | `go/globals`   | global state of the run (changes during the run)                |
 | `go/params`    | parameters, the content of the input files and the values derived from them (read-only during the run) |
 | `go/input`     | reader of the run files (YAML), the built-in example farm       |
-| `go/util`      | functions that mirror NetLogo reporters                         |
 | `go/obs`       | observers of the model output                                   |
 | `go/benchmark` | run time of NetLogo, gobees and gobees-fast                     |
 | `go/compare`   | check of each step: scenarios against the previous step, gobees and NetLogo |

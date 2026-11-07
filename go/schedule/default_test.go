@@ -24,7 +24,7 @@ func exampleFarm(t testing.TB, seed float64) params.Params {
 
 func TestDefaultYearCycle(t *testing.T) {
 	// The full model over 3 years. check.Day checks the state at the end of every day: the bees of the colonies
-	// [CHK-03] and no colony on Day 364 [CHK-04], which needs the end of season [SEAS-01].
+	// and no colony on Day 364, which needs the end of season.
 	const years = 3
 	for seed := 1.0; seed <= 3; seed++ {
 		p := exampleFarm(t, seed)

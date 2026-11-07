@@ -15,7 +15,7 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// nestSitesSetup finds the nest sites of each simulated species [INIT-07] and adds them as the resource
+// nestSitesSetup finds the nest sites of each simulated species and adds them as the resource
 // globals.NestSites. Runs after landscapeSetup, because the nest sites are foodsources.
 //
 // NetLogo: CreateSpeciesProc, NestHabitatsListREP.
@@ -27,26 +27,22 @@ func (s *nestSitesSetup) Initialize(w *ecs.World) {
 	in := ecs.GetResource[params.Input](w)
 	rng := rand.New(ecs.GetResource[resource.Rand](w))
 
-	// [SPEC-01] one species per species in speciesList, in FILE order of the BeespeciesFile. Package input has read
-	// the rows into params.Input.Species and set the derived values [SPEC-02], [SPEC-03], [SPEC-05], [SPEC-07]. Since
-	// step F11 the species are no agents: bees and colonies hold the index of their species. No agent takes a who
-	// number since step F12.
+	// one species per species of the run file, in FILE order. Package input has read the rows into
+	// params.Input.Species and set the derived values. Bees and colonies hold the index of their species.
 
-	// Collect all masterpatches, sorted by who, to expand the nest habitats list and find the nest sites.
+	// Collect all masterpatches, in NetLogo's who order, to expand the nest habitats list and find the nest sites.
 	masterpatches := collectMasterpatches(w)
 	s.nestSites.BySpecies = make([]globals.SpeciesNestSites, len(in.Species))
 	for i := range in.Species {
 		sp := &in.Species[i]
 		ns := &s.nestSites.BySpecies[i]
-		// [SPEC-04]
 		expanded, err := expandNestHabitats(sp.NestHabitats, masterpatches, rng)
 		if err != nil {
 			panic(err)
 		}
 		ns.Habitats = expanded
-		// [SPEC-06]
 		ns.Sites, ns.Area = nestSites(ns.Habitats, masterpatches)
-		// [SPEC-08] message only
+		// message only
 		if len(ns.Sites) == 0 && !sp.Parasitic {
 			log.Printf("%s has no suitable nesting foodsources. No colonies will form", sp.Name)
 		}
@@ -58,7 +54,7 @@ func (s *nestSitesSetup) Update(w *ecs.World) {}
 
 func (s *nestSitesSetup) Finalize(w *ecs.World) {}
 
-// speciesTable gives a species by its index, the Species of bees and colonies (step F11).
+// speciesTable gives a species by its index, the Species of bees and colonies.
 // It reads params.Input.Species at each call, so species added later (tests) are found too.
 type speciesTable struct {
 	in *params.Input
@@ -82,15 +78,15 @@ func (t *speciesTable) all() []int {
 	return result
 }
 
-// masterpatch is a masterpatch foodsource with the values NestHabitatsListREP and the nest sites need.
+// masterpatch is a masterpatch foodsource with the values expandNestHabitats and nestSites need.
 type masterpatch struct {
 	entity    ecs.Entity
 	patchType string
 	area      float64 // [m2]
 }
 
-// collectMasterpatches returns all masterpatches, sorted by who: in the order of globals.Landscape.Masterpatches
-// (step F12).
+// collectMasterpatches returns all masterpatches in NetLogo's who order, which is the order of
+// globals.Landscape.Masterpatches.
 func collectMasterpatches(w *ecs.World) []masterpatch {
 	landscape := ecs.GetResource[globals.Landscape](w)
 	fsMap := ecs.NewMap1[comp.Foodsource](w)
@@ -103,9 +99,10 @@ func collectMasterpatches(w *ecs.World) []masterpatch {
 }
 
 // expandNestHabitats expands entries ending with "*" to all habitat types of the masterpatches that contain
-// the text before the "*" [NHAB], finding 20 (see trans/netlogo-findings.md#finding-20).
+// the text before the "*".
 func expandNestHabitats(list []string, masterpatches []masterpatch, rng *rand.Rand) ([]string, error) {
-	// [NHAB-01] ORDER: irrelevant, nestHabitatsList is only used with member?. Shuffled anyway (decision C).
+	// ORDER: irrelevant, the nest habitats list is only used with member?. Shuffled anyway, as NetLogo collects the
+	// habitat types of the masterpatches in random order.
 	order := slices.Clone(masterpatches)
 	rng.Shuffle(len(order), func(i, j int) { order[i], order[j] = order[j], order[i] })
 	allHabitats := []string{}
@@ -115,7 +112,6 @@ func expandNestHabitats(list []string, masterpatches []masterpatch, rng *rand.Ra
 		}
 	}
 
-	// [NHAB-02]
 	result := []string{}
 	for _, entry := range list {
 		if !strings.Contains(entry, "*") {
@@ -135,8 +131,8 @@ func expandNestHabitats(list []string, masterpatches []masterpatch, rng *rand.Ra
 	return result, nil
 }
 
-// nestSites returns all masterpatches whose patchType is in the nest habitat list (exact match), sorted by who,
-// and the sum of their areas [SPEC-06].
+// nestSites returns all masterpatches whose patchType is in the nest habitat list (exact match), in the order of
+// masterpatches, and the sum of their areas.
 func nestSites(habitats []string, masterpatches []masterpatch) ([]ecs.Entity, float64) {
 	sites := []ecs.Entity{}
 	area := 0.0

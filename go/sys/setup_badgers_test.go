@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"gobees/comp"
-	"gobees/util"
 
 	"github.com/mlange-42/ark/ecs"
 )
@@ -28,10 +27,9 @@ func badgerPositions(w *ecs.World) []comp.Position {
 }
 
 func TestCreateBadgersNearOrigin(t *testing.T) {
-	// [BADC-01] finding 48 (see trans/netlogo-findings.md#finding-48), fixed in step F5: the badgers that have not
-	// moved yet sit at the origin, but only the placed badgers exclude Scrub patches. Scrub A lies 14 patches (140 m)
-	// from the origin, so both badgers can choose it: P(A occupied) = 1/3 + 2/3 * 1/2 = 2/3, sd 0.009. NetLogo: only
-	// the first badger can choose it, P = 1/3.
+	// the badgers that have not moved yet sit at the origin, but only the placed badgers exclude Scrub patches.
+	// Scrub A lies 14 patches (140 m) from the origin, so both badgers can choose it:
+	// P(A occupied) = 1/3 + 2/3 * 1/2 = 2/3, sd 0.009. NetLogo: only the first badger can choose it, P = 1/3.
 	const runs = 3000
 	occupiedA := 0
 	for seed := range uint64(runs) {
@@ -46,7 +44,7 @@ func TestCreateBadgersNearOrigin(t *testing.T) {
 			t.Fatalf("%d badgers, want 2", len(pos))
 		}
 		// at the centre of the patch cell, at least 300 m apart
-		if util.Distance(pos[0].X, pos[0].Y, pos[1].X, pos[1].Y) <= 30 {
+		if distanceBetween(pos[0].X, pos[0].Y, pos[1].X, pos[1].Y) <= 30 {
 			t.Fatalf("badgers at %v and %v are not more than 300 m apart", pos[0], pos[1])
 		}
 		for _, p := range pos {
@@ -61,7 +59,7 @@ func TestCreateBadgersNearOrigin(t *testing.T) {
 }
 
 func TestCreateBadgersNotEnoughHabitat(t *testing.T) {
-	// [BADC-01] no candidate left: the badger dies.
+	// no candidate left: the badger dies.
 	w := ecs.NewWorld()
 	addScrub(w, 100, 100)
 	addScrub(w, 200, 100)

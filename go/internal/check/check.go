@@ -13,13 +13,10 @@ import (
 
 // Day returns an error if the state at the end of a day violates a check, nil otherwise.
 //
-//   - [CHK-03] every egg, larva, pupa, adult worker and adult male belongs to a living colony. CheckNumbersProc
-//     compares the totals of the colonies (allEggs, ..., which [UCOL-06] counts from the bees of each colony) with
-//     the totals of all bees, which is the same. Unlike these totals of the morning, it holds at any time of the
-//     day: a colony dies only when no bee belongs to it [UCOL-11].
-//   - [CHK-04] if seasonEnd: no colony is alive on day 364. NetLogo checks produced - died = 0, which is the same,
-//     as only CreateColoniesProc creates and only DieProc removes colonies. Needs the end of the season [SEAS-01],
-//     so runs without seasonalEvents pass false.
+//   - every egg, larva, pupa, adult worker and adult male belongs to a living colony. It holds at any time of the
+//     day: a colony dies only when no bee belongs to it.
+//   - if seasonEnd: no colony is alive on day 364. Needs the end of the season, so runs without seasonalEvents
+//     pass false.
 func Day(w *ecs.World, seasonEnd bool) error {
 	colonies := ecs.NewMap1[comp.Colony](w)
 	query := ecs.NewFilter1[comp.Bee](w).Query()
@@ -27,7 +24,7 @@ func Day(w *ecs.World, seasonEnd bool) error {
 		b := query.Get()
 		member := b.Stage != stage.Adult || b.Caste == caste.Worker || b.Caste == caste.Male
 		if member && (b.Colony.IsZero() || !w.Alive(b.Colony) || !colonies.HasAll(b.Colony)) {
-			err := fmt.Errorf("[CHK-03] bee %v (stage %v, caste %v, number %v) belongs to no living colony",
+			err := fmt.Errorf("bee %v (stage %v, caste %v, number %v) belongs to no living colony",
 				query.Entity(), b.Stage, b.Caste, b.Number)
 			query.Close()
 			return err
@@ -39,7 +36,7 @@ func Day(w *ecs.World, seasonEnd bool) error {
 		n := q.Count()
 		q.Close()
 		if n != 0 {
-			return fmt.Errorf("[CHK-04] %d colonies alive on day 364", n)
+			return fmt.Errorf("%d colonies alive on day 364", n)
 		}
 	}
 	return nil

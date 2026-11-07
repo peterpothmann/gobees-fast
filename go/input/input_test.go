@@ -25,7 +25,6 @@ func exampleSpecies(t *testing.T) map[string]Species {
 func TestExampleFarm(t *testing.T) {
 	p := ExampleFarm()
 	in := p.Input
-	// [PAR-01], [PAR-04] to [PAR-07]
 	want := params.Derived{
 		InitialQueens:      []params.SpeciesQueens{{Species: "B_terrestris", Queens: 500}},
 		SpeciesNames:       []string{"B_terrestris"},
@@ -36,7 +35,7 @@ func TestExampleFarm(t *testing.T) {
 	if !reflect.DeepEqual(in.Derived, want) {
 		t.Errorf("Derived:\n got  %+v\n want %+v", in.Derived, want)
 	}
-	// [FPER] "Constant 8 hrs": 365 times 28800 s
+	// "Constant 8 hrs": 365 times 28800 s
 	if len(in.ForagingPeriod.Years) != 1 || len(in.ForagingPeriod.Years[0]) != 365 || slices.ContainsFunc(in.ForagingPeriod.Years[0],
 		func(v float64) bool { return v != 28800 }) {
 		t.Errorf("ForagingPeriod: want one year of 28800 s")
@@ -82,7 +81,7 @@ func TestDeriveSpecies(t *testing.T) {
 		t.Errorf("nestHabitats = %q (not yet expanded)", s.NestHabitats)
 	}
 
-	// [SPEC-05], [SPEC-07] derived values, computed by hand
+	// derived values, computed by hand
 	derived := map[string][2]float64{
 		"FlightCosts (488.6 / 5 / 1e9)":                {s.FlightCosts, 9.772e-8},
 		"DailyIncubationQuota (10 / 18)":               {s.DailyIncubationQuota, 0.5555555555555556},
@@ -105,14 +104,14 @@ func TestDeriveSpecies(t *testing.T) {
 		}
 	}
 
-	// finding 20 (see trans/netlogo-findings.md#finding-20): emergingDay_sd is rounded, .5 up
+	// emergenceDaySD is rounded, .5 up
 	for name, want := range map[string]float64{"B_pascuorum": 15, "B_lapidarius": 21, "B_pratorum": 31, "B_hortorum": 8} {
 		if got := deriveSpecies(species[name], &constants).EmergenceDaySD; got != want {
 			t.Errorf("%s: emergingDay_sd = %v, want %v", name, got, want)
 		}
 	}
 
-	// step F13: only the Psithyrus row of the run file has the key parasitic, and the species keeps it
+	// only the Psithyrus row of the run file has the key parasitic, and the species keeps it
 	for name, sp := range species {
 		if got := deriveSpecies(sp, &constants).Parasitic; got != (name == "Psithyrus") {
 			t.Errorf("%s: Parasitic = %v", name, got)
@@ -124,8 +123,7 @@ func TestDeriveSpecies(t *testing.T) {
 }
 
 func TestBuildSpeciesOrder(t *testing.T) {
-	// finding 20 (see trans/netlogo-findings.md#finding-20): species are created in the order of the run file (the
-	// order of the BeespeciesFile), a name missing in the file creates no species, names are case-sensitive.
+	// species are created in the order of the run file, a name missing in the file creates no species, names are case-sensitive.
 	c, landscapes := ExampleFarmConfig()
 	c.InitialQueens = []params.SpeciesQueens{{Species: "B_pascuorum", Queens: 1}, {Species: "B_terrestris", Queens: 1},
 		{Species: "B_missing", Queens: 1}, {Species: "b_hortorum", Queens: 1}}
@@ -141,13 +139,12 @@ func TestBuildSpeciesOrder(t *testing.T) {
 		t.Errorf("species = %q, want B_terrestris, B_pascuorum", names)
 	}
 	if !reflect.DeepEqual(p.Input.Derived.SpeciesNames, []string{"B_pascuorum", "B_terrestris", "B_missing", "b_hortorum"}) {
-		t.Errorf("SpeciesNames = %q, want the order of initialQueens [QINI-03]", p.Input.Derived.SpeciesNames)
+		t.Errorf("SpeciesNames = %q, want the order of initialQueens", p.Input.Derived.SpeciesNames)
 	}
 }
 
 func TestMortalityForagerUnknownModel(t *testing.T) {
-	// Finding 5 (see trans/netlogo-findings.md#finding-5), fixed in step F5: case-sensitive, any other value is an
-	// error (NetLogo: 0).
+	// case-sensitive, any other value is an error
 	for _, m := range []string{"High", "medium", ""} {
 		if got, err := mortalityForager(m); err == nil {
 			t.Errorf("mortalityForager(%q) = %v, want an error", m, got)
@@ -170,7 +167,7 @@ func constantYear(v float64) Year {
 }
 
 func TestForagingPeriod(t *testing.T) {
-	// [FPER] the years follow each other and then repeat
+	// the years follow each other and then repeat
 	w, err := weather([]Year{constantYear(1), constantYear(2)})
 	if err != nil {
 		t.Fatal(err)
@@ -192,14 +189,14 @@ func TestForagingPeriod(t *testing.T) {
 }
 
 func TestReadConfigStrict(t *testing.T) {
-	// An unknown key is an error, as an unknown NetLogo parameter. A missing key keeps its zero value.
+	// An unknown key is an error. A missing key keeps its zero value.
 	cases := map[string]string{
 		"unknown section":   "foo: 1\n",
 		"unknown parameter": "parameters:\n  Foo: 1\n",
 		"GUI parameter":     "parameters:\n  ShowPlots?: true\n",
 		"two documents":     "landscape: a.yaml\n---\nlandscape: b.yaml\n",
 		"empty":             "",
-		// counts and days are whole numbers (step F8)
+		// counts and days are whole numbers
 		"fraction of queens":       "initialQueens:\n  - species: B_terrestris\n    queens: 2.5\n",
 		"fraction in batchSize":    "species:\n  - batchSize: 12.5\n",
 		"fraction in seasonStop":   "species:\n  - seasonStop: 305.5\n",
@@ -217,7 +214,7 @@ func TestReadConfigStrict(t *testing.T) {
 }
 
 func TestFlowerEntryYAML(t *testing.T) {
-	// A flower entry is written as in NetLogo, [name value] or [name] (Margin and Plot have no value).
+	// A flower entry is written [name value] or [name] (Margin and Plot have no value).
 	l := Landscape{MetresPerPatch: 10, Patches: []Patch{{ID: 3, PatchType: "Scrub", X: 1.5, Y: 2, Area: 300,
 		Flowers: []FlowerEntry{{Name: "Bramble", Value: 0.331, HasValue: true}, {Name: "Margin"}}}}}
 	var b bytes.Buffer
@@ -252,7 +249,7 @@ func TestConfigRoundTrip(t *testing.T) {
 }
 
 func TestBuildCropRotation(t *testing.T) {
-	// [CROP-01] every landscape file of the crop rotation must be read before the setup.
+	// every landscape file of the crop rotation must be read before the setup.
 	c, landscapes := ExampleFarmConfig()
 	c.CropRotation = []string{c.Landscape, "other.yaml"}
 	if _, err := Build(c, landscapes); err == nil {
@@ -263,7 +260,7 @@ func TestBuildCropRotation(t *testing.T) {
 	if err != nil || len(p.Input.Foodsources) != 2 || p.Input.Foodsources["other.yaml"].MetresPerPatch != 5 {
 		t.Errorf("want both landscape files, got %d, %v", len(p.Input.Foodsources), err)
 	}
-	// one file: no crop rotation [MORN-09], the file is not needed
+	// one file: no crop rotation, the file is not needed
 	c.CropRotation = []string{"missing.yaml"}
 	if p, err := Build(c, landscapes); err != nil || len(p.Input.Foodsources) != 1 {
 		t.Errorf("a crop rotation with one file must not be read: %v", err)
@@ -271,7 +268,7 @@ func TestBuildCropRotation(t *testing.T) {
 }
 
 func TestBuildNoFlowers(t *testing.T) {
-	// [FSRC-12] without flower species (NetLogo: "No Input File") there is no table.
+	// without flower species there is no table.
 	c, landscapes := ExampleFarmConfig()
 	c.Flowers = nil
 	p, err := Build(c, landscapes)

@@ -12,8 +12,8 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// broodWorld extends colonyWorld (step 4a) with the brood systems of step 4b. Brood is laid with EgglayingProc
-// or created by hand, because ActivityProc (step 5) does not exist yet.
+// broodWorld extends colonyWorld with the brood systems. Brood is laid with eggLayer or created by hand
+// (addBrood), without the activities of the bees.
 type broodWorld struct {
 	*colonyWorld
 	need *larvaeNeeds
@@ -80,7 +80,7 @@ func (bw *broodWorld) addBrood(col ecs.Entity, st stage.Stage, c caste.Caste, nu
 	return e
 }
 
-// evening runs the evening systems [GO-13] to [GO-16] in the order of the group Evening (schedule.go).
+// evening runs the evening systems in the order of the group Evening (schedule.go).
 func (bw *broodWorld) evening() {
 	bw.feed.Update(bw.w)
 	bw.qpd.Update(bw.w)
@@ -89,7 +89,7 @@ func (bw *broodWorld) evening() {
 }
 
 func TestBeesByColonyReusesGroups(t *testing.T) {
-	// step F10: the second call empties the groups of the first and drops the colony without larvae
+	// the second call empties the groups of the first and drops the colony without larvae
 	bw := newBroodWorld(t, 1)
 	col := bw.addColony(nil)
 	other := bw.addColony(nil)
