@@ -58,7 +58,7 @@ func newForager(w *ecs.World, rng *rand.Rand) forager {
 
 // ForagingProc lets the bee e make one foraging trip [FOR]. The bee may die on the trip.
 func (f *forager) ForagingProc(w *ecs.World, e ecs.Entity) {
-	_, _, b, _, _, fo, _ := f.beeMap.Get(e)
+	_, b, _, _, fo, _ := f.beeMap.Get(e)
 	// [FOR-01] totalForagingTripsToday: output only, counted by the observers (step F4)
 	f.trip.Emit(e)
 	// [FOR-02]
@@ -93,7 +93,7 @@ func (f *forager) ForagingProc(w *ecs.World, e ecs.Entity) {
 // Foraging_SortKnownPatchesListREP returns the known masterpatches of the bee e without duplicates, sorted by
 // distance to her colony [SORT].
 func (f *forager) Foraging_SortKnownPatchesListREP(e ecs.Entity, knownPatchesList []ecs.Entity) []ecs.Entity {
-	_, _, b, _, _, _, _ := f.beeMap.Get(e)
+	_, b, _, _, _, _ := f.beeMap.Get(e)
 	// [SORT-01] remove-duplicates keeps the first occurrence, sort-by is stable
 	newList := make([]ecs.Entity, 0, len(knownPatchesList))
 	for _, p := range knownPatchesList {
@@ -121,7 +121,7 @@ func (f *forager) Foraging_SortKnownPatchesListREP(e ecs.Entity, knownPatchesLis
 
 // Foraging_searchingProc lets a searching bee e try to find a flower patch [SRCH].
 func (f *forager) Foraging_searchingProc(e ecs.Entity) {
-	_, _, b, _, _, fo, _ := f.beeMap.Get(e)
+	_, b, _, _, fo, _ := f.beeMap.Get(e)
 	// [SRCH-01]
 	if b.Activity == activity.Searching {
 		chosenMasterpatch := ecs.Entity{}
@@ -187,7 +187,7 @@ func (f *forager) DetectionProbREP(patchWho ecs.Entity, xcol, ycol float64) floa
 
 // Foraging_collectNectarPollenProc lets the bee e take a load from her foodsource [COLL].
 func (f *forager) Foraging_collectNectarPollenProc(e ecs.Entity) {
-	_, _, b, _, _, fo, _ := f.beeMap.Get(e)
+	_, b, _, _, fo, _ := f.beeMap.Get(e)
 	// [COLL-01] NetLogo also checks for "expForagingP", which the activity never is here (removed in step F3)
 	if b.Activity == activity.CollectPollen {
 		_, _, state, _ := f.foodsourceMap.Get(fo.CurrentFoodsource)
@@ -217,7 +217,7 @@ func (f *forager) Foraging_collectNectarPollenProc(e ecs.Entity) {
 // HandlingTime_s_REP returns the time [s] the bee e needs to collect one full load at the foodsource myPatch
 // [HAND]. pollenPatch selects pollen or nectar.
 func (f *forager) HandlingTime_s_REP(e ecs.Entity, myPatch ecs.Entity, pollenPatch bool) float64 {
-	_, _, b, _, _, fo, _ := f.beeMap.Get(e)
+	_, b, _, _, fo, _ := f.beeMap.Get(e)
 	_, fs, state, _ := f.foodsourceMap.Get(myPatch)
 	maxHandlingTime_s := 60.0 * 60
 	handlingTime_s := -999.0
@@ -283,7 +283,7 @@ func log10(x float64) float64 {
 // Foraging_bestLayerREP returns the best layer for the bee e among the layers of the flower patch of
 // myCurrentFoodsource, or the zero entity if none has the bee's forage [BLYR].
 func (f *forager) Foraging_bestLayerREP(e ecs.Entity, myCurrentFoodsource ecs.Entity) ecs.Entity {
-	_, _, b, _, _, fo, _ := f.beeMap.Get(e)
+	_, b, _, _, fo, _ := f.beeMap.Get(e)
 	memoBestHandlingtime := params.NotSetHigh
 	memoBestEEF := params.NotSetLow
 	memoBestPatch := ecs.Entity{}
@@ -322,7 +322,7 @@ func (f *forager) Foraging_bestLayerREP(e ecs.Entity, myCurrentFoodsource ecs.En
 
 // Foraging_PatchChoiceProc lets the bee e choose the foodsource of her next trip of this forage [PCH].
 func (f *forager) Foraging_PatchChoiceProc(e ecs.Entity, currentTripDuration_s float64) {
-	_, _, b, _, _, fo, _ := f.beeMap.Get(e)
+	_, b, _, _, fo, _ := f.beeMap.Get(e)
 	// [PCH-01]
 	preferenceClosePatchesProb := 0.9
 	happy := true
@@ -407,14 +407,14 @@ func (f *forager) Foraging_PatchChoiceProc(e ecs.Entity, currentTripDuration_s f
 //
 // NetLogo: Foraging_costs&choiceProc ("&" is not allowed in Go names).
 func (f *forager) Foraging_costsAndChoiceProc(w *ecs.World, e ecs.Entity) bool {
-	who, _, b, _, _, fo, _ := f.beeMap.Get(e)
+	_, b, _, _, fo, _ := f.beeMap.Get(e)
 	persTimeSave := b.PersonalTime_s
 	saveNumber := float64(b.Number)
 	saveWeight_mg := b.Weight_mg
 	saveFlightCosts_kJ_per_m_per_mg := f.speciesMap.Get(b.SpeciesID).FlightCosts_kJ_per_m_per_mg
 
 	if b.Caste != caste.Worker && b.Caste != caste.Queen {
-		panic(fmt.Sprintf("%v %v %d shouldn't be foraging (Foraging_costs&timeProc)", b.Stage, b.Caste, who.Who))
+		panic(fmt.Sprintf("%v %v %d shouldn't be foraging (Foraging_costs&timeProc)", b.Stage, b.Caste, e.ID())) // Ark entity ID, not NetLogo's who (step F12)
 	}
 	if saveFlightCosts_kJ_per_m_per_mg < 0 {
 		panic("saveFlightCosts local variable not set (Foraging_costs&timeProc)")
@@ -478,7 +478,7 @@ func (f *forager) Foraging_costsAndChoiceProc(w *ecs.World, e ecs.Entity) bool {
 
 // Foraging_unloadingProc puts the load of the bee e into her colony's stores [UNLD].
 func (f *forager) Foraging_unloadingProc(e ecs.Entity) {
-	_, _, b, _, _, fo, _ := f.beeMap.Get(e)
+	_, b, _, _, fo, _ := f.beeMap.Get(e)
 	// [UNLD-01]
 	if b.Activity == activity.ExpForagingN || b.Activity == activity.ExpForagingP ||
 		b.Activity == activity.ReturningUnhappyN || b.Activity == activity.ReturningUnhappyP {

@@ -9,7 +9,7 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// A bee entity has the components Who, Position, Bee, Genetics, Thresholds, Forager and Development.
+// A bee entity has the components Position, Bee, Genetics, Thresholds, Forager and Development.
 // It is one bee or a cohort of Number bees (trans/data-model.md).
 // NetLogo: bees-own. Not translated: activityList (a log for the GUI, [GO-09]).
 

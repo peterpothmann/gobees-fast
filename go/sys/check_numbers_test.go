@@ -19,7 +19,7 @@ func checkWorld(t *testing.T) (*colonyWorld, ecs.Entity) {
 	t.Helper()
 	cw := newColonyWorld(t, 1)
 	hibernating := cw.addBee(ecs.Entity{}, stage.Adult, caste.Queen, 1, 100)
-	_, _, b, _, _, _, _ := cw.beeMap.Get(hibernating)
+	_, b, _, _, _, _ := cw.beeMap.Get(hibernating)
 	b.Activity = activity.Hibernate
 	col := cw.addColony(nil)
 	cw.addBee(col, stage.Adult, caste.Queen, 1, 300)

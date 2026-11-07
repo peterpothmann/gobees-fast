@@ -24,7 +24,7 @@ func qlnWorld(t *testing.T, unlimitedMales bool) (*colonyWorld, *QueensLeavingNe
 // addYoungQueen adds an unmated adult queen with the "youngQueen" thresholds [DEVP-04] to a colony.
 func (cw *colonyWorld) addYoungQueen(col ecs.Entity, number int) ecs.Entity {
 	e := cw.addBee(col, stage.Adult, caste.Queen, number, 0)
-	_, _, b, _, th, _, _ := cw.beeMap.Get(e)
+	_, b, _, th, _, _ := cw.beeMap.Get(e)
 	b.Mated = false
 	*th = thresholds(sitYoungQueen)
 	return e
@@ -33,7 +33,7 @@ func (cw *colonyWorld) addYoungQueen(col ecs.Entity, number int) ecs.Entity {
 // addMale adds an adult male with the given alleles (1: haploid, 2: diploid).
 func (cw *colonyWorld) addMale(col ecs.Entity, alleles ...float64) ecs.Entity {
 	e := cw.addBee(col, stage.Adult, caste.Male, 1, 0)
-	_, _, _, g, _, _, _ := cw.beeMap.Get(e)
+	_, _, g, _, _, _ := cw.beeMap.Get(e)
 	g.AllelesList = alleles
 	return e
 }
@@ -50,7 +50,7 @@ func TestQueensLeavingNestMating(t *testing.T) {
 	s.Update(cw.w)
 
 	// [QLN-01] the cohort of 3 leaves as one agent
-	_, _, b, g, th, _, _ := cw.beeMap.Get(young)
+	_, b, g, th, _, _ := cw.beeMap.Get(young)
 	if b.Number != 3 || !b.Mated || b.Activity != activity.Hibernate || !b.ColonyID.IsZero() {
 		t.Errorf("young queen: number %v, mated %v, activity %v, colony %v; want 3, true, hibernate, none",
 			b.Number, b.Mated, b.Activity, b.ColonyID)
@@ -65,14 +65,14 @@ func TestQueensLeavingNestMating(t *testing.T) {
 		t.Errorf("thresholds %+v, want %+v", *th, want)
 	}
 	// the list is a copy of the male's list
-	_, _, _, mg, _, _, _ := cw.beeMap.Get(male)
+	_, _, mg, _, _, _ := cw.beeMap.Get(male)
 	mg.AllelesList[0] = 99
 	if g.SpermathecaList[0] != 7 {
 		t.Errorf("spermathecaList shares the male's allelesList")
 	}
 	// the mother queen and the queen pupa stay in the colony
 	for _, e := range []ecs.Entity{mother, queenPupa} {
-		_, _, b, _, _, _, _ := cw.beeMap.Get(e)
+		_, b, _, _, _, _ := cw.beeMap.Get(e)
 		if b.ColonyID != col || b.Activity == activity.Hibernate {
 			t.Errorf("%v %v left the colony", b.Stage, b.Caste)
 		}
@@ -90,7 +90,7 @@ func TestQueensLeavingNestNoMale(t *testing.T) {
 	col := cw.addColony(nil)
 	young := cw.addYoungQueen(col, 2)
 	foreign := cw.addMale(col, 5)
-	_, _, fb, _, _, _, _ := cw.beeMap.Get(foreign)
+	_, fb, _, _, _, _ := cw.beeMap.Get(foreign)
 	fb.SpeciesID = other
 	cw.addBee(col, stage.Pupa, caste.Male, 4, 0)
 
@@ -114,7 +114,7 @@ func TestQueensLeavingNestUnlimitedMales(t *testing.T) {
 	s.Update(cw.w)
 	seen := map[float64]bool{}
 	for _, e := range queens {
-		_, _, b, g, _, _, _ := cw.beeMap.Get(e)
+		_, b, g, _, _, _ := cw.beeMap.Get(e)
 		if len(g.SpermathecaList) != 1 || g.SpermathecaList[0] > -1 || g.SpermathecaList[0] < -24 ||
 			g.SpermathecaList[0] != float64(int(g.SpermathecaList[0])) {
 			t.Fatalf("spermathecaList %v, want one integer allele in [-24, -1]", g.SpermathecaList)

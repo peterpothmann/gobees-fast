@@ -122,7 +122,6 @@ func testFlower(fs comp.Foodsource) string {
 
 func TestCreateLayersProc(t *testing.T) {
 	w := ecs.NewWorld()
-	who := &globals.WhoCounter{}
 	flowers := &params.FlowerSpeciesTable{
 		Names: []string{"A", "B", "C"},
 		Rows: []params.FlowerSpecies{
@@ -133,22 +132,23 @@ func TestCreateLayersProc(t *testing.T) {
 	}
 	file := &params.ParameterFile{AbundanceBoost: 1, FoodSourceLimit: 1, MinSizeFoodSources: true, RemoveEmptyFoodSources: true}
 	// limits [LAYR-01]: 180 microlitres nectar, 0.05 g pollen
-	p1 := &flowerPatch{who: who.Next(), FlowerPatch: params.FlowerPatch{PatchType: "Grassland", X: 10.2, Y: 20.4,
+	p1 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Grassland", X: 10.2, Y: 20.4,
 		Area_sqm: 100, FlowerSpeciesList: []params.FlowerEntry{{Name: "A", Value: 2, HasValue: true}, {Name: "Margin"},
 			{Name: "B", Value: 1, HasValue: true}, {Name: "C", Value: 1, HasValue: true}}}}
-	p2 := &flowerPatch{who: who.Next(), FlowerPatch: params.FlowerPatch{PatchType: "Crop_Cereals", X: 10.4, Y: 19.6,
+	p2 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Crop_Cereals", X: 10.4, Y: 19.6,
 		Area_sqm: 100, FlowerSpeciesList: []params.FlowerEntry{{Name: "B", Value: 1, HasValue: true}}}}
-	p3 := &flowerPatch{who: who.Next(), FlowerPatch: params.FlowerPatch{PatchType: "Scrub", X: 50, Y: 50, Area_sqm: 400}}
+	p3 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Scrub", X: 50, Y: 50, Area_sqm: 400}}
 
-	if err := CreateLayersProc(w, []*flowerPatch{p1, p2, p3}, flowers, file, []string{"Margin", "Plot"}, who, rand.New(rand.NewPCG(1, 1))); err != nil {
+	masterpatches, err := CreateLayersProc(w, []*flowerPatch{p1, p2, p3}, flowers, file, []string{"Margin", "Plot"}, rand.New(rand.NewPCG(1, 1)))
+	if err != nil {
 		t.Fatal(err)
 	}
 
 	byKey := map[string]testLayer{}
-	query := ecs.NewFilter3[comp.Who, comp.Foodsource, comp.Layer](w).Query()
+	query := ecs.NewFilter2[comp.Foodsource, comp.Layer](w).Query()
 	for query.Next() {
-		wh, fs, l := query.Get()
-		byKey[fs.PatchType+"/"+testFlower(*fs)] = testLayer{query.Entity(), wh.Who, *fs, *l}
+		fs, l := query.Get()
+		byKey[fs.PatchType+"/"+testFlower(*fs)] = testLayer{query.Entity(), *fs, *l}
 	}
 	if len(byKey) != 4 {
 		t.Fatalf("got %d foodsources, want 4: %v", len(byKey), byKey)
@@ -171,10 +171,6 @@ func TestCreateLayersProc(t *testing.T) {
 	if crop.fs.NectarMax_myl != 0 || crop.fs.PollenMax_g != 0 {
 		t.Errorf("crop layer B = %+v, want no food", crop.fs)
 	}
-	// Finding 18 (see trans/netlogo-findings.md#finding-18): the removed layer B used up a who number between A and C
-	if c.who-a.who != 2 {
-		t.Errorf("who A %d, C %d: the removed layer B must leave a gap", a.who, c.who)
-	}
 	// [LAYR-08] masterpatches
 	if !a.l.Masterpatch || a.l.MasterpatchID != a.e || c.l.Masterpatch || c.l.MasterpatchID != a.e {
 		t.Errorf("A master %v -> %v, C master %v -> %v", a.l.Masterpatch, a.l.MasterpatchID, c.l.Masterpatch, c.l.MasterpatchID)
@@ -182,14 +178,14 @@ func TestCreateLayersProc(t *testing.T) {
 	if !crop.l.Masterpatch || crop.l.MasterpatchID != crop.e {
 		t.Error("the crop layer must be its own masterpatch")
 	}
-	// [LAYR-09] finding 19 (see trans/netlogo-findings.md#finding-19): a flower patch with an empty list stays, without food, with its own who number
-	if !scrub.l.Masterpatch || scrub.who != p3.who || scrub.fs.NectarMax_myl != 0 || scrub.fs.PollenMax_g != 0 ||
+	// [LAYR-09] finding 19 (see trans/netlogo-findings.md#finding-19): a flower patch with an empty list stays, without food
+	if !scrub.l.Masterpatch || scrub.fs.NectarMax_myl != 0 || scrub.fs.PollenMax_g != 0 ||
 		scrub.fs.StartDay != 0 || scrub.fs.StopDay != 0 {
 		t.Errorf("scrub = %+v %+v", scrub.fs, scrub.l)
 	}
 	// [LAYR-10] finding 15 (see trans/netlogo-findings.md#finding-15), fixed in step F5: A, C and the crop layer lie
-	// in the same patch cell (10, 20). A and C share the list of the grassland, sorted by who (A before C, see the
-	// gap above). The crop layer has its own list (NetLogo: one list of all three).
+	// in the same patch cell (10, 20). A and C share the list of the grassland, sorted by who (A before C: order of
+	// creation, step F12). The crop layer has its own list (NetLogo: one list of all three).
 	for _, l := range []testLayer{a, c} {
 		if want := []ecs.Entity{a.e, c.e}; !slices.Equal(l.l.LayersInPatchList, want) {
 			t.Errorf("%s/%s: layersInPatchList %v, want %v", l.fs.PatchType, testFlower(l.fs), l.l.LayersInPatchList, want)
@@ -201,14 +197,19 @@ func TestCreateLayersProc(t *testing.T) {
 	if !slices.Equal(scrub.l.LayersInPatchList, []ecs.Entity{scrub.e}) {
 		t.Errorf("scrub: layersInPatchList %v", scrub.l.LayersInPatchList)
 	}
+	// step F12: the masterpatches in who order. The scrub is not split and took its who number in [FSRC-04], before
+	// all layers, so it comes first. The grassland and the crop field follow in the shuffled order of [LAYR-03].
+	if len(masterpatches) != 3 || masterpatches[0] != scrub.e ||
+		!slices.Contains(masterpatches[1:], a.e) || !slices.Contains(masterpatches[1:], crop.e) {
+		t.Errorf("masterpatches %v, want scrub %v first, then A %v and crop %v", masterpatches, scrub.e, a.e, crop.e)
+	}
 }
 
 // testLayer is a foodsource as read back in TestCreateLayersProc.
 type testLayer struct {
-	e   ecs.Entity
-	who int64
-	fs  comp.Foodsource
-	l   comp.Layer
+	e  ecs.Entity
+	fs comp.Foodsource
+	l  comp.Layer
 }
 
 // newExampleFarmSetup runs the initialisation systems of steps 1 and 2 on the example farm (the run file built into
@@ -242,7 +243,6 @@ func newExampleFarmSetupFiles(t *testing.T, seed float64, landscapes map[string]
 
 	a := app.New()
 	p.Apply(a.World)
-	ecs.AddResource(a.World, &globals.WhoCounter{})
 	ecs.AddResource(a.World, &globals.ActiveBees{})
 	ecs.AddResource(a.World, &globals.Daytime{})
 	a.AddSystem(&Parameters{})

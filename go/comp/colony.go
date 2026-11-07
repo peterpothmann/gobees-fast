@@ -6,7 +6,7 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// A colony entity has the components Who, Position, Colony, ColonyStores, ColonyStimuli, ColonyCounts and
+// A colony entity has the components Position, Colony, ColonyStores, ColonyStimuli, ColonyCounts and
 // ColonyRange. NetLogo: colonies-own (56 variables), split by topic (trans/data-model.md).
 // Not translated: masterpatchesInRangeList (never read, finding 23, see trans/netlogo-findings.md#finding-23).
 

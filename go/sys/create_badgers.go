@@ -25,9 +25,8 @@ type CreateBadgers struct{}
 func (s *CreateBadgers) Initialize(w *ecs.World) {
 	file := ecs.GetResource[params.ParameterFile](w)
 	landscape := ecs.GetResource[globals.Landscape](w)
-	who := ecs.GetResource[globals.WhoCounter](w)
 	rng := rand.New(ecs.GetResource[resource.Rand](w))
-	CreateBadgersProc(w, int(file.N_Badgers), landscape.Scaling_NLpatches_per_m, who, rng)
+	CreateBadgersProc(w, int(file.N_Badgers), landscape.Scaling_NLpatches_per_m, rng)
 }
 
 func (s *CreateBadgers) Update(w *ecs.World) {}
@@ -36,7 +35,7 @@ func (s *CreateBadgers) Finalize(w *ecs.World) {}
 
 // CreateBadgersProc creates n badgers on "Scrub" masterpatches [BADC], finding 48 (see
 // trans/netlogo-findings.md#finding-48).
-func CreateBadgersProc(w *ecs.World, n int, scaling_NLpatches_per_m float64, who *globals.WhoCounter, rng *rand.Rand) {
+func CreateBadgersProc(w *ecs.World, n int, scaling_NLpatches_per_m float64, rng *rand.Rand) {
 	burrowHabitatsList := []string{"Scrub"} // case-sensitive, as member?
 	const distanceLimit_m = 300
 	distance_patches := distanceLimit_m * scaling_NLpatches_per_m
@@ -55,12 +54,13 @@ func CreateBadgersProc(w *ecs.World, n int, scaling_NLpatches_per_m float64, who
 		}
 	}
 
-	// [BADC-01] create-badgers creates ALL badgers first, at the origin (0, 0), each with a who number. Then each
+	// [BADC-01] create-badgers creates ALL badgers first, at the origin (0, 0), each with a who number (not
+	// kept, step F12). Then each
 	// runs the block, in random order (as ask).
-	badgerMap := ecs.NewMap3[comp.Who, comp.Position, comp.Badger](w)
+	badgerMap := ecs.NewMap2[comp.Position, comp.Badger](w)
 	badgers := make([]ecs.Entity, n)
 	for i := range badgers {
-		badgers[i] = badgerMap.NewEntity(&comp.Who{Who: who.Next()}, &comp.Position{}, &comp.Badger{})
+		badgers[i] = badgerMap.NewEntity(&comp.Position{}, &comp.Badger{})
 	}
 	placed := []ecs.Entity{}
 	util.Shuffle(rng, badgers)
@@ -74,7 +74,7 @@ func CreateBadgersProc(w *ecs.World, n int, scaling_NLpatches_per_m float64, who
 		}
 		chosenFs := burrowFsSet[rng.IntN(len(burrowFsSet))]
 		// the badger moves to the centre of the patch cell of the foodsource (pxcor, pycor)
-		_, pos, _ := badgerMap.Get(b)
+		pos, _ := badgerMap.Get(b)
 		pos.X, pos.Y = float64(util.Pcor(chosenFs.pos.X)), float64(util.Pcor(chosenFs.pos.Y))
 		placed = append(placed, b)
 
@@ -85,7 +85,7 @@ func CreateBadgersProc(w *ecs.World, n int, scaling_NLpatches_per_m float64, who
 		for _, site := range sites {
 			free := true
 			for _, other := range placed {
-				_, p, _ := badgerMap.Get(other)
+				p, _ := badgerMap.Get(other)
 				samePatch := util.Pcor(p.X) == util.Pcor(site.pos.X) && util.Pcor(p.Y) == util.Pcor(site.pos.Y)
 				if samePatch || util.Distance(site.pos.X, site.pos.Y, p.X, p.Y) <= distance_patches {
 					free = false

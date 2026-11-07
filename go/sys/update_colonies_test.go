@@ -32,7 +32,6 @@ type colonyWorld struct {
 	species   int           // index of B_terrestris
 	colonyMap *colonyMapper
 	beeMap    *beeMapper
-	who       *globals.WhoCounter
 }
 
 func newColonyWorld(t *testing.T, seed uint64) *colonyWorld {
@@ -51,8 +50,6 @@ func newColonyWorld(t *testing.T, seed uint64) *colonyWorld {
 	cw.today = &globals.FoodsourcesToday{}
 	ecs.AddResource(w, cw.today)
 	ecs.AddResource(w, &globals.Landscape{Scaling_NLpatches_per_m: 0.1})
-	cw.who = &globals.WhoCounter{}
-	ecs.AddResource(w, cw.who)
 	cw.tally = newTally(w)
 	ecs.AddResource(w, &globals.ActiveBees{})
 	ecs.AddResource(w, &globals.Daytime{})
@@ -60,7 +57,7 @@ func newColonyWorld(t *testing.T, seed uint64) *colonyWorld {
 	cw.input = &params.Input{Species: []comp.Species{*terrestris(t)}} // seasonStop 305
 	ecs.AddResource(w, cw.input)
 	cw.species = 0
-	cw.colonyMap = ecs.NewMap7[comp.Who, comp.Position, comp.Colony, comp.ColonyStores, comp.ColonyStimuli, comp.ColonyCounts, comp.ColonyRange](w)
+	cw.colonyMap = ecs.NewMap6[comp.Position, comp.Colony, comp.ColonyStores, comp.ColonyStimuli, comp.ColonyCounts, comp.ColonyRange](w)
 	cw.beeMap = newBeeMapper(w)
 
 	cw.sys = &UpdateColonies{}
@@ -76,7 +73,7 @@ func (cw *colonyWorld) addColony(change func(c *comp.Colony, s *comp.ColonyStore
 	if change != nil {
 		change(&c, &s, &n)
 	}
-	return cw.colonyMap.NewEntity(&comp.Who{Who: cw.who.Next()}, &comp.Position{}, &c, &s, &comp.ColonyStimuli{}, &n, &comp.ColonyRange{})
+	return cw.colonyMap.NewEntity(&comp.Position{}, &c, &s, &comp.ColonyStimuli{}, &n, &comp.ColonyRange{})
 }
 
 // addBee adds a bee or cohort to a colony. Adult queens are mated.
@@ -84,12 +81,12 @@ func (cw *colonyWorld) addBee(col ecs.Entity, st stage.Stage, c caste.Caste, num
 	b := comp.Bee{Number: number, Stage: st, Caste: c, Activity: activity.Resting,
 		ColonyID: col, SpeciesID: cw.species, AdultAge: adultAge, Weight_mg: 100,
 		Mated: st == stage.Adult && c == caste.Queen}
-	return cw.beeMap.NewEntity(&comp.Who{Who: cw.who.Next()}, &comp.Position{}, &b, &comp.Genetics{},
+	return cw.beeMap.NewEntity(&comp.Position{}, &b, &comp.Genetics{},
 		&comp.Thresholds{}, &comp.Forager{}, &comp.Development{})
 }
 
 func (cw *colonyWorld) colony(e ecs.Entity) (*comp.Colony, *comp.ColonyStores, *comp.ColonyCounts) {
-	_, _, c, s, _, n, _ := cw.colonyMap.Get(e)
+	_, c, s, _, n, _ := cw.colonyMap.Get(e)
 	return c, s, n
 }
 
@@ -107,7 +104,7 @@ func TestUpdateColoniesStatistics(t *testing.T) {
 	})
 	cw.addBee(col, stage.Adult, caste.Queen, 1, 300)
 	young := cw.addBee(col, stage.Adult, caste.Queen, 1, 2)
-	_, _, b, _, _, _, _ := cw.beeMap.Get(young)
+	_, b, _, _, _, _ := cw.beeMap.Get(young)
 	b.Activity = activity.Hibernate
 	b.Weight_mg = 800
 	cw.addBee(col, stage.Adult, caste.Worker, 3, 5)
@@ -164,7 +161,7 @@ func TestUpdateColoniesDeathAfterCP(t *testing.T) {
 	if cw.tally.beesDied != 2 {
 		t.Errorf("%v bees died, want 2", cw.tally.beesDied)
 	}
-	_, _, b, _, _, _, _ := cw.beeMap.Get(youngWorker)
+	_, b, _, _, _, _ := cw.beeMap.Get(youngWorker)
 	b.AdultAge = 11
 	cw.nextMorning() // 203: the young worker is now older than 10 days, only the male is left
 	if cw.w.Alive(youngWorker) || !cw.w.Alive(col) {
@@ -308,16 +305,16 @@ func TestUpdateColoniesRangeLists(t *testing.T) {
 	}
 	col := cw.addColony(nil)
 	cw.addBee(col, stage.Adult, caste.Queen, 1, 300)
-	_, _, _, _, _, _, r := cw.colonyMap.Get(col)
+	_, _, _, _, _, r := cw.colonyMap.Get(col)
 	r.AllPatchesInRangeList = []ecs.Entity{inFlower, notInFlower}
 
 	cw.nextMorning() // no update
-	if _, _, _, _, _, _, r := cw.colonyMap.Get(col); len(r.MasterpatchesWithPollenlayersInFlowerAndRangeList) != 0 {
+	if _, _, _, _, _, r := cw.colonyMap.Get(col); len(r.MasterpatchesWithPollenlayersInFlowerAndRangeList) != 0 {
 		t.Fatal("lists must not change without FoodsourcesInFlowerUpdate")
 	}
 	cw.today.FoodsourcesInFlowerUpdate = true
 	cw.nextMorning()
-	_, _, _, _, _, _, r = cw.colonyMap.Get(col)
+	_, _, _, _, _, r = cw.colonyMap.Get(col)
 	if len(r.MasterpatchesWithPollenlayersInFlowerAndRangeList) != 1 || r.MasterpatchesWithPollenlayersInFlowerAndRangeList[0] != inFlower ||
 		len(r.MasterpatchesWithNectarlayersInFlowerAndRangeList) != 1 {
 		t.Errorf("lists after the update: %+v", *r)

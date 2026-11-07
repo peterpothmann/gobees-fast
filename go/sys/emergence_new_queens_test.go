@@ -50,16 +50,15 @@ func newEmergenceWorld(t *testing.T, seed uint64) *emergenceWorld {
 	ew.derived = &globals.Derived{MortalityForager_per_s: 0}
 	ecs.AddResource(w, ew.derived)
 	ecs.AddResource(w, &globals.Landscape{Scaling_NLpatches_per_m: 0.1})
-	ecs.AddResource(w, &globals.WhoCounter{})
 	ew.tally = newTally(w)
 	ew.active = &globals.ActiveBees{}
 	ecs.AddResource(w, ew.active)
 
-	fsMap := ecs.NewMap5[comp.Who, comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](w)
-	ew.bigSite = fsMap.NewEntity(&comp.Who{Who: 0}, &comp.Position{X: 100, Y: 100},
+	fsMap := ecs.NewMap4[comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](w)
+	ew.bigSite = fsMap.NewEntity(&comp.Position{X: 100, Y: 100},
 		&comp.Foodsource{PatchType: "Grassland", Area_sqm: 10000, Radius_m: math.Sqrt(10000 / math.Pi)},
 		&comp.FoodsourceState{}, &comp.Layer{Masterpatch: true})
-	ew.smallSite = fsMap.NewEntity(&comp.Who{Who: 1}, &comp.Position{X: 50.3, Y: 50.2},
+	ew.smallSite = fsMap.NewEntity(&comp.Position{X: 50.3, Y: 50.2},
 		&comp.Foodsource{PatchType: "Hedgerow", Area_sqm: 100, Radius_m: math.Sqrt(100 / math.Pi)},
 		&comp.FoodsourceState{}, &comp.Layer{Masterpatch: true})
 
@@ -82,7 +81,7 @@ func (ew *emergenceWorld) addQueen(emergingDate day.Abs, number int, weight floa
 	bee := comp.Bee{Number: number, Stage: stage.Adult, Caste: caste.Queen, Activity: activity.Hibernate, Mated: true,
 		SpeciesID: ew.species, EmergingDate: day.At(emergingDate), Weight_mg: weight}
 	gen := comp.Genetics{AllelesList: []float64{1, 2}, SpermathecaList: []float64{3}}
-	return newBeeMapper(ew.w).NewEntity(&comp.Who{Who: ecs.GetResource[globals.WhoCounter](ew.w).Next()}, &comp.Position{},
+	return newBeeMapper(ew.w).NewEntity(&comp.Position{},
 		&bee, &gen, &comp.Thresholds{}, &comp.Forager{}, &comp.Development{})
 }
 
@@ -105,9 +104,8 @@ func TestEmergenceSplitsCohort(t *testing.T) {
 
 	// [EMER-01] the cohort of 3 is split into 3 queens with number 1, identical copies (finding 32)
 	beeMap := newBeeMapper(ew.w)
-	_, _, orig, origGen, _, _, _ := beeMap.Get(q)
+	_, orig, origGen, _, _, _ := beeMap.Get(q)
 	emerged := 0
-	whos := map[int64]bool{}
 	for e, b := range ew.bees() {
 		if b.EmergingDate != day.At(10) {
 			if b.Activity != activity.Hibernate {
@@ -116,21 +114,20 @@ func TestEmergenceSplitsCohort(t *testing.T) {
 			continue
 		}
 		emerged++
-		who, _, _, gen, th, _, _ := beeMap.Get(e)
-		whos[who.Who] = true
+		_, _, gen, th, _, _ := beeMap.Get(e)
 		// [EMER-02] resting, no colony; thresholds of the initiation phase
 		if b.Number != 1 || b.Weight_mg != orig.Weight_mg || b.Activity != activity.Resting || !b.ColonyID.IsZero() ||
 			*th != thresholds(sitQueenInitiationPhase) || gen.AllelesList[1] != origGen.AllelesList[1] {
 			t.Errorf("queen %+v %+v", b, *th)
 		}
 	}
-	if emerged != 3 || len(whos) != 3 {
-		t.Fatalf("%d emerged queens with %d who numbers, want 3", emerged, len(whos))
+	if emerged != 3 {
+		t.Fatalf("%d emerged queens, want 3", emerged)
 	}
 	// the copies do not share their lists with the original
 	origGen.AllelesList[0] = 99
 	for e := range ew.bees() {
-		if _, _, _, gen, _, _, _ := beeMap.Get(e); e != q && gen.AllelesList[0] == 99 {
+		if _, _, gen, _, _, _ := beeMap.Get(e); e != q && gen.AllelesList[0] == 99 {
 			t.Error("a copy shares its allele list with the original")
 		}
 	}
@@ -175,7 +172,7 @@ func TestNestSearchFoundsColonies(t *testing.T) {
 			t.Fatalf("queen without colony: %+v", b)
 		}
 		colonies[b.ColonyID] = true
-		_, qPos, _, _, _, _, _ := beeMap.Get(e)
+		qPos, _, _, _, _, _ := beeMap.Get(e)
 		cPos, col, stores := colonyMap.Get(b.ColonyID)
 		// the colony is at the queen's position, a patch centre (finding 25)
 		if *cPos != *qPos || cPos.X != math.Trunc(cPos.X) || cPos.Y != math.Trunc(cPos.Y) {
@@ -239,8 +236,7 @@ func TestNestSearchNoPatchCentre(t *testing.T) {
 	// no patch centre in its circle (radius 0.564 patches). The colony is placed at the centre of the patch cell of
 	// the foodsource. y = 112.5 lies on the border between two cells, NetLogo rounds .5 up: (134, 113).
 	ew := newEmergenceWorld(t, 6)
-	hedge := ecs.NewMap5[comp.Who, comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](ew.w).NewEntity(
-		&comp.Who{Who: 3}, &comp.Position{X: 133.548, Y: 112.5},
+	hedge := ecs.NewMap4[comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](ew.w).NewEntity(&comp.Position{X: 133.548, Y: 112.5},
 		&comp.Foodsource{PatchType: "Hedgerow", Area_sqm: 100, Radius_m: math.Sqrt(100 / math.Pi)},
 		&comp.FoodsourceState{}, &comp.Layer{Masterpatch: true})
 	ew.ns.NestsiteFoodsourceList = []ecs.Entity{hedge}
@@ -288,13 +284,13 @@ func TestDieRemovesFromActiveBees(t *testing.T) {
 func TestPatchesInRangeAndFlowerLists(t *testing.T) {
 	ew := newEmergenceWorld(t, 8)
 	w := ew.w
-	fsMap := ecs.NewMap5[comp.Who, comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](w)
+	fsMap := ecs.NewMap4[comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](w)
 	// colony at (0, 0); range 758 m * 0.1 = 75.8 patches
 	newFs := func(x, pollen, nectar float64, master ecs.Entity) ecs.Entity {
-		e := fsMap.NewEntity(&comp.Who{}, &comp.Position{X: x, Y: 0}, &comp.Foodsource{},
+		e := fsMap.NewEntity(&comp.Position{X: x, Y: 0}, &comp.Foodsource{},
 			&comp.FoodsourceState{Pollen_g: pollen, Nectar_myl: nectar}, &comp.Layer{MasterpatchID: master})
 		if master.IsZero() {
-			_, _, _, _, l := fsMap.Get(e)
+			_, _, _, l := fsMap.Get(e)
 			l.MasterpatchID = e
 		}
 		return e
@@ -306,7 +302,7 @@ func TestPatchesInRangeAndFlowerLists(t *testing.T) {
 	e := newFs(20, 0, 0, ecs.Entity{}) // in range, not in flower
 	_ = c
 
-	colony := ew.sys.colonies.colonyMap.NewEntity(&comp.Who{}, &comp.Position{X: 0, Y: 0}, &comp.Colony{},
+	colony := ew.sys.colonies.colonyMap.NewEntity(&comp.Position{X: 0, Y: 0}, &comp.Colony{},
 		&comp.ColonyStores{}, &comp.ColonyStimuli{}, &comp.ColonyCounts{}, &comp.ColonyRange{})
 	ew.sys.colonies.PatchesInRangeProc(colony)
 	ew.sys.colonies.FoodsourcesInFlowerAndRangeProc(colony)

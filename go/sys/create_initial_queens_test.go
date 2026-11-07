@@ -19,14 +19,12 @@ func TestCreateInitialQueensExampleFarm(t *testing.T) {
 	sp := terrestris(t)
 	spIndex := speciesIndices(w)["B_terrestris"][0]
 
-	query := ecs.NewFilter7[comp.Who, comp.Position, comp.Bee, comp.Genetics, comp.Thresholds, comp.Forager, comp.Development](w).Query()
+	query := ecs.NewFilter6[comp.Position, comp.Bee, comp.Genetics, comp.Thresholds, comp.Forager, comp.Development](w).Query()
 	n := 0
 	sumWeight, sumEmergence := 0.0, 0.0
-	whos := map[int64]bool{}
 	for query.Next() {
-		who, _, b, g, th, f, _ := query.Get()
+		_, b, g, th, f, _ := query.Get()
 		n++
-		whos[who.Who] = true
 		// [IQUE-03], [IQUE-04]
 		// brood? false: stage adult, ploidy 2: 2 alleles (below), speciesName: the species (step F9)
 		if b.Caste != caste.Queen || b.Stage != stage.Adult || b.Activity != activity.Hibernate || !b.Mated ||
@@ -59,8 +57,8 @@ func TestCreateInitialQueensExampleFarm(t *testing.T) {
 		sumWeight += b.Weight_mg
 		sumEmergence += float64(b.EmergingDate.Day())
 	}
-	if n != 500 || len(whos) != 500 {
-		t.Fatalf("got %d queens with %d who numbers, want 500 (\"B_terrestris 500\")", n, len(whos))
+	if n != 500 {
+		t.Fatalf("got %d queens, want 500 (\"B_terrestris 500\")", n)
 	}
 	// statistics over 500 queens: mean 785 mg (sd 97.5, cut at 590 and 980) and mean emergence day 91 (sd 28)
 	if m := sumWeight / 500; math.Abs(m-785) > 20 {
