@@ -16,19 +16,19 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// QueensLeavingNest [GO-12].
+// queensLeavingNest [GO-12].
 //
 // Every young (unmated) adult queen in a colony leaves it, mates and starts to hibernate.
-// A young queen emerges in Development [DEVP-04], which runs after this system, so she stays in the colony for
+// A young queen emerges in development [DEVP-04], which runs after this system, so she stays in the colony for
 // one whole day and leaves on the next evening [QLN-01].
 // Not translated: size, shape, color (GUI).
 //
 // NetLogo: QueensLeavingNestProc.
-type QueensLeavingNest struct {
-	rng       *rand.Rand
-	file      *params.ParameterFile
-	constants *params.Constants
-	death     beeDeath
+type queensLeavingNest struct {
+	rng        *rand.Rand
+	parameters *params.Parameters
+	constants  *params.Constants
+	death      beeDeath
 
 	beeFilter *ecs.Filter1[comp.Bee]
 	beeMap    *ecs.Map3[comp.Bee, comp.Genetics, comp.Thresholds]
@@ -36,19 +36,19 @@ type QueensLeavingNest struct {
 	queens []ecs.Entity // buffer of askBees
 }
 
-func (s *QueensLeavingNest) Initialize(w *ecs.World) {
+func (s *queensLeavingNest) Initialize(w *ecs.World) {
 	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
-	s.file = ecs.GetResource[params.ParameterFile](w)
+	s.parameters = ecs.GetResource[params.Parameters](w)
 	s.constants = ecs.GetResource[params.Constants](w)
 	s.death = newBeeDeath(w)
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
 	s.beeMap = ecs.NewMap3[comp.Bee, comp.Genetics, comp.Thresholds](w)
 }
 
-func (s *QueensLeavingNest) Update(w *ecs.World) {
+func (s *queensLeavingNest) Update(w *ecs.World) {
 	// [QLN-01] ORDER: irrelevant. Each queen only changes herself, and mating does not use up the male.
 	s.queens = askBees(s.queens, s.beeFilter, s.rng, func(b *comp.Bee) bool {
-		return b.Stage == stage.Adult && b.Caste == caste.Queen && !b.Mated && !b.ColonyID.IsZero()
+		return b.Stage == stage.Adult && b.Caste == caste.Queen && !b.Mated && !b.Colony.IsZero()
 	})
 	if len(s.queens) == 0 {
 		return
@@ -59,39 +59,39 @@ func (s *QueensLeavingNest) Update(w *ecs.World) {
 	query := s.beeFilter.Query()
 	for query.Next() {
 		if b := query.Get(); b.Caste == caste.Male && b.Stage == stage.Adult {
-			males[b.SpeciesID] = append(males[b.SpeciesID], query.Entity())
+			males[b.Species] = append(males[b.Species], query.Entity())
 		}
 	}
 
 	for _, e := range s.queens {
 		bee, gen, th := s.beeMap.Get(e)
 		// [QLN-02]
-		if candidates := males[bee.SpeciesID]; len(candidates) > 0 {
+		if candidates := males[bee.Species]; len(candidates) > 0 {
 			// one-of: a random male of her species, haploid or diploid
 			_, maleGen, _ := s.beeMap.Get(candidates[s.rng.IntN(len(candidates))])
-			gen.SpermathecaList = slices.Clone(maleGen.AllelesList)
+			gen.Spermatheca = slices.Clone(maleGen.Alleles)
 		} else {
 			// mating with a male from outside
-			if !s.file.UnlimitedMales {
-				s.death.DieProc(w, e, "Queen: no mating")
+			if !s.parameters.UnlimitedMales {
+				s.death.die(w, e, "Queen: no mating")
 				continue // finding 28 (see trans/netlogo-findings.md#finding-28)
 			}
-			foreignAllele := -1*util.RandomInt(s.rng, s.constants.N_ForeignAlleles) - 1 // -1, -2, ... -N_ForeignAlleles
-			gen.SpermathecaList = append([]float64{foreignAllele}, gen.SpermathecaList...)
-			if len(gen.SpermathecaList) > 1 {
-				panic(fmt.Sprintf("Assertion violated in QueensLeavingNestProc: too many alleles here! %v", gen.SpermathecaList))
+			foreignAllele := -1*util.RandomInt(s.rng, s.constants.ForeignAlleles) - 1 // -1, -2, ... -ForeignAlleles
+			gen.Spermatheca = append([]float64{foreignAllele}, gen.Spermatheca...)
+			if len(gen.Spermatheca) > 1 {
+				panic(fmt.Sprintf("Assertion violated in QueensLeavingNestProc: too many alleles here! %v", gen.Spermatheca))
 			}
 		}
 		// [QLN-03] the other three thresholds stay "youngQueen" until she emerges next year [EMER-01]
 		bee.Mated = true
-		th.ThEgglaying = ThresholdLevelREP(thEggLaying, sitQueenInitiationPhase)
+		th.Egglaying = thresholdLevel(thEggLaying, sitQueenInitiationPhase)
 		bee.Activity = activity.Hibernate
-		bee.ColonyID = ecs.Entity{}
+		bee.Colony = ecs.Entity{}
 		// [QLN-04] mated with a diploid male: she could not found a colony
-		if len(gen.SpermathecaList) == 2 {
-			s.death.DieProc(w, e, "Queen: mating with diploid male")
+		if len(gen.Spermatheca) == 2 {
+			s.death.die(w, e, "Queen: mating with diploid male")
 		}
 	}
 }
 
-func (s *QueensLeavingNest) Finalize(w *ecs.World) {}
+func (s *queensLeavingNest) Finalize(w *ecs.World) {}

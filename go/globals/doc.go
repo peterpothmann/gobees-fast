@@ -3,5 +3,6 @@
 // landscape, the nest sites). The read-only values (parameters, derived values, species) are in package
 // params (step F14).
 //
-// Naming: fields keep the NetLogo names of the globals, as in package params.
+// Naming: Go names without units (step F15b). The unit stands in the doc comment of the field, and the comment
+// names the NetLogo global where the name differs from it (table in docs/names.md).
 package globals

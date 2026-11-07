@@ -38,10 +38,10 @@ type Counters struct {
 	// TimeToExtinction is the ticks of the first day without colonies and bees, 0 before [GO-20].
 	TimeToExtinction float64
 
-	ticks    *globals.Ticks
-	calendar *globals.Calendar
-	file     *params.ParameterFile
-	output   *params.Output
+	ticks      *globals.Ticks
+	calendar   *globals.Calendar
+	parameters *params.Parameters
+	output     *params.Output
 
 	beeFilter    *ecs.Filter1[comp.Bee]
 	colonyFilter *ecs.Filter1[comp.Colony]
@@ -54,7 +54,7 @@ type Counters struct {
 func (c *Counters) Initialize(w *ecs.World) {
 	c.ticks = ecs.GetResource[globals.Ticks](w)
 	c.calendar = ecs.GetResource[globals.Calendar](w)
-	c.file = ecs.GetResource[params.ParameterFile](w)
+	c.parameters = ecs.GetResource[params.Parameters](w)
 	c.output = ecs.GetResource[params.Output](w)
 	c.beeFilter = ecs.NewFilter1[comp.Bee](w)
 	c.colonyFilter = ecs.NewFilter1[comp.Colony](w)
@@ -84,7 +84,7 @@ func (c *Counters) Initialize(w *ecs.World) {
 func (c *Counters) Update(w *ecs.World) {
 	c.TotalForagingTripsToday, c.tripsToday = c.tripsToday, 0
 
-	// [UCOL-12] UpdateColonies removes the dead colonies on day 1 after the colonies of that day have died
+	// [UCOL-12] colonyUpdate removes the dead colonies on day 1 after the colonies of that day have died
 	if c.calendar.Day == 1 && !c.output.KeepDeadColonies {
 		c.DeadColonies = 0
 	} else {
@@ -127,5 +127,5 @@ func (c *Counters) planQueenRemoval() {
 			hibernating += b.Number
 		}
 	}
-	c.queensToBeRemoved = max(0, hibernating-c.file.MaxHibernatingQueens)
+	c.queensToBeRemoved = max(0, hibernating-c.parameters.MaxHibernatingQueens)
 }

@@ -11,15 +11,15 @@ import (
 )
 
 // prowlWorld is a colonyWorld (Scaling 0.1 patches per m: 735 m = 73.5 patches) with badgers at the given
-// positions and the BadgersOnTheProwl system.
-func prowlWorld(t *testing.T, seed uint64, badgers ...comp.Position) (*colonyWorld, *BadgersOnTheProwl) {
+// positions and the badgers system.
+func prowlWorld(t *testing.T, seed uint64, positions ...comp.Position) (*colonyWorld, *badgers) {
 	t.Helper()
 	cw := newColonyWorld(t, seed)
 	m := ecs.NewMap2[comp.Position, comp.Badger](cw.w)
-	for _, p := range badgers {
+	for _, p := range positions {
 		m.NewEntity(&p, &comp.Badger{})
 	}
-	s := &BadgersOnTheProwl{}
+	s := &badgers{}
 	s.Initialize(cw.w)
 	return cw, s
 }
@@ -36,7 +36,7 @@ func TestBadgersDigUpColony(t *testing.T) {
 	// [BADG-01] a dug-up colony loses its stores and all its bees. The colony dies the next morning in [UCOL-11].
 	cw, s := prowlWorld(t, 1, comp.Position{X: 0, Y: 0})
 	near := cw.addColonyAt(10, 0, func(c *comp.Colony, st *comp.ColonyStores, n *comp.ColonyCounts) {
-		st.EnergyStore_kJ, st.PollenStore_g = 50, 3
+		st.Energy, st.Pollen = 50, 3
 	})
 	cw.addBee(near, stage.Adult, caste.Queen, 1, 30)
 	cw.addBee(near, stage.Adult, caste.Worker, 3, 5)
@@ -47,14 +47,14 @@ func TestBadgersDigUpColony(t *testing.T) {
 	hibernating := cw.addHibernatingQueen(1) // colonyID -1 and position (0, 0): safe
 
 	for day := 0; day < 2000; day++ {
-		if _, st, _ := cw.colony(near); st.EnergyStore_kJ == 0 {
+		if _, st, _ := cw.colony(near); st.Energy == 0 {
 			break
 		}
 		s.Update(cw.w)
 	}
 	_, st, _ := cw.colony(near)
-	if st.EnergyStore_kJ != 0 || st.PollenStore_g != 0 {
-		t.Fatalf("near colony: energy %v, pollen %v; want 0, 0", st.EnergyStore_kJ, st.PollenStore_g)
+	if st.Energy != 0 || st.Pollen != 0 {
+		t.Fatalf("near colony: energy %v, pollen %v; want 0, 0", st.Energy, st.Pollen)
 	}
 	if left := len(beesByColony(nil, ecs.NewFilter1[comp.Bee](cw.w), func(b *comp.Bee) bool { return true })[near]); left != 0 {
 		t.Errorf("%d bee agents left in the dug-up colony", left)
@@ -91,13 +91,13 @@ func TestBadgersDigUpProbability(t *testing.T) {
 		cols := make([]ecs.Entity, n)
 		for i := range cols {
 			cols[i] = cw.addColonyAt(c.dist, 0, func(_ *comp.Colony, st *comp.ColonyStores, _ *comp.ColonyCounts) {
-				st.EnergyStore_kJ = 1
+				st.Energy = 1
 			})
 		}
 		s.Update(cw.w)
 		dug := 0
 		for _, col := range cols {
-			if _, st, _ := cw.colony(col); st.EnergyStore_kJ == 0 {
+			if _, st, _ := cw.colony(col); st.Energy == 0 {
 				dug++
 			}
 		}

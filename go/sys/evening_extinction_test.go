@@ -18,11 +18,11 @@ func TestExtinction(t *testing.T) {
 	// TimeToExtinction: output, see obs.Counters.
 	for _, stop := range []bool{false, true} {
 		cw := newColonyWorld(t, 1)
-		cw.file.StopExtinct = stop
+		cw.parameters.StopExtinct = stop
 		term := &resource.Termination{}
 		ecs.AddResource(cw.w, term)
 		ecs.AddResource(cw.w, &params.Termination{MaxTicks: 0})
-		s := &Extinction{}
+		s := &extinction{}
 		s.Initialize(cw.w)
 
 		// a hibernating queen alone keeps the population alive, a colony alone too
@@ -55,7 +55,7 @@ func TestExtinctionMaxTicks(t *testing.T) {
 	term := &resource.Termination{}
 	ecs.AddResource(cw.w, term)
 	ecs.AddResource(cw.w, &params.Termination{MaxTicks: 365})
-	s := &Extinction{}
+	s := &extinction{}
 	s.Initialize(cw.w)
 	for _, ticks := range []day.Abs{364, 365} {
 		cw.ticks.Ticks = ticks

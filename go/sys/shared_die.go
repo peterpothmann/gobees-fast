@@ -28,8 +28,8 @@ func newBeeDeath(w *ecs.World) beeDeath {
 	}
 }
 
-// DieProc removes the bee e. causeOfDeath is not used, as in NetLogo (only printed for badgers).
-func (d *beeDeath) DieProc(w *ecs.World, e ecs.Entity, causeOfDeath string) {
+// die removes the bee e. causeOfDeath is not used, as in NetLogo (only printed for badgers).
+func (d *beeDeath) die(w *ecs.World, e ecs.Entity, causeOfDeath string) {
 	// [DIE-01]
 	d.active.List = slices.DeleteFunc(d.active.List, func(x ecs.Entity) bool { return x == e })
 	w.RemoveEntity(e)
@@ -47,8 +47,8 @@ func (d *beeDeath) DieProc(w *ecs.World, e ecs.Entity, causeOfDeath string) {
 // NetLogo: DieProc for breed colonies. Not translated: the store bars and the display (GUI).
 type colonyDeath struct{}
 
-// DieProc removes the colony e. causeOfDeath is not used, as in NetLogo.
-func (colonyDeath) DieProc(w *ecs.World, e ecs.Entity, causeOfDeath string) {
+// die removes the colony e. causeOfDeath is not used, as in NetLogo.
+func (colonyDeath) die(w *ecs.World, e ecs.Entity, causeOfDeath string) {
 	// [DIE-02]
 	w.RemoveEntity(e)
 }
@@ -59,8 +59,8 @@ func (colonyDeath) DieProc(w *ecs.World, e ecs.Entity, causeOfDeath string) {
 // NetLogo: DieProc for breed badgers.
 type badgerDeath struct{}
 
-// DieProc prints the cause and removes the badger e (NetLogo: output-show causeOfDeath, die).
-func (badgerDeath) DieProc(w *ecs.World, e ecs.Entity, causeOfDeath string) {
+// die prints the cause and removes the badger e (NetLogo: output-show causeOfDeath, die).
+func (badgerDeath) die(w *ecs.World, e ecs.Entity, causeOfDeath string) {
 	// [DIE-03]
 	log.Print(causeOfDeath)
 	w.RemoveEntity(e)

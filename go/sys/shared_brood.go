@@ -63,8 +63,8 @@ func beesByColony(groups map[ecs.Entity][]ecs.Entity, filter *ecs.Filter1[comp.B
 	}
 	query := filter.Query()
 	for query.Next() {
-		if b := query.Get(); !b.ColonyID.IsZero() && keep(b) {
-			groups[b.ColonyID] = append(groups[b.ColonyID], query.Entity())
+		if b := query.Get(); !b.Colony.IsZero() && keep(b) {
+			groups[b.Colony] = append(groups[b.Colony], query.Entity())
 		}
 	}
 	// colonies without bees today, e.g. dead ones, would otherwise keep their lists for the rest of the run

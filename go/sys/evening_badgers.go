@@ -11,14 +11,14 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// BadgersOnTheProwl [GO-17].
+// badgers [GO-17].
 //
 // Every badger digs up each colony closer than 735 m with probability 0.19 * 0.1 = 0.019 per day: the colony
 // loses its stores and all its bees. The colony itself dies the next morning in [UCOL-11].
 // Not translated: color (GUI).
 //
 // NetLogo: BadgersOnTheProwlProc.
-type BadgersOnTheProwl struct {
+type badgers struct {
 	rng       *rand.Rand
 	landscape *globals.Landscape
 	death     beeDeath
@@ -31,7 +31,7 @@ type BadgersOnTheProwl struct {
 	beesOf map[ecs.Entity][]ecs.Entity // buffer of beesByColony
 }
 
-func (s *BadgersOnTheProwl) Initialize(w *ecs.World) {
+func (s *badgers) Initialize(w *ecs.World) {
 	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.landscape = ecs.GetResource[globals.Landscape](w)
 	s.death = newBeeDeath(w)
@@ -41,12 +41,12 @@ func (s *BadgersOnTheProwl) Initialize(w *ecs.World) {
 	s.colonyMap = ecs.NewMap1[comp.ColonyStores](w)
 }
 
-func (s *BadgersOnTheProwl) Update(w *ecs.World) {
+func (s *badgers) Update(w *ecs.World) {
 	// variables, not Go constants: NetLogo multiplies two doubles, 0.19 * 0.1 = 0.019000000000000003, whereas Go
 	// would multiply constants exactly (0.019).
-	foragingRange_m := 735.0 // Kruuk & Parish 1982: territory ca. 170 ha, radius ca. 735 m
-	encounterProb := 0.19    // Kowalczyk et al. 2006: daily range 19 % of the home range
-	digUpProb := 0.1         // ARBITRARY VALUE (NetLogo comment)
+	foragingRange := 735.0 // [m], Kruuk & Parish 1982: territory ca. 170 ha, radius ca. 735 m
+	encounterProb := 0.19  // Kowalczyk et al. 2006: daily range 19 % of the home range
+	digUpProb := 0.1       // ARBITRARY VALUE (NetLogo comment)
 
 	// [BADG-01] ORDER: irrelevant for the state. A colony dug up twice in one evening has nothing left to lose.
 	type badger struct{ x, y float64 }
@@ -70,7 +70,7 @@ func (s *BadgersOnTheProwl) Update(w *ecs.World) {
 		cq := s.colonyFilter.Query()
 		for cq.Next() {
 			pos, _ := cq.Get()
-			if util.Distance(pos.X, pos.Y, b.x, b.y) < s.landscape.Scaling_NLpatches_per_m*foragingRange_m {
+			if util.Distance(pos.X, pos.Y, b.x, b.y) < s.landscape.Scale*foragingRange {
 				inRange = append(inRange, cq.Entity())
 			}
 		}
@@ -81,8 +81,8 @@ func (s *BadgersOnTheProwl) Update(w *ecs.World) {
 				continue
 			}
 			stores := s.colonyMap.Get(col)
-			stores.EnergyStore_kJ = 0
-			stores.PollenStore_g = 0
+			stores.Energy = 0
+			stores.Pollen = 0
 			// every bee of the colony dies, in random order. Each bee dies independently.
 			victims := []ecs.Entity{}
 			for _, e := range s.beesOf[col] {
@@ -93,10 +93,10 @@ func (s *BadgersOnTheProwl) Update(w *ecs.World) {
 			util.Shuffle(s.rng, victims)
 			// memoBroodDeaths, broodDeathBadger: read only by the egg accounting [CHK-04], removed in step F4
 			for _, e := range victims {
-				s.death.DieProc(w, e, "Colony killed by badger!")
+				s.death.die(w, e, "Colony killed by badger!")
 			}
 		}
 	}
 }
 
-func (s *BadgersOnTheProwl) Finalize(w *ecs.World) {}
+func (s *badgers) Finalize(w *ecs.World) {}

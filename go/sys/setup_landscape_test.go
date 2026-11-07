@@ -15,23 +15,23 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-func TestMergeHedgesProc(t *testing.T) {
-	field := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Grassland", X: 0, Y: 0, Area_sqm: 10000}}
-	small := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Grassland", X: 1, Y: 0, Area_sqm: 1000}} // below 6500 m2, never linked
-	big := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 100, Y: 0, Area_sqm: 500}}
-	h1 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 2, Y: 0, Area_sqm: 300}}
-	h2 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 3, Y: 0, Area_sqm: 200}}
-	MergeHedgesProc([]*flowerPatch{field, small, h1, h2, big}, rand.New(rand.NewPCG(1, 2)))
+func TestMergeHedges(t *testing.T) {
+	field := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Grassland", X: 0, Y: 0, Area: 10000}}
+	small := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Grassland", X: 1, Y: 0, Area: 1000}} // below 6500 m2, never linked
+	big := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 100, Y: 0, Area: 500}}
+	h1 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 2, Y: 0, Area: 300}}
+	h2 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 3, Y: 0, Area: 200}}
+	mergeHedges([]*flowerPatch{field, small, h1, h2, big}, rand.New(rand.NewPCG(1, 2)))
 
 	// [HEDG-04] the largest hedge is the master hedge, it keeps its position and gets the area of the others.
-	if big.Area_sqm != 1000 || h1.Area_sqm != 0 || h2.Area_sqm != 0 {
-		t.Errorf("areas: big %v, h1 %v, h2 %v; want 1000, 0, 0", big.Area_sqm, h1.Area_sqm, h2.Area_sqm)
+	if big.Area != 1000 || h1.Area != 0 || h2.Area != 0 {
+		t.Errorf("areas: big %v, h1 %v, h2 %v; want 1000, 0, 0", big.Area, h1.Area, h2.Area)
 	}
 	// [HEDG-05] new radius
-	if math.Abs(big.Radius_m-math.Sqrt(1000/math.Pi)) > 1e-12 || h1.Radius_m != 0 {
-		t.Errorf("radius: big %v, h1 %v", big.Radius_m, h1.Radius_m)
+	if math.Abs(big.Radius-math.Sqrt(1000/math.Pi)) > 1e-12 || h1.Radius != 0 {
+		t.Errorf("radius: big %v, h1 %v", big.Radius, h1.Radius)
 	}
-	if field.Area_sqm != 10000 || small.Area_sqm != 1000 {
+	if field.Area != 10000 || small.Area != 1000 {
 		t.Error("non-hedge patches must not change")
 	}
 }
@@ -40,17 +40,17 @@ func TestMergeHedgesEqualAreaIsRandom(t *testing.T) {
 	// Finding 14 (see trans/netlogo-findings.md#finding-14): sort-on breaks ties randomly, so either of two equally large hedges can be the master.
 	masters := map[string]int{}
 	for seed := range uint64(50) {
-		field := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Woodland", X: 0, Y: 0, Area_sqm: 7000}}
-		a := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 1, Y: 0, Area_sqm: 100}}
-		b := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 2, Y: 0, Area_sqm: 100}}
-		MergeHedgesProc([]*flowerPatch{field, a, b}, rand.New(rand.NewPCG(seed, 7)))
+		field := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Woodland", X: 0, Y: 0, Area: 7000}}
+		a := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 1, Y: 0, Area: 100}}
+		b := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 2, Y: 0, Area: 100}}
+		mergeHedges([]*flowerPatch{field, a, b}, rand.New(rand.NewPCG(seed, 7)))
 		switch {
-		case a.Area_sqm == 200 && b.Area_sqm == 0:
+		case a.Area == 200 && b.Area == 0:
 			masters["a"]++
-		case b.Area_sqm == 200 && a.Area_sqm == 0:
+		case b.Area == 200 && a.Area == 0:
 			masters["b"]++
 		default:
-			t.Fatalf("unexpected areas %v, %v", a.Area_sqm, b.Area_sqm)
+			t.Fatalf("unexpected areas %v, %v", a.Area, b.Area)
 		}
 	}
 	if masters["a"] == 0 || masters["b"] == 0 {
@@ -62,12 +62,12 @@ func TestMergeHedgesEquallyNearFieldIsRandom(t *testing.T) {
 	// [HEDG-03] min-one-of picks a random one among equally near fields.
 	linked := map[string]int{}
 	for seed := range uint64(50) {
-		left := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Woodland", X: -5, Y: 0, Area_sqm: 7000}}
-		right := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Woodland", X: 5, Y: 0, Area_sqm: 7000}}
-		h1 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 0, Y: 0, Area_sqm: 300}}
-		h2 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: -4, Y: 0, Area_sqm: 100}} // always linked to left
-		MergeHedgesProc([]*flowerPatch{left, right, h1, h2}, rand.New(rand.NewPCG(seed, 3)))
-		if h2.Area_sqm == 0 {
+		left := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Woodland", X: -5, Y: 0, Area: 7000}}
+		right := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Woodland", X: 5, Y: 0, Area: 7000}}
+		h1 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 0, Y: 0, Area: 300}}
+		h2 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: -4, Y: 0, Area: 100}} // always linked to left
+		mergeHedges([]*flowerPatch{left, right, h1, h2}, rand.New(rand.NewPCG(seed, 3)))
+		if h2.Area == 0 {
 			linked["left"]++ // h1 and h2 share the field, h1 (larger) got the area
 		} else {
 			linked["right"]++
@@ -78,7 +78,7 @@ func TestMergeHedgesEquallyNearFieldIsRandom(t *testing.T) {
 	}
 }
 
-// testFlower returns the flower species of a layer of TestCreateLayersProc, from its values in the test table:
+// testFlower returns the flower species of a layer of TestCreateLayers, from its values in the test table:
 // the foodsource does not store its flower species (removed in step F3).
 func testFlower(fs comp.Foodsource) string {
 	switch {
@@ -86,32 +86,32 @@ func testFlower(fs comp.Foodsource) string {
 		return "Scrub" // not split, NetLogo: flowerSpecies_relativeAbundanceList (list patchType 1)
 	case fs.StartDay == 100:
 		return "A"
-	case fs.NectarFlowerVolume_myl == 0:
+	case fs.NectarPerFlower == 0:
 		return "C"
 	}
 	return "B"
 }
 
-func TestCreateLayersProc(t *testing.T) {
+func TestCreateLayers(t *testing.T) {
 	w := ecs.NewWorld()
 	flowers := &params.FlowerSpeciesTable{
 		Names: []string{"A", "B", "C"},
 		Rows: []params.FlowerSpecies{
-			{Name: "A", Pollen_g_per_flower: 0.01, Nectar_ml_per_flower: 0.001, StartDay: 100, StopDay: 200},
-			{Name: "B", Pollen_g_per_flower: 0.0001, Nectar_ml_per_flower: 0.001},
-			{Name: "C", Pollen_g_per_flower: 0.01, Nectar_ml_per_flower: 0},
+			{Name: "A", PollenPerFlower: 0.01, NectarPerFlower: 0.001, StartDay: 100, StopDay: 200},
+			{Name: "B", PollenPerFlower: 0.0001, NectarPerFlower: 0.001},
+			{Name: "C", PollenPerFlower: 0.01, NectarPerFlower: 0},
 		},
 	}
-	file := &params.ParameterFile{AbundanceBoost: 1, FoodSourceLimit: 1, MinSizeFoodSources: true, RemoveEmptyFoodSources: true}
+	file := &params.Parameters{AbundanceBoost: 1, FoodsourceLimit: 1, LimitFoodsources: true, RemoveEmptyFoodsources: true}
 	// limits [LAYR-01]: 180 microlitres nectar, 0.05 g pollen
 	p1 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Grassland", X: 10.2, Y: 20.4,
-		Area_sqm: 100, FlowerSpeciesList: []params.FlowerEntry{{Name: "A", Value: 2, HasValue: true}, {Name: "Margin"},
+		Area: 100, Flowers: []params.FlowerEntry{{Name: "A", Value: 2, HasValue: true}, {Name: "Margin"},
 			{Name: "B", Value: 1, HasValue: true}, {Name: "C", Value: 1, HasValue: true}}}}
 	p2 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Crop_Cereals", X: 10.4, Y: 19.6,
-		Area_sqm: 100, FlowerSpeciesList: []params.FlowerEntry{{Name: "B", Value: 1, HasValue: true}}}}
-	p3 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Scrub", X: 50, Y: 50, Area_sqm: 400}}
+		Area: 100, Flowers: []params.FlowerEntry{{Name: "B", Value: 1, HasValue: true}}}}
+	p3 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Scrub", X: 50, Y: 50, Area: 400}}
 
-	masterpatches, err := CreateLayersProc(w, []*flowerPatch{p1, p2, p3}, flowers, file, []string{"Margin", "Plot"}, rand.New(rand.NewPCG(1, 1)))
+	masterpatches, err := createLayers(w, []*flowerPatch{p1, p2, p3}, flowers, file, []string{"Margin", "Plot"}, rand.New(rand.NewPCG(1, 1)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,30 +128,30 @@ func TestCreateLayersProc(t *testing.T) {
 	a, c, crop, scrub := byKey["Grassland/A"], byKey["Grassland/C"], byKey["Crop_Cereals/B"], byKey["Scrub/Scrub"]
 
 	// [LAYR-05] A: pollen 100 * 2 * 0.01 = 2 g, nectar 100 * 2 * 1 microlitre = 200 microlitres, flowering period from the table
-	if a.fs.PollenMax_g != 2 || a.fs.NectarMax_myl != 200 || a.fs.NectarFlowerVolume_myl != 1 || a.fs.StartDay != 100 || a.fs.StopDay != 200 {
+	if a.fs.PollenMax != 2 || a.fs.NectarMax != 200 || a.fs.NectarPerFlower != 1 || a.fs.StartDay != 100 || a.fs.StopDay != 200 {
 		t.Errorf("layer A = %+v", a.fs)
 	}
 	// [LAYR-04] the stewardship option "Margin" gets no layer: 4 foodsources (checked above)
 	// [LAYR-06] C: nectar 0 below the limit, pollen 1 g kept
-	if c.fs.NectarMax_myl != 0 || c.fs.PollenMax_g != 1 {
-		t.Errorf("layer C nectar %v, pollen %v; want 0, 1", c.fs.NectarMax_myl, c.fs.PollenMax_g)
+	if c.fs.NectarMax != 0 || c.fs.PollenMax != 1 {
+		t.Errorf("layer C nectar %v, pollen %v; want 0, 1", c.fs.NectarMax, c.fs.PollenMax)
 	}
 	// [LAYR-07] B on the grassland is removed (both below the limits), but kept on the crop field ("Crop_")
 	if _, ok := byKey["Grassland/B"]; ok {
 		t.Error("layer B on Grassland should be removed")
 	}
-	if crop.fs.NectarMax_myl != 0 || crop.fs.PollenMax_g != 0 {
+	if crop.fs.NectarMax != 0 || crop.fs.PollenMax != 0 {
 		t.Errorf("crop layer B = %+v, want no food", crop.fs)
 	}
 	// [LAYR-08] masterpatches
-	if !a.l.Masterpatch || a.l.MasterpatchID != a.e || c.l.Masterpatch || c.l.MasterpatchID != a.e {
-		t.Errorf("A master %v -> %v, C master %v -> %v", a.l.Masterpatch, a.l.MasterpatchID, c.l.Masterpatch, c.l.MasterpatchID)
+	if !a.l.IsMasterpatch || a.l.Masterpatch != a.e || c.l.IsMasterpatch || c.l.Masterpatch != a.e {
+		t.Errorf("A master %v -> %v, C master %v -> %v", a.l.IsMasterpatch, a.l.Masterpatch, c.l.IsMasterpatch, c.l.Masterpatch)
 	}
-	if !crop.l.Masterpatch || crop.l.MasterpatchID != crop.e {
+	if !crop.l.IsMasterpatch || crop.l.Masterpatch != crop.e {
 		t.Error("the crop layer must be its own masterpatch")
 	}
 	// [LAYR-09] finding 19 (see trans/netlogo-findings.md#finding-19): a flower patch with an empty list stays, without food
-	if !scrub.l.Masterpatch || scrub.fs.NectarMax_myl != 0 || scrub.fs.PollenMax_g != 0 ||
+	if !scrub.l.IsMasterpatch || scrub.fs.NectarMax != 0 || scrub.fs.PollenMax != 0 ||
 		scrub.fs.StartDay != 0 || scrub.fs.StopDay != 0 {
 		t.Errorf("scrub = %+v %+v", scrub.fs, scrub.l)
 	}
@@ -159,15 +159,15 @@ func TestCreateLayersProc(t *testing.T) {
 	// in the same patch cell (10, 20). A and C share the list of the grassland, sorted by who (A before C: order of
 	// creation, step F12). The crop layer has its own list (NetLogo: one list of all three).
 	for _, l := range []testLayer{a, c} {
-		if want := []ecs.Entity{a.e, c.e}; !slices.Equal(l.l.LayersInPatchList, want) {
-			t.Errorf("%s/%s: layersInPatchList %v, want %v", l.fs.PatchType, testFlower(l.fs), l.l.LayersInPatchList, want)
+		if want := []ecs.Entity{a.e, c.e}; !slices.Equal(l.l.PatchLayers, want) {
+			t.Errorf("%s/%s: layersInPatchList %v, want %v", l.fs.PatchType, testFlower(l.fs), l.l.PatchLayers, want)
 		}
 	}
-	if !slices.Equal(crop.l.LayersInPatchList, []ecs.Entity{crop.e}) {
-		t.Errorf("crop: layersInPatchList %v, want %v", crop.l.LayersInPatchList, []ecs.Entity{crop.e})
+	if !slices.Equal(crop.l.PatchLayers, []ecs.Entity{crop.e}) {
+		t.Errorf("crop: layersInPatchList %v, want %v", crop.l.PatchLayers, []ecs.Entity{crop.e})
 	}
-	if !slices.Equal(scrub.l.LayersInPatchList, []ecs.Entity{scrub.e}) {
-		t.Errorf("scrub: layersInPatchList %v", scrub.l.LayersInPatchList)
+	if !slices.Equal(scrub.l.PatchLayers, []ecs.Entity{scrub.e}) {
+		t.Errorf("scrub: layersInPatchList %v", scrub.l.PatchLayers)
 	}
 	// step F12: the masterpatches in who order. The scrub is not split and took its who number in [FSRC-04], before
 	// all layers, so it comes first. The grassland and the crop field follow in the shuffled order of [LAYR-03].
@@ -177,7 +177,7 @@ func TestCreateLayersProc(t *testing.T) {
 	}
 }
 
-// testLayer is a foodsource as read back in TestCreateLayersProc.
+// testLayer is a foodsource as read back in TestCreateLayers.
 type testLayer struct {
 	e  ecs.Entity
 	fs comp.Foodsource
@@ -191,12 +191,12 @@ func newExampleFarmSetup(t *testing.T, seed float64, extra ...app.System) *app.A
 	return newExampleFarmSetupWith(t, seed, func(c *input.Config) {}, extra...)
 }
 
-// newExampleFarmSetupWithModifier runs the setup incl. CreateInitialQueens with the given
-// InitialQueensModifierBehaviorSpace.
+// newExampleFarmSetupWithModifier runs the setup incl. initialQueensSetup with the given
+// InitialQueensFactor.
 func newExampleFarmSetupWithModifier(t *testing.T, modifier float64) *app.App {
 	t.Helper()
 	return newExampleFarmSetupWith(t, 1,
-		func(c *input.Config) { c.Parameters.InitialQueensModifierBehaviorSpace = modifier }, &CreateInitialQueens{})
+		func(c *input.Config) { c.Parameters.InitialQueensFactor = modifier }, &initialQueensSetup{})
 }
 
 // newExampleFarmSetupWith is newExampleFarmSetup with a function that changes the run file before the setup.
@@ -217,8 +217,8 @@ func newExampleFarmSetupFiles(t *testing.T, seed float64, landscapes map[string]
 	p.Apply(a.World)
 	ecs.AddResource(a.World, &globals.ActiveBees{})
 	ecs.AddResource(a.World, &globals.Daytime{})
-	a.AddSystem(&CreateFoodsources{})
-	a.AddSystem(&CreateSpecies{})
+	a.AddSystem(&landscapeSetup{})
+	a.AddSystem(&nestSitesSetup{})
 	for _, s := range extra {
 		a.AddSystem(s)
 	}
@@ -248,8 +248,8 @@ func TestCreateFoodsourcesExampleFarm(t *testing.T) {
 		a := newExampleFarmSetup(t, float64(seed))
 		w := a.World
 		landscape := ecs.GetResource[globals.Landscape](w)
-		if landscape.Scaling_NLpatches_per_m != 0.1 {
-			t.Fatalf("Scaling_NLpatches/m = %v, want 0.1 (1 / 10 m)", landscape.Scaling_NLpatches_per_m)
+		if landscape.Scale != 0.1 {
+			t.Fatalf("Scaling_NLpatches/m = %v, want 0.1 (1 / 10 m)", landscape.Scale)
 		}
 
 		masterpatches := collectMasterpatches(w)
@@ -260,8 +260,8 @@ func TestCreateFoodsourcesExampleFarm(t *testing.T) {
 		query := ecs.NewFilter3[comp.Position, comp.Foodsource, comp.Layer](w).Query()
 		for query.Next() {
 			pos, fs, l := query.Get()
-			mpos, mfs := posMap.Get(l.MasterpatchID)
-			if *mpos != *pos || mfs.PatchType != fs.PatchType || mfs.Area_sqm != fs.Area_sqm {
+			mpos, mfs := posMap.Get(l.Masterpatch)
+			if *mpos != *pos || mfs.PatchType != fs.PatchType || mfs.Area != fs.Area {
 				t.Errorf("layer %s at %v points to masterpatch %s at %v", fs.PatchType, *pos, mfs.PatchType, *mpos)
 			}
 		}

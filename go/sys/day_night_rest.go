@@ -12,13 +12,13 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// EndOfDayResting [GO-11].
+// nightRest [GO-11].
 //
 // Sets all adult, non-hibernating females to resting, also the ones whose day ended earlier.
 // Not translated: activityList (GUI log).
 //
 // NetLogo: ask bees ... set activity "resting" (in Go).
-type EndOfDayResting struct {
+type nightRest struct {
 	rng       *rand.Rand
 	beeFilter *ecs.Filter1[comp.Bee]
 	beeMap    *ecs.Map1[comp.Bee]
@@ -26,13 +26,13 @@ type EndOfDayResting struct {
 	bees []ecs.Entity // buffer of askBees
 }
 
-func (s *EndOfDayResting) Initialize(w *ecs.World) {
+func (s *nightRest) Initialize(w *ecs.World) {
 	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
 	s.beeMap = ecs.NewMap1[comp.Bee](w)
 }
 
-func (s *EndOfDayResting) Update(w *ecs.World) {
+func (s *nightRest) Update(w *ecs.World) {
 	// [GO-11] ORDER: irrelevant, each bee only sets itself. Shuffled (decision C).
 	s.bees = askBees(s.bees, s.beeFilter, s.rng, func(b *comp.Bee) bool {
 		return b.Stage == stage.Adult && b.Activity != activity.Hibernate && b.Caste != caste.Male
@@ -42,4 +42,4 @@ func (s *EndOfDayResting) Update(w *ecs.World) {
 	}
 }
 
-func (s *EndOfDayResting) Finalize(w *ecs.World) {}
+func (s *nightRest) Finalize(w *ecs.World) {}

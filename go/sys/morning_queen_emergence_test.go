@@ -18,20 +18,20 @@ import (
 )
 
 // emergenceWorld is a small world for the tests of step 3: B_terrestris, two nest sites and the resources
-// that EmergenceNewQueens needs. Scaling 0.1 patches per metre (10 m per patch) as in the example farm.
+// that queenEmergence needs. Scaling 0.1 patches per metre (10 m per patch) as in the example farm.
 type emergenceWorld struct {
-	w         *ecs.World
-	sys       *EmergenceNewQueens
-	ticks     *globals.Ticks
-	file      *params.ParameterFile
-	derived   *params.Derived
-	tally     *tally
-	active    *globals.ActiveBees
-	species   int // index of B_terrestris
-	sp        *params.Species
-	ns        *globals.SpeciesNestSites // nest sites of B_terrestris
-	bigSite   ecs.Entity                // Grassland, 10000 m2 at (100, 100)
-	smallSite ecs.Entity                // Hedgerow, 100 m2 at (50.3, 50.2), radius 0.564 patches: only the patch centre (50, 50)
+	w          *ecs.World
+	sys        *queenEmergence
+	ticks      *globals.Ticks
+	parameters *params.Parameters
+	derived    *params.Derived
+	tally      *tally
+	active     *globals.ActiveBees
+	species    int // index of B_terrestris
+	sp         *params.Species
+	ns         *globals.SpeciesNestSites // nest sites of B_terrestris
+	bigSite    ecs.Entity                // Grassland, 10000 m2 at (100, 100)
+	smallSite  ecs.Entity                // Hedgerow, 100 m2 at (50.3, 50.2), radius 0.564 patches: only the patch centre (50, 50)
 }
 
 func newEmergenceWorld(t *testing.T, seed uint64) *emergenceWorld {
@@ -40,38 +40,38 @@ func newEmergenceWorld(t *testing.T, seed uint64) *emergenceWorld {
 	ew := &emergenceWorld{w: w}
 	ecs.AddResource(w, &resource.Rand{Source: rand.NewPCG(seed, 1)})
 	p := params.Default()
-	ew.file = &p.File
-	ew.file.MergeHedges = false
+	ew.parameters = &p.Parameters
+	ew.parameters.MergeHedges = false
 	ecs.AddResource(w, &p.World)
 	ecs.AddResource(w, &p.Constants)
-	ecs.AddResource(w, ew.file)
+	ecs.AddResource(w, ew.parameters)
 	ew.ticks = &globals.Ticks{Ticks: 10}
 	ecs.AddResource(w, ew.ticks)
-	ew.derived = &params.Derived{MortalityForager_per_s: 0}
+	ew.derived = &params.Derived{ForagerMortality: 0}
 	ecs.AddResource(w, ew.derived)
-	ecs.AddResource(w, &globals.Landscape{Scaling_NLpatches_per_m: 0.1})
+	ecs.AddResource(w, &globals.Landscape{Scale: 0.1})
 	ew.tally = newTally(w)
 	ew.active = &globals.ActiveBees{}
 	ecs.AddResource(w, ew.active)
 
 	fsMap := ecs.NewMap4[comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](w)
 	ew.bigSite = fsMap.NewEntity(&comp.Position{X: 100, Y: 100},
-		&comp.Foodsource{PatchType: "Grassland", Area_sqm: 10000, Radius_m: math.Sqrt(10000 / math.Pi)},
-		&comp.FoodsourceState{}, &comp.Layer{Masterpatch: true})
+		&comp.Foodsource{PatchType: "Grassland", Area: 10000, Radius: math.Sqrt(10000 / math.Pi)},
+		&comp.FoodsourceState{}, &comp.Layer{IsMasterpatch: true})
 	ew.smallSite = fsMap.NewEntity(&comp.Position{X: 50.3, Y: 50.2},
-		&comp.Foodsource{PatchType: "Hedgerow", Area_sqm: 100, Radius_m: math.Sqrt(100 / math.Pi)},
-		&comp.FoodsourceState{}, &comp.Layer{Masterpatch: true})
+		&comp.Foodsource{PatchType: "Hedgerow", Area: 100, Radius: math.Sqrt(100 / math.Pi)},
+		&comp.FoodsourceState{}, &comp.Layer{IsMasterpatch: true})
 
 	in := &params.Input{Species: []params.Species{*terrestris(t)}}
 	ecs.AddResource(w, in)
 	ew.species = 0
 	ew.sp = &in.Species[ew.species]
 	nestSites := &globals.NestSites{BySpecies: []globals.SpeciesNestSites{
-		{NestsiteFoodsourceList: []ecs.Entity{ew.bigSite, ew.smallSite}, NestSiteArea: 10100}}}
+		{Sites: []ecs.Entity{ew.bigSite, ew.smallSite}, Area: 10100}}}
 	ecs.AddResource(w, nestSites)
 	ew.ns = &nestSites.BySpecies[ew.species]
 
-	ew.sys = &EmergenceNewQueens{}
+	ew.sys = &queenEmergence{}
 	ew.sys.Initialize(w)
 	return ew
 }
@@ -79,8 +79,8 @@ func newEmergenceWorld(t *testing.T, seed uint64) *emergenceWorld {
 // addQueen adds a hibernating queen that emerges at the given tick.
 func (ew *emergenceWorld) addQueen(emergingDate day.Abs, number int, weight float64) ecs.Entity {
 	bee := comp.Bee{Number: number, Stage: stage.Adult, Caste: caste.Queen, Activity: activity.Hibernate, Mated: true,
-		SpeciesID: ew.species, EmergingDate: day.At(emergingDate), Weight_mg: weight}
-	gen := comp.Genetics{AllelesList: []float64{1, 2}, SpermathecaList: []float64{3}}
+		Species: ew.species, EmergenceDate: day.At(emergingDate), Weight: weight}
+	gen := comp.Genetics{Alleles: []float64{1, 2}, Spermatheca: []float64{3}}
 	return newBeeMapper(ew.w).NewEntity(&comp.Position{},
 		&bee, &gen, &comp.Thresholds{}, &comp.Forager{}, &comp.Development{})
 }
@@ -107,7 +107,7 @@ func TestEmergenceSplitsCohort(t *testing.T) {
 	_, orig, origGen, _, _, _ := beeMap.Get(q)
 	emerged := 0
 	for e, b := range ew.bees() {
-		if b.EmergingDate != day.At(10) {
+		if b.EmergenceDate != day.At(10) {
 			if b.Activity != activity.Hibernate {
 				t.Error("the queen of tomorrow must still hibernate")
 			}
@@ -116,8 +116,8 @@ func TestEmergenceSplitsCohort(t *testing.T) {
 		emerged++
 		_, _, gen, th, _, _ := beeMap.Get(e)
 		// [EMER-02] resting, no colony; thresholds of the initiation phase
-		if b.Number != 1 || b.Weight_mg != orig.Weight_mg || b.Activity != activity.Resting || !b.ColonyID.IsZero() ||
-			*th != thresholds(sitQueenInitiationPhase) || gen.AllelesList[1] != origGen.AllelesList[1] {
+		if b.Number != 1 || b.Weight != orig.Weight || b.Activity != activity.Resting || !b.Colony.IsZero() ||
+			*th != thresholds(sitQueenInitiationPhase) || gen.Alleles[1] != origGen.Alleles[1] {
 			t.Errorf("queen %+v %+v", b, *th)
 		}
 	}
@@ -125,9 +125,9 @@ func TestEmergenceSplitsCohort(t *testing.T) {
 		t.Fatalf("%d emerged queens, want 3", emerged)
 	}
 	// the copies do not share their lists with the original
-	origGen.AllelesList[0] = 99
+	origGen.Alleles[0] = 99
 	for e := range ew.bees() {
-		if _, _, gen, _, _, _ := beeMap.Get(e); e != q && gen.AllelesList[0] == 99 {
+		if _, _, gen, _, _, _ := beeMap.Get(e); e != q && gen.Alleles[0] == 99 {
 			t.Error("a copy shares its allele list with the original")
 		}
 	}
@@ -135,7 +135,7 @@ func TestEmergenceSplitsCohort(t *testing.T) {
 
 func TestEmergenceWinterMortality(t *testing.T) {
 	ew := newEmergenceWorld(t, 2)
-	ew.file.WinterMortality = true
+	ew.parameters.WinterMortality = true
 	ew.sp.DailyNestSiteChance = 0
 	// relative weight 0.32: survival probability 0.32 (finding 33)
 	const n = 2000
@@ -168,12 +168,12 @@ func TestNestSearchFoundsColonies(t *testing.T) {
 	colonies := map[ecs.Entity]bool{}
 	for e, b := range ew.bees() {
 		// [CCOL-03] every queen has a colony and rests
-		if b.ColonyID.IsZero() || b.Activity != activity.Resting {
+		if b.Colony.IsZero() || b.Activity != activity.Resting {
 			t.Fatalf("queen without colony: %+v", b)
 		}
-		colonies[b.ColonyID] = true
+		colonies[b.Colony] = true
 		qPos, _, _, _, _, _ := beeMap.Get(e)
-		cPos, col, stores := colonyMap.Get(b.ColonyID)
+		cPos, col, stores := colonyMap.Get(b.Colony)
 		// the colony is at the queen's position, a patch centre (finding 25)
 		if *cPos != *qPos || cPos.X != math.Trunc(cPos.X) || cPos.Y != math.Trunc(cPos.Y) {
 			t.Fatalf("colony at %v, queen at %v", *cPos, *qPos)
@@ -189,7 +189,7 @@ func TestNestSearchFoundsColonies(t *testing.T) {
 		}
 		// [CCOL-04]
 		if col.QueenProduction || col.SwitchPointDate.IsSet() ||
-			col.SpeciesIDcolony != ew.species || !almostEqual(stores.EnergyStore_kJ, 0.873) {
+			col.Species != ew.species || !almostEqual(stores.Energy, 0.873) {
 			t.Fatalf("colony %+v %+v", col, stores)
 		}
 	}
@@ -205,7 +205,7 @@ func TestNestSearchFoundsColonies(t *testing.T) {
 func TestNestSearchMortality(t *testing.T) {
 	ew := newEmergenceWorld(t, 4)
 	ew.sp.DailyNestSiteChance = 0
-	ew.derived.MortalityForager_per_s = 1e-5 // "high"
+	ew.derived.ForagerMortality = 1e-5 // "high"
 	const n = 2000
 	for range n {
 		ew.addQueen(10, 1, 700)
@@ -221,7 +221,7 @@ func TestNestSearchMortality(t *testing.T) {
 
 func TestNestSearchWithoutNestSites(t *testing.T) {
 	ew := newEmergenceWorld(t, 5)
-	ew.ns.NestsiteFoodsourceList = nil
+	ew.ns.Sites = nil
 	ew.addQueen(10, 1, 700)
 	ew.addQueen(10, 1, 700)
 	ew.sys.Update(ew.w)
@@ -237,20 +237,20 @@ func TestNestSearchNoPatchCentre(t *testing.T) {
 	// the foodsource. y = 112.5 lies on the border between two cells, NetLogo rounds .5 up: (134, 113).
 	ew := newEmergenceWorld(t, 6)
 	hedge := ecs.NewMap4[comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](ew.w).NewEntity(&comp.Position{X: 133.548, Y: 112.5},
-		&comp.Foodsource{PatchType: "Hedgerow", Area_sqm: 100, Radius_m: math.Sqrt(100 / math.Pi)},
-		&comp.FoodsourceState{}, &comp.Layer{Masterpatch: true})
-	ew.ns.NestsiteFoodsourceList = []ecs.Entity{hedge}
-	ew.ns.NestSiteArea = 100
+		&comp.Foodsource{PatchType: "Hedgerow", Area: 100, Radius: math.Sqrt(100 / math.Pi)},
+		&comp.FoodsourceState{}, &comp.Layer{IsMasterpatch: true})
+	ew.ns.Sites = []ecs.Entity{hedge}
+	ew.ns.Area = 100
 	ew.sp.DailyNestSiteChance = 1
 	ew.addQueen(10, 1, 700)
 	ew.sys.Update(ew.w)
 
 	colonyMap := ecs.NewMap1[comp.Position](ew.w)
 	for _, b := range ew.bees() {
-		if b.ColonyID.IsZero() {
+		if b.Colony.IsZero() {
 			t.Fatalf("queen without colony: %+v", b)
 		}
-		if pos := colonyMap.Get(b.ColonyID); *pos != (comp.Position{X: 134, Y: 113}) {
+		if pos := colonyMap.Get(b.Colony); *pos != (comp.Position{X: 134, Y: 113}) {
 			t.Errorf("colony at %v, want (134, 113)", *pos)
 		}
 	}
@@ -260,10 +260,10 @@ func TestNestSiteChoicePastEnd(t *testing.T) {
 	// [NSFS-01] finding 27, fixed in step F5: the shares sum to 0.5, so p lies above the sum in about half of the
 	// draws. The loop runs past the end and the last site of the list is chosen (NetLogo: runtime error).
 	ew := newEmergenceWorld(t, 7)
-	ew.ns.NestsiteFoodsourceList = []ecs.Entity{ew.bigSite}
-	ew.ns.NestSiteArea = 20000
+	ew.ns.Sites = []ecs.Entity{ew.bigSite}
+	ew.ns.Area = 20000
 	for range 100 {
-		if got := ew.sys.NestSiteFoodSourceREP(ew.ns); got != ew.bigSite {
+		if got := ew.sys.chooseNestSite(ew.ns); got != ew.bigSite {
 			t.Fatalf("NestSiteFoodSourceREP = %v, want the grassland %v", got, ew.bigSite)
 		}
 	}
@@ -274,7 +274,7 @@ func TestDieRemovesFromActiveBees(t *testing.T) {
 	a := ew.addQueen(0, 5, 700)
 	b := ew.addQueen(0, 1, 700)
 	ew.active.List = []ecs.Entity{a, b}
-	ew.sys.death.DieProc(ew.w, a, "test")
+	ew.sys.death.die(ew.w, a, "test")
 	// [DIE-01] TotalBeesEverDied + number, removed from the activity queue and from the world
 	if ew.tally.beesDied != 5 || len(ew.active.List) != 1 || ew.active.List[0] != b || ew.w.Alive(a) {
 		t.Errorf("%v bees died, queue %v, alive %v", ew.tally.beesDied, ew.active.List, ew.w.Alive(a))
@@ -288,10 +288,10 @@ func TestPatchesInRangeAndFlowerLists(t *testing.T) {
 	// colony at (0, 0); range 758 m * 0.1 = 75.8 patches
 	newFs := func(x, pollen, nectar float64, master ecs.Entity) ecs.Entity {
 		e := fsMap.NewEntity(&comp.Position{X: x, Y: 0}, &comp.Foodsource{},
-			&comp.FoodsourceState{Pollen_g: pollen, Nectar_myl: nectar}, &comp.Layer{MasterpatchID: master})
+			&comp.FoodsourceState{Pollen: pollen, Nectar: nectar}, &comp.Layer{Masterpatch: master})
 		if master.IsZero() {
 			_, _, _, l := fsMap.Get(e)
-			l.MasterpatchID = e
+			l.Masterpatch = e
 		}
 		return e
 	}
@@ -304,8 +304,8 @@ func TestPatchesInRangeAndFlowerLists(t *testing.T) {
 
 	colony := ew.sys.colonies.colonyMap.NewEntity(&comp.Position{X: 0, Y: 0}, &comp.Colony{},
 		&comp.ColonyStores{}, &comp.ColonyStimuli{}, &comp.ColonyCounts{}, &comp.ColonyRange{})
-	ew.sys.colonies.PatchesInRangeProc(colony)
-	ew.sys.colonies.FoodsourcesInFlowerAndRangeProc(colony)
+	ew.sys.colonies.patchesInRange(colony)
+	ew.sys.colonies.flowersInRange(colony)
 	r := ecs.NewMap1[comp.ColonyRange](w).Get(colony)
 
 	sameSet := func(got, want []ecs.Entity) bool {
@@ -325,13 +325,13 @@ func TestPatchesInRangeAndFlowerLists(t *testing.T) {
 	}
 	// [PRNG-01] also the small hedge of newEmergenceWorld at (50.3, 50.2), distance 71.1 (not in flower);
 	// the grassland at (100, 100) is at distance 141.4
-	if !sameSet(r.AllPatchesInRangeList, []ecs.Entity{a, b, d, e, ew.smallSite}) {
-		t.Errorf("in range: %v", r.AllPatchesInRangeList)
+	if !sameSet(r.Layers, []ecs.Entity{a, b, d, e, ew.smallSite}) {
+		t.Errorf("in range: %v", r.Layers)
 	}
 	// [FRNG-01]
 	checks := map[string][2][]ecs.Entity{
-		"pollen masters": {r.MasterpatchesWithPollenlayersInFlowerAndRangeList, {a, d}},
-		"nectar masters": {r.MasterpatchesWithNectarlayersInFlowerAndRangeList, {a, d}}, // b is a layer of a
+		"pollen masters": {r.PollenPatches, {a, d}},
+		"nectar masters": {r.NectarPatches, {a, d}}, // b is a layer of a
 	}
 	for name, c := range checks {
 		if !sameSet(c[0], c[1]) {
@@ -343,13 +343,13 @@ func TestPatchesInRangeAndFlowerLists(t *testing.T) {
 func TestExampleFarmFirstYear(t *testing.T) {
 	// One year with the translated parts of steps 1 to 3: every initial queen has either founded a colony,
 	// died (winter or nest search), or is still searching or hibernating at the end.
-	a := newExampleFarmSetup(t, 11, &CreateInitialQueens{}, &Tick{}, &EmergenceNewQueens{})
+	a := newExampleFarmSetup(t, 11, &initialQueensSetup{}, &tick{}, &queenEmergence{})
 	w := a.World
 	tally := newTally(w) // Setup kills no bee
 	for range 365 {
 		a.Update()
 	}
-	// without UpdateColonies no colony dies: the living colonies are all colonies founded
+	// without colonyUpdate no colony dies: the living colonies are all colonies founded
 	colonies := ecs.NewFilter1[comp.Colony](w).Query()
 	founded := colonies.Count()
 	colonies.Close()
@@ -358,9 +358,9 @@ func TestExampleFarmFirstYear(t *testing.T) {
 	for query.Next() {
 		b := query.Get()
 		switch {
-		case b.ColonyID.IsZero() && b.Activity == activity.Hibernate:
+		case b.Colony.IsZero() && b.Activity == activity.Hibernate:
 			hibernating++
-		case b.ColonyID.IsZero():
+		case b.Colony.IsZero():
 			searching++
 		}
 	}

@@ -29,7 +29,7 @@ func expectPanic(t *testing.T, name string, f func()) {
 	f()
 }
 
-func TestThresholdLevelREP(t *testing.T) {
+func TestThresholdLevel(t *testing.T) {
 	// [THR] all 24 values of ThresholdLevelREP
 	h := params.NotSetHigh
 	want := map[string][6]float64{ // egg, worker, youngQueen, QueenInitiationPhase, QueenSocialPhase, Psith
@@ -41,49 +41,48 @@ func TestThresholdLevelREP(t *testing.T) {
 	situations := []string{sitEgg, sitWorker, sitYoungQueen, sitQueenInitiationPhase, sitQueenSocialPhase, sitPsith}
 	for thType, values := range want {
 		for i, sit := range situations {
-			if got := ThresholdLevelREP(thType, sit); got != values[i] {
+			if got := thresholdLevel(thType, sit); got != values[i] {
 				t.Errorf("ThresholdLevelREP(%s, %s) = %v, want %v", thType, sit, got, values[i])
 			}
 		}
 	}
-	expectPanic(t, "unknown situation", func() { ThresholdLevelREP(thNursing, "drone") })
-	expectPanic(t, "unknown type", func() { ThresholdLevelREP("guarding", sitWorker) })
+	expectPanic(t, "unknown situation", func() { thresholdLevel(thNursing, "drone") })
+	expectPanic(t, "unknown type", func() { thresholdLevel("guarding", sitWorker) })
 }
 
-func TestCropAndPelletSizeREP(t *testing.T) {
+func TestCropVolumeAndPollenLoad(t *testing.T) {
 	sp := terrestris(t)
 	// [LOAD] worked example: queen of 785 mg: min (173, 315.57) = 173, min (0.15, 315.57 * 0.0003) = 0.094671
-	if got := CropAndPelletSizeREP("nectar", 785, sp); got != 173 {
+	if got := cropVolume(785, sp); got != 173 {
 		t.Errorf("crop volume 785 mg = %v, want 173 (species maximum)", got)
 	}
-	if got := CropAndPelletSizeREP("pollen", 785, sp); !almostEqual(got, 0.094671) {
+	if got := pollenLoad(785, sp); !almostEqual(got, 0.094671) {
 		t.Errorf("pollen pellets 785 mg = %v, want 0.094671", got)
 	}
 	// lightest worker, 62.4 mg: 62.4 * 0.402 = 25.0848 microlitres, 25.0848 * 0.0003 = 0.00752544 g
-	if got := CropAndPelletSizeREP("nectar", 62.4, sp); !almostEqual(got, 25.0848) {
+	if got := cropVolume(62.4, sp); !almostEqual(got, 25.0848) {
 		t.Errorf("crop volume 62.4 mg = %v, want 25.0848", got)
 	}
-	if got := CropAndPelletSizeREP("pollen", 62.4, sp); !almostEqual(got, 0.00752544) {
+	if got := pollenLoad(62.4, sp); !almostEqual(got, 0.00752544) {
 		t.Errorf("pollen pellets 62.4 mg = %v, want 0.00752544", got)
 	}
-	expectPanic(t, "weight 0", func() { CropAndPelletSizeREP("nectar", 0, sp) })
-	expectPanic(t, "unknown forage (result 0)", func() { CropAndPelletSizeREP("water", 785, sp) })
+	expectPanic(t, "weight 0", func() { cropVolume(0, sp) })
 }
 
-func TestProboscisLengthREP(t *testing.T) {
+func TestProboscisLength(t *testing.T) {
 	sp := terrestris(t)
 	// [PROB] finding 34: 6.9 mm at 62.4 mg (lightest worker), 11.1 mm at 980 mg (heaviest queen)
 	cases := map[float64]float64{62.4: 6.9, 980: 11.1, (62.4 + 980) / 2: 9.0}
 	for weight, want := range cases {
-		if got := ProboscisLengthREP(weight, sp); !almostEqual(got, want) {
+		if got := proboscisLength(weight, sp); !almostEqual(got, want) {
 			t.Errorf("ProboscisLengthREP(%v) = %v, want %v", weight, got, want)
 		}
 	}
-	expectPanic(t, "weight below the lightest worker", func() { ProboscisLengthREP(50, sp) })
-	expectPanic(t, "weight above the heaviest queen", func() { ProboscisLengthREP(1000, sp) })
+	expectPanic(t, "weight below the lightest worker", func() { proboscisLength(50, sp) })
+	expectPanic(t, "weight above the heaviest queen", func() { proboscisLength(1000, sp) })
 }
 
-func TestWintermortalityProbREP(t *testing.T) {
+func TestWinterMortalityProb(t *testing.T) {
 	sp := terrestris(t) // queen weights 590 to 980 mg
 	// [WMOR] 0.64 / (1 + e^(-22 * (relative weight - 0.32)))
 	cases := map[float64]float64{
@@ -92,12 +91,12 @@ func TestWintermortalityProbREP(t *testing.T) {
 		590:            0.64 / (1 + math.Exp(-22*(-0.32))), // lightest: 0.00056
 	}
 	for weight, want := range cases {
-		if got := WintermortalityProbREP(weight, sp); !almostEqual(got, want) {
+		if got := winterMortalityProb(weight, sp); !almostEqual(got, want) {
 			t.Errorf("WintermortalityProbREP(%v) = %v, want %v", weight, got, want)
 		}
 	}
-	if got := WintermortalityProbREP(980, sp); got > 0.64 {
+	if got := winterMortalityProb(980, sp); got > 0.64 {
 		t.Errorf("survival must stay below 0.64 (finding 33), got %v", got)
 	}
-	expectPanic(t, "weight above the maximum", func() { WintermortalityProbREP(981, sp) })
+	expectPanic(t, "weight above the maximum", func() { winterMortalityProb(981, sp) })
 }

@@ -21,12 +21,12 @@ func world() (*ecs.World, *globals.Calendar, ecs.Entity) {
 	col := ecs.NewMap1[comp.Colony](w).NewEntity(&comp.Colony{})
 	bees := ecs.NewMap1[comp.Bee](w)
 	for _, b := range []comp.Bee{
-		{Stage: stage.Adult, Caste: caste.Queen, ColonyID: col, Activity: activity.Egglaying},
-		{Stage: stage.Egg, Caste: caste.Undefined, ColonyID: col},
-		{Stage: stage.Larva, Caste: caste.Queen, ColonyID: col},
-		{Stage: stage.Pupa, Caste: caste.Male, ColonyID: col},
-		{Stage: stage.Adult, Caste: caste.Worker, ColonyID: col},
-		{Stage: stage.Adult, Caste: caste.Male, ColonyID: col},
+		{Stage: stage.Adult, Caste: caste.Queen, Colony: col, Activity: activity.Egglaying},
+		{Stage: stage.Egg, Caste: caste.Undefined, Colony: col},
+		{Stage: stage.Larva, Caste: caste.Queen, Colony: col},
+		{Stage: stage.Pupa, Caste: caste.Male, Colony: col},
+		{Stage: stage.Adult, Caste: caste.Worker, Colony: col},
+		{Stage: stage.Adult, Caste: caste.Male, Colony: col},
 		{Stage: stage.Adult, Caste: caste.Queen, Activity: activity.Hibernate},
 	} {
 		b.Number = 1

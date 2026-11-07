@@ -13,7 +13,7 @@ import (
 // addScrub adds a Scrub masterpatch at (x, y).
 func addScrub(w *ecs.World, x, y float64) ecs.Entity {
 	return ecs.NewMap3[comp.Position, comp.Foodsource, comp.Layer](w).NewEntity(
-		&comp.Position{X: x, Y: y}, &comp.Foodsource{PatchType: "Scrub"}, &comp.Layer{Masterpatch: true})
+		&comp.Position{X: x, Y: y}, &comp.Foodsource{PatchType: "Scrub"}, &comp.Layer{IsMasterpatch: true})
 }
 
 // badgerPositions returns the positions of all badgers.
@@ -39,7 +39,7 @@ func TestCreateBadgersNearOrigin(t *testing.T) {
 		addScrub(w, 10.3, 10.4) // A, patch cell (10, 10)
 		addScrub(w, 100, 100)   // B
 		addScrub(w, 200, 100)   // C
-		CreateBadgersProc(w, 2, 0.1, rand.New(rand.NewPCG(seed, 5)))
+		createBadgers(w, 2, 0.1, rand.New(rand.NewPCG(seed, 5)))
 
 		pos := badgerPositions(w)
 		if len(pos) != 2 {
@@ -66,7 +66,7 @@ func TestCreateBadgersNotEnoughHabitat(t *testing.T) {
 	addScrub(w, 100, 100)
 	addScrub(w, 200, 100)
 	addScrub(w, 205, 100) // within 300 m of the previous one
-	CreateBadgersProc(w, 3, 0.1, rand.New(rand.NewPCG(1, 5)))
+	createBadgers(w, 3, 0.1, rand.New(rand.NewPCG(1, 5)))
 	if n := len(badgerPositions(w)); n != 2 {
 		t.Errorf("%d badgers, want 2", n)
 	}

@@ -16,7 +16,7 @@ import (
 // columns with file names and lists, which have their own sections in a run file (convert), and the output option
 // KeepDeadColonies? (section output, step F13).
 type netLogoParameters struct {
-	params.ParameterFile
+	params.Parameters
 	BeeSpeciesInitialQueensListAsString string `netlogo:"BeeSpeciesInitialQueensListAsString"` // Species and initial queens, e.g. "B_terrestris 500" [QINI].
 	BeespeciesFile                      string `netlogo:"BeespeciesFile"`                      // Bee species table.
 	CropRotationListAsString            string `netlogo:"CropRotationListAsString"`            // Maps of the crop rotation, separated by blanks [PAR-07].
@@ -186,7 +186,7 @@ func setField(v reflect.Value, literal string) error {
 }
 
 // fieldsByName maps the lower-case NetLogo name of each field of netLogoParameters to the field: the tag `netlogo`
-// of its own fields, the tag `yaml` of the embedded params.ParameterFile (the run file keeps the NetLogo names).
+// of its own fields, the tag `yaml` of the embedded params.Parameters (the run file keeps the NetLogo names).
 func fieldsByName() map[string]reflect.StructField {
 	fields := map[string]reflect.StructField{}
 	for _, f := range reflect.VisibleFields(reflect.TypeFor[netLogoParameters]()) {

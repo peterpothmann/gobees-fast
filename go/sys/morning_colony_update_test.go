@@ -20,18 +20,18 @@ import (
 // colonyWorld is a small world for the tests of step 4a: B_terrestris, colonies and bees created by hand,
 // and the resources of the morning systems. Ticks and Day are 200 (before seasonStop 305).
 type colonyWorld struct {
-	w         *ecs.World
-	ticks     *globals.Ticks
-	cal       *globals.Calendar
-	today     *globals.FoodsourcesToday
-	file      *params.ParameterFile
-	constants *params.Constants
-	tally     *tally
-	sys       *UpdateColonies
-	input     *params.Input // the species
-	species   int           // index of B_terrestris
-	colonyMap *colonyMapper
-	beeMap    *beeMapper
+	w          *ecs.World
+	ticks      *globals.Ticks
+	cal        *globals.Calendar
+	today      *globals.Flowering
+	parameters *params.Parameters
+	constants  *params.Constants
+	tally      *tally
+	sys        *colonyUpdate
+	input      *params.Input // the species
+	species    int           // index of B_terrestris
+	colonyMap  *colonyMapper
+	beeMap     *beeMapper
 }
 
 func newColonyWorld(t *testing.T, seed uint64) *colonyWorld {
@@ -40,16 +40,16 @@ func newColonyWorld(t *testing.T, seed uint64) *colonyWorld {
 	cw := &colonyWorld{w: w}
 	ecs.AddResource(w, &resource.Rand{Source: rand.NewPCG(seed, 3)})
 	p := params.Default()
-	cw.file, cw.constants = &p.File, &p.Constants
-	ecs.AddResource(w, cw.file)
+	cw.parameters, cw.constants = &p.Parameters, &p.Constants
+	ecs.AddResource(w, cw.parameters)
 	ecs.AddResource(w, cw.constants)
 	cw.ticks = &globals.Ticks{Ticks: 200}
 	ecs.AddResource(w, cw.ticks)
 	cw.cal = &globals.Calendar{Day: 200}
 	ecs.AddResource(w, cw.cal)
-	cw.today = &globals.FoodsourcesToday{}
+	cw.today = &globals.Flowering{}
 	ecs.AddResource(w, cw.today)
-	ecs.AddResource(w, &globals.Landscape{Scaling_NLpatches_per_m: 0.1})
+	ecs.AddResource(w, &globals.Landscape{Scale: 0.1})
 	cw.tally = newTally(w)
 	ecs.AddResource(w, &globals.ActiveBees{})
 	ecs.AddResource(w, &globals.Daytime{})
@@ -60,15 +60,15 @@ func newColonyWorld(t *testing.T, seed uint64) *colonyWorld {
 	cw.colonyMap = ecs.NewMap6[comp.Position, comp.Colony, comp.ColonyStores, comp.ColonyStimuli, comp.ColonyCounts, comp.ColonyRange](w)
 	cw.beeMap = newBeeMapper(w)
 
-	cw.sys = &UpdateColonies{}
+	cw.sys = &colonyUpdate{}
 	cw.sys.Initialize(w)
 	return cw
 }
 
 // addColony adds a colony with the start values of CreateColoniesProc [CCOL-04]. change may modify them.
 func (cw *colonyWorld) addColony(change func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts)) ecs.Entity {
-	c := comp.Colony{SpeciesIDcolony: cw.species} // the four dates unset
-	s := comp.ColonyStores{EnergyStore_kJ: 0.873}
+	c := comp.Colony{Species: cw.species} // the four dates unset
+	s := comp.ColonyStores{Energy: 0.873}
 	n := comp.ColonyCounts{}
 	if change != nil {
 		change(&c, &s, &n)
@@ -79,7 +79,7 @@ func (cw *colonyWorld) addColony(change func(c *comp.Colony, s *comp.ColonyStore
 // addBee adds a bee or cohort to a colony. Adult queens are mated.
 func (cw *colonyWorld) addBee(col ecs.Entity, st stage.Stage, c caste.Caste, number, adultAge int) ecs.Entity {
 	b := comp.Bee{Number: number, Stage: st, Caste: c, Activity: activity.Resting,
-		ColonyID: col, SpeciesID: cw.species, AdultAge: adultAge, Weight_mg: 100,
+		Colony: col, Species: cw.species, AdultAge: adultAge, Weight: 100,
 		Mated: st == stage.Adult && c == caste.Queen}
 	return cw.beeMap.NewEntity(&comp.Position{}, &b, &comp.Genetics{},
 		&comp.Thresholds{}, &comp.Forager{}, &comp.Development{})
@@ -90,23 +90,23 @@ func (cw *colonyWorld) colony(e ecs.Entity) (*comp.Colony, *comp.ColonyStores, *
 	return c, s, n
 }
 
-// nextMorning advances ticks and Day by one and runs UpdateColonies.
+// nextMorning advances ticks and Day by one and runs colonyUpdate.
 func (cw *colonyWorld) nextMorning() {
 	cw.ticks.Ticks++
 	cw.cal.Day = dayOfYear(cw.ticks.Ticks)
 	cw.sys.Update(cw.w)
 }
 
-func TestUpdateColoniesStatistics(t *testing.T) {
+func TestColonyUpdateStatistics(t *testing.T) {
 	cw := newColonyWorld(t, 1)
 	col := cw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) {
-		s.SummedIncubationToday_kJ = 5
+		s.IncubationToday = 5
 	})
 	cw.addBee(col, stage.Adult, caste.Queen, 1, 300)
 	young := cw.addBee(col, stage.Adult, caste.Queen, 1, 2)
 	_, b, _, _, _, _ := cw.beeMap.Get(young)
 	b.Activity = activity.Hibernate
-	b.Weight_mg = 800
+	b.Weight = 800
 	cw.addBee(col, stage.Adult, caste.Worker, 3, 5)
 	cw.addBee(col, stage.Adult, caste.Male, 2, 1)
 	cw.addBee(col, stage.Egg, caste.Undefined, 10, 0)
@@ -117,13 +117,13 @@ func TestUpdateColoniesStatistics(t *testing.T) {
 
 	cw.nextMorning()
 	c, s, n := cw.colony(col)
-	want := comp.ColonyCounts{LarvaWorkerRatio: 2, AllEggs: 10, AllLarvae: 6, AllPupae: 4, AllAdults: 7,
-		AllAdultWorkers: 3}
+	want := comp.ColonyCounts{LarvaWorkerRatio: 2, Eggs: 10, Larvae: 6, Pupae: 4, Adults: 7,
+		AdultWorkers: 3}
 	if *n != want {
 		t.Errorf("statistics [UCOL-06]:\n got %+v\nwant %+v", *n, want)
 	}
-	if s.SummedIncubationToday_kJ != 0 {
-		t.Errorf("[UCOL-05] summedIncubationToday_kJ = %v, want 0", s.SummedIncubationToday_kJ)
+	if s.IncubationToday != 0 {
+		t.Errorf("[UCOL-05] summedIncubationToday_kJ = %v, want 0", s.IncubationToday)
 	}
 	// [UCOL-07] the first adult worker starts the eusocial phase
 	if c.EusocialPhaseDate != day.At(201) {
@@ -135,12 +135,12 @@ func TestUpdateColoniesStatistics(t *testing.T) {
 	}
 }
 
-func TestUpdateColoniesDeathAfterCP(t *testing.T) {
+func TestColonyUpdateDeathAfterCP(t *testing.T) {
 	// [UCOL-02] finding 37 (see trans/netlogo-findings.md#finding-37) and finding 38 (see trans/netlogo-findings.md#finding-38)
 	cw := newColonyWorld(t, 1)
 	col := cw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) {
 		c.CompetitionPointDate = day.At(150)
-		n.AllPupae = 4 // counted on the previous morning, the pupae have emerged since
+		n.Pupae = 4 // counted on the previous morning, the pupae have emerged since
 	})
 	queen := cw.addBee(col, stage.Adult, caste.Queen, 1, 400)
 	oldWorker := cw.addBee(col, stage.Adult, caste.Worker, 1, 20)
@@ -151,8 +151,8 @@ func TestUpdateColoniesDeathAfterCP(t *testing.T) {
 	if !cw.w.Alive(queen) || !cw.w.Alive(oldWorker) {
 		t.Fatal("day 201: adults must survive, the brood counts of the previous morning are not 0")
 	}
-	if _, _, n := cw.colony(col); n.AllPupae != 0 {
-		t.Fatalf("day 201: allPupae %v, want 0 after the statistics", n.AllPupae)
+	if _, _, n := cw.colony(col); n.Pupae != 0 {
+		t.Fatalf("day 201: allPupae %v, want 0 after the statistics", n.Pupae)
 	}
 	cw.nextMorning() // 202: workers and queens older than 10 days die
 	if cw.w.Alive(queen) || cw.w.Alive(oldWorker) || !cw.w.Alive(youngWorker) || !cw.w.Alive(male) {
@@ -170,7 +170,7 @@ func TestUpdateColoniesDeathAfterCP(t *testing.T) {
 
 	// the male dies (e.g. after MaxLifespanMales). The colony dies the next morning [UCOL-11].
 	death := newBeeDeath(cw.w)
-	death.DieProc(cw.w, male, "Male: adultAge > MaxLifespanMales")
+	death.die(cw.w, male, "Male: adultAge > MaxLifespanMales")
 	cw.nextMorning() // 204
 	if cw.w.Alive(col) {
 		t.Fatal("day 204: the colony without bees must die")
@@ -180,10 +180,10 @@ func TestUpdateColoniesDeathAfterCP(t *testing.T) {
 	}
 }
 
-func TestUpdateColoniesEnergyDepleted(t *testing.T) {
+func TestColonyUpdateEnergyDepleted(t *testing.T) {
 	// [UCOL-03] all bees die, the colony dies on the same morning [UCOL-11]
 	cw := newColonyWorld(t, 1)
-	col := cw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) { s.EnergyStore_kJ = -0.1 })
+	col := cw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) { s.Energy = -0.1 })
 	cw.addBee(col, stage.Adult, caste.Queen, 1, 300)
 	cw.addBee(col, stage.Larva, caste.Undefined, 5, 0)
 	cw.addBee(col, stage.Egg, caste.Undefined, 2, 0)
@@ -194,7 +194,7 @@ func TestUpdateColoniesEnergyDepleted(t *testing.T) {
 	}
 }
 
-func TestUpdateColoniesNoAdults(t *testing.T) {
+func TestColonyUpdateNoAdults(t *testing.T) {
 	// [UCOL-04] brood without any adult dies. An adult male keeps the brood alive (finding 38, see
 	// trans/netlogo-findings.md#finding-38).
 	cw := newColonyWorld(t, 1)
@@ -216,7 +216,7 @@ func TestUpdateColoniesNoAdults(t *testing.T) {
 	}
 }
 
-func TestUpdateColoniesSwitchPoint(t *testing.T) {
+func TestColonyUpdateSwitchPoint(t *testing.T) {
 	// [UCOL-08] in the eusocial phase and with larvaWorkerRatio < 3: p = 0.13 per day
 	cw := newColonyWorld(t, 5)
 	const n = 2000
@@ -258,7 +258,7 @@ func TestUpdateColoniesSwitchPoint(t *testing.T) {
 	}
 }
 
-func TestCompetitionPointDateREP(t *testing.T) {
+func TestCompetitionPointDate(t *testing.T) {
 	// [CPD-01] worked examples of the annotation, and the bounds
 	cases := []struct{ eus, qpd, want day.Abs }{
 		{120, 130, 143}, // y = 22.5, round 142.5 = 143
@@ -270,7 +270,7 @@ func TestCompetitionPointDateREP(t *testing.T) {
 	}
 	for _, c := range cases {
 		col := comp.Colony{EusocialPhaseDate: day.At(c.eus), QueenProductionDate: day.At(c.qpd)}
-		if got := CompetitionPointDateREP(&col); got != c.want {
+		if got := competitionPointDate(&col); got != c.want {
 			t.Errorf("CompetitionPointDateREP(eus %v, qpd %v) = %v, want %v", c.eus, c.qpd, got, c.want)
 		}
 	}
@@ -293,30 +293,30 @@ func TestCompetitionPointDateREP(t *testing.T) {
 	}
 }
 
-func TestUpdateColoniesRangeLists(t *testing.T) {
-	// [UCOL-01] the lists in flower and range are rebuilt only if FoodsourcesInFlowerUpdate
+func TestColonyUpdateRangeLists(t *testing.T) {
+	// [UCOL-01] the lists in flower and range are rebuilt only if Flowering.Changed
 	cw := newColonyWorld(t, 1)
 	fsMap := ecs.NewMap3[comp.Foodsource, comp.FoodsourceState, comp.Layer](cw.w)
-	inFlower := fsMap.NewEntity(&comp.Foodsource{}, &comp.FoodsourceState{Pollen_g: 1, Nectar_myl: 1}, &comp.Layer{Masterpatch: true})
-	notInFlower := fsMap.NewEntity(&comp.Foodsource{}, &comp.FoodsourceState{}, &comp.Layer{Masterpatch: true})
+	inFlower := fsMap.NewEntity(&comp.Foodsource{}, &comp.FoodsourceState{Pollen: 1, Nectar: 1}, &comp.Layer{IsMasterpatch: true})
+	notInFlower := fsMap.NewEntity(&comp.Foodsource{}, &comp.FoodsourceState{}, &comp.Layer{IsMasterpatch: true})
 	for _, e := range []ecs.Entity{inFlower, notInFlower} {
 		_, _, l := fsMap.Get(e)
-		l.MasterpatchID = e
+		l.Masterpatch = e
 	}
 	col := cw.addColony(nil)
 	cw.addBee(col, stage.Adult, caste.Queen, 1, 300)
 	_, _, _, _, _, r := cw.colonyMap.Get(col)
-	r.AllPatchesInRangeList = []ecs.Entity{inFlower, notInFlower}
+	r.Layers = []ecs.Entity{inFlower, notInFlower}
 
 	cw.nextMorning() // no update
-	if _, _, _, _, _, r := cw.colonyMap.Get(col); len(r.MasterpatchesWithPollenlayersInFlowerAndRangeList) != 0 {
-		t.Fatal("lists must not change without FoodsourcesInFlowerUpdate")
+	if _, _, _, _, _, r := cw.colonyMap.Get(col); len(r.PollenPatches) != 0 {
+		t.Fatal("lists must not change without Flowering.Changed")
 	}
-	cw.today.FoodsourcesInFlowerUpdate = true
+	cw.today.Changed = true
 	cw.nextMorning()
 	_, _, _, _, _, r = cw.colonyMap.Get(col)
-	if len(r.MasterpatchesWithPollenlayersInFlowerAndRangeList) != 1 || r.MasterpatchesWithPollenlayersInFlowerAndRangeList[0] != inFlower ||
-		len(r.MasterpatchesWithNectarlayersInFlowerAndRangeList) != 1 {
+	if len(r.PollenPatches) != 1 || r.PollenPatches[0] != inFlower ||
+		len(r.NectarPatches) != 1 {
 		t.Errorf("lists after the update: %+v", *r)
 	}
 }

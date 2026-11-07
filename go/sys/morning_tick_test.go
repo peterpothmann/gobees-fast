@@ -12,7 +12,7 @@ import (
 
 func TestTickMatchesNetLogo(t *testing.T) {
 	a := app.New()
-	a.AddSystem(&Tick{})
+	a.AddSystem(&tick{})
 	a.Initialize()
 
 	ticks := ecs.GetResource[globals.Ticks](a.World)

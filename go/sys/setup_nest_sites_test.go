@@ -11,12 +11,12 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-func TestNestHabitatsListREP(t *testing.T) {
+func TestExpandNestHabitats(t *testing.T) {
 	masterpatches := []masterpatch{
 		{patchType: "Grassland"}, {patchType: "Grass_improved"}, {patchType: "Improved_Grassland"},
 		{patchType: "Hedgerow"}, {patchType: "Grassland"},
 	}
-	got, err := NestHabitatsListREP([]string{"Grassland*", "Garden", "Hedgerow"}, masterpatches, rand.New(rand.NewPCG(1, 1)))
+	got, err := expandNestHabitats([]string{"Grassland*", "Garden", "Hedgerow"}, masterpatches, rand.New(rand.NewPCG(1, 1)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,7 +28,7 @@ func TestNestHabitatsListREP(t *testing.T) {
 		t.Errorf("got %q, want %q (in any order)", got, want)
 	}
 	// "*" not at the end gives an assertion
-	if _, err := NestHabitatsListREP([]string{"Gr*ss"}, masterpatches, rand.New(rand.NewPCG(1, 1))); err == nil {
+	if _, err := expandNestHabitats([]string{"Gr*ss"}, masterpatches, rand.New(rand.NewPCG(1, 1))); err == nil {
 		t.Error("expected an error for a '*' that is not at the end")
 	}
 }
@@ -46,7 +46,7 @@ func TestNestSites(t *testing.T) {
 	}
 }
 
-func TestCreateSpeciesExampleFarm(t *testing.T) {
+func TestNestSitesSetupExampleFarm(t *testing.T) {
 	a := newExampleFarmSetup(t, 1)
 	w := a.World
 
@@ -63,7 +63,7 @@ func TestCreateSpeciesExampleFarm(t *testing.T) {
 
 	// [SPEC-04] the example farm has the habitat types Crop_Cereals, Grass_improved, Grassland, Hedgerow, Scrub,
 	// Woodland. "Grassland*" matches only "Grassland" ("Grass_improved" does not contain "Grassland").
-	gotHabitats := slices.Clone(ns.NestHabitatsList)
+	gotHabitats := slices.Clone(ns.Habitats)
 	slices.Sort(gotHabitats)
 	wantHabitats := []string{"Garden", "Grassland", "Hedgerow", "Nestboxes", "Scrub", "Woodland"}
 	if !slices.Equal(gotHabitats, wantHabitats) {
@@ -76,14 +76,14 @@ func TestCreateSpeciesExampleFarm(t *testing.T) {
 	for _, m := range collectMasterpatches(w) {
 		if slices.Contains(wantHabitats, m.patchType) {
 			wantSites = append(wantSites, m.entity)
-			wantArea += m.area_sqm
+			wantArea += m.area
 		}
 	}
-	if len(wantSites) == 0 || !slices.Equal(ns.NestsiteFoodsourceList, wantSites) || ns.NestSiteArea != wantArea {
-		t.Errorf("nest sites: %d with %v m2, want %d with %v m2", len(ns.NestsiteFoodsourceList), ns.NestSiteArea, len(wantSites), wantArea)
+	if len(wantSites) == 0 || !slices.Equal(ns.Sites, wantSites) || ns.Area != wantArea {
+		t.Errorf("nest sites: %d with %v m2, want %d with %v m2", len(ns.Sites), ns.Area, len(wantSites), wantArea)
 	}
 	// the species keep the list of the run file
-	if slices.Equal(species[0].NestHabitatsList, ns.NestHabitatsList) {
-		t.Errorf("params.Input.Species holds the expanded list %q", species[0].NestHabitatsList)
+	if slices.Equal(species[0].NestHabitats, ns.Habitats) {
+		t.Errorf("params.Input.Species holds the expanded list %q", species[0].NestHabitats)
 	}
 }

@@ -5,42 +5,43 @@ import (
 )
 
 // SpeciesFile are the values of one bee species in a run file [SPEC-03] (section species, package input), before the
-// derived values. The keys are the column names of the NetLogo BeespeciesFile.
+// derived values. The keys (tag `yaml`) are the Go names in lowerCamelCase (step F15c), the tag `netlogo` holds the
+// column of the NetLogo BeespeciesFile where it differs (the converter reads the columns by it).
 type SpeciesFile struct {
 	// Name is the name in InitialQueens [SPEC-02], [IQUE-04]. NetLogo has two columns, species (compared with the
 	// initial queens) and name (stored), equal in all files. The converter checks that they are equal (step F13).
 	Name string `yaml:"name"`
 	// Parasitic marks a cuckoo bumblebee species (Psithyrus) [ACT-04], [EMER-04], [PSI]. NetLogo compares the name
 	// with "Psithyrus", the converter sets the key for this name (step F13).
-	Parasitic                    bool       `yaml:"parasitic,omitempty"`
-	EmergingDay_mean             float64    `yaml:"emergingDay_mean"`
-	EmergingDay_sd               float64    `yaml:"emergingDay_sd"`
-	NestHabitatsList             []string   `yaml:"nestHabitatsList"` // [SPEC-04] before the expansion, see globals.NestSites
-	Proboscis_min_mm             float64    `yaml:"proboscis_min_mm"`
-	Proboscis_max_mm             float64    `yaml:"proboscis_max_mm"`
-	GrowthFactor                 float64    `yaml:"growthFactor"`
-	SeasonStop                   day.OfYear `yaml:"seasonStop"`
-	MaxLifespanWorkers           int        `yaml:"maxLifespanWorkers"`
-	Batchsize                    int        `yaml:"batchsize"`
-	FlightVelocity_m_per_s       float64    `yaml:"flightVelocity_m/s"`
-	SearchLength_m               float64    `yaml:"searchLength_m"`
-	TimeUnloading                float64    `yaml:"timeUnloading"`
-	SpecMax_cropVolume_myl       float64    `yaml:"specMax_cropVolume_myl"`
-	SpecMax_pollenPellets_g      float64    `yaml:"specMax_pollenPellets_g"`
-	MinToMaxFactor               float64    `yaml:"minToMaxFactor"`
-	DevAgeHatchingMin_d          float64    `yaml:"devAgeHatchingMin_d"`
-	DevAgePupationMin_d          float64    `yaml:"devAgePupationMin_d"`
-	DevAgeEmergingMin_d          float64    `yaml:"devAgeEmergingMin_d"`
-	DevWeightEgg_mg              float64    `yaml:"devWeightEgg_mg"`
-	DevWeightPupationMin_mg      float64    `yaml:"devWeightPupationMin_mg"`
-	DevWeightPupationMax_mg      float64    `yaml:"devWeightPupationMax_mg"`
-	PollenToBodymassFactor       float64    `yaml:"pollenToBodymassFactor"`
-	Dev_Q_DeterminationWeight_mg float64    `yaml:"dev_Q_DeterminationWeight_mg"`
-	DevAge_Q_PupationMin_d       float64    `yaml:"devAge_Q_PupationMin_d"`
-	DevWeight_Q_PupationMin_mg   float64    `yaml:"devWeight_Q_PupationMin_mg"`
-	DevWeight_Q_PupationMax_mg   float64    `yaml:"devWeight_Q_PupationMax_mg"`
-	DevAge_Q_EmergingMin_d       float64    `yaml:"devAge_Q_EmergingMin_d"`
-	DailyNestSiteChance          float64    `yaml:"dailyNestSiteChance"`
+	Parasitic                bool       `yaml:"parasitic,omitempty"`
+	EmergenceDayMean         float64    `yaml:"emergenceDayMean" netlogo:"emergingDay_mean"` // mean day of the year of the emergence from hibernation [d]
+	EmergenceDaySD           float64    `yaml:"emergenceDaySD" netlogo:"emergingDay_sd"`     // its standard deviation [d], rounded [SPEC-03]
+	NestHabitats             []string   `yaml:"nestHabitats" netlogo:"nestHabitatsList"`     // habitat types of the nest sites [SPEC-04], before the expansion, see globals.NestSites
+	ProboscisMin             float64    `yaml:"proboscisMin" netlogo:"proboscis_min_mm"`     // [mm]
+	ProboscisMax             float64    `yaml:"proboscisMax" netlogo:"proboscis_max_mm"`     // [mm]
+	GrowthFactor             float64    `yaml:"growthFactor"`
+	SeasonStop               day.OfYear `yaml:"seasonStop"`                                         // day of the year
+	MaxLifespanWorkers       int        `yaml:"maxLifespanWorkers"`                                 // [d]
+	BatchSize                int        `yaml:"batchSize" netlogo:"batchsize"`                      // eggs per batch
+	FlightVelocity           float64    `yaml:"flightVelocity" netlogo:"flightVelocity_m/s"`        // [m/s]
+	SearchLength             float64    `yaml:"searchLength" netlogo:"searchLength_m"`              // flight distance of a search trip [m]
+	UnloadingTime            float64    `yaml:"unloadingTime" netlogo:"timeUnloading"`              // [s]
+	MaxCropVolume            float64    `yaml:"maxCropVolume" netlogo:"specMax_cropVolume_myl"`     // crop volume of the largest bee [µl]
+	MaxPollenPellets         float64    `yaml:"maxPollenPellets" netlogo:"specMax_pollenPellets_g"` // pollen load of the largest bee [g]
+	MinToMaxFactor           float64    `yaml:"minToMaxFactor"`
+	HatchingAgeMin           float64    `yaml:"hatchingAgeMin" netlogo:"devAgeHatchingMin_d"`        // [d]
+	PupationAgeMin           float64    `yaml:"pupationAgeMin" netlogo:"devAgePupationMin_d"`        // [d]
+	EmergenceAgeMin          float64    `yaml:"emergenceAgeMin" netlogo:"devAgeEmergingMin_d"`       // [d]
+	EggWeight                float64    `yaml:"eggWeight" netlogo:"devWeightEgg_mg"`                 // [mg]
+	PupationWeightMin        float64    `yaml:"pupationWeightMin" netlogo:"devWeightPupationMin_mg"` // [mg]
+	PupationWeightMax        float64    `yaml:"pupationWeightMax" netlogo:"devWeightPupationMax_mg"` // [mg]
+	PollenToBodymassFactor   float64    `yaml:"pollenToBodymassFactor"`
+	QueenDeterminationWeight float64    `yaml:"queenDeterminationWeight" netlogo:"dev_Q_DeterminationWeight_mg"` // [mg]
+	QueenPupationAgeMin      float64    `yaml:"queenPupationAgeMin" netlogo:"devAge_Q_PupationMin_d"`            // [d]
+	QueenPupationWeightMin   float64    `yaml:"queenPupationWeightMin" netlogo:"devWeight_Q_PupationMin_mg"`     // [mg]
+	QueenPupationWeightMax   float64    `yaml:"queenPupationWeightMax" netlogo:"devWeight_Q_PupationMax_mg"`     // [mg]
+	QueenEmergenceAgeMin     float64    `yaml:"queenEmergenceAgeMin" netlogo:"devAge_Q_EmergingMin_d"`           // [d]
+	DailyNestSiteChance      float64    `yaml:"dailyNestSiteChance"`
 }
 
 // Species holds the parameters of one bee species: the values of the run file (SpeciesFile) and the values derived
@@ -50,20 +51,20 @@ type SpeciesFile struct {
 //
 // NetLogo: species-own (oneSpecies agents), created in CreateSpeciesProc [SPEC].
 type Species struct {
-	SpeciesFile // EmergingDay_sd is rounded [SPEC-03], finding 20 (see trans/netlogo-findings.md#finding-20)
+	SpeciesFile // EmergenceDaySD is rounded [SPEC-03], finding 20 (see trans/netlogo-findings.md#finding-20)
 
-	FlightCosts_kJ_per_m_per_mg        float64 // derived from MetabolicRateFlight_W/kg
-	DevQuotaIncubationToday_kJ         float64 // [SPEC-05] and following: derived
-	DevAgeHatchingMax_d                float64
-	DevAgePupationMax_d                float64
-	DevAgeEmergingMax_d                float64
-	DevIncubationHatchingTH_kJ         float64
-	DevIncubationPupationTH_kJ         float64
-	DevIncubationEmergingTH_kJ         float64
-	Dev_larvalAge_QueenDetermination_d int
-	DevAge_Q_PupationMax_d             float64
-	DevAge_Q_EmergingMax_d             float64
-	DevIncubation_Q_PupationTH_kJ      float64
-	DevIncubation_Q_EmergingTH_kJ      float64
-	MinPollenStore_g                   float64 // [SPEC-07]
+	FlightCosts              float64 // [kJ/(m mg)], derived from Constants.FlightMetabolicRate. NetLogo: flightCosts_kJ/m/mg
+	DailyIncubationQuota     float64 // [kJ] [SPEC-05], this and the following: derived. NetLogo: devQuotaIncubationToday_kJ
+	HatchingAgeMax           float64 // [d]. NetLogo: devAgeHatchingMax_d
+	PupationAgeMax           float64 // [d]. NetLogo: devAgePupationMax_d
+	EmergenceAgeMax          float64 // [d]. NetLogo: devAgeEmergingMax_d
+	HatchingIncubation       float64 // incubation threshold of the hatching [kJ]. NetLogo: devIncubationHatchingTH_kJ
+	PupationIncubation       float64 // incubation threshold of the pupation [kJ]. NetLogo: devIncubationPupationTH_kJ
+	EmergenceIncubation      float64 // incubation threshold of the emergence [kJ]. NetLogo: devIncubationEmergingTH_kJ
+	QueenDeterminationAge    int     // larval age of the caste determination [d]. NetLogo: dev_larvalAge_QueenDetermination_d
+	QueenPupationAgeMax      float64 // [d]. NetLogo: devAge_Q_PupationMax_d
+	QueenEmergenceAgeMax     float64 // [d]. NetLogo: devAge_Q_EmergingMax_d
+	QueenPupationIncubation  float64 // [kJ]. NetLogo: devIncubation_Q_PupationTH_kJ
+	QueenEmergenceIncubation float64 // [kJ]. NetLogo: devIncubation_Q_EmergingTH_kJ
+	MinPollenStore           float64 // [g] [SPEC-07]. NetLogo: minPollenStore_g
 }

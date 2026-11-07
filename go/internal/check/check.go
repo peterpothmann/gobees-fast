@@ -19,14 +19,14 @@ import (
 //     day: a colony dies only when no bee belongs to it [UCOL-11].
 //   - [CHK-04] if seasonEnd: no colony is alive on day 364. NetLogo checks produced - died = 0, which is the same,
 //     as only CreateColoniesProc creates and only DieProc removes colonies. Needs the end of the season [SEAS-01],
-//     so runs without UpdateSeasonalEvents pass false.
+//     so runs without seasonalEvents pass false.
 func Day(w *ecs.World, seasonEnd bool) error {
 	colonies := ecs.NewMap1[comp.Colony](w)
 	query := ecs.NewFilter1[comp.Bee](w).Query()
 	for query.Next() {
 		b := query.Get()
 		member := b.Stage != stage.Adult || b.Caste == caste.Worker || b.Caste == caste.Male
-		if member && (b.ColonyID.IsZero() || !w.Alive(b.ColonyID) || !colonies.HasAll(b.ColonyID)) {
+		if member && (b.Colony.IsZero() || !w.Alive(b.Colony) || !colonies.HasAll(b.Colony)) {
 			err := fmt.Errorf("[CHK-03] bee %v (stage %v, caste %v, number %v) belongs to no living colony",
 				query.Entity(), b.Stage, b.Caste, b.Number)
 			query.Close()

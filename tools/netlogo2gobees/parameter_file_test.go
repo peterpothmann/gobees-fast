@@ -13,22 +13,22 @@ import (
 // wantExampleFarmParameters holds every value of _SYSTEM_Example_Farm_Parameters.csv that the model reads [RPAR].
 // Strings are stored as """text""" in the file, """""" means an empty string.
 var wantExampleFarmParameters = netLogoParameters{
-	ParameterFile: params.ParameterFile{
-		AbundanceBoost:                     1,
-		FoodSourceLimit:                    25,
-		ForagingMortalityFactor:            1,
-		ForagingMortalityModel:             "high",
-		InitialQueensModifierBehaviorSpace: 1,
-		Lambda_detectProb:                  -0.005,
-		MaxHibernatingQueens:               10000,
-		MergeHedges:                        true,
-		MinSizeFoodSources:                 true,
-		N_Badgers:                          0,
-		RemoveEmptyFoodSources:             true,
-		SexLocus:                           false,
-		StopExtinct:                        true,
-		UnlimitedMales:                     true,
-		WinterMortality:                    true,
+	Parameters: params.Parameters{
+		AbundanceBoost:          1,
+		FoodsourceLimit:         25,
+		ForagingMortalityFactor: 1,
+		ForagingMortalityModel:  "high",
+		InitialQueensFactor:     1,
+		DetectionLambda:         -0.005,
+		MaxHibernatingQueens:    10000,
+		MergeHedges:             true,
+		LimitFoodsources:        true,
+		Badgers:                 0,
+		RemoveEmptyFoodsources:  true,
+		SexLocus:                false,
+		StopExtinct:             true,
+		UnlimitedMales:          true,
+		WinterMortality:         true,
 	},
 	BeeSpeciesInitialQueensListAsString: "B_terrestris 500",
 	BeespeciesFile:                      "_SYSTEM_BumbleSpecies_UK_01.csv",
@@ -108,8 +108,8 @@ func TestParseParameterFileRemovedParameter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p.N_Badgers != 2 {
-		t.Errorf("N_Badgers = %v, want 2", p.N_Badgers)
+	if p.Badgers != 2 {
+		t.Errorf("N_Badgers = %v, want 2", p.Badgers)
 	}
 }
 
@@ -119,8 +119,8 @@ func TestParseParameterFileFirstColumnWins(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p.N_Badgers != 1 {
-		t.Errorf("N_Badgers = %v, want 1", p.N_Badgers)
+	if p.Badgers != 1 {
+		t.Errorf("N_Badgers = %v, want 1", p.Badgers)
 	}
 }
 
@@ -131,7 +131,7 @@ func TestParseParameterFileIgnoredGUIParameter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p != (netLogoParameters{ParameterFile: params.ParameterFile{N_Badgers: 2}}) {
+	if p != (netLogoParameters{Parameters: params.Parameters{Badgers: 2}}) {
 		t.Errorf("got %+v, want only N_Badgers = 2", p)
 	}
 }

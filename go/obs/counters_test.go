@@ -93,7 +93,7 @@ func TestCountersDeadColoniesNewYear(t *testing.T) {
 func TestCountersHibernatingQueensRemoved(t *testing.T) {
 	// [SEAS-03] the planned number from the hibernating queens of the evening before day 1, added on day 1
 	w := newWorld(t)
-	ecs.GetResource[params.ParameterFile](w).MaxHibernatingQueens = 10
+	ecs.GetResource[params.Parameters](w).MaxHibernatingQueens = 10
 	calendar := ecs.GetResource[globals.Calendar](w)
 	calendar.Day = 0 // Setup
 	hibernating := addBee(w, comp.Bee{Stage: stage.Adult, Caste: caste.Queen, Number: 12, Activity: activity.Hibernate})

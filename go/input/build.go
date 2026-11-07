@@ -16,7 +16,7 @@ const daysPerYear = 365
 // every file of c.CropRotation.
 func Build(c Config, landscapes map[string]Landscape) (params.Params, error) {
 	p := params.Default()
-	p.File = c.Parameters
+	p.Parameters = c.Parameters
 	p.Output = c.Output
 	in := params.Input{}
 
@@ -31,16 +31,16 @@ func Build(c Config, landscapes map[string]Landscape) (params.Params, error) {
 		return p, err
 	}
 	in.Derived = params.Derived{
-		BeeSpeciesInitialQueensList: slices.Clone(c.InitialQueens),
-		SpeciesList:                 species,
-		MortalityForager_per_s:      mortality,
-		FoodsourcesFile:             c.Landscape,                        // [PAR-05]
-		CSS_OptionsList:             slices.Clone(c.StewardshipOptions), // [PAR-06]
-		CropRotationList:            slices.Clone(c.CropRotation),       // [PAR-07]
+		InitialQueens:      slices.Clone(c.InitialQueens),
+		SpeciesNames:       species,
+		ForagerMortality:   mortality,
+		StartLandscape:     c.Landscape,                        // [PAR-05]
+		StewardshipOptions: slices.Clone(c.StewardshipOptions), // [PAR-06]
+		CropRotation:       slices.Clone(c.CropRotation),       // [PAR-07]
 	}
 
 	// [FPER]
-	if in.Weather, err = weather(c.ForagingPeriod_s); err != nil {
+	if in.ForagingPeriod, err = weather(c.ForagingPeriod); err != nil {
 		return p, err
 	}
 
@@ -100,50 +100,50 @@ func mortalityForager(model string) (float64, error) {
 
 // weather checks the foraging periods of the run file: at least one year, 365 values per year, each from 0 to
 // 86400 s.
-func weather(years []Year) (params.Weather, error) {
+func weather(years []Year) (params.ForagingPeriod, error) {
 	if len(years) == 0 {
-		return params.Weather{}, fmt.Errorf("foraging_period_s: at least one year is needed")
+		return params.ForagingPeriod{}, fmt.Errorf("foragingPeriod: at least one year is needed")
 	}
-	w := params.Weather{Years_s: make([][]float64, len(years))}
+	w := params.ForagingPeriod{Years: make([][]float64, len(years))}
 	for i, y := range years {
 		if len(y) != daysPerYear {
-			return w, fmt.Errorf("foraging_period_s: year %d has %d days, expected %d", i+1, len(y), daysPerYear)
+			return w, fmt.Errorf("foragingPeriod: year %d has %d days, expected %d", i+1, len(y), daysPerYear)
 		}
 		for d, v := range y {
 			if v < 0 || v > 86400 {
-				return w, fmt.Errorf("foraging_period_s: year %d, day %d: %v s, expected 0 to 86400", i+1, d+1, v)
+				return w, fmt.Errorf("foragingPeriod: year %d, day %d: %v s, expected 0 to 86400", i+1, d+1, v)
 			}
 		}
-		w.Years_s[i] = slices.Clone(y)
+		w.Years[i] = slices.Clone(y)
 	}
 	return w, nil
 }
 
 // deriveSpecies returns the species of the run file with the derived values [SPEC-03], [SPEC-05], [SPEC-07].
-// NestHabitatsList is not yet expanded [SPEC-04].
+// NestHabitats is not yet expanded [SPEC-04].
 func deriveSpecies(s Species, constants *params.Constants) params.Species {
-	// the values of the run file as they are (a copy, NestHabitatsList cloned), then the derived values (step F14)
+	// the values of the run file as they are (a copy, NestHabitats cloned), then the derived values (step F14)
 	sp := params.Species{SpeciesFile: s}
-	sp.NestHabitatsList = slices.Clone(s.NestHabitatsList)
-	sp.EmergingDay_sd = util.Round(sp.EmergingDay_sd) // finding 20 (see trans/netlogo-findings.md#finding-20)
-	sp.FlightCosts_kJ_per_m_per_mg = constants.MetabolicRateFlight_W_per_kg / sp.FlightVelocity_m_per_s / (1000 * 1000 * 1000)
+	sp.NestHabitats = slices.Clone(s.NestHabitats)
+	sp.EmergenceDaySD = util.Round(sp.EmergenceDaySD) // finding 20 (see trans/netlogo-findings.md#finding-20)
+	sp.FlightCosts = constants.FlightMetabolicRate / sp.FlightVelocity / (1000 * 1000 * 1000)
 
 	// [SPEC-05]
-	sp.DevQuotaIncubationToday_kJ = 10 / (1.5 * float64(sp.Batchsize))
-	sp.DevAgeHatchingMax_d = sp.DevAgeHatchingMin_d * sp.MinToMaxFactor
-	sp.DevAgePupationMax_d = sp.DevAgePupationMin_d*sp.MinToMaxFactor - sp.DevAgeHatchingMin_d
-	sp.DevAgeEmergingMax_d = sp.DevAgeEmergingMin_d*sp.MinToMaxFactor - sp.DevAgePupationMin_d
-	sp.DevIncubationHatchingTH_kJ = sp.DevQuotaIncubationToday_kJ * sp.DevAgeHatchingMin_d
-	sp.DevIncubationPupationTH_kJ = sp.DevQuotaIncubationToday_kJ * sp.DevAgePupationMin_d
-	sp.DevIncubationEmergingTH_kJ = sp.DevQuotaIncubationToday_kJ * sp.DevAgeEmergingMin_d
-	sp.Dev_larvalAge_QueenDetermination_d = 3
-	sp.DevAge_Q_PupationMax_d = sp.DevAge_Q_PupationMin_d*sp.MinToMaxFactor - sp.DevAgeHatchingMin_d
-	sp.DevAge_Q_EmergingMax_d = sp.DevAge_Q_EmergingMin_d*sp.MinToMaxFactor - sp.DevAge_Q_PupationMin_d
-	sp.DevIncubation_Q_PupationTH_kJ = sp.DevQuotaIncubationToday_kJ * sp.DevAge_Q_PupationMin_d
-	sp.DevIncubation_Q_EmergingTH_kJ = sp.DevQuotaIncubationToday_kJ * sp.DevAge_Q_EmergingMin_d
+	sp.DailyIncubationQuota = 10 / (1.5 * float64(sp.BatchSize))
+	sp.HatchingAgeMax = sp.HatchingAgeMin * sp.MinToMaxFactor
+	sp.PupationAgeMax = sp.PupationAgeMin*sp.MinToMaxFactor - sp.HatchingAgeMin
+	sp.EmergenceAgeMax = sp.EmergenceAgeMin*sp.MinToMaxFactor - sp.PupationAgeMin
+	sp.HatchingIncubation = sp.DailyIncubationQuota * sp.HatchingAgeMin
+	sp.PupationIncubation = sp.DailyIncubationQuota * sp.PupationAgeMin
+	sp.EmergenceIncubation = sp.DailyIncubationQuota * sp.EmergenceAgeMin
+	sp.QueenDeterminationAge = 3
+	sp.QueenPupationAgeMax = sp.QueenPupationAgeMin*sp.MinToMaxFactor - sp.HatchingAgeMin
+	sp.QueenEmergenceAgeMax = sp.QueenEmergenceAgeMin*sp.MinToMaxFactor - sp.QueenPupationAgeMin
+	sp.QueenPupationIncubation = sp.DailyIncubationQuota * sp.QueenPupationAgeMin
+	sp.QueenEmergenceIncubation = sp.DailyIncubationQuota * sp.QueenEmergenceAgeMin
 
 	// [SPEC-07]
-	sp.MinPollenStore_g = 0.5 * 0.001 * sp.DevWeightPupationMin_mg * float64(sp.Batchsize) / sp.PollenToBodymassFactor
+	sp.MinPollenStore = 0.5 * 0.001 * sp.PupationWeightMin * float64(sp.BatchSize) / sp.PollenToBodymassFactor
 	return sp
 }
 
@@ -151,12 +151,12 @@ func deriveSpecies(s Species, constants *params.Constants) params.Species {
 func foodsources(l Landscape) params.Foodsources {
 	f := params.Foodsources{MetresPerPatch: l.MetresPerPatch, Patches: make([]params.FlowerPatch, len(l.Patches))}
 	for i, p := range l.Patches {
-		list := make([]params.FlowerEntry, len(p.FlowerSpeciesList))
-		for j, e := range p.FlowerSpeciesList {
+		list := make([]params.FlowerEntry, len(p.Flowers))
+		for j, e := range p.Flowers {
 			list[j] = params.FlowerEntry(e)
 		}
-		f.Patches[i] = params.FlowerPatch{Id_Beescout: p.Id, PatchType: p.PatchType, X: p.X, Y: p.Y,
-			Area_sqm: p.Area_sqm, FlowerSpeciesList: list}
+		f.Patches[i] = params.FlowerPatch{ID: p.ID, PatchType: p.PatchType, X: p.X, Y: p.Y,
+			Area: p.Area, Flowers: list}
 	}
 	return f
 }

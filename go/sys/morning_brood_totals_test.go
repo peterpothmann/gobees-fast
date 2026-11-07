@@ -14,7 +14,7 @@ import (
 )
 
 // checkWorld is a colonyWorld with a hibernating queen without colony and a colony with its queen, brood, a worker
-// and a male. The colony statistics are set by one UpdateColonies morning.
+// and a male. The colony statistics are set by one colonyUpdate morning.
 func checkWorld(t *testing.T) (*colonyWorld, ecs.Entity) {
 	t.Helper()
 	cw := newColonyWorld(t, 1)
@@ -32,16 +32,16 @@ func checkWorld(t *testing.T) (*colonyWorld, ecs.Entity) {
 	return cw, col
 }
 
-func TestCheckNumbersTotals(t *testing.T) {
+func TestBroodTotals(t *testing.T) {
 	cw, col := checkWorld(t)
-	s := &CheckNumbers{}
+	s := &broodTotals{}
 	s.Initialize(cw.w)
-	got := ecs.GetResource[globals.Totals](cw.w)
+	got := ecs.GetResource[globals.BroodTotals](cw.w)
 	// [CHK-02] the totals of the colonies of this morning, finding 39 (see trans/netlogo-findings.md#finding-39):
 	// an egg laid after the morning statistics is not counted
 	cw.addBee(col, stage.Egg, caste.Undefined, 2, 0)
 	s.Update(cw.w)
-	want := globals.Totals{TotalEggs: 5, TotalLarvae: 4, TotalPupae: 3}
+	want := globals.BroodTotals{Eggs: 5, Larvae: 4, Pupae: 3}
 	if *got != want {
 		t.Errorf("totals:\n got %+v\nwant %+v", *got, want)
 	}
@@ -50,8 +50,8 @@ func TestCheckNumbersTotals(t *testing.T) {
 func TestMorningExampleFarm(t *testing.T) {
 	// The morning systems on the example farm for one year, with the queens of step 3. Without brood and
 	// foraging every colony consists of its queen only and keeps its start energy, so no colony dies.
-	a := newExampleFarmSetup(t, 1, &CreateInitialQueens{}, &Tick{}, &UpdateMorning{}, &UpdateFoodsources{},
-		&EmergenceNewQueens{}, &UpdateColonies{}, &CheckNumbers{})
+	a := newExampleFarmSetup(t, 1, &initialQueensSetup{}, &tick{}, &calendarUpdate{}, &flowerRefill{},
+		&queenEmergence{}, &colonyUpdate{}, &broodTotals{})
 	w := a.World
 	tally := newTally(w) // Setup kills no colony
 	cal := ecs.GetResource[globals.Calendar](w)
@@ -62,7 +62,7 @@ func TestMorningExampleFarm(t *testing.T) {
 		sum := 0.0
 		q := states.Query()
 		for q.Next() {
-			sum += q.Get().Nectar_myl
+			sum += q.Get().Nectar
 		}
 		return sum
 	}
@@ -81,11 +81,11 @@ func TestMorningExampleFarm(t *testing.T) {
 		q := filter.Query()
 		for q.Next() {
 			c, n, r := q.Get()
-			if n.AllAdults != 1 || c.EusocialPhaseDate.IsSet() {
-				t.Fatalf("colony: allAdults %v, eusocialPhaseDate %v", n.AllAdults, c.EusocialPhaseDate)
+			if n.Adults != 1 || c.EusocialPhaseDate.IsSet() {
+				t.Fatalf("colony: allAdults %v, eusocialPhaseDate %v", n.Adults, c.EusocialPhaseDate)
 			}
-			if len(r.MasterpatchesWithPollenlayersInFlowerAndRangeList)+
-				len(r.MasterpatchesWithNectarlayersInFlowerAndRangeList) > 0 {
+			if len(r.PollenPatches)+
+				len(r.NectarPatches) > 0 {
 				withLists++
 			}
 		}

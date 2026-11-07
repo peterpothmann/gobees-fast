@@ -14,7 +14,7 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// CropRotation replaces the whole landscape by the next foodsources file of the rotation [CROP].
+// cropRotation replaces the whole landscape by the next foodsources file of the rotation [CROP].
 //
 // Part of the morning routine [MORN-09]: on Day 365, if CropRotationList has more than 1 item (finding 3, see
 // trans/netlogo-findings.md#finding-3). CropRotationListAsString is empty in
@@ -22,7 +22,7 @@ import (
 // Not translated: Report_name (output file of a GUI button).
 //
 // NetLogo: the call in UpdateMorning_Proc and CropRotationProc.
-type CropRotation struct {
+type cropRotation struct {
 	rng       *rand.Rand
 	ticks     *globals.Ticks
 	calendar  *globals.Calendar
@@ -40,7 +40,7 @@ type CropRotation struct {
 	bees []ecs.Entity // buffer of askAllBees
 }
 
-func (s *CropRotation) Initialize(w *ecs.World) {
+func (s *cropRotation) Initialize(w *ecs.World) {
 	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.ticks = ecs.GetResource[globals.Ticks](w)
 	s.calendar = ecs.GetResource[globals.Calendar](w)
@@ -55,22 +55,22 @@ func (s *CropRotation) Initialize(w *ecs.World) {
 	s.speciesMap = newSpeciesTable(w)
 }
 
-func (s *CropRotation) Update(w *ecs.World) {
+func (s *cropRotation) Update(w *ecs.World) {
 	// [MORN-09]
-	if s.calendar.Day == 365 && len(s.derived.CropRotationList) > 1 {
-		s.CropRotationProc(w)
+	if s.calendar.Day == 365 && len(s.derived.CropRotation) > 1 {
+		s.rotate(w)
 	}
 }
 
-func (s *CropRotation) Finalize(w *ecs.World) {}
+func (s *cropRotation) Finalize(w *ecs.World) {}
 
-// CropRotationProc replaces all foodsources by the ones of the next file of the rotation [CROP].
-func (s *CropRotation) CropRotationProc(w *ecs.World) {
+// rotate replaces all foodsources by the ones of the next file of the rotation [CROP].
+func (s *cropRotation) rotate(w *ecs.World) {
 	// [CROP-01] Worked example (list chosen by hand): 2 files, ticks 365: year 1, item 1; ticks 730: item 0.
 	year := math.Ceil(float64(s.ticks.Ticks) / 365)
-	nMaps := len(s.derived.CropRotationList)
+	nMaps := len(s.derived.CropRotation)
 	mapToUse := int(year) % nMaps // remainder: ticks > 0, so no negative values
-	s.landscape.FoodsourcesFile = s.derived.CropRotationList[mapToUse]
+	s.landscape.File = s.derived.CropRotation[mapToUse]
 
 	// [CROP-02] all foodsources die
 	dead := []ecs.Entity{}
@@ -85,27 +85,27 @@ func (s *CropRotation) CropRotationProc(w *ecs.World) {
 	s.bees = askAllBees(s.bees, s.beeFilter, s.rng)
 	for _, e := range s.bees {
 		f := s.foragerMap.Get(e)
-		f.KnownMasterpatchesNectarList = []ecs.Entity{}
-		f.KnownMasterpatchesPollenList = []ecs.Entity{}
-		f.NectarsourceToGoTo = ecs.Entity{}
-		f.PollensourceToGoTo = ecs.Entity{}
+		f.KnownNectarPatches = []ecs.Entity{}
+		f.KnownPollenPatches = []ecs.Entity{}
+		f.NectarSource = ecs.Entity{}
+		f.PollenSource = ecs.Entity{}
 		f.CurrentFoodsource = ecs.Entity{}
 	}
-	// every colony empties its in-flower lists of masterpatches, but NOT AllPatchesInRangeList [PRNG]: it keeps the
+	// every colony empties its in-flower lists of masterpatches, but NOT ColonyRange.Layers [PRNG]: it keeps the
 	// dead foodsources. FoodsourcesInFlowerAndRangeProc [FRNG] reads
-	// AllPatchesInRangeList on the next flowering change and panics there (Ark: "can't get components of a dead
+	// Layers on the next flowering change and panics there (Ark: "can't get components of a dead
 	// entity", NetLogo: runtime error on a dead turtle). Needs a colony alive on Day 365, which the species of
 	// netlogo/_SYSTEM_BumbleSpecies_UK_01.csv cannot have (seasonStop 305).
 	// masterpatchesInRangeList is not translated (finding 23, see trans/netlogo-findings.md#finding-23).
 	// ORDER: irrelevant, each colony only changes itself. Shuffled (decision C).
 	for _, e := range askColonies(s.colonyFilter, s.rng) {
 		r := s.rangeMap.Get(e)
-		r.MasterpatchesWithNectarlayersInFlowerAndRangeList = []ecs.Entity{}
-		r.MasterpatchesWithPollenlayersInFlowerAndRangeList = []ecs.Entity{}
+		r.NectarPatches = []ecs.Entity{}
+		r.PollenPatches = []ecs.Entity{}
 	}
 
 	// [CROP-03] the new landscape: new who numbers, random numbers for the hedges and layers
-	CreateFoodsourcesProc(w, s.landscape.FoodsourcesFile, s.landscape)
+	createFoodsources(w, s.landscape.File, s.landscape)
 
 	// per species the nest sites and their area as in [SPEC-06].
 	// nestHabitatsList is NOT expanded again [SPEC-04]: it keeps the habitat types of the first landscape.
@@ -117,8 +117,8 @@ func (s *CropRotation) CropRotationProc(w *ecs.World) {
 	masterpatches := collectMasterpatches(w)
 	for _, i := range species {
 		ns := &s.nestSites.BySpecies[i]
-		ns.NestsiteFoodsourceList, ns.NestSiteArea = nestSites(ns.NestHabitatsList, masterpatches)
-		if sp := s.speciesMap.Get(i); len(ns.NestsiteFoodsourceList) == 0 && !sp.Parasitic {
+		ns.Sites, ns.Area = nestSites(ns.Habitats, masterpatches)
+		if sp := s.speciesMap.Get(i); len(ns.Sites) == 0 && !sp.Parasitic {
 			log.Printf("%s has no suitable nesting habitat", sp.Name)
 		}
 	}

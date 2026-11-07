@@ -12,21 +12,21 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// UpdateFoodsources fills every foodsource in flower up to its maximum and empties all others [UFS].
+// flowerRefill fills every foodsource in flower up to its maximum and empties all others [UFS].
 //
 // Part of the morning routine [MORN-05]. Initialize runs it also at ticks = 0, i.e. Day = 0 [INIT-10].
 //
 // NetLogo: UpdateFoodsourcesProc.
-type UpdateFoodsources struct {
+type flowerRefill struct {
 	rng      *rand.Rand
 	calendar *globals.Calendar
-	today    globals.FoodsourcesToday
+	today    globals.Flowering
 
 	filter *ecs.Filter2[comp.Foodsource, comp.FoodsourceState]
 	fsMap  *ecs.Map2[comp.Foodsource, comp.FoodsourceState]
 }
 
-func (s *UpdateFoodsources) Initialize(w *ecs.World) {
+func (s *flowerRefill) Initialize(w *ecs.World) {
 	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.calendar = ecs.GetResource[globals.Calendar](w)
 	ecs.AddResource(w, &s.today)
@@ -35,10 +35,10 @@ func (s *UpdateFoodsources) Initialize(w *ecs.World) {
 	s.Update(w) // run at ticks = 0 [INIT-10]
 }
 
-func (s *UpdateFoodsources) Update(w *ecs.World) {
+func (s *flowerRefill) Update(w *ecs.World) {
 	day := s.calendar.Day
 	// [UFS-01] pollenAvailableTotalToday_kg, nectarAvailableTotalToday_l: output only, removed in step F4
-	s.today.FoodsourcesInFlowerUpdate = false
+	s.today.Changed = false
 
 	// [UFS-02] ORDER: irrelevant, each foodsource only changes itself.
 	foodsources := []ecs.Entity{}
@@ -54,16 +54,16 @@ func (s *UpdateFoodsources) Update(w *ecs.World) {
 			panic(fmt.Sprintf("Foodsource: startDay > StopDay! (UpdateFoodsourcesProc): startDay %v, stopDay %v", fs.StartDay, fs.StopDay))
 		}
 		if day == fs.StartDay || day == fs.StopDay {
-			s.today.FoodsourcesInFlowerUpdate = true
+			s.today.Changed = true
 		}
 		if day >= fs.StartDay && day < fs.StopDay {
-			state.Nectar_myl = fs.NectarMax_myl
-			state.Pollen_g = fs.PollenMax_g
+			state.Nectar = fs.NectarMax
+			state.Pollen = fs.PollenMax
 		} else {
-			state.Nectar_myl = 0
-			state.Pollen_g = 0
+			state.Nectar = 0
+			state.Pollen = 0
 		}
 	}
 }
 
-func (s *UpdateFoodsources) Finalize(w *ecs.World) {}
+func (s *flowerRefill) Finalize(w *ecs.World) {}

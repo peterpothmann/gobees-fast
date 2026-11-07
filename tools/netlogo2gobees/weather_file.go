@@ -10,8 +10,8 @@ import (
 	"strings"
 )
 
-// constantForagingPeriods_s are the "Constant N hrs" options of Weather [FPER-03], in seconds.
-var constantForagingPeriods_s = map[string]float64{
+// constantForagingPeriods are the "Constant N hrs" options of Weather [FPER-03], in seconds.
+var constantForagingPeriods = map[string]float64{
 	"Constant 24 hrs": 86400,
 	"Constant 20 hrs": 72000,
 	"Constant 16 hrs": 57600,
@@ -44,10 +44,10 @@ var netLogoWeatherFiles = map[string]string{
 // otherwise the name of a weather file in dir (readWeatherFile). An unknown Weather is an error, NetLogo gives a
 // foraging period of -1 [FPER-01].
 func weatherFromParameter(weather, dir string) ([][]float64, error) {
-	if period_s, ok := constantForagingPeriods_s[weather]; ok {
+	if period, ok := constantForagingPeriods[weather]; ok {
 		year := make([]float64, 365)
 		for d := range year {
-			year[d] = period_s
+			year[d] = period
 		}
 		return [][]float64{year}, nil
 	}
@@ -104,8 +104,8 @@ func parseWeatherFile(r io.Reader) ([][]float64, error) {
 	}
 
 	type value struct {
-		set      bool
-		period_s float64
+		set    bool
+		period float64 // [s]
 	}
 	years := [][]value{}
 	for i, row := range rows[1:] {
@@ -127,7 +127,7 @@ func parseWeatherFile(r io.Reader) ([][]float64, error) {
 		if err != nil {
 			return nil, err
 		}
-		period_s, err := number(periodCol)
+		period, err := number(periodCol) // [s]
 		if err != nil {
 			return nil, err
 		}
@@ -137,8 +137,8 @@ func parseWeatherFile(r io.Reader) ([][]float64, error) {
 		if day < 1 || day > 365 || day != float64(int(day)) {
 			return nil, fmt.Errorf("line %d: day %v, expected 1 to 365", line, day)
 		}
-		if period_s < 0 || period_s > 86400 {
-			return nil, fmt.Errorf("line %d: foraging period %v s, expected 0 to 86400", line, period_s)
+		if period < 0 || period > 86400 {
+			return nil, fmt.Errorf("line %d: foraging period %v s, expected 0 to 86400", line, period)
 		}
 		for len(years) < int(year) {
 			years = append(years, make([]value, 365))
@@ -147,7 +147,7 @@ func parseWeatherFile(r io.Reader) ([][]float64, error) {
 		if v.set {
 			return nil, fmt.Errorf("line %d: year %v, day %v given twice", line, year, day)
 		}
-		*v = value{set: true, period_s: period_s}
+		*v = value{set: true, period: period}
 	}
 
 	result := make([][]float64, len(years))
@@ -157,7 +157,7 @@ func parseWeatherFile(r io.Reader) ([][]float64, error) {
 			if !v.set {
 				return nil, fmt.Errorf("year %d, day %d is missing", y+1, d+1)
 			}
-			result[y][d] = v.period_s
+			result[y][d] = v.period
 		}
 	}
 	return result, nil

@@ -38,7 +38,7 @@ func Convert(dir, path, mapName string) (Converted, error) {
 }
 
 func convert(dir string, file *netLogoParameters, mapName string) (Converted, error) {
-	c := input.Config{Parameters: file.ParameterFile}
+	c := input.Config{Parameters: file.Parameters}
 	c.Output.KeepDeadColonies = file.KeepDeadColonies // step F13
 
 	// [PAR-01], [QINI]
@@ -57,7 +57,7 @@ func convert(dir string, file *netLogoParameters, mapName string) (Converted, er
 		return Converted{}, err
 	}
 	for _, y := range years {
-		c.ForagingPeriod_s = append(c.ForagingPeriod_s, input.Year(y))
+		c.ForagingPeriod = append(c.ForagingPeriod, input.Year(y))
 	}
 	// [SPEC-01], [SPEC-03]: all species of the file
 	if c.Species, err = readSpeciesFile(filepath.Join(dir, file.BeespeciesFile)); err != nil {
@@ -120,8 +120,8 @@ func readFoodsourcesFile(path string) (input.Landscape, error) {
 		for j, e := range p.FlowerSpeciesList {
 			list[j] = input.FlowerEntry(e)
 		}
-		l.Patches[i] = input.Patch{Id: p.Id_Beescout, PatchType: p.PatchType, X: p.X, Y: p.Y, Area_sqm: p.Area_sqm,
-			FlowerSpeciesList: list}
+		l.Patches[i] = input.Patch{ID: p.Id_Beescout, PatchType: p.PatchType, X: p.X, Y: p.Y, Area: p.Area_sqm,
+			Flowers: list}
 	}
 	return l, nil
 }

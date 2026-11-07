@@ -11,12 +11,12 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// qlnWorld is a colonyWorld with the QueensLeavingNest system.
-func qlnWorld(t *testing.T, unlimitedMales bool) (*colonyWorld, *QueensLeavingNest) {
+// qlnWorld is a colonyWorld with the queensLeavingNest system.
+func qlnWorld(t *testing.T, unlimitedMales bool) (*colonyWorld, *queensLeavingNest) {
 	t.Helper()
 	cw := newColonyWorld(t, 1)
-	cw.file.UnlimitedMales = unlimitedMales
-	s := &QueensLeavingNest{}
+	cw.parameters.UnlimitedMales = unlimitedMales
+	s := &queensLeavingNest{}
 	s.Initialize(cw.w)
 	return cw, s
 }
@@ -34,7 +34,7 @@ func (cw *colonyWorld) addYoungQueen(col ecs.Entity, number int) ecs.Entity {
 func (cw *colonyWorld) addMale(col ecs.Entity, alleles ...float64) ecs.Entity {
 	e := cw.addBee(col, stage.Adult, caste.Male, 1, 0)
 	_, _, g, _, _, _ := cw.beeMap.Get(e)
-	g.AllelesList = alleles
+	g.Alleles = alleles
 	return e
 }
 
@@ -51,29 +51,29 @@ func TestQueensLeavingNestMating(t *testing.T) {
 
 	// [QLN-01] the cohort of 3 leaves as one agent
 	_, b, g, th, _, _ := cw.beeMap.Get(young)
-	if b.Number != 3 || !b.Mated || b.Activity != activity.Hibernate || !b.ColonyID.IsZero() {
+	if b.Number != 3 || !b.Mated || b.Activity != activity.Hibernate || !b.Colony.IsZero() {
 		t.Errorf("young queen: number %v, mated %v, activity %v, colony %v; want 3, true, hibernate, none",
-			b.Number, b.Mated, b.Activity, b.ColonyID)
+			b.Number, b.Mated, b.Activity, b.Colony)
 	}
-	if !slices.Equal(g.SpermathecaList, []float64{7}) {
-		t.Errorf("spermathecaList %v, want [7]", g.SpermathecaList)
+	if !slices.Equal(g.Spermatheca, []float64{7}) {
+		t.Errorf("spermathecaList %v, want [7]", g.Spermatheca)
 	}
 	// [QLN-03] only the egg-laying threshold changes
 	want := thresholds(sitYoungQueen)
-	want.ThEgglaying = 0.1
+	want.Egglaying = 0.1
 	if *th != want {
 		t.Errorf("thresholds %+v, want %+v", *th, want)
 	}
 	// the list is a copy of the male's list
 	_, _, mg, _, _, _ := cw.beeMap.Get(male)
-	mg.AllelesList[0] = 99
-	if g.SpermathecaList[0] != 7 {
+	mg.Alleles[0] = 99
+	if g.Spermatheca[0] != 7 {
 		t.Errorf("spermathecaList shares the male's allelesList")
 	}
 	// the mother queen and the queen pupa stay in the colony
 	for _, e := range []ecs.Entity{mother, queenPupa} {
 		_, b, _, _, _, _ := cw.beeMap.Get(e)
-		if b.ColonyID != col || b.Activity == activity.Hibernate {
+		if b.Colony != col || b.Activity == activity.Hibernate {
 			t.Errorf("%v %v left the colony", b.Stage, b.Caste)
 		}
 	}
@@ -91,7 +91,7 @@ func TestQueensLeavingNestNoMale(t *testing.T) {
 	young := cw.addYoungQueen(col, 2)
 	foreign := cw.addMale(col, 5)
 	_, fb, _, _, _, _ := cw.beeMap.Get(foreign)
-	fb.SpeciesID = other
+	fb.Species = other
 	cw.addBee(col, stage.Pupa, caste.Male, 4, 0)
 
 	s.Update(cw.w)
@@ -104,7 +104,7 @@ func TestQueensLeavingNestNoMale(t *testing.T) {
 }
 
 func TestQueensLeavingNestUnlimitedMales(t *testing.T) {
-	// [QLN-02] with UnlimitedMales? = true she mates with a male from outside: one allele -1 to -N_ForeignAlleles
+	// [QLN-02] with UnlimitedMales? = true she mates with a male from outside: one allele -1 to -ForeignAlleles
 	cw, s := qlnWorld(t, true)
 	col := cw.addColony(nil)
 	queens := []ecs.Entity{}
@@ -115,14 +115,14 @@ func TestQueensLeavingNestUnlimitedMales(t *testing.T) {
 	seen := map[float64]bool{}
 	for _, e := range queens {
 		_, b, g, _, _, _ := cw.beeMap.Get(e)
-		if len(g.SpermathecaList) != 1 || g.SpermathecaList[0] > -1 || g.SpermathecaList[0] < -24 ||
-			g.SpermathecaList[0] != float64(int(g.SpermathecaList[0])) {
-			t.Fatalf("spermathecaList %v, want one integer allele in [-24, -1]", g.SpermathecaList)
+		if len(g.Spermatheca) != 1 || g.Spermatheca[0] > -1 || g.Spermatheca[0] < -24 ||
+			g.Spermatheca[0] != float64(int(g.Spermatheca[0])) {
+			t.Fatalf("spermathecaList %v, want one integer allele in [-24, -1]", g.Spermatheca)
 		}
 		if !b.Mated || b.Activity != activity.Hibernate {
 			t.Fatalf("queen not mated or not hibernating")
 		}
-		seen[g.SpermathecaList[0]] = true
+		seen[g.Spermatheca[0]] = true
 	}
 	if len(seen) != 24 {
 		t.Errorf("%d different foreign alleles, want all 24", len(seen))

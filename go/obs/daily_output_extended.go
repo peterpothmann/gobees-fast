@@ -117,11 +117,11 @@ func (o *DailyOutputExtended) Values(w *ecs.World) []float64 {
 			hibernating += float64(b.Number)
 		}
 		// NetLogo: ploidy = 2, the number of alleles since step F9
-		if b.Caste == caste.Male && len(g.AllelesList) == 2 {
+		if b.Caste == caste.Male && len(g.Alleles) == 2 {
 			diploidMales += float64(b.Number)
 		}
 		// NetLogo: speciesName = "Psithyrus", the flag of the species since step F9
-		if slices.Contains(parasitic, b.SpeciesID) {
+		if slices.Contains(parasitic, b.Species) {
 			psithyrus += float64(b.Number)
 		}
 	}
@@ -132,14 +132,14 @@ func (o *DailyOutputExtended) Values(w *ecs.World) []float64 {
 	for cq.Next() {
 		colony, stores := cq.Get()
 		colonies++
-		name := species[colony.SpeciesIDcolony].Name
+		name := species[colony.Species].Name
 		for i, s := range netLogoSpecies {
 			if name == s {
 				perSpecies[i]++
 			}
 		}
-		energy += stores.EnergyStore_kJ
-		pollen += stores.PollenStore_g
+		energy += stores.Energy
+		pollen += stores.Pollen
 		if colony.CompetitionPointDate.IsSet() {
 			cpSum += float64(colony.CompetitionPointDate.Day())
 			cpCount++
@@ -154,8 +154,8 @@ func (o *DailyOutputExtended) Values(w *ecs.World) []float64 {
 	sq := o.stocks.Query()
 	for sq.Next() {
 		s := sq.Get()
-		nectar += s.Nectar_myl
-		pollenLeft += s.Pollen_g
+		nectar += s.Nectar
+		pollenLeft += s.Pollen
 	}
 	fq := o.foodsources.Query()
 	foodsources := float64(fq.Count())
@@ -175,7 +175,7 @@ func (o *DailyOutputExtended) Values(w *ecs.World) []float64 {
 		badgers, foodsources, beeAgents, diploidMales,
 	}
 	values = append(values, perSpecies...)
-	values = append(values, psithyrus, o.calendar.Get().DailyForagingPeriod_s, float64(counters.TotalHibernatingQueensEverRemoved),
+	values = append(values, psithyrus, o.calendar.Get().ForagingPeriod, float64(counters.TotalHibernatingQueensEverRemoved),
 		foragerDeaths, counters.TotalAdultQueensEverProduced, meanCP)
 	copy(o.values[n:], values)
 	return o.values

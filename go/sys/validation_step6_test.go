@@ -28,8 +28,8 @@ func step6Metrics(w *ecs.World, counters *obs.Counters) map[string]float64 {
 	for cols.Next() {
 		c, s := cols.Get()
 		m["colonies"]++
-		m["energy_kJ"] += s.EnergyStore_kJ
-		m["pollen_g"] += s.PollenStore_g
+		m["energy_kJ"] += s.Energy
+		m["pollen_g"] += s.Pollen
 		if c.SwitchPointDate.IsSet() {
 			m["switch_point"]++
 		}
@@ -65,8 +65,8 @@ func step6Metrics(w *ecs.World, counters *obs.Counters) map[string]float64 {
 	fs := ecs.NewFilter1[comp.FoodsourceState](w).Query()
 	for fs.Next() {
 		s := fs.Get()
-		m["nectar_left_l"] += s.Nectar_myl
-		m["pollen_left_kg"] += s.Pollen_g
+		m["nectar_left_l"] += s.Nectar
+		m["pollen_left_kg"] += s.Pollen
 	}
 	m["nectar_left_l"] /= 1000000
 	m["pollen_left_kg"] /= 1000
@@ -98,10 +98,10 @@ func TestValidationStep6AgainstNetLogo(t *testing.T) {
 	}
 	for run := 1; run <= runs; run++ {
 		counters := &obs.Counters{} // after the model systems
-		a := newExampleFarmSetup(t, float64(run), &CreateInitialQueens{}, &Tick{}, &UpdateMorning{}, &UpdateFoodsources{},
-			&EmergenceNewQueens{}, &WakeUpBees{}, &UpdateColonies{}, &CheckNumbers{},
-			&NeedNectarPollenLarvaeToday{}, &ActivityLoop{}, &EndOfDayResting{}, &FeedLarvae{}, &QueenProductionDate{},
-			&Development{}, &MortalityBrood{}, counters)
+		a := newExampleFarmSetup(t, float64(run), &initialQueensSetup{}, &tick{}, &calendarUpdate{}, &flowerRefill{},
+			&queenEmergence{}, &wakeUp{}, &colonyUpdate{}, &broodTotals{},
+			&larvaeNeeds{}, &activities{}, &nightRest{}, &larvaeFeeding{}, &queenProductionDate{},
+			&development{}, &broodMortality{}, counters)
 		record(0, step6Metrics(a.World, counters))
 		for step := 1; step <= steps; step++ {
 			a.Update()

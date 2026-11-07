@@ -24,9 +24,9 @@ func emit(w *ecs.World, evt ecs.EventType, e ecs.Entity) {
 func TestDailyOutputExtended(t *testing.T) {
 	w := newWorld(t)
 	calendar := ecs.GetResource[globals.Calendar](w)
-	calendar.DailyForagingPeriod_s = 28800
+	calendar.ForagingPeriod = 28800
 
-	// species indices: the bees without SpeciesID belong to species 0, B_terrestris
+	// species indices: the bees without Species belong to species 0, B_terrestris
 	const terrestris, hortorum, pascuorum, psithyrus = 0, 1, 2, 3
 	ecs.AddResource(w, &params.Input{Species: []params.Species{{SpeciesFile: params.SpeciesFile{Name: "B_terrestris"}}, {SpeciesFile: params.SpeciesFile{Name: "B_hortorum"}},
 		{SpeciesFile: params.SpeciesFile{Name: "B_pascuorum"}}, {SpeciesFile: params.SpeciesFile{Name: "Psithyrus", Parasitic: true}}}})
@@ -42,25 +42,25 @@ func TestDailyOutputExtended(t *testing.T) {
 		{Number: 1, Stage: stage.Adult, Caste: caste.Worker, Activity: activity.Resting},
 		{Number: 1, Stage: stage.Adult, Caste: caste.Queen, Activity: activity.Resting},
 		{Number: 1, Stage: stage.Adult, Caste: caste.Queen, Mated: true, Activity: activity.Hibernate},
-		{Number: 2, Stage: stage.Adult, Caste: caste.Queen, Mated: true, SpeciesID: psithyrus, Activity: activity.Resting},
+		{Number: 2, Stage: stage.Adult, Caste: caste.Queen, Mated: true, Species: psithyrus, Activity: activity.Resting},
 		{Number: 4, Stage: stage.Adult, Caste: caste.Male, Activity: activity.Resting},
 	} {
 		bees = append(bees, addBee(w, b))
 	}
 	// diploid male pupae (2 alleles), haploid adult males (1 allele)
 	genetics := ecs.NewMap1[comp.Genetics](w)
-	genetics.Get(bees[3]).AllelesList = []float64{10, 20}
-	genetics.Get(bees[9]).AllelesList = []float64{10}
+	genetics.Get(bees[3]).Alleles = []float64{10, 20}
+	genetics.Get(bees[9]).Alleles = []float64{10}
 	colonies := ecs.NewMap2[comp.Colony, comp.ColonyStores](w)
-	colonies.NewEntity(&comp.Colony{CompetitionPointDate: day.At(150), SpeciesIDcolony: terrestris},
-		&comp.ColonyStores{EnergyStore_kJ: 100, PollenStore_g: 2})
-	colonies.NewEntity(&comp.Colony{CompetitionPointDate: day.At(160), SpeciesIDcolony: hortorum},
-		&comp.ColonyStores{EnergyStore_kJ: 50, PollenStore_g: 1})
-	colonies.NewEntity(&comp.Colony{CompetitionPointDate: day.Date{}, SpeciesIDcolony: terrestris},
-		&comp.ColonyStores{EnergyStore_kJ: 10})
+	colonies.NewEntity(&comp.Colony{CompetitionPointDate: day.At(150), Species: terrestris},
+		&comp.ColonyStores{Energy: 100, Pollen: 2})
+	colonies.NewEntity(&comp.Colony{CompetitionPointDate: day.At(160), Species: hortorum},
+		&comp.ColonyStores{Energy: 50, Pollen: 1})
+	colonies.NewEntity(&comp.Colony{CompetitionPointDate: day.Date{}, Species: terrestris},
+		&comp.ColonyStores{Energy: 10})
 	foodsources := ecs.NewMap2[comp.Foodsource, comp.FoodsourceState](w)
-	foodsources.NewEntity(&comp.Foodsource{}, &comp.FoodsourceState{Nectar_myl: 1500000, Pollen_g: 2000})
-	foodsources.NewEntity(&comp.Foodsource{}, &comp.FoodsourceState{Nectar_myl: 500000, Pollen_g: 500})
+	foodsources.NewEntity(&comp.Foodsource{}, &comp.FoodsourceState{Nectar: 1500000, Pollen: 2000})
+	foodsources.NewEntity(&comp.Foodsource{}, &comp.FoodsourceState{Nectar: 500000, Pollen: 500})
 	ecs.NewMap1[comp.Badger](w).NewEntity(&comp.Badger{})
 
 	// Setup ends here: the counters start
@@ -84,7 +84,7 @@ func TestDailyOutputExtended(t *testing.T) {
 	emit(w, event.DiedForaging, bees[5])
 	w.RemoveEntity(bees[5])
 	emit(w, event.QueenEmerged, bees[6])
-	founded := colonies.NewEntity(&comp.Colony{CompetitionPointDate: day.Date{}, SpeciesIDcolony: pascuorum},
+	founded := colonies.NewEntity(&comp.Colony{CompetitionPointDate: day.Date{}, Species: pascuorum},
 		&comp.ColonyStores{})
 	o.Update(w)
 	want := map[string]float64{
@@ -114,7 +114,7 @@ func TestDailyOutputExtendedNoCompetitionPoint(t *testing.T) {
 	w := newWorld(t)
 	ecs.AddResource(w, &params.Input{Species: []params.Species{{SpeciesFile: params.SpeciesFile{Name: "B_terrestris"}}}})
 	ecs.NewMap2[comp.Colony, comp.ColonyStores](w).NewEntity(
-		&comp.Colony{CompetitionPointDate: day.Date{}, SpeciesIDcolony: 0}, &comp.ColonyStores{})
+		&comp.Colony{CompetitionPointDate: day.Date{}, Species: 0}, &comp.ColonyStores{})
 
 	o := DailyOutputExtended{}
 	o.Initialize(w)

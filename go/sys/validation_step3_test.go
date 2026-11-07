@@ -22,18 +22,18 @@ func step3Metrics(w *ecs.World) map[string]float64 {
 	for fs.Next() {
 		_, l := fs.Get()
 		m["foodsources"]++
-		if l.Masterpatch {
+		if l.IsMasterpatch {
 			m["masterpatches"]++
 		}
 	}
 	nestSites := ecs.GetResource[globals.NestSites](w).BySpecies
 	for i, s := range ecs.GetResource[params.Input](w).Species {
 		if s.Name == "B_terrestris" {
-			m["nestsites"] = float64(len(nestSites[i].NestsiteFoodsourceList))
-			m["nestsite_area"] = nestSites[i].NestSiteArea
+			m["nestsites"] = float64(len(nestSites[i].Sites))
+			m["nestsite_area"] = nestSites[i].Area
 		}
 	}
-	// TotalColoniesEverProduced: without UpdateColonies no colony dies, so the living colonies are all colonies
+	// TotalColoniesEverProduced: without colonyUpdate no colony dies, so the living colonies are all colonies
 	// founded (the counter is output only since step F4, obs.Counters)
 	cols := ecs.NewFilter1[comp.Colony](w).Query()
 	m["colonies_founded"] = float64(cols.Count())
@@ -43,15 +43,15 @@ func step3Metrics(w *ecs.World) map[string]float64 {
 	bees := ecs.NewFilter1[comp.Bee](w).Query()
 	for bees.Next() {
 		b := bees.Get()
-		if b.Caste != caste.Queen || !b.EmergingDate.IsSet() || b.EmergingDate.Day() <= 0 || b.EmergingDate.Day() >= 365 {
+		if b.Caste != caste.Queen || !b.EmergenceDate.IsSet() || b.EmergenceDate.Day() <= 0 || b.EmergenceDate.Day() >= 365 {
 			continue
 		}
 		n++
-		sumWeight += b.Weight_mg
-		sumEmerging += float64(b.EmergingDate.Day())
+		sumWeight += b.Weight
+		sumEmerging += float64(b.EmergenceDate.Day())
 		if b.Activity == activity.Hibernate {
 			m["queens_hibernating"]++
-		} else if b.ColonyID.IsZero() {
+		} else if b.Colony.IsZero() {
 			m["queens_searching"]++
 		}
 	}
@@ -84,7 +84,7 @@ func TestValidationStep3AgainstNetLogo(t *testing.T) {
 		}
 	}
 	for run := 1; run <= runs; run++ {
-		a := newExampleFarmSetup(t, float64(run), &CreateInitialQueens{}, &Tick{}, &EmergenceNewQueens{})
+		a := newExampleFarmSetup(t, float64(run), &initialQueensSetup{}, &tick{}, &queenEmergence{})
 		record(0, step3Metrics(a.World))
 		for step := 1; step <= steps; step++ {
 			a.Update()

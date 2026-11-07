@@ -13,14 +13,14 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// QueenProductionDate [GO-14].
+// queenProductionDate [GO-14].
 //
 // Starts the queen production of a colony [QPD]: queenProduction? becomes true, and queenProductionDate is
 // back-calculated as the laying day of the larvae now at the caste determination age (finding 42, see
-// trans/netlogo-findings.md#finding-42). No queen is created here. Must run before Development.
+// trans/netlogo-findings.md#finding-42). No queen is created here. Must run before development.
 //
 // NetLogo: QueenProductionDateProc.
-type QueenProductionDate struct {
+type queenProductionDate struct {
 	rng       *rand.Rand
 	ticks     *globals.Ticks
 	constants *params.Constants
@@ -34,7 +34,7 @@ type QueenProductionDate struct {
 	larvae map[ecs.Entity][]ecs.Entity // buffer of beesByColony
 }
 
-func (s *QueenProductionDate) Initialize(w *ecs.World) {
+func (s *queenProductionDate) Initialize(w *ecs.World) {
 	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.ticks = ecs.GetResource[globals.Ticks](w)
 	s.constants = ecs.GetResource[params.Constants](w)
@@ -46,7 +46,7 @@ func (s *QueenProductionDate) Initialize(w *ecs.World) {
 	s.speciesMap = newSpeciesTable(w)
 }
 
-func (s *QueenProductionDate) Update(w *ecs.World) {
+func (s *queenProductionDate) Update(w *ecs.World) {
 	ticks := s.ticks.Ticks
 	// ORDER: irrelevant, each colony only reads its own larvae and changes itself. Shuffled (decision C).
 	s.larvae = beesByColony(s.larvae, s.beeFilter, func(b *comp.Bee) bool { return b.Stage == stage.Larva })
@@ -54,14 +54,14 @@ func (s *QueenProductionDate) Update(w *ecs.World) {
 		colony, counts := s.colonyMap.Get(col)
 
 		// [QPD-01] 7 d + dev_larvalAge_QueenDetermination_d, or the largest broodAge of the larvae at larval day 3
-		averageCumulTimeEgg_d := 7
-		timeEggToLarvalAgeAtQueenDetermination := averageCumulTimeEgg_d + s.speciesMap.Get(colony.SpeciesIDcolony).Dev_larvalAge_QueenDetermination_d
+		averageEggTime := 7 // [d]
+		timeEggToLarvalAgeAtQueenDetermination := averageEggTime + s.speciesMap.Get(colony.Species).QueenDeterminationAge
 		found := false
 		maxBroodAge := 0
 		for _, e := range s.larvae[col] {
 			b, dev := s.beeMap.Get(e)
 			// speciesID of the larva, as in NetLogo (the same species as the colony's)
-			if dev.CumulTimeLarva_d == s.speciesMap.Get(b.SpeciesID).Dev_larvalAge_QueenDetermination_d {
+			if dev.LarvaTime == s.speciesMap.Get(b.Species).QueenDeterminationAge {
 				if !found || b.BroodAge > maxBroodAge {
 					maxBroodAge = b.BroodAge
 				}
@@ -75,12 +75,12 @@ func (s *QueenProductionDate) Update(w *ecs.World) {
 		// [QPD-02] without switch point (NetLogo: NotSetHigh) the condition is false
 		layingDate := ticks - day.Abs(timeEggToLarvalAgeAtQueenDetermination)
 		if !colony.QueenProduction && colony.SwitchPointDate.IsSet() &&
-			layingDate >= colony.SwitchPointDate.Day()-day.Abs(s.constants.QueenDestinedEggsBeforeSP_d) &&
-			counts.LarvaWorkerRatio < s.constants.LarvaWorkerRatioTH {
+			layingDate >= colony.SwitchPointDate.Day()-day.Abs(s.constants.QueenEggsBeforeSwitchPoint) &&
+			counts.LarvaWorkerRatio < s.constants.LarvaWorkerRatioLimit {
 			colony.QueenProduction = true
 			colony.QueenProductionDate = day.At(layingDate)
 		}
 	}
 }
 
-func (s *QueenProductionDate) Finalize(w *ecs.World) {}
+func (s *queenProductionDate) Finalize(w *ecs.World) {}

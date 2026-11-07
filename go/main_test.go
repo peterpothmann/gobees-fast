@@ -46,10 +46,10 @@ func TestParametersExampleFarm(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := input.ExampleFarm()
-	if p.File != want.File {
-		t.Errorf("File = %+v, want the example farm parameters %+v", p.File, want.File)
+	if p.Parameters != want.Parameters {
+		t.Errorf("File = %+v, want the example farm parameters %+v", p.Parameters, want.Parameters)
 	}
-	if len(p.Input.Species) != 1 || len(p.Input.Foodsources[p.Input.Derived.FoodsourcesFile].Patches) != 73 {
+	if len(p.Input.Species) != 1 || len(p.Input.Foodsources[p.Input.Derived.StartLandscape].Patches) != 73 {
 		t.Errorf("Input: want B_terrestris and the 73 flower patches of the example farm")
 	}
 	if p.Seed != 0 || p.Termination.MaxTicks != 365 {
@@ -96,8 +96,8 @@ func TestParametersRunFile(t *testing.T) {
 	a.Run()
 	derived := ecs.GetResource[params.Derived](a.World)
 	wantSpecies := []string{"B_terrestris", "B_pascuorum", "B_lapidarius", "B_hortorum", "B_pratorum", "B_hypnorum", "Psithyrus"}
-	if !slices.Equal(derived.SpeciesList, wantSpecies) {
-		t.Errorf("SpeciesList = %v, want %v", derived.SpeciesList, wantSpecies)
+	if !slices.Equal(derived.SpeciesNames, wantSpecies) {
+		t.Errorf("SpeciesNames = %v, want %v", derived.SpeciesNames, wantSpecies)
 	}
 }
 

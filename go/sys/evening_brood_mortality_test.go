@@ -11,13 +11,13 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-func TestMortalityBrood(t *testing.T) {
+func TestBroodMortality(t *testing.T) {
 	// [MORB-01] to [MORB-04], maximum ages from the worked example: eggs 10, larvae 20.8, pupae 34.7, queen
 	// larvae 29, queen pupae 47
 	bw := newBroodWorld(t, 1)
 	sp := bw.sp
-	for _, x := range []struct{ got, want float64 }{{sp.DevAgeHatchingMax_d, 10}, {sp.DevAgePupationMax_d, 20.8},
-		{sp.DevAgeEmergingMax_d, 34.7}, {sp.DevAge_Q_PupationMax_d, 29}, {sp.DevAge_Q_EmergingMax_d, 47}} {
+	for _, x := range []struct{ got, want float64 }{{sp.HatchingAgeMax, 10}, {sp.PupationAgeMax, 20.8},
+		{sp.EmergenceAgeMax, 34.7}, {sp.QueenPupationAgeMax, 29}, {sp.QueenEmergenceAgeMax, 47}} {
 		if !almostEqual(x.got, x.want) {
 			t.Errorf("maximum age %v, want %v", x.got, x.want)
 		}
@@ -34,7 +34,7 @@ func TestMortalityBrood(t *testing.T) {
 	bw.addBee(bw.addColony(nil), stage.Adult, caste.Queen, 1, 300)
 	queenWithoutColony := bw.addBee(col, stage.Adult, caste.Queen, 1, 300)
 	b, _, _, _, _ := bw.bee(queenWithoutColony)
-	b.ColonyID = ecs.Entity{}
+	b.Colony = ecs.Entity{}
 
 	bw.morb.Update(bw.w)
 
@@ -60,7 +60,7 @@ func TestMortalityBrood(t *testing.T) {
 	})
 }
 
-func TestMortalityBroodCompetitionPoint(t *testing.T) {
+func TestBroodMortalityCompetitionPoint(t *testing.T) {
 	// [MORB-04] after the competition point every egg dies, larvae survive
 	bw := newBroodWorld(t, 1)
 	after := bw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) { c.CompetitionPointDate = day.At(199) })

@@ -123,7 +123,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Consequence for the merge order in gobees:** shuffle the hedges with the model RNG, then sort them by area (largest first) with a STABLE sort.
 - **Consequence for gobees:** reproduce the merge exactly, incl. the loss of the flower lists. The two additions can be dropped (SIMPLIFY), they do not change any value.
 - **Second Check**:
-- **Implemented:** `MergeHedgesProc` in `sys/setup_create_foodsources.go`: shuffle, then `slices.SortStableFunc` by area. Tests: `TestMergeHedges`, `TestMergeHedgesEqualAreaIsRandom` (both equally large hedges become master in some of 50 runs), `TestMergeHedgesEquallyNearFieldIsRandom`.
+- **Implemented:** `mergeHedges` in `sys/setup_landscape.go`: shuffle, then `slices.SortStableFunc` by area. Tests: `TestMergeHedges`, `TestMergeHedgesEqualAreaIsRandom` (both equally large hedges become master in some of 50 runs), `TestMergeHedgesEquallyNearFieldIsRandom`.
 
 <a id="finding-15"></a>
 
@@ -135,8 +135,8 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Checked from the input file (2026-10-23, PP):** the 73 flower patches of `_SYSTEM_Example_Farm_Foodsources.txt` lie in 73 different patch cells, with every rounding rule for coordinates ending in .5 (finding 24). The case does not occur for the example farm.
 - **Consequence for gobees:** compute the list by patch cell exactly as NetLogo does (rounded coordinates, see the patch cells in `trans/data-model.md`), not by masterpatch. Translate the assertion, so that gobees stops in the same situation.
 - **Second Check**: 23.10.2026, PP
-- **Implemented:** `setLayersInPatchList` in `sys/setup_create_foodsources.go`, grouped by `util.Pcor`. Test: `TestCreateLayers` (two flower patches in cell (10, 20) share one list). The assertion in `Foraging_PatchChoiceProc` comes with step 6. Step 6: the assertion in `forager.Foraging_PatchChoiceProc` (`sys/day_foraging.go`, `[PCH-03]`) panics. `Foraging_bestLayerREP` reads `LayersInPatchList`.
-- **gobees-fast:** fixed in step F5. `setLayersInPatchList` groups by `MasterpatchID`: the list holds the layers of the same flower patch, sorted by `who`. The assertion in [PCH-03] stays as a check of the state. Same lists as before for the example farm and `Example_Farm_PlotTest` (no patch cell with two flower patches). Test: `TestCreateLayersProc` (two flower patches in cell (10, 20) get two lists).
+- **Implemented:** `setLayersInPatchList` in `sys/setup_landscape.go`, grouped by `util.Pcor`. Test: `TestCreateLayers` (two flower patches in cell (10, 20) share one list). The assertion in `choosePatch` comes with step 6. Step 6: the assertion in `forager.choosePatch` (`sys/day_foraging.go`, `[PCH-03]`) panics. `bestLayer` reads `Layer.PatchLayers` (`LayersInPatchList` until step F15b).
+- **gobees-fast:** fixed in step F5. `setLayersInPatchList` groups by `Layer.Masterpatch` (`MasterpatchID` until step F15b): the list holds the layers of the same flower patch, sorted by `who`. The assertion in [PCH-03] stays as a check of the state. Same lists as before for the example farm and `Example_Farm_PlotTest` (no patch cell with two flower patches). Test: `TestCreateLayersProc` (two flower patches in cell (10, 20) get two lists).
 
 <a id="finding-16"></a>
 
@@ -146,7 +146,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Finding:** `CreateLayersProc` creates the layers with `hatch` inside `ask foodsources`. The layers of one flower patch get consecutive `who` numbers, but the order between flower patches follows the random order of `ask`. `layersInPatchList` (finding 15) is sorted by `who`, and `Foraging_bestLayerREP` keeps the first layer with the shortest handling time. For layers of different flower patches in the same cell with equal handling time, the random `who` order therefore decides which one a forager takes.
 - **Consequence for gobees:** shuffle the flower patches before creating the layers, and give each layer a `Who` number in creation order (decision C and `who` numbers in `trans/data-model.md`).
 - **Second Check**: 23.10.2026, PP
-- **Implemented:** `CreateLayersProc` shuffles the flower patches before the layers get their `Who` numbers. Test: `TestCreateLayers`.
+- **Implemented:** `createLayers` shuffles the flower patches before the layers get their `Who` numbers. Test: `TestCreateLayers`.
 
 <a id="finding-17"></a>
 
@@ -166,7 +166,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Finding:** A flower patch outside `MapAreaIncluded` and a layer without nectar and pollen are first created and then removed with `die`. Each has already used up a `who` number. NetLogo never reuses `who` numbers within a run.
 - **Consequence for gobees:** the `Who` counter must also count these removed foodsources, otherwise the `who` order differs from NetLogo whenever it matters (finding 16).
 - **Second Check**: 23.10.2026, PP
-- **Implemented:** `globals.WhoCounter`. `CreateFoodsources` counts every flower patch, also outside `MapAreaIncluded`, and every removed layer. Test: `TestCreateLayers` (gap between layers A and C).
+- **Implemented:** in gobees `globals.WhoCounter`, which counted every flower patch, also outside `MapAreaIncluded`, and every removed layer (test: gap between layers A and C). gobees-fast keeps no `who` numbers since step F12: `createLayers` keeps the foodsources in the order of creation, which is the `who` order (`globals.Landscape.Masterpatches`, `Layer.PatchLayers`). `MapAreaIncluded` is removed since step F13. Test: `TestCreateLayers` (order of the masterpatches).
 
 <a id="finding-19"></a>
 
@@ -176,7 +176,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Finding:** `CreateLayersProc` splits only flower patches with a non-empty `flowerSpeciesList`. A flower patch with an empty list stays as it is: a masterpatch with `nectarMax_myl = pollenMax_g = 0` and `startDay = stopDay = 0`, the values after creation. It never offers food, but it can still be a nest site (`[SPEC-06]`). `_SYSTEM_Example_Farm_Foodsources.txt` contains no empty list.
 - **Consequence for gobees:** keep such flower patches as masterpatches without food.
 - **Second Check**: 23.10.2026, PP
-- **Implemented:** `CreateLayersProc` in `sys/setup_create_foodsources.go`. Test: `TestCreateLayers` (the Scrub patch with an empty list).
+- **Implemented:** `createLayers` in `sys/setup_landscape.go`. Test: `TestCreateLayers` (the Scrub patch with an empty list).
 
 <a id="finding-23"></a>
 
@@ -198,7 +198,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
   - A nest habitat ending with `*` matches every habitat type on the map that contains the text before the `*` anywhere, e.g. `"Grassland*"` also matches `"Improved_Grassland"`.
 - **Consequence for gobees:** reproduce all three. NetLogo `round` rounds .5 up, `math.Round` in Go rounds .5 away from zero, which gives the same result for positive values.
 - **Second Check**: 23.10.2026, PP
-- **Implemented:** `parseSpeciesFile` and `NestHabitatsListREP` in `sys/setup_create_species.go`. Tests: `TestParseSpeciesFileOrder`, `TestParseSpeciesFileExample` (rounded standard deviations), `TestNestHabitatsListREP`.
+- **Implemented:** `parseSpeciesFile` and `expandNestHabitats` in `sys/setup_nest_sites.go`. Tests: `TestParseSpeciesFileOrder`, `TestParseSpeciesFileExample` (rounded standard deviations), `TestExpandNestHabitats`.
 
 <a id="finding-21"></a>
 
@@ -237,7 +237,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Checked from the input file (2026-10-24):** in the example farm every possible nest site of B. terrestris (Grassland, Hedgerow, Scrub, Woodland) has at least one patch centre in its circle. 15 small hedges and woods (100 to 300 m², radius 0.56 to 0.98 patches) have exactly one. The error does not occur.
 - **Consequence for gobees:** reproduce the random choice among the patch centres within the circle (strict `<`, distance in patch units). Translate the runtime error as an error. This also corrects finding 24.
 - **Second Check**: 24.10.2026, PP
-- **Implemented:** `NestSitesSearchingProc` in `sys/morning_emergence_new_queens.go` with `util.PatchCentresWithin` (strict `<`). No patch centre: panic. Tests: `TestNestSearchFoundsColonies` (colonies at patch centres, the 100 m2 hedge only at (50, 50)), `TestPatchCentresWithin`.
+- **Implemented:** `searchNestSite` in `sys/morning_queen_emergence.go` with `util.PatchCentresWithin` (strict `<`). No patch centre: panic. Tests: `TestNestSearchFoundsColonies` (colonies at patch centres, the 100 m2 hedge only at (50, 50)), `TestPatchCentresWithin`.
 - **gobees-fast:** edge case fixed in step F5. Without a patch centre in the circle, the colony is placed at the centre of the patch cell of the foodsource (`util.Pcor`), without a random number. Test: `TestNestSearchNoPatchCentre` (the 100 m² hedge at (133.548, 112.5): colony at (134, 113)).
 
 <a id="finding-26"></a>
@@ -248,7 +248,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Finding:** a queen without a nest finds one with probability `chanceFindNest` (0.2 in the species file). If she finds none, she dies with probability `1 - (1 - MortalityForager_per_s) ^ (NestSearchTime_h * 3600)`. With the default values (`"high"`: 1e-5 per s, 6 h): `1 - 0.99999 ^ 21600 = 0.194`. Per day 20 % of the searching queens found a nest and 0.8 × 0.194 = 15.5 % die. In the long run 0.2 / (0.2 + 0.155) = 56 % of the emerged queens found a colony, 44 % die during the search.
 - **Consequence for gobees:** nothing special, but a strong lever of the dynamics and worth knowing for the validation. With an unknown `ForagingMortalityModel` no queen dies here (finding 5).
 - **Second Check**: 24.10.2026, PP
-- **Implemented:** `NestSitesSearchingProc` and `searchMortality` in `sys/morning_emergence_new_queens.go`. Test: `TestNestSearchMortality` (2000 queens, about 19.4 % die).
+- **Implemented:** `searchNestSite` and `searchMortality` in `sys/morning_queen_emergence.go`. Test: `TestNestSearchMortality` (2000 queens, about 19.4 % die).
 
 <a id="finding-27"></a>
 
@@ -258,7 +258,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Finding:** `NestSiteFoodSourceREP` draws `p = random-float 1` and walks through the nest sites, summing `area_sqm / nestSiteArea`, until the sum exceeds `p`. In floating point the full sum can end slightly below 1. If `p` lies between this sum and 1, the loop reads past the end of the list and NetLogo stops with a runtime error.
 - **Consequence for gobees:** reproduce the loop. Running past the end is an error, as in NetLogo.
 - **Second Check**: 24.10.2026, PP 
-- **Implemented:** `NestSiteFoodSourceREP` in `sys/morning_emergence_new_queens.go`: running past the end of the list panics.
+- **Implemented:** `chooseNestSite` in `sys/morning_queen_emergence.go`: running past the end of the list panics.
 - **gobees-fast:** fixed in step F5. When the loop runs past the end, the last site of the (shuffled) list is chosen, without an extra random number. Test: `TestNestSiteChoicePastEnd` (one site with share 0.5, 100 draws).
 
 <a id="finding-28"></a>
@@ -269,7 +269,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Finding:** `DieProc` calls `die`. In NetLogo, `die` ends the execution of the dying agent immediately: commands after `DieProc` in the same `ask` block are not run for this agent. Example: a queen that dies over winter in `EmergenceNewQueensProc` never gets `activity "resting"` and `colonyID -1`.
 - **Consequence for gobees:** after the Go equivalent of `DieProc` the calling code must stop working on this agent (`return` or `continue`). This is a rule for every translated procedure, not a quirk.
 - **Second Check**: 24.10.2026, PP
-- **Implemented:** `beeDeath.DieProc` in `sys/shared_die.go`; the callers `continue` or `return` after it. Test: `TestDieRemovesFromActiveBees`.
+- **Implemented:** `beeDeath.die` in `sys/shared_die.go`; the callers `continue` or `return` after it. Test: `TestDieRemovesFromActiveBees`.
 
 <a id="finding-29"></a>
 
@@ -279,7 +279,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Finding:** `PatchesInRangeProc` builds the list of foodsources within the foraging range with `fput` inside `ask foodsources with [...]`. Since `ask` visits the agents in random order, the list is in random order. `FoodsourcesInFlowerAndRangeProc` keeps this order for the nectar and pollen lists, also for the lists of masterpatches.
 - **Consequence for gobees:** shuffle the foodsources, then build the list in this order. Whether the order matters for the foragers is decided in step 6 (`Foraging_searchingProc`).
 - **Second Check**: 24.10.2026, PP
-- **Implemented:** `PatchesInRangeProc` in `sys/morning_create_colonies.go`: shuffle, then append. Test: `TestPatchesInRangeAndFlowerLists`.
+- **Implemented:** `patchesInRange` in `sys/morning_create_colonies.go`: shuffle, then append. Test: `TestPatchesInRangeAndFlowerLists`.
 
 <a id="finding-30"></a>
 
@@ -300,7 +300,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Finding:** `set personalTime_s random (2 * 3600) + (GetUpTime_s - 3600)` with the comment "between 7:00 and 9:00 am". With `GetUpTime_s = 1` [PAR-03] the result is -3599 to 3600 s. The comment probably dates from a time when `GetUpTime_s` was 8 h. No effect: `UpdateMorning_Proc` sets a new `personalTime_s` for every active bee each morning, and hibernating queens are not active.
 - **Consequence for gobees:** translate as it is, or leave out (SIMPLIFY). It has no effect on the dynamics.
 - **Second Check**: 24.10.2026, PP
-- **Implemented:** `CreateInitialQueens` in `sys/setup_create_initial_queens.go` keeps the formula. Test: `TestCreateInitialQueensExampleFarm` (whole seconds from -3599 to 3600).
+- **Implemented:** `initialQueensSetup` in `sys/setup_initial_queens.go` keeps the formula. Test: `TestCreateInitialQueensExampleFarm` (whole seconds from -3599 to 3600).
 
 <a id="finding-32"></a>
 
@@ -310,7 +310,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Finding:** a queen agent with `number = n` (a cohort from a cohort-based colony) is split at emergence: `hatch (n - 1)` creates copies with all her values, i.e. the same weight, alleles, spermatheca and emergence date. The initial queens are created with `number 1` and are not affected. The copies then draw winter survival and nest search independently, but with the same weight and therefore the same survival probability.
 - **Consequence for gobees:** create `n - 1` copies of the queen entity with all components, `Number = 1` for all.
 - **Second Check**: 24.10.2026, PP
-- **Implemented:** `copyBee` in `sys/morning_emergence_new_queens.go` (lists are copied, not shared). Test: `TestEmergenceSplitsCohort`.
+- **Implemented:** `copyBee` in `sys/morning_queen_emergence.go` (lists are copied, not shared). Test: `TestEmergenceSplitsCohort`.
 
 <a id="finding-33"></a>
 
@@ -320,7 +320,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Finding:** `WintermortalityProbREP` reports the probability to SURVIVE the winter (despite its name): `0.64 / (1 + e^(-22 * (relative weight - 0.32)))`, with the weight relative to the minimum and maximum queen weight of the species. The curve was fitted to B. terrestris (Beekman et al. 1998) and is used for all species. Even the heaviest queens survive with at most 64 %.
 - **Consequence for gobees:** Keep the NetLogo name.
 - **Second Check**: 24.10.2026, PP
-- **Implemented:** `WintermortalityProbREP` in `sys/shared_bee_traits.go`. Tests: `TestWintermortalityProbREP`, `TestEmergenceWinterMortality` (2000 queens at relative weight 0.32, about 32 % survive).
+- **Implemented:** `winterMortalityProb` in `sys/shared_bee_traits.go`. Tests: `TestWinterMortalityProb`, `TestEmergenceWinterMortality` (2000 queens at relative weight 0.32, about 32 % survive).
 
 <a id="finding-34"></a>
 
@@ -330,7 +330,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Finding:** `ProboscisLengthREP` interpolates linearly between `proboscis_min_mm` at the minimum WORKER weight (`devWeightPupationMin_mg`) and `proboscis_max_mm` at the maximum QUEEN weight (`devWeight_Q_PupationMax_mg`). Workers, males and queens are on the same line. A weight outside this range is an assertion.
 - **Consequence for gobees:** translate as it is, incl. the assertion.
 - **Second Check**: 24.10.2026, PP
-- **Implemented:** `ProboscisLengthREP` in `sys/shared_bee_traits.go`. Test: `TestProboscisLength`.
+- **Implemented:** `proboscisLength` in `sys/shared_bee_traits.go`. Test: `TestProboscisLength`.
 
 <a id="finding-35"></a>
 
@@ -340,7 +340,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Finding:** `PsithyrusNestSearchProc` chooses the host with `one-of colonies`: a colony of any species, also one that another cuckoo bee has already taken. The probabilities (find one nest 0.05, get access 0.25, be killed 0.25, kill the host queen 0.5) are marked as arbitrary in the code. Not part of the default runs.
 - **Consequence for gobees:** translate as it is.
 - **Second Check**: 24.10.2026, PP
-- **Implemented:** `PsithyrusNestSearchProc` in `sys/morning_emergence_new_queens.go`. Not tested yet (not part of the default runs).
+- **Implemented:** `searchHostColony` in `sys/morning_queen_emergence.go`. Not tested yet (not part of the default runs).
 
 ## Findings from step 4a (morning routine)
 
@@ -353,7 +353,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Result:** `Day = ((ticks - 1) mod 365) + 1` for `ticks > 0`, and `Day = 0` in Setup.
 - **Consequence for gobees:** compute `Day` with integers. A test compares the integer formula with the NetLogo formula for ticks 0, 1, 364, 365, 366, 730 and 731.
 - **Second Check**: 24.10.2026, PP
-- **Implemented:** `dayOfYear` in `sys/morning_update_morning.go`. Test: `TestDayOfYear` (the worked examples, and the integer formula against the NetLogo formula for 100 years). The step 4a validation compares `Day` with NetLogo over 400 days.
+- **Implemented:** `dayOfYear` in `sys/morning_calendar.go`. Test: `TestDayOfYear` (the worked examples, and the integer formula against the NetLogo formula for 100 years). The step 4a validation compares `Day` with NetLogo over 400 days.
 
 <a id="finding-37"></a>
 
@@ -363,7 +363,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Finding:** `UpdateColoniesProc` checks `allEggs + allLarvae + allPupae = 0` before it recomputes these counts in the same block. The check therefore uses the values of the previous morning. Brood that emerged or died since then is still counted, so the workers and queens die one day later than with current counts. Only workers and queens with `adultAge > 10` die. Younger adults stay and die on a later morning, once they are older than 10 days.
 - **Consequence for gobees:** keep the order: deaths first, then the statistics. Do not compute the counts on demand.
 - **Second Check**: 24.10.2026, PP
-- **Implemented:** `UpdateColonies.updateColony` in `sys/morning_update_colonies.go`, deaths before statistics. Test: `TestUpdateColoniesDeathAfterCP` (the adults survive one more day because of the pupae counted on the previous morning).
+- **Implemented:** `colonyUpdate.updateColony` in `sys/morning_colony_update.go`, deaths before statistics. Test: `TestColonyUpdateDeathAfterCP` (the adults survive one more day because of the pupae counted on the previous morning).
 
 <a id="finding-38"></a>
 
@@ -376,7 +376,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
   - Brood whose only adults are males is not killed for "no adults left" (`[UCOL-04]`). This needs brood without any worker or queen, which is probably rare.
 - **Consequence for gobees:** keep the `ColonyID` of males. A colony entity is deleted only when no bee refers to it. So a bee never refers to a deleted colony, and the `ecs.Entity` references stay valid (decision B in `trans/data-model.md`).
 - **Second Check**: 24.10.2026, PP
-- **Implemented:** `sys/morning_update_colonies.go` keeps males in `[UCOL-02]` and counts them as adults in `[UCOL-04]`. A colony is deleted only in `[UCOL-11]`, when no bee refers to it. Tests: `TestUpdateColoniesDeathAfterCP` (a male alone keeps the colony alive), `TestUpdateColoniesNoAdults` (a male keeps the brood alive).
+- **Implemented:** `sys/morning_colony_update.go` keeps males in `[UCOL-02]` and counts them as adults in `[UCOL-04]`. A colony is deleted only in `[UCOL-11]`, when no bee refers to it. Tests: `TestColonyUpdateDeathAfterCP` (a male alone keeps the colony alive), `TestColonyUpdateNoAdults` (a male keeps the brood alive).
 
 <a id="finding-39"></a>
 
@@ -387,7 +387,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Affects:** a translation that drops `CheckNumbersProc` as "only checks" changes when the males die, and the outputs. The BehaviorSpace metrics of these totals are morning values.
 - **Consequence for gobees:** a system `CheckNumbers` that sets the totals and panics where NetLogo asserts.
 - **Second Check**: 24.10.2026, PP
-- **Implemented:** system `CheckNumbers` in `sys/morning_check_numbers.go`, totals in `globals.Totals`. Test: `TestCheckNumbersTotals` (all totals, `TotalForagingTripsToday` reset to 0). The colony check on day 364 is switched off in `model/default.go` (`SkipColonyCheck`) until step 7 translates the end of season.
+- **Implemented:** system `broodTotals` in `sys/morning_brood_totals.go`, totals in `globals.Totals`. Test: `TestBroodTotals` (all totals, `TotalForagingTripsToday` reset to 0). The colony check on day 364 is switched off in `model/default.go` (`SkipColonyCheck`) until step 7 translates the end of season.
 
 ## Findings from step 4b (brood)
 
@@ -400,7 +400,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Affects:** whether a queen larva becomes an adult queen depends only on her food and incubation afterwards. B. terrestris needs 590 mg by `broodAge` 29, otherwise she dies (`larvaDeathsWeight`, `[MORB-02]`). After the switch point the queen lays only male eggs (`[EGG-02]`), so the young queens come from the last female eggs laid before the switch point.
 - **Consequence for gobees:** translate as it is, with the weight comparison.
 - **Second Check**: 24.10.2026
-- **Implemented:** `DetermineCaste_REP` in `sys/evening_development.go`, with the weight comparison. Test: `TestDetermineCaste_REP` (every weight gives a queen with queen production, the weight criterion works with a value above 0).
+- **Implemented:** `determineCaste` in `sys/evening_development.go`, with the weight comparison. Test: `TestDetermineCaste` (every weight gives a queen with queen production, the weight criterion works with a value above 0).
 
 <a id="finding-41"></a>
 
@@ -411,7 +411,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Search of the whole code (2026-10-24):** a script listed all statements that mix `and` and `or` at the same bracket level. This is the only one. The Go code of steps 1 to 4a brackets every mix of `&&` and `||`.
 - **Consequence for gobees:** brackets in Go: `(worker || male) && ...`. A test checks that a worker larva that is too light does not pupate.
 - **Second Check**: 24.10.2026
-- **Implemented:** `Development_LarvaeProc` in `sys/evening_development.go`, `(worker || male) && ...`. Test: `TestDevelopmentLarvaePrecedence` (worker and male larvae that are too light, too young or too cold stay larvae).
+- **Implemented:** `developLarva` in `sys/evening_development.go`, `(worker || male) && ...`. Test: `TestDevelopmentLarvaePrecedence` (worker and male larvae that are too light, too young or too cold stay larvae).
 
 <a id="finding-42"></a>
 
@@ -422,7 +422,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Affects:** `queenProductionDate` is about one day earlier than the laying day of the first queen-destined eggs, contrary to the comment in the code ("these larvae were laid as eggs on that day"). The competition point (`[CPD-01]`) then comes about 0.7 days earlier (y = 0.7 x + 15.5, rounded). The comment calls the date "theoretical", so the effect may be accepted.
 - **Consequence for gobees:** translate as it is, in the same order of the systems (QueenProductionDate before Development).
 - **Second Check**: 24.10.2026
-- **Implemented:** `QueenProductionDate` runs before `Development` in `model/default.go`. Test: `TestQueenProductionDateBeforeDevelopment` (date 102 = laying day of the worker larva, the larva laid on day 103 becomes a queen).
+- **Implemented:** `queenProductionDate` runs before `development` in `model/default.go`. Test: `TestQueenProductionDateBeforeDevelopment` (date 102 = laying day of the worker larva, the larva laid on day 103 becomes a queen).
 
 <a id="finding-43"></a>
 
@@ -433,7 +433,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Affects:** only colonies with `cohortBased? = false`, i.e. runs with `COLONIES_IBM > 0`. `COLONIES_IBM` is 0 in `_SYSTEM_Parameters.csv` and `_SYSTEM_Example_Farm_Parameters.csv`, so the default runs are not affected.
 - **Consequence for gobees:** translate as it is. A test with an individual-based colony checks the cost of one egg.
 - **Second Check**: 24.10.2026
-- **Implemented:** `eggLayer.EgglayingProc` in `sys/day_egglaying.go`. Test: `TestEgglayingIndividualBased` (12 cohorts of 1 egg, stores reduced by 0.0015 g and 0.0093 kJ).
+- **Implemented:** `eggLayer.layEggs` in `sys/day_egglaying.go`. Test: `TestEgglayingIndividualBased` (12 cohorts of 1 egg, stores reduced by 0.0015 g and 0.0093 kJ).
 - **gobees-fast:** removed with the individual-based colonies in step F1. Every colony lays one cohort of `batchsize` eggs. Test: `TestEgglayingOneCohort`.
 
 <a id="finding-44"></a>
@@ -445,7 +445,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Affects:** in `ActivityProc` the last matching task wins (finding 11, see trans/netlogo-findings.md#finding-11). While the host brood still needs incubation today (`StimNursingREP` = 1), nursing overwrites egg laying, and the Psithyrus rule in `ActivityProc` turns nursing into resting. The Psithyrus queen then rests for 30 minutes instead of laying eggs. She lays her batch only once the host brood has received today's incubation, and on a day on which it never does, she lays none. With the `"Psith"` thresholds she would lay eggs at the first opportunity. The change of the egg-laying threshold (0.2 to 0) has no effect, because the stimulus is 0 or 1.
 - **Consequence for gobees:** translate as it is, without a species check. A test checks that a Psithyrus queen in a host colony with workers gets the social-phase thresholds. The effect on egg laying is tested with `ActivityProc` in step 5.
 - **Second Check**: 24.10.2026
-- **Implemented:** `Development_Mortality_AdultsProc` in `sys/evening_development.go`, without species check. Test: `TestDevelopmentSocialPhaseThresholds` (host queen and Psithyrus queen get the social-phase thresholds, a queen without workers keeps hers). The effect on egg laying follows with `ActivityProc` in step 5. Step 5: `TestActivityProcChoice` (a Psithyrus queen with the social-phase thresholds rests while the host brood needs heat, and lays eggs once it is warm).
+- **Implemented:** `ageAdult` in `sys/evening_development.go`, without species check. Test: `TestDevelopmentSocialPhaseThresholds` (host queen and Psithyrus queen get the social-phase thresholds, a queen without workers keeps hers). The effect on egg laying follows with `act` in step 5. Step 5: `TestActChoice` (a Psithyrus queen with the social-phase thresholds rests while the host brood needs heat, and lays eggs once it is warm).
 - **gobees-fast:** not fixed in step F5, planned with the fixes that change the dynamics. The fix would be one condition in [MORA-02]: a Psithyrus queen keeps her `"Psith"` thresholds and lays eggs at the first opportunity. It changes only `step8_species`, the default run has no Psithyrus. Measured on 2 November 2026 (`step8_species`, 100 runs): Psithyrus bees on day 150, median 501.5 without and 621 with the fix (24 % more), NetLogo 548.5 (5-95 %: 207 to 1048). Both stay within the NetLogo band. The effect runs through finding 11, so it is measured after a fix of 46 and 11.
 
 ## Findings from step 5 (daily activity queue)
@@ -459,7 +459,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Affects:** colonies with adults other than the queen but no workers. (1) A colony with a Psithyrus queen: the host queen, still in the founding phase, has the egg-laying stimulus 1 every day and lays a batch on every day with enough stores and no brood that needs heat, instead of waiting until her brood has pupated. (2) Late in the season, when all workers have died but males or young queens are still in the nest: the queen keeps laying (after the switch point male eggs, after the competition point the eggs die in `[MORB-04]`).
 - **Consequence for gobees:** translate as it is, with `allAdults > 1`. A test checks that a colony with the queen and one male has the stimulus 1.
 - **Second Check**: 24.10.2026
-- **Implemented:** `StimEgglayingREP` in `sys/day_stimuli.go`. Test: `TestStimuli` (queen and one male: stimulus 1).
+- **Implemented:** `egglayingStimulus` in `sys/day_stimuli.go`. Test: `TestStimuli` (queen and one male: stimulus 1).
 
 <a id="finding-46"></a>
 
@@ -471,7 +471,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Affects:** an egg reaches the hatching threshold `devIncubationHatchingTH_kJ` = quota × `devAgeHatchingMin_d` (`[SPEC-05]`, `[DEVE-01]`) one day after the minimum age if it gets exactly the quota every day. It hatches at the minimum age only if the daily surplus (`[INC-01]`, up to the heat of one turn) adds up to one quota. This fits the comment in `[QPD-01]`: the realised egg phase is about 6.4 days, with a minimum of 5. The worked examples in `[DEVE-01]`, `[DEVL-02]` and `[DEVL-03]` start with heat on the laying day, so they show the earliest possible days.
 - **Consequence for gobees:** nothing to change, the effect follows from the order of the checks. A test with `ActivityProc` checks that eggs laid by a queen get no heat on their first day.
 - **Second Check**: 24.10.2026
-- **Implemented:** follows from `ActivityLoop.ActivityProc` and `BroodIncubationProc` in `sys/day_activity_loop.go`. Test: `TestActivityLoopDay` (one day of a colony with 12 eggs, a queen and 20 workers: the old eggs get at least the quota, the new batch gets 0 kJ).
+- **Implemented:** follows from `activities.act` and `incubateBrood` in `sys/day_activities.go`. Test: `TestActivitiesDay` (one day of a colony with 12 eggs, a queen and 20 workers: the old eggs get at least the quota, the new batch gets 0 kJ).
 
 ## Findings from step 6 (foraging)
 
@@ -484,7 +484,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Affects:** a forager that takes the last nectar or pollen of a foodsource has a trip of more than one hour and pays the flight costs of 3600 s of handling (`[COST-02]`). Her mortality risk for the trip rises accordingly (worked example of `[COST-02]`, foodsource 300 m away: 0.0041 for 412 s, 0.0365 for 3720 s with the handling time 3600 s). In `Foraging_PatchChoiceProc` the long trip makes her unhappy and raises her expectation. In all other trips the handling time is slightly longer than at the filling level she found, because her own load is already missing. `Foraging_bestLayerREP` computes handling times before the collection, so the choice of the layer is not affected.
 - **Consequence for gobees:** translate as it is, in the same order. A test checks that a forager that empties a foodsource gets the handling time 3600 s.
 - **Second Check**: 24.10.2026, PP
-- **Implemented:** `forager.Foraging_costsAndChoiceProc` in `sys/day_foraging.go`, handling time after `Foraging_collectNectarPollenProc`. Test: `TestForagingEmptiesFoodsource` (a cohort of 3 takes the last 100 microlitres: trip 120 s + 3600 s).
+- **Implemented:** `forager.tripCosts` in `sys/day_foraging.go`, handling time after `collect`. Test: `TestForagingEmptiesFoodsource` (a cohort of 3 takes the last 100 microlitres: trip 120 s + 3600 s).
 
 ## Findings from step 7 (year cycle)
 
@@ -497,7 +497,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Affects:** only runs with `N_Badgers > 1` and Scrub masterpatches within 300 m of the lower left corner. `N_Badgers` is 0 in `_SYSTEM_Parameters.csv` and `_SYSTEM_Example_Farm_Parameters.csv`, so the default runs have no badgers. To be checked in NetLogo: that `create-badgers` creates all badgers before the first one runs the block (`crt 3 [ show count turtles ]` shows 3 three times).
 - **Consequence for gobees:** create all badgers at (0, 0) first, then place them one by one in random order, as NetLogo does. A test with 2 badgers and a Scrub patch near the corner checks the exclusion.
 - **Second Check**: 25.10.2026, PP 
-- **Implemented:** `CreateBadgersProc` in `sys/setup_create_badgers.go`: all badgers are created at (0, 0), then placed in random order, the candidates are recomputed with all living badgers. Test: `TestCreateBadgersOriginBlocks` (Scrub patch 140 m from the corner and two far ones, 2 badgers: the near patch is occupied in about 1/3 of 3000 runs, without the blocking it would be 2/3).
+- **Implemented:** `createBadgers` in `sys/setup_badgers.go`: all badgers are created at (0, 0), then placed in random order, the candidates are recomputed with all living badgers. Test: `TestCreateBadgersOriginBlocks` (Scrub patch 140 m from the corner and two far ones, 2 badgers: the near patch is occupied in about 1/3 of 3000 runs, without the blocking it would be 2/3).
 - **gobees-fast:** fixed in step F5. The candidates are recomputed with the badgers placed so far, the badgers still at the origin block nothing. Same placement as before for the example farm (the nearest Scrub patch lies 1495 m from the origin). Test: `TestCreateBadgersNearOrigin` (the near patch is occupied in about 2/3 of 3000 runs).
 
 ## Findings from the model map and from `Go`
@@ -520,7 +520,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Who reads `deadCols`:** checked on 2026-10-23. Only three places: the egg accounting assertion in `CheckNumbersProc` on day 364, `UpdateColoniesProc` (deletes all dead colonies on 1 January unless `KeepDeadColonies?`), and the GUI (white dots if `ShowDeadCols?`). No output, plot or BehaviorSpace experiment reads `deadCols`, and no model procedure iterates over all `turtles`. Nobody reads `speciesNameColony` of a dead colony, so the loss has no effect.
 - **Consequence for gobees:** no effect on the dynamics. gobees deletes the colony entity at death and writes its data into a record of dead colonies, including `speciesNameColony` (decision E in `trans/data-model.md`). The egg accounting check runs at death instead of on day 364.
 - **Second Check**: 23.10.2026, PP
-- **gobees-fast:** colonies have no `speciesNameColony` since step F3 (never read). The record keeps the species as `SpeciesIDcolony`.
+- **gobees-fast:** colonies have no `speciesNameColony` since step F3 (never read). The record keeps the species as `SpeciesIDcolony` (`Colony.Species` since step F15b).
 
 <a id="finding-10"></a>
 
@@ -530,7 +530,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Finding:** The code calls the value from `flowerSpeciesList` "relative abundance". It is, however, multiplied by the area and by pollen or nectar *per flower*: `pollenMax_g = area_sqm × AbundanceBoost × value × pollen_g/flower` and `nectarMax_myl = area_sqm × AbundanceBoost × value × nectar_ml/flower × 1000`. Its unit is therefore flowers per m².
 - **Status:** confirmed when annotating `CreateLayersProc` on 2026-10-23. The name has no effect on the dynamics. Only the interpretation of the input data is affected.
 - **Second Check**: 23.10.2026, PP
-- **Implemented:** `CreateLayersProc` in `sys/setup_create_foodsources.go` (`RelativeAbundance` stores the value without `AbundanceBoost`). Test: `TestCreateLayers` (100 m2 x 2 x 0.01 g = 2 g pollen).
+- **Implemented:** `createLayers` in `sys/setup_landscape.go` (`RelativeAbundance` stores the value without `AbundanceBoost`). Test: `TestCreateLayers` (100 m2 x 2 x 0.01 g = 2 g pollen).
 - **gobees-fast:** `RelativeAbundance` is removed in step F3 (never read). The value enters only `pollenMax_g` and `nectarMax_myl`.
 
 <a id="finding-11"></a>
@@ -541,7 +541,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Finding:** The four comparisons of stimulus and threshold are separate consecutive `if` statements. Each matching condition overwrites `activity`. If several match, the order of precedence is therefore: nectar foraging before pollen foraging before nursing before egg laying. The comment in the code ("ordered by their importance") does not say whether the first or the last check takes precedence.
 - **Consequence for gobees:** keep the exact order of the checks, do not write them as `if … else if`.
 - **Second Check**: 23.10.2026, PP
-- **Implemented:** `ActivityLoop.ActivityProc` in `sys/day_activity_loop.go`, four separate `if`. Test: `TestActivityProcChoice` (a founding queen with all stimuli 1 forages nectar).
+- **Implemented:** `activities.act` in `sys/day_activities.go`, four separate `if`. Test: `TestActChoice` (a founding queen with all stimuli 1 forages nectar).
 
 <a id="finding-12"></a>
 
@@ -549,7 +549,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 
 - **Code:** `[GO-03]`
 - **Finding:** NetLogo calls `tick` at the start of `Go`. During the first simulated day `ticks` is 1, during `Setup` it is 0. ark-tools increments `resource.Tick` only after each update, so its value is 0 during the first day.
-- **Consequence for gobees:** the system `sys.Tick` writes the NetLogo ticks into `globals.Ticks`. All systems read only this resource. The test `sys/morning_tick_test.go` covers this.
+- **Consequence for gobees:** the system `sys.Tick` (gobees-fast: the part `tick`, step F15a) writes the NetLogo ticks into `globals.Ticks`. All systems read only this resource. The test `sys/morning_tick_test.go` covers this.
 - **Second Check**:
 
 <a id="finding-22"></a>
@@ -561,4 +561,4 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Affects:** nothing with the hard-coded value 0. A value of e.g. 0.01 would kill 99 % of all adults (workers, males and all adult queens, including hibernating ones) every day.
 - **Consequence for gobees:** translate the condition exactly as it is. A test with value 0 checks that no bee dies.
 - **Second Check**: 23.10.2026, PP
-- **Implemented:** `Development_Mortality_AdultsProc` in `sys/evening_development.go`, condition as in NetLogo. Test: `TestDevelopmentBackgroundMortality` (0: nobody dies; 0.01: about 99 % die).
+- **Implemented:** `ageAdult` in `sys/evening_development.go`, condition as in NetLogo. Test: `TestDevelopmentBackgroundMortality` (0: nobody dies; 0.01: about 99 % die).

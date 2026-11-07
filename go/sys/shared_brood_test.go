@@ -16,11 +16,11 @@ import (
 // or created by hand, because ActivityProc (step 5) does not exist yet.
 type broodWorld struct {
 	*colonyWorld
-	need *NeedNectarPollenLarvaeToday
-	feed *FeedLarvae
-	qpd  *QueenProductionDate
-	dev  *Development
-	morb *MortalityBrood
+	need *larvaeNeeds
+	feed *larvaeFeeding
+	qpd  *queenProductionDate
+	dev  *development
+	morb *broodMortality
 	eggs eggLayer
 	sp   *params.Species
 }
@@ -28,8 +28,8 @@ type broodWorld struct {
 func newBroodWorld(t *testing.T, seed uint64) *broodWorld {
 	t.Helper()
 	bw := &broodWorld{colonyWorld: newColonyWorld(t, seed),
-		need: &NeedNectarPollenLarvaeToday{}, feed: &FeedLarvae{}, qpd: &QueenProductionDate{},
-		dev: &Development{}, morb: &MortalityBrood{}}
+		need: &larvaeNeeds{}, feed: &larvaeFeeding{}, qpd: &queenProductionDate{},
+		dev: &development{}, morb: &broodMortality{}}
 	bw.need.Initialize(bw.w)
 	bw.feed.Initialize(bw.w)
 	bw.qpd.Initialize(bw.w)
@@ -58,7 +58,7 @@ func (bw *broodWorld) eggsOf(col ecs.Entity) []ecs.Entity {
 	result := []ecs.Entity{}
 	query := bw.beeFilter().Query()
 	for query.Next() {
-		if b := query.Get(); b.Stage == stage.Egg && b.ColonyID == col {
+		if b := query.Get(); b.Stage == stage.Egg && b.Colony == col {
 			result = append(result, query.Entity())
 		}
 	}
@@ -72,10 +72,11 @@ func (bw *broodWorld) bee(e ecs.Entity) (*comp.Bee, *comp.Genetics, *comp.Thresh
 }
 
 // addBrood adds brood of a colony with the given caste, broodAge, weight and incubation.
-func (bw *broodWorld) addBrood(col ecs.Entity, st stage.Stage, c caste.Caste, number, broodAge int, weight_mg, incubation_kJ float64) ecs.Entity {
+// weight [mg], incubation [kJ].
+func (bw *broodWorld) addBrood(col ecs.Entity, st stage.Stage, c caste.Caste, number, broodAge int, weight, incubation float64) ecs.Entity {
 	e := bw.addBee(col, st, c, number, 0)
 	b, _, _, _, d := bw.bee(e)
-	b.BroodAge, b.Weight_mg, d.CumulIncubationReceived_kJ = broodAge, weight_mg, incubation_kJ
+	b.BroodAge, b.Weight, d.IncubationReceived = broodAge, weight, incubation
 	return e
 }
 

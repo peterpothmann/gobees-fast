@@ -15,16 +15,16 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// ActivityLoop [GO-06 to GO-10].
+// activities [GO-06 to GO-10].
 //
 // Event-driven loop of the day. Repeatedly takes the active bee with the smallest personalTime_s
 // [NEXT], lets it perform exactly one activity [ACT] and re-inserts it, until the smallest personalTime_s
-// exceeds CallItaDay_s, no active adult worker or queen is left, or no colony is left.
+// exceeds Constants.CallItADay, no active adult worker or queen is left, or no colony is left.
 //
 // Foraging: sys/foraging.go [FOR].
 //
 // NetLogo: while loop in Go, NextActiveBeeREP, ActivityProc, BroodIncubationProc.
-type ActivityLoop struct {
+type activities struct {
 	// CheckActiveCount makes the loop count the active adult workers and queens in every turn, as NetLogo does
 	// in [GO-06], and panic if the number differs from the length of the queue. For tests.
 	CheckActiveCount bool
@@ -49,7 +49,7 @@ type ActivityLoop struct {
 	broodOf map[ecs.Entity][]ecs.Entity
 }
 
-func (s *ActivityLoop) Initialize(w *ecs.World) {
+func (s *activities) Initialize(w *ecs.World) {
 	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.constants = ecs.GetResource[params.Constants](w)
 	s.calendar = ecs.GetResource[globals.Calendar](w)
@@ -66,7 +66,7 @@ func (s *ActivityLoop) Initialize(w *ecs.World) {
 	s.broodOf = map[ecs.Entity][]ecs.Entity{}
 }
 
-func (s *ActivityLoop) Update(w *ecs.World) {
+func (s *activities) Update(w *ecs.World) {
 	s.broodOf = beesByColony(s.broodOf, s.beeFilter, func(b *comp.Bee) bool { return b.Stage != stage.Adult })
 
 	// [GO-06] the queue holds exactly the active adult workers and queens ([NEXT-01]): all of them were put
@@ -75,15 +75,15 @@ func (s *ActivityLoop) Update(w *ecs.World) {
 	continueWorking := true
 	for continueWorking && s.activeAdults() > 0 && s.colonies() > 0 {
 		// [GO-07]
-		e := s.NextActiveBeeREP()
+		e := s.nextActiveBee()
 		_, b, _, _, _, _ := s.beeMap.Get(e)
 		// [GO-08]
-		if b.PersonalTime_s > s.constants.CallItaDay_s {
+		if b.PersonalTime > s.constants.CallItADay {
 			continueWorking = false
 		} else {
 			// [GO-09] activityList: GUI log, not translated.
-			s.daytime.Daytime_s = b.PersonalTime_s // Model has no global time, each bee has her own personalTime_s and the one with the lowest is next
-			s.ActivityProc(w, e)
+			s.daytime.Time = b.PersonalTime // Model has no global time, each bee has her own personalTime_s and the one with the lowest is next
+			s.act(w, e)
 			if !w.Alive(e) {
 				continue // died during her task (foraging, step 6): DieProc ends her code, [GO-10] is skipped (finding 28)
 			}
@@ -91,16 +91,16 @@ func (s *ActivityLoop) Update(w *ecs.World) {
 		// [GO-10] get the bee again: ActivityProc may have created entities
 		_, b, _, _, _, _ = s.beeMap.Get(e)
 		// Queens without a colony are inactive for the rest of the day.
-		if b.ColonyID.IsZero() {
-			b.PersonalTime_s = s.constants.CallItaDay_s + 1
+		if b.Colony.IsZero() {
+			b.PersonalTime = s.constants.CallItADay + 1
 		}
 	}
 }
 
-func (s *ActivityLoop) Finalize(w *ecs.World) {}
+func (s *activities) Finalize(w *ecs.World) {}
 
 // activeAdults returns the number of active adult workers and queens [GO-06].
-func (s *ActivityLoop) activeAdults() int {
+func (s *activities) activeAdults() int {
 	n := len(s.active.List)
 	if s.CheckActiveCount {
 		count := 0
@@ -118,30 +118,30 @@ func (s *ActivityLoop) activeAdults() int {
 }
 
 // colonies returns the number of colonies [GO-06].
-func (s *ActivityLoop) colonies() int {
+func (s *activities) colonies() int {
 	query := s.colonyFilter.Query()
 	n := query.Count()
 	query.Close()
 	return n
 }
 
-// NextActiveBeeREP puts the first bee of the queue back at its sorted position and returns the new first bee
+// nextActiveBee puts the first bee of the queue back at its sorted position and returns the new first bee
 // [NEXT]. Ported line by line, including the tie rule [NEXT-04].
-func (s *ActivityLoop) NextActiveBeeREP() ecs.Entity {
+func (s *activities) nextActiveBee() ecs.Entity {
 	time := func(e ecs.Entity) float64 {
 		_, b, _, _, _, _ := s.beeMap.Get(e)
-		return b.PersonalTime_s
+		return b.PersonalTime
 	}
 	list := s.active.List
 	// [NEXT-01]
 	activeBee := list[0]
-	persTime_activeBee := time(activeBee)
+	activeBeeTime := time(activeBee) // [s]
 	// [NEXT-02]
 	minPosition := 0.0
 	maxPosition := float64(len(list) - 1)
 	currentPosition := util.Round(maxPosition / 2)
 	for maxPosition-minPosition > 1 {
-		if time(list[int(currentPosition)]) > persTime_activeBee {
+		if time(list[int(currentPosition)]) > activeBeeTime {
 			maxPosition = currentPosition
 			currentPosition = util.Round((currentPosition + minPosition) / 2)
 		} else {
@@ -160,7 +160,7 @@ func (s *ActivityLoop) NextActiveBeeREP() ecs.Entity {
 	// [NEXT-04] in place, without a new list (step F10): beginningList moves one position to the front into the place
 	// of activeBee, endList stays where it is. Same order as NetLogo's sentence.
 	// SIMPLIFY: a priority queue (trans/data-model.md).
-	if len(endList) == 1 && persTime_activeBee > time(endList[0]) {
+	if len(endList) == 1 && activeBeeTime > time(endList[0]) {
 		copy(list, list[1:])
 		list[len(list)-1] = activeBee
 	} else {
@@ -170,32 +170,32 @@ func (s *ActivityLoop) NextActiveBeeREP() ecs.Entity {
 	return list[0]
 }
 
-// ActivityProc lets the bee e choose one task and do it [ACT].
-func (s *ActivityLoop) ActivityProc(w *ecs.World, e ecs.Entity) {
+// act lets the bee e choose one task and do it [ACT].
+func (s *activities) act(w *ecs.World, e ecs.Entity) {
 	// [ACT-01]
-	break_s := 0.5 * 3600
+	pause := 0.5 * 3600 // [s]
 	_, b, _, th, _, _ := s.beeMap.Get(e)
 	b.Activity = activity.Resting
-	if !b.ColonyID.IsZero() {
+	if !b.Colony.IsZero() {
 		// [ACT-02] ORDER of the four: irrelevant.
-		colony, stores, stim, counts := s.colonyMap.Get(b.ColonyID)
-		sp := s.speciesMap.Get(colony.SpeciesIDcolony)
-		stim.StimEgglaying = StimEgglayingREP(stores, counts, sp)
-		stim.StimNectarForaging = StimForagingNectarREP(stores, s.daytime.Daytime_s, s.constants.Sunrise_s, s.calendar.DailyForagingPeriod_s)
-		stim.StimPollenForaging = StimForagingPollenREP(stores, sp, s.daytime.Daytime_s, s.constants.Sunrise_s, s.calendar.DailyForagingPeriod_s)
-		stim.StimNursing = StimNursingREP(stores, counts, sp)
+		colony, stores, stim, counts := s.colonyMap.Get(b.Colony)
+		sp := s.speciesMap.Get(colony.Species)
+		stim.Egglaying = egglayingStimulus(stores, counts, sp)
+		stim.NectarForaging = nectarStimulus(stores, s.daytime.Time, s.constants.Sunrise, s.calendar.ForagingPeriod)
+		stim.PollenForaging = pollenStimulus(stores, sp, s.daytime.Time, s.constants.Sunrise, s.calendar.ForagingPeriod)
+		stim.Nursing = nursingStimulus(stores, counts, sp)
 
 		// [ACT-03] the last matching task wins (finding 11, see trans/netlogo-findings.md#finding-11): no "else if".
-		if stim.StimEgglaying > th.ThEgglaying {
+		if stim.Egglaying > th.Egglaying {
 			b.Activity = activity.Egglaying
 		}
-		if stim.StimNursing > th.ThNursing {
+		if stim.Nursing > th.Nursing {
 			b.Activity = activity.Nursing
 		}
-		if stim.StimPollenForaging > th.ThForagingPollen {
+		if stim.PollenForaging > th.PollenForaging {
 			b.Activity = activity.PollenForaging
 		}
-		if stim.StimNectarForaging > th.ThForagingNectar {
+		if stim.NectarForaging > th.NectarForaging {
 			b.Activity = activity.NectarForaging
 		}
 	}
@@ -203,51 +203,51 @@ func (s *ActivityLoop) ActivityProc(w *ecs.World, e ecs.Entity) {
 	// [ACT-04] speciesName = "Psithyrus": the flag of the bee's species (step F9). The task is tested first, so the
 	// species is looked up only for nursing and foraging (no side effects, same result).
 	if (b.Activity == activity.Nursing || b.Activity == activity.PollenForaging || b.Activity == activity.NectarForaging) &&
-		s.speciesMap.Get(b.SpeciesID).Parasitic {
+		s.speciesMap.Get(b.Species).Parasitic {
 		b.Activity = activity.Resting
 	}
 
 	// [ACT-05] at most one task runs, see the annotation
 	switch b.Activity {
 	case activity.Resting:
-		b.PersonalTime_s = b.PersonalTime_s + break_s
+		b.PersonalTime = b.PersonalTime + pause
 	case activity.Egglaying:
-		col := b.ColonyID
-		eggs := s.eggs.EgglayingProc(e)
+		col := b.Colony
+		eggs := s.eggs.layEggs(e)
 		s.broodOf[col] = append(s.broodOf[col], eggs...)
 	case activity.Nursing:
-		s.BroodIncubationProc(w, e)
+		s.incubateBrood(w, e)
 	case activity.PollenForaging, activity.NectarForaging:
-		s.foraging.ForagingProc(w, e)
+		s.foraging.forage(w, e)
 	}
 }
 
-// BroodIncubationProc lets the nurse e heat the brood of her colony for 48 min [INC].
-func (s *ActivityLoop) BroodIncubationProc(w *ecs.World, e ecs.Entity) {
-	heatingPeriod_s := 2880.0
-	incubationEnergy_kJ_per_mg_s := 0.000000217013888
+// incubateBrood lets the nurse e heat the brood of her colony for 48 min [INC].
+func (s *activities) incubateBrood(w *ecs.World, e ecs.Entity) {
+	heatingPeriod := 2880.0               // [s]
+	incubationEnergy := 0.000000217013888 // [kJ/(mg s)]
 	_, b, _, _, _, _ := s.beeMap.Get(e)
 	// [INC-01]
-	heatProvided_kJ := heatingPeriod_s * incubationEnergy_kJ_per_mg_s * b.Weight_mg * float64(b.Number)
+	heatProvided := heatingPeriod * incubationEnergy * b.Weight * float64(b.Number) // [kJ]
 	// [INC-02] the divisor uses this morning's counts, brood laid today is not in it (finding 46, see
 	// trans/netlogo-findings.md#finding-46)
-	heatProvidedPerBrood_kJ := 0.0
-	_, stores, _, counts := s.colonyMap.Get(b.ColonyID)
-	if counts.AllEggs+counts.AllLarvae+counts.AllPupae > 0 {
-		heatProvidedPerBrood_kJ = heatProvided_kJ / float64(counts.AllEggs+counts.AllLarvae+counts.AllPupae)
+	heatPerBrood := 0.0 // [kJ]
+	_, stores, _, counts := s.colonyMap.Get(b.Colony)
+	if counts.Eggs+counts.Larvae+counts.Pupae > 0 {
+		heatPerBrood = heatProvided / float64(counts.Eggs+counts.Larvae+counts.Pupae)
 	}
 	// ORDER: irrelevant, each brood agent only changes itself. Shuffled (decision C).
-	brood := s.broodOf[b.ColonyID]
+	brood := s.broodOf[b.Colony]
 	util.Shuffle(s.rng, brood)
 	for _, x := range brood {
 		if !w.Alive(x) {
 			continue
 		}
 		_, _, _, _, _, dev := s.beeMap.Get(x)
-		dev.CumulIncubationReceived_kJ = dev.CumulIncubationReceived_kJ + heatProvidedPerBrood_kJ
+		dev.IncubationReceived = dev.IncubationReceived + heatPerBrood
 	}
-	stores.SummedIncubationToday_kJ = stores.SummedIncubationToday_kJ + heatProvided_kJ
-	stores.EnergyStore_kJ = stores.EnergyStore_kJ - heatProvided_kJ
+	stores.IncubationToday = stores.IncubationToday + heatProvided
+	stores.Energy = stores.Energy - heatProvided
 	// [INC-03]
-	b.PersonalTime_s = b.PersonalTime_s + heatingPeriod_s
+	b.PersonalTime = b.PersonalTime + heatingPeriod
 }
