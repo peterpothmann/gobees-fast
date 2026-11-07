@@ -74,20 +74,24 @@ Other scenarios need a run file (YAML) and its landscape files (see [Run files](
 The model (`go/`, `go run .`):
 
 
-| Flag                 | Short | Default                                | Meaning                                                                                                                                |
-| -------------------- | ----- | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `--config PATH`      | `-c`  | the example farm (built in)            | run file (YAML). Its landscape files are relative to its folder.                                                                       |
-| `--seed N`           | `-s`  | `run.seed` of the run file, else `0`   | random seed (NetLogo:`RAND_SEED`). `0` draws a random seed, which the summary and the run info show.                                   |
-| `--days N`           |       | `run.days` of the run file, else `365` | number of days to run.`0`: no limit, the run ends only when the population is extinct and `stopExtinct` is true.                       |
-| `--output`           | `-o`  | off                                    | write the daily output to`daily_output.csv` in the working directory (`go/`), tab separated, and the [run info](#run-info) next to it. |
-| `--output-file PATH` | `-f`  |                                        | write the daily output to`PATH` instead (implies `-o`). Missing folders are created.                                                   |
-| `--help`             | `-h`  |                                        | show all flags.                                                                                                                        |
+| Flag                 | Short | Default                                    | Meaning                                                                                                                                       |
+| -------------------- | ----- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--config PATH`      | `-c`  | the example farm (built in)                | run file (YAML). Its landscape files are relative to its folder.                                                                              |
+| `--seed N`           | `-s`  | `run.seed` of the run file, else `0`       | random seed (NetLogo:`RAND_SEED`). `0` draws a random seed, which the summary and the run info show.                                          |
+| `--days N`           |       | `run.days` of the run file, else `365`     | number of days to run.`0`: no limit, the run ends only when the population is extinct and `stopExtinct` is true.                              |
+| `--output`           | `-o`  | off                                        | write the daily output to`daily_output.csv` in the working directory (`go/`), tab separated, and the [run info](#run-info) next to it.        |
+| `--output-file PATH` | `-f`  |                                            | write the daily output to`PATH` instead (implies `-o`). Missing folders are created.                                                          |
+| `--columns A,B,C`    |       | `output.columns` of the run file, else all | columns of the daily output, in this order (needs `-o` or `-f`). `ticks` is always first. An unknown name is an error that lists the columns. |
+| `--list-columns`     |       |                                            | print the columns of the daily output with a description and exit.                                                                            |
+| `--help`             | `-h`  |                                            | show all flags.                                                                                                                               |
 
 ```shell
 go run . -c path/to/run.yaml -s 3 --days 730   # own run file, seed 3, 2 years
 go run . -o                                    # example farm, output in go/daily_output.csv
 go run . -f path/to/output.csv                 # output to any path
 go run . -c path/to/output_run_info.yaml -f x.csv  # repeat the run of path/to/output.csv
+go run . --list-columns                        # the columns of the daily output
+go run . -o --columns colonies,workers,eggs    # only these columns (and ticks)
 ```
 
 The converter of the NetLogo input files (`tools/netlogo2gobees`, `go run . <command>`, see
@@ -113,7 +117,7 @@ A run file has these sections. All keys are in lowerCamelCase, values are in the
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | `run`                | optional:`seed` and `days` of the run (the flags `-s` and `--days` override them), in a [run info](#run-info) also the record of the run | `RAND_SEED`                                                                     |
 | `parameters`         | the model parameters                                                                                                                     | the columns of the parameter file                                               |
-| `output`             | output options (`keepDeadColonies`), change no model value                                                                               | `KeepDeadColonies?`                                                             |
+| `output`             | output options (`keepDeadColonies`, `columns`), change no model value                                                                    | `KeepDeadColonies?`                                                             |
 | `constants`          | the values that NetLogo hard-codes, every key needed (see below)                                                                         | `ParametersProc` and local values of the procedures                             |
 | `initialQueens`      | species and number of initial queens                                                                                                     | `BeeSpeciesInitialQueensListAsString`                                           |
 | `foragingPeriod`     | foraging period [s], 365 values per year, one or more years, the years repeat                                                            | `Weather`                                                                       |
@@ -166,6 +170,8 @@ that the run files of the repository are the conversion of the NetLogo files.
 
 The daily output (`-o`, `-f`) is a tab-separated file. It holds the totals of `OutputDailyProc` (colonies, queens, males, mean weights, ...), followed by brood, workers, stores, foraging trips, forager deaths, queens produced and the mean competition point date (`obs.DailyOutputExtended`). The CSV reporter of ark-tools adds one row at the end of every tick. Its first column `t` counts from 0, the column `ticks` holds the NetLogo ticks (1 on the first day). The totals of `OutputDailyProc` keep their NetLogo names.
 
+`go run . --list-columns` prints all columns with a description. The key `output.columns` of the run file (a list of names) or the flag `--columns a,b,c` (which overrides the key) selects columns and their order. `ticks` is always the first column after `t`: it is added if missing and moved to the front. Without a selection, all columns are written. An unknown or repeated name is an error that lists the available columns, also when the run has no output. Every value is still computed, so the values of the selected columns do not depend on the selection.
+
 ### Run info
 
 With an output (`-o`, `-f`), gobees-fast writes the run info next to it, before the run: the name of the output
@@ -174,16 +180,16 @@ file that repeats the run: `go run . -c daily_output_run_info.yaml -f again.csv`
 for byte (keyword: reproduceability). It holds all sections of the run file as read (the constants included) and the section `run`:
 
 
-| Key                 | Content                                                                                                                                                                                                   |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `seed`              | the seed used. A seed`0` is drawn before the run and recorded here.                                                                                                                                       |
-| `days`              | the number of days                                                                                                                                                                                        |
-| `started`           | start time (RFC 3339)                                                                                                                                                                                     |
-| `command`           | command line                                                                                                                                                                                              |
-| `version`           | module, version, VCS revision, its time and`modified` (changes against the revision), Go version. The VCS keys are only known in a binary built with `go build` inside the repository, not with `go run`. |
-| `config`            | the run file given with`-c`, or `built-in example farm`                                                                                                                                                   |
-| `output`, `columns` | the output file and its columns                                                                                                                                                                           |
-| `landscapes`        | per landscape file: the copy (`file`), the name in the run file (`source`) and the SHA-256                                                                                                                |
+| Key          | Content                                                                                                                                                                                                   |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `seed`       | the seed used. A seed`0` is drawn before the run and recorded here.                                                                                                                                       |
+| `days`       | the number of days                                                                                                                                                                                        |
+| `started`    | start time (RFC 3339)                                                                                                                                                                                     |
+| `command`    | command line                                                                                                                                                                                              |
+| `version`    | module, version, VCS revision, its time and`modified` (changes against the revision), Go version. The VCS keys are only known in a binary built with `go build` inside the repository, not with `go run`. |
+| `config`     | the run file given with`-c`, or `built-in example farm`                                                                                                                                                   |
+| `output`     | the output file. Its columns are the key `columns` of the section `output` of the run info, always written in full                                                                                        |
+| `landscapes` | per landscape file: the copy (`file`), the name in the run file (`source`) and the SHA-256                                                                                                                |
 
 The landscape files are copied byte for byte next to the run info, with the name of the output in front
 (`daily_output__SYSTEM_Example_Farm_Foodsources.yaml`). The keys `landscape` and `cropRotation` of the run info name

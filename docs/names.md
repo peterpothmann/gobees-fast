@@ -232,7 +232,7 @@ field `Years_s` → `Years`, `Input.Weather` → `Input.ForagingPeriod`).
 | --- | --- | --- | --- | --- | --- |
 | `Seed` (flag `-s`) | `RAND_SEED` | `Run` (`input.Run`) | `run` |  | optional: `seed` and `days` [d] of the run, in a run info also the record of the run (README, "Run info") |
 | `Parameters` | the columns of the parameter file | `Parameters` | `parameters` |  | the model parameters |
-| `Output` | `KeepDeadColonies?` | `Output` | `output` |  | output options |
+| `Output` | `KeepDeadColonies?` | `Output` | `output` |  | output options: `keepDeadColonies` and `columns` (names of the columns of the daily output, `obs.AllColumns`, no NetLogo counterpart) |
 | `InitialQueens` | `BeeSpeciesInitialQueensListAsString` | `InitialQueens` | `initialQueens` |  | species (`species`) and number of initial queens (`queens`) |
 | `ForagingPeriod_s` | `Weather` | `ForagingPeriod` | `foragingPeriod` | [s] | 365 values per year, the years repeat |
 | `StewardshipOptions` | from the `HabitatsFile` | `StewardshipOptions` | `stewardshipOptions` |  | names of the stewardship options |
