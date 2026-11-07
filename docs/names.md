@@ -230,7 +230,7 @@ field `Years_s` → `Years`, `Input.Weather` → `Input.ForagingPeriod`).
 
 | gobees Go | NetLogo | gobees-fast Go (`input.Config`) | Key | Unit | Content |
 | --- | --- | --- | --- | --- | --- |
-| `Seed` (flag `-s`) | `RAND_SEED` | `Run` (`input.Run`) | `run` |  | optional: `seed` and `days` [d] of the run, in a run info also the record of the run (README, "Run info") |
+| `Seed` (flag `-s`) | `RAND_SEED` | `Run` (`input.Run`) | `run` |  | needed: `seed` (of the first run), `runs`, `threads`, each 1 or more, optional `days` [d], written by the converter (1, 365, 1, 1), in a run info also the record of the run (README, "Run info") |
 | `Parameters` | the columns of the parameter file | `Parameters` | `parameters` |  | the model parameters |
 | `Output` | `KeepDeadColonies?` | `Output` | `output` |  | output options: `keepDeadColonies` and `columns` (names of the columns of the daily output, `obs.AllColumns`, no NetLogo counterpart) |
 | `InitialQueens` | `BeeSpeciesInitialQueensListAsString` | `InitialQueens` | `initialQueens` |  | species (`species`) and number of initial queens (`queens`) |

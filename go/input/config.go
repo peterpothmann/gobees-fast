@@ -226,12 +226,15 @@ func mappingValue(n *yaml.Node, key string) *yaml.Node {
 // constantsKey is the key of the section constants in a run file.
 const constantsKey = "constants"
 
+// runKey is the key of the section run in a run file.
+const runKey = "run"
+
 // constantsComment is the comment above the section constants.
 const constantsComment = "Fixed in the NetLogo code, not settable in NetLogo's parameter files. Defaults: the NetLogo values.\n" +
 	"Every key is needed. The comment at a key gives unit and source."
 
 // WriteConfig writes a run file. The section constants gets a comment above it and, at each key, the tag doc of the
-// field (unit and source).
+// field (unit and source). The keys seed, days and runs of the section run get the tag doc of their field.
 func WriteConfig(w io.Writer, c Config) error {
 	return WriteConfigNotes(w, c, nil)
 }
@@ -244,9 +247,12 @@ func WriteConfigNotes(w io.Writer, c Config, notes map[string]string) error {
 		return err
 	}
 	for i := 0; i+1 < len(n.Content); i += 2 {
-		if n.Content[i].Value == constantsKey {
+		switch n.Content[i].Value {
+		case constantsKey:
 			n.Content[i].HeadComment = constantsComment
 			commentKeys(n.Content[i+1], reflect.TypeFor[params.Constants](), "", notes)
+		case runKey:
+			commentKeys(n.Content[i+1], reflect.TypeFor[Run](), "", nil)
 		}
 	}
 	return encode(w, n)

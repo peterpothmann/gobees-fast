@@ -36,14 +36,14 @@ func TestCLIDefaults(t *testing.T) {
 	if c.Config != "" {
 		t.Errorf("Config = %q, want empty (example farm)", c.Config)
 	}
-	// not set: the section run of the run file or the defaults apply (TestParametersRunSection)
-	if c.Seed != nil || c.Days != nil {
-		t.Errorf("Seed, Days = %v, %v, want nil, nil", c.Seed, c.Days)
+	// not set: the section run of the run file applies (TestParametersRunSection)
+	if c.Seed != nil || c.Days != nil || c.Runs != nil || c.Threads != nil {
+		t.Errorf("Seed, Days, Runs, Threads = %v, %v, %v, %v, want nil", c.Seed, c.Days, c.Runs, c.Threads)
 	}
-	// set to 0: a random seed and no limit, also against the run file
-	c = parse(t, "-s", "0", "--days", "0")
-	if c.Seed == nil || *c.Seed != 0 || c.Days == nil || *c.Days != 0 {
-		t.Errorf("Seed, Days = %v, %v, want 0, 0", c.Seed, c.Days)
+	// days set to 0: no limit, also against the run file
+	c = parse(t, "-s", "2", "--days", "0")
+	if c.Seed == nil || *c.Seed != 2 || c.Days == nil || *c.Days != 0 {
+		t.Errorf("Seed, Days = %v, %v, want 2, 0", c.Seed, c.Days)
 	}
 }
 
@@ -112,7 +112,7 @@ func TestParametersRunSection(t *testing.T) {
 	// the section run of a run file sets seed and days, the flags override it
 	c, landscapes := input.ExampleFarmConfig()
 	days := 3
-	c.Run = &input.Run{Seed: 5, Days: &days}
+	c.Run = &input.Run{Seed: 5, Days: &days, Runs: 1, Threads: 1}
 	dir := t.TempDir()
 	writeRunFile(t, dir, "run.yaml", c, map[string]input.Landscape{c.Landscape: landscapes[c.Landscape]})
 	path := filepath.Join(dir, "run.yaml")
@@ -125,7 +125,6 @@ func TestParametersRunSection(t *testing.T) {
 	}{
 		{nil, 5, 3, "no flags: the section run"},
 		{[]string{"-s", "9", "--days", "0"}, 9, 0, "flags override the section run"},
-		{[]string{"-s", "0"}, 0, 3, "-s 0: a random seed, drawn in run"},
 	} {
 		cli := parse(t, append([]string{"-c", path}, tc.args...)...)
 		p, _, err := cli.parameters()
@@ -135,6 +134,25 @@ func TestParametersRunSection(t *testing.T) {
 		if p.Seed != tc.seed || p.Termination.MaxTicks != tc.days {
 			t.Errorf("%s: Seed, MaxTicks = %d, %d, want %d, %d", tc.situation, p.Seed, p.Termination.MaxTicks,
 				tc.seed, tc.days)
+		}
+	}
+
+	// the section run and its keys seed, runs and threads are needed, each 1 or more
+	for _, tc := range []struct {
+		run       *input.Run
+		situation string
+	}{
+		{nil, "no section run"},
+		{&input.Run{Runs: 1, Threads: 1}, "no seed"},
+		{&input.Run{Seed: 1, Threads: 1}, "no runs"},
+		{&input.Run{Seed: 1, Runs: 1}, "no threads"},
+		{&input.Run{Seed: -1, Runs: 1, Threads: 1}, "seed below 1"},
+	} {
+		c.Run = tc.run
+		writeRunFile(t, dir, "run.yaml", c, map[string]input.Landscape{c.Landscape: landscapes[c.Landscape]})
+		cli := parse(t, "-c", path)
+		if _, _, err := cli.parameters(); err == nil || !strings.Contains(err.Error(), "run") {
+			t.Errorf("%s: error = %v, want an error about the section run", tc.situation, err)
 		}
 	}
 }
@@ -177,8 +195,8 @@ func TestParametersExampleFarm(t *testing.T) {
 	if len(p.Input.Species) != 1 || len(p.Input.Foodsources[p.Input.Derived.StartLandscape].Patches) != 73 {
 		t.Errorf("Input: want B_terrestris and the 73 flower patches of the example farm")
 	}
-	if p.Seed != 0 || p.Termination.MaxTicks != 365 {
-		t.Errorf("Seed, MaxTicks = %v, %d, want 0, 365", p.Seed, p.Termination.MaxTicks)
+	if p.Seed != 1 || p.Termination.MaxTicks != 365 {
+		t.Errorf("Seed, MaxTicks = %v, %d, want 1, 365 (run.seed of the example farm)", p.Seed, p.Termination.MaxTicks)
 	}
 }
 

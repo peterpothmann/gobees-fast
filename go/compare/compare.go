@@ -33,7 +33,7 @@ type Table struct {
 // "foragingHoursExample", scenario step8_weather). The model gives the same results, only this column differs.
 var RoundedColumns = []string{"foraging_period_s"}
 
-// ReadTable reads a tab-separated table with a header line, as written by reporter.CSV. The values of
+// ReadTable reads a tab-separated table with a header line, as the daily output of gobees and gobees-fast. The values of
 // RoundedColumns are rounded to whole numbers.
 func ReadTable(r io.Reader) (Table, error) {
 	t := Table{}
