@@ -12,7 +12,7 @@ import (
 // TestGeneratedFilesUpToDate checks that the run files in the repository are the conversion of the NetLogo files
 // (Generate). After a change of the NetLogo files, the scenarios or the run file format: go run . generate
 func TestGeneratedFilesUpToDate(t *testing.T) {
-	files, err := Generate()
+	files, _, err := Generate()
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -143,15 +143,18 @@ func TestBuildSpeciesOrder(t *testing.T) {
 	}
 }
 
+// defaults are the NetLogo values of the constants.
+var defaults = params.DefaultConstants()
+
 func TestMortalityForagerUnknownModel(t *testing.T) {
 	// case-sensitive, any other value is an error
 	for _, m := range []string{"High", "medium", ""} {
-		if got, err := mortalityForager(m); err == nil {
+		if got, err := mortalityForager(m, &defaults.Foraging.Mortality); err == nil {
 			t.Errorf("mortalityForager(%q) = %v, want an error", m, got)
 		}
 	}
 	for m, want := range map[string]float64{"high": 1.0e-05, "intermediate": 2.14e-06, "low": 2.75e-07} {
-		if got, err := mortalityForager(m); err != nil || got != want {
+		if got, err := mortalityForager(m, &defaults.Foraging.Mortality); err != nil || got != want {
 			t.Errorf("mortalityForager(%q) = %v, %v, want %v", m, got, err, want)
 		}
 	}
@@ -189,7 +192,7 @@ func TestForagingPeriod(t *testing.T) {
 }
 
 func TestReadConfigStrict(t *testing.T) {
-	// An unknown key is an error. A missing key keeps its zero value.
+	// An unknown key is an error. A missing key keeps its zero value, except in the section constants.
 	cases := map[string]string{
 		"unknown section":   "foo: 1\n",
 		"unknown parameter": "parameters:\n  Foo: 1\n",
@@ -207,10 +210,89 @@ func TestReadConfigStrict(t *testing.T) {
 			t.Errorf("%s: want an error", name)
 		}
 	}
-	c, err := ReadConfig(strings.NewReader("parameters:\n  badgers: 2\n  mergeHedges: true\n"))
+	c, err := ReadConfig(strings.NewReader(withConstants(t, "parameters:\n  badgers: 2\n  mergeHedges: true\n")))
 	if err != nil || c.Parameters != (params.Parameters{Badgers: 2, MergeHedges: true}) {
 		t.Errorf("got %+v, %v", c.Parameters, err)
 	}
+}
+
+// withConstants appends the section constants with the NetLogo values to the run file text.
+func withConstants(t *testing.T, text string) string {
+	t.Helper()
+	var b bytes.Buffer
+	section := struct {
+		Constants params.Constants `yaml:"constants"`
+	}{defaults}
+	if err := encode(&b, section); err != nil {
+		t.Fatal(err)
+	}
+	return text + b.String()
+}
+
+func TestConstantsSection(t *testing.T) {
+	// the section must hold every key
+	if _, err := ReadConfig(strings.NewReader("parameters:\n  badgers: 2\n")); err == nil ||
+		!strings.Contains(err.Error(), "constants: missing") {
+		t.Errorf("no section constants: error %v", err)
+	}
+	full := withConstants(t, "")
+	c, err := ReadConfig(strings.NewReader(full))
+	if err != nil || c.Constants != defaults {
+		t.Errorf("all keys: got %+v, %v, want the NetLogo values", c.Constants, err)
+	}
+	for _, key := range []string{"digUpProb", "high", "psithyrus", "queenSocialPhase"} {
+		lines := []string{}
+		for _, line := range strings.Split(full, "\n") {
+			if strings.HasPrefix(strings.TrimSpace(line), key+":") {
+				continue // drops the first and only key of this name below its parent
+			}
+			lines = append(lines, line)
+		}
+		text := strings.Join(lines, "\n")
+		if key == "psithyrus" { // the section without its values
+			text = strings.NewReplacer("    findNestProb: 0.05\n", "", "    accessProb: 0.25\n", "",
+				"    killedProb: 0.25\n", "", "    killQueenProb: 0.5\n", "").Replace(text)
+		}
+		if _, err := ReadConfig(strings.NewReader(text)); err == nil || !strings.Contains(err.Error(), key+": missing") {
+			t.Errorf("without %s: error %v", key, err)
+		}
+	}
+	if _, err := ReadConfig(strings.NewReader(full + "  foo: 1\n")); err == nil {
+		t.Error("unknown key in constants: want an error")
+	}
+}
+
+func TestConstantsComments(t *testing.T) {
+	// the written run file has the comment above the section and unit and source at each key, with the notes
+	c, _ := ExampleFarmConfig()
+	var b bytes.Buffer
+	if err := WriteConfigNotes(&b, c, map[string]string{"foraging.maxForagingRange": "a note"}); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"# Fixed in the NetLogo code, not settable in NetLogo's parameter files. Defaults: the NetLogo values.\n",
+		"    maxForagingRange: 758 # [m] Knight et al. 2005. a note\n",
+		"    digUpProb: 0.1 # arbitrary\n",
+		"    nestSearchTime: 21600 # [s] no source\n",
+		"      queenSocialPhase: 0 # no source\n",
+	} {
+		if !strings.Contains(b.String(), want) {
+			t.Errorf("written run file lacks %q", want)
+		}
+	}
+	// every value of the section has a comment
+	var check func(t reflect.Type, path string)
+	check = func(t2 reflect.Type, path string) {
+		for i := range t2.NumField() {
+			f := t2.Field(i)
+			if f.Type.Kind() == reflect.Struct {
+				check(f.Type, path+"."+f.Name)
+			} else if f.Tag.Get("doc") == "" {
+				t.Errorf("%s.%s has no tag doc", path, f.Name)
+			}
+		}
+	}
+	check(reflect.TypeFor[params.Constants](), "Constants")
 }
 
 func TestFlowerEntryYAML(t *testing.T) {

@@ -59,8 +59,8 @@ func (aw *activityWorld) worker(col ecs.Entity, number int) ecs.Entity {
 	e := aw.adult(col, caste.Worker, number, 100, sitWorker)
 	_, _, _, fo, _ := aw.bee(e)
 	fo.GlossaLength = proboscisLength(100, aw.sp)
-	fo.CropVolume = cropVolume(100, aw.sp)
-	fo.PollenPellets = pollenLoad(100, aw.sp)
+	fo.CropVolume = cropVolume(100, aw.sp, &defaults.Foraging)
+	fo.PollenPellets = pollenLoad(100, aw.sp, &defaults.Foraging)
 	fo.KnownNectarPatches = []ecs.Entity{}
 	fo.KnownPollenPatches = []ecs.Entity{}
 	return e

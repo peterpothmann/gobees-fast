@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -61,7 +62,8 @@ func TestParseParameterFileExamples(t *testing.T) {
 			if err != nil {
 				t.Fatalf("%s (line end %q): %v", c.name, lineEnd, err)
 			}
-			if got != c.want {
+			got.Skipped = nil // checked in TestSkippedColumns
+			if !reflect.DeepEqual(got, c.want) {
 				t.Errorf("%s (line end %q):\n got  %+v\n want %+v", c.name, lineEnd, got, c.want)
 			}
 		}
@@ -77,7 +79,8 @@ func TestReadParameterFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got != wantExampleFarmParameters {
+	got.Skipped = nil // checked in TestSkippedColumns
+	if !reflect.DeepEqual(got, wantExampleFarmParameters) {
 		t.Errorf("got  %+v\nwant %+v", got, wantExampleFarmParameters)
 	}
 	if _, err := ReadParameterFile(filepath.Join(t.TempDir(), "missing.csv")); err == nil {
@@ -131,8 +134,78 @@ func TestParseParameterFileIgnoredGUIParameter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p != (netLogoParameters{Parameters: params.Parameters{Badgers: 2}}) {
-		t.Errorf("got %+v, want only N_Badgers = 2", p)
+	want := netLogoParameters{Parameters: params.Parameters{Badgers: 2}, Skipped: []skippedColumn{
+		{Name: "SetColour", Value: "Magenta", Reason: "only the NetLogo GUI reads it", GUI: true},
+		{Name: "ShowPlots?", Value: "maybe", Reason: "only the NetLogo GUI reads it", GUI: true},
+	}}
+	if !reflect.DeepEqual(p, want) {
+		t.Errorf("got %+v, want only N_Badgers = 2 and the two GUI columns skipped", p)
+	}
+}
+
+func TestSkippedColumns(t *testing.T) {
+	// every column of the example farm file that is not taken over is reported, in the order of the file
+	p, err := ParseParameterFile(strings.NewReader(examplefiles.ExampleFarmParameters))
+	if err != nil {
+		t.Fatal(err)
+	}
+	gui := 0
+	other := map[string]string{}
+	for _, s := range p.Skipped {
+		if s.GUI {
+			gui++
+			continue
+		}
+		other[s.Name] = s.Value
+	}
+	if gui != len(ignoredParameters) {
+		t.Errorf("%d GUI columns skipped, want %d", gui, len(ignoredParameters))
+	}
+	want := map[string]string{"COLONIES_IBM": "0", "CumulVisitsOnlyLastYear?": "false", "MapAreaIncluded": `"complete"`,
+		"MaxForagingRange_m": "10000", "MyFarmlandPatches": `""`}
+	if !reflect.DeepEqual(other, want) {
+		t.Errorf("skipped %v, want %v", other, want)
+	}
+}
+
+func TestReportSkipped(t *testing.T) {
+	constants := params.DefaultConstants()
+	skipped := []skippedColumn{
+		{Name: "MaxForagingRange_m", Value: "10000", Reason: "no effect"},
+		{Name: "MyFarmlandPatches", Value: `""`, Reason: "no effect: never read"},
+		{Name: "SetColour", Value: "Magenta", GUI: true},
+		{Name: "ShowPlots?", Value: "true", GUI: true},
+	}
+	report, notes, err := reportSkipped(skipped, &constants)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		"constants: the NetLogo values of the code (params.DefaultConstants), not from the parameter file, which cannot set them in NetLogo",
+		"MaxForagingRange_m = 10000 has no effect in NetLogo, which uses ForagingRangeMax_m = 758. Written: constants.foraging.maxForagingRange: 758",
+		`MyFarmlandPatches = "" not taken over: no effect: never read`,
+		"2 columns not taken over, only the NetLogo GUI reads them: SetColour, ShowPlots?",
+	}
+	if !reflect.DeepEqual(report, want) {
+		t.Errorf("report\n%s\nwant\n%s", strings.Join(report, "\n"), strings.Join(want, "\n"))
+	}
+	if n := notes["foraging.maxForagingRange"]; n != "NetLogo parameter file: MaxForagingRange_m = 10000, without effect in NetLogo" || len(notes) != 1 {
+		t.Errorf("notes %v", notes)
+	}
+	// the same value as the constant: no conflict, only "not taken over"
+	report, notes, _ = reportSkipped([]skippedColumn{{Name: "MaxForagingRange_m", Value: "758", Reason: "no effect"}},
+		&constants)
+	if len(notes) != 0 || report[1] != "MaxForagingRange_m = 758 not taken over: no effect" {
+		t.Errorf("report %v, notes %v", report, notes)
+	}
+}
+
+func TestShadowedParametersHaveNoEffect(t *testing.T) {
+	// a shadowed column is also a column without effect, and its key exists below constants
+	for name := range shadowedParameters {
+		if _, ok := noEffectParameters[name]; !ok {
+			t.Errorf("shadowed parameter %q is not in noEffectParameters", name)
+		}
 	}
 }
 

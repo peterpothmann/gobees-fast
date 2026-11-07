@@ -29,11 +29,12 @@ func nursingStimulus(stores *comp.ColonyStores, counts *comp.ColonyCounts, sp *p
 
 // nectarStimulus returns the nectar foraging stimulus of a colony and SETS its ideal energy store.
 // daytime, sunrise and foragingPeriod are in [s].
-func nectarStimulus(stores *comp.ColonyStores, daytime, sunrise, foragingPeriod float64) float64 {
-	storeSize := 5.0       // [d]
-	minNectarStore := 20.0 // [kJ]
-	nectarStimTH := 0.005
-	idealEnergyFactor := 6.0
+func nectarStimulus(stores *comp.ColonyStores, c *params.StimulusConstants, daytime, sunrise,
+	foragingPeriod float64) float64 {
+	storeSize := c.NectarStoreSize     // [d]
+	minNectarStore := c.MinNectarStore // [kJ]
+	nectarStimTH := c.NectarThreshold
+	idealEnergyFactor := c.IdealEnergyFactor
 	// float64(...): no fused multiply-add, so the result equals NetLogo (Java)
 	stores.IdealEnergy = float64(idealEnergyFactor*stores.EnergyNeedToday*storeSize) + minNectarStore
 	if stores.IdealEnergy < 0 {
@@ -54,9 +55,10 @@ func nectarStimulus(stores *comp.ColonyStores, daytime, sunrise, foragingPeriod 
 // pollenStimulus returns the pollen foraging stimulus of a colony and SETS its ideal pollen store.
 // sp is the colony's species.
 // daytime, sunrise and foragingPeriod are in [s].
-func pollenStimulus(stores *comp.ColonyStores, sp *params.Species, daytime, sunrise, foragingPeriod float64) float64 {
-	storeSize := 5.0 // [d]
-	pollenStimTH := 0.005
+func pollenStimulus(stores *comp.ColonyStores, sp *params.Species, c *params.StimulusConstants, daytime, sunrise,
+	foragingPeriod float64) float64 {
+	storeSize := c.PollenStoreSize // [d]
+	pollenStimTH := c.PollenThreshold
 	stores.IdealPollen = float64(stores.LarvaePollenNeedToday*storeSize) + sp.MinPollenStore
 	if stores.IdealPollen < 0 {
 		panic("Negative IdealPollen! (pollenStimulus)")

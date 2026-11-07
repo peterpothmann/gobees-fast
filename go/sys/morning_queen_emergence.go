@@ -72,7 +72,7 @@ func (s *queenEmergence) Update(w *ecs.World) {
 			fmt.Println("WARNING! Something else than a queen emerged from hibernation! (1)")
 		}
 		bee.Activity = activity.Emerging
-		*th = thresholds(sitQueenInitiationPhase)
+		*th = thresholds(&s.constants.Thresholds, sitQueenInitiationPhase)
 		hatchlings := int(bee.Number) - 1
 		bee.Number = 1
 		s.copyBee(e, hatchlings)
@@ -186,7 +186,7 @@ func (s *queenEmergence) searchNestSite(w *ecs.World, e ecs.Entity, sp *params.S
 
 // searchMortality returns the probability to die during one day of nest search.
 func (s *queenEmergence) searchMortality() float64 {
-	return 1 - math.Pow(1-s.derived.ForagerMortality, s.constants.NestSearchTime*60*60)
+	return 1 - math.Pow(1-s.derived.ForagerMortality, s.constants.Bees.NestSearchTime)
 }
 
 // chooseNestSite chooses a nest site, weighted by area.
@@ -210,13 +210,10 @@ func (s *queenEmergence) chooseNestSite(ns *globals.SpeciesNestSites) ecs.Entity
 
 // searchHostColony lets a cuckoo bee search a host colony for one day.
 func (s *queenEmergence) searchHostColony(w *ecs.World, e ecs.Entity) {
-	// arbitrary values (comments in the NetLogo code)
-	const (
-		findSingleNestProb = 0.05
-		getAccessProb      = 0.25
-		getKilledProb      = 0.25
-		killQueenProb      = 0.5
-	)
+	findSingleNestProb := s.constants.Psithyrus.FindNestProb
+	getAccessProb := s.constants.Psithyrus.AccessProb
+	getKilledProb := s.constants.Psithyrus.KilledProb
+	killQueenProb := s.constants.Psithyrus.KillQueenProb
 	colonies := []ecs.Entity{}
 	colonyPos := map[ecs.Entity]comp.Position{}
 	query := s.colonyFilter.Query()
@@ -238,7 +235,7 @@ func (s *queenEmergence) searchHostColony(w *ecs.World, e ecs.Entity) {
 			pos, bee, _, th, _, _ := s.beeMap.Get(e)
 			bee.Colony = host
 			*pos = colonyPos[host]
-			*th = thresholds(sitPsith)
+			*th = thresholds(&s.constants.Thresholds, sitPsith)
 		}
 	}
 

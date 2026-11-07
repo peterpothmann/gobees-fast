@@ -45,12 +45,12 @@ func (s *wakeUp) Initialize(w *ecs.World) {
 func (s *wakeUp) Update(w *ecs.World) {
 	// ORDER: MATTERS for ties. NetLogo puts the bees in the random order of ask into the list (fput,
 	// i.e. in reverse), then sorts it with the stable sort-by. Here: shuffle in askBees, then a stable sort.
-	randomTimeToGetUp := 1800.0 // [s]
+	randomTimeToGetUp := s.constants.Activities.GetUpSpread // [s]
 	s.bees = askBees(s.bees, s.beeFilter, s.rng, isActiveAdult)
 	list := make([]ecs.Entity, 0, len(s.bees))
 	for _, e := range s.bees {
 		b := s.beeMap.Get(e)
-		b.PersonalTime = s.constants.GetUpTime + randomInt(s.rng, randomTimeToGetUp)
+		b.PersonalTime = s.constants.Activities.GetUpTime + randomInt(s.rng, randomTimeToGetUp)
 		list = append(list, e)
 	}
 	slices.Reverse(list) // fput

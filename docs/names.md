@@ -357,6 +357,9 @@ The keys `x` and `y` would need quotes (`y` is a boolean in YAML 1.1), so `xcor`
 
 ### Constants (`params.Constants`, Go only, keys with step F17)
 
+Step F17 groups the constants and gives them keys (next section). The F15c names below stay the Go names in their
+group, e.g. `Constants.Foraging.MaxForagingRange`.
+
 | gobees Go | NetLogo | gobees-fast Go | Unit |
 | --- | --- | --- | --- |
 | `CallItaDay_s` | `CallItaDay_s` | `CallItADay` | [s] |
@@ -374,7 +377,74 @@ The keys `x` and `y` would need quotes (`y` is a boolean in YAML 1.1), so `xcor`
 
 Unchanged: `DailySwitchProbability`, `EnergyFactorOnFlower`, `MaxLifespanMales`, `NotSetHigh`, `NotSetLow`.
 Values that the code still converts at run time (`NestSearchTime` in hours, `nectarPerFlower` in ml, the
-constants written as `24 * 3600`) keep their unit until a step of their own.
+constants written as `24 * 3600`) keep their unit until a step of their own. Since F17 `nestSearchTime` is in
+seconds. `nectarPerFlower` stays in ml: in µl, 16 of its 79 values would need 17 digits to stay exact (e.g.
+`0.25999999999999995`), see docs/plan.md.
+
+## Step F17: section `constants` of the run file
+
+`params.Constants`, key `constants`. Every key is needed. The values are the NetLogo values (`params.DefaultConstants`).
+"Local" means a local value of the NetLogo procedure, until F17 a literal in the Go code.
+
+| Group | Key | NetLogo | Unit | Before F17 in gobees-fast |
+| --- | --- | --- | --- | --- |
+| `activities` | `getUpTime` | `GetUpTime_s` | [s] | `Constants.GetUpTime` |
+| `activities` | `getUpSpread` | local `randomTimeToGetUp_s` | [s] | literal in `wakeUp` |
+| `activities` | `sunrise` | `Sunrise_s` | [s] | `Constants.Sunrise` |
+| `activities` | `callItADay` | `CallItaDay_s` | [s] | `Constants.CallItADay` |
+| `activities` | `pause` | local `break_s` | [s] | literal in `act` |
+| `activities` | `eggLayingTime` | `24 * 3600` in `EgglayingProc` | [s] | literal in `layEggs` |
+| `activities` | `nursingTime` | local `heatingPeriod_s` | [s] | literal in `incubateBrood` |
+| `activities` | `incubationEnergy` | local `incubationEnergy_kJ_per_mg_s` | [kJ/(mg s)] | literal in `incubateBrood` |
+| `stimuli` | `nectarStoreSize` | local `storeSize_d` | [d] | literal in `nectarStimulus` |
+| `stimuli` | `minNectarStore` | local `minNectarStore_kJ` | [kJ] | literal in `nectarStimulus` |
+| `stimuli` | `idealEnergyFactor` | local `idealEnergyFactor` |  | literal in `nectarStimulus` |
+| `stimuli` | `nectarThreshold` | local `nectarStimTH` |  | literal in `nectarStimulus` |
+| `stimuli` | `pollenStoreSize` | local `storeSize_d` | [d] | literal in `pollenStimulus` |
+| `stimuli` | `pollenThreshold` | local `pollenStimTH` |  | literal in `pollenStimulus` |
+| `foraging` | `maxForagingRange` | `ForagingRangeMax_m` | [m] | `Constants.MaxForagingRange` |
+| `foraging` | `energyFactorOnFlower` | `EnergyFactorOnFlower` |  | `Constants.EnergyFactorOnFlower` |
+| `foraging` | `sucroseEnergy` | `EnergySucrose_kJ/mymol` | [kJ/µmol] | `Constants.SucroseEnergy` |
+| `foraging` | `flightMetabolicRate` | `MetabolicRateFlight_W/kg` | [W/kg] | `Constants.FlightMetabolicRate` |
+| `foraging` | `maxHandlingTime` | local `maxHandlingTime_s` | [s] | literal in `handlingTime` |
+| `foraging` | `pollenLoadTime` | local `timeInFlowers_s` | [s] | literal in `handlingTime` |
+| `foraging` | `flowersPerPollenLoad` | local `flowersNeededForPollenLoad` |  | literal in `handlingTime` |
+| `foraging` | `preferCloseProb` | local `preferenceClosePatchesProb` |  | literal in `choosePatch` |
+| `foraging` | `searchProb` | local `searchProbBase` |  | literal in `choosePatch` |
+| `foraging` | `cropFactor` | local `beeWeightToLoadFactor` | [µl/mg] | constant `beeWeightToLoadFactor` |
+| `foraging` | `pelletFactor` | local `beehaveCropToPelletFactor_ul-to-g` (0.015 / 50) | [g/µl] | constant `cropToPelletFactor` |
+| `foraging.mortality` | `high`, `intermediate`, `low` | `MortalityForager_per_s` by `ForagingMortalityModel` | [1/s] | literals in `input.mortalityForager` |
+| `colony` | `pollenAssimilationEnergy` | `EnergyRequiredForPollenAssimilation_kJ_per_g` | [kJ/g] | `Constants.PollenAssimilationEnergy` |
+| `colony` | `larvaWorkerRatioLimit` | `LarvaWorkerRatioTH` |  | `Constants.LarvaWorkerRatioLimit` |
+| `colony` | `dailySwitchProbability` | `DailySwitchProbability` | [1/d] | `Constants.DailySwitchProbability` |
+| `colony` | `queenEggsBeforeSwitchPoint` | `QueenDestinedEggsBeforeSP_d` | [d] | `Constants.QueenEggsBeforeSwitchPoint` |
+| `colony` | `eggTime` | local `averageCumulTimeEgg_d` | [d] | literal in `queenProductionDate` |
+| `colony` | `latestCompetitionPoint` | local `latestCPafter_d` | [d] | literal in `competitionPointDate` |
+| `colony` | `deathAge` | `adultAge > 10` in `UpdateColoniesProc` | [d] | literal in `updateColony` |
+| `colony` | `startNectar`, `startConcentration` | `100 * EnergySucrose_kJ/mymol * 1.5` in `CreateColoniesProc` | [µl], [mol/l] | literals in `found` |
+| `colony` | `dailyIncubation`, `incubationBatches` | `10 / (1.5 * batchsize)` in `ParametersProc` | [kJ/d] | literals in `input.deriveSpecies` |
+| `colony` | `minPollenStoreBatches` | `0.5 * 0.001 * ...` in `ParametersProc` |  | literal in `input.deriveSpecies` |
+| `colony` | `queenDeterminationAge` | `dev_larvalAge_QueenDetermination_d` | [d] | literal in `input.deriveSpecies` |
+| `bees` | `adultBackgroundMortality` | `MortalityAdultsBackground_daily` | [1/d] | `Constants.AdultBackgroundMortality` |
+| `bees` | `maxLifespanMales` | `MaxLifespanMales` | [d] | `Constants.MaxLifespanMales` |
+| `bees` | `foreignAlleles` | `N_ForeignAlleles` |  | `Constants.ForeignAlleles` |
+| `bees` | `nestSearchTime` | `NestSearchTime_h` (in h) | [s] | `Constants.NestSearchTime` [h] |
+| `psithyrus` | `findNestProb` | local `findSingleNestProb` |  | constant in `searchHostColony` |
+| `psithyrus` | `accessProb` | local `getAccessProb` |  | constant in `searchHostColony` |
+| `psithyrus` | `killedProb` | local `getKilledProb` |  | constant in `searchHostColony` |
+| `psithyrus` | `killQueenProb` | local `killQueenProb` |  | constant in `searchHostColony` |
+| `badgers` | `range` | local `foragingRange_m` | [m] | literal in `badgers.Update` |
+| `badgers` | `encounterProb` | local `encounterProb` | [1/d] | literal in `badgers.Update` |
+| `badgers` | `digUpProb` | local `digUpProb` |  | literal in `badgers.Update` |
+| `badgers` | `minDistance` | `300` in `CreateBadgersProc` | [m] | constant in `createBadgers` |
+| `landscape` | `minMergeArea` | local `areaTH_sqm` | [m2] | constant in `mergeHedges` |
+| `landscape` | `tripNectar`, `tripPollen` | `180`, `0.05` in `CreateLayersProc` | [µl], [g] | literals in `createLayers` |
+| `initialQueens` | `adultAge`, `broodAge` | `180`, `36` in `CreateInitialQueensProc` | [d] | literals in `initialQueensSetup` |
+| `initialQueens` | `alleleRange` | `random-float 139.9` in `CreateInitialQueensProc` |  | literal in `initialQueensSetup` |
+| `thresholds` | `eggLaying`, `pollenForaging`, `nectarForaging`, `nursing` (by situation) | `ThresholdLevelREP` |  | `thresholdTable` |
+
+`thresholds` holds only the situations in which a task is possible (e.g. `pollenForaging.worker`). In all others the
+threshold is `NotSetHigh` (never), as in NetLogo. The situation `Psith` has the key `psithyrus`.
 
 ## Step F15d: local names
 

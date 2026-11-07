@@ -71,7 +71,7 @@ func (s *queensLeavingNest) Update(w *ecs.World) {
 				s.death.die(w, e, "Queen: no mating")
 				continue
 			}
-			foreignAllele := -1*randomInt(s.rng, s.constants.ForeignAlleles) - 1 // -1, -2, ... -ForeignAlleles
+			foreignAllele := -1*randomInt(s.rng, s.constants.Bees.ForeignAlleles) - 1 // -1, -2, ... -ForeignAlleles
 			gen.Spermatheca = append([]float64{foreignAllele}, gen.Spermatheca...)
 			if len(gen.Spermatheca) > 1 {
 				panic(fmt.Sprintf("Assertion violated in queensLeavingNest: too many alleles here! %v", gen.Spermatheca))
@@ -79,7 +79,7 @@ func (s *queensLeavingNest) Update(w *ecs.World) {
 		}
 		// the other three thresholds stay "youngQueen" until she emerges next year
 		bee.Mated = true
-		th.Egglaying = thresholdLevel(thEggLaying, sitQueenInitiationPhase)
+		th.Egglaying = s.constants.Thresholds.EggLaying.QueenInitiationPhase
 		bee.Activity = activity.Hibernate
 		bee.Colony = ecs.Entity{}
 		// mated with a diploid male: she could not found a colony

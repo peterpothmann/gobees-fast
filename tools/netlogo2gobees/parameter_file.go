@@ -24,6 +24,29 @@ type netLogoParameters struct {
 	HabitatsFile                        string `netlogo:"HabitatsFile"`                        // Habitat table, provides the stewardship option names [CSO].
 	Weather                             string `netlogo:"Weather"`                             // Daily foraging period, e.g. "Constant 8 hrs" [FPER].
 	KeepDeadColonies                    bool   `netlogo:"KeepDeadColonies?"`                   // Output option since step F13 (params.Output).
+
+	Skipped []skippedColumn // the columns not taken over, in the order of the file
+}
+
+// skippedColumn is a column of a NetLogo parameter file that the converter does not take over: its name and value as
+// in the file, and the reason. gui marks the columns that only the NetLogo GUI reads.
+type skippedColumn struct {
+	Name, Value, Reason string
+	GUI                 bool
+}
+
+// shadowedParameter is a column of the NetLogo parameter files that NetLogo reads but never uses, because the model
+// uses a hard-coded constant instead: the NetLogo name of the constant, its key below constants in the run file
+// and its value.
+type shadowedParameter struct {
+	constant, key string
+	value         func(*params.Constants) float64
+}
+
+// shadowedParameters are the shadowed columns by their lower-case name.
+var shadowedParameters = map[string]shadowedParameter{
+	"maxforagingrange_m": {"ForagingRangeMax_m", "foraging.maxForagingRange",
+		func(c *params.Constants) float64 { return c.Foraging.MaxForagingRange }},
 }
 
 // removedParameters are parameters of the NetLogo parameter files whose model branch gobees-fast does not have, with
@@ -39,8 +62,8 @@ var removedParameters = map[string]string{
 // (step F7).
 var noEffectParameters = map[string]string{
 	"cumulvisitsonlylastyear?": "resets visit counters that only the output read, removed in step F3",
-	"maxforagingrange_m":       "the model uses the constant ForagingRangeMax_m = 758 m [PAR-03]",
-	"myfarmlandpatches":        "sets farmland?, which is never read [FSRC-07]",
+	"maxforagingrange_m":       "the model uses the constant ForagingRangeMax_m = 758 m",
+	"myfarmlandpatches":        "sets farmland?, which is never read",
 }
 
 // ignoredParameters are the columns of the NetLogo parameter files that only the NetLogo GUI reads (lower-case
@@ -113,7 +136,13 @@ func ParseParameterFile(r io.Reader) (netLogoParameters, error) {
 		literal := parameterLiteral(name, values[idx])
 
 		key := strings.ToLower(strings.TrimSpace(name)) // NetLogo names are case-insensitive.
-		if _, noEffect := noEffectParameters[key]; ignoredParameters[key] || noEffect {
+		if ignoredParameters[key] {
+			p.Skipped = append(p.Skipped, skippedColumn{Name: name, Value: literal, Reason: "only the NetLogo GUI reads it",
+				GUI: true})
+			continue
+		}
+		if reason, noEffect := noEffectParameters[key]; noEffect {
+			p.Skipped = append(p.Skipped, skippedColumn{Name: name, Value: literal, Reason: "no effect: " + reason})
 			continue
 		}
 		if allowed, removed := removedParameters[key]; removed {
@@ -121,6 +150,8 @@ func ParseParameterFile(r io.Reader) (netLogoParameters, error) {
 				return p, fmt.Errorf("parameter %q = %s is not supported by gobees-fast, only %s", name, literal,
 					allowed)
 			}
+			p.Skipped = append(p.Skipped, skippedColumn{Name: name, Value: literal,
+				Reason: "its model branch is not in gobees-fast, " + allowed + " is the only value accepted"})
 			continue
 		}
 		field, ok := fields[key]

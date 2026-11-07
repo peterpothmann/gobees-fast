@@ -54,7 +54,7 @@ func (l *eggLayer) layEggs(e ecs.Entity) []ecs.Entity {
 	motherCaste := mother.Caste
 	beesInCohort := sp.BatchSize
 	pollenCost := float64(beesInCohort) * sp.EggWeight * sp.PollenToBodymassFactor / 1000 // [g]
-	energyCost := pollenCost * l.constants.PollenAssimilationEnergy                       // [kJ]
+	energyCost := pollenCost * l.constants.Colony.PollenAssimilationEnergy                // [kJ]
 
 	var eggs []ecs.Entity
 	_, stores := l.colonyMap.Get(colonyID)
@@ -84,7 +84,7 @@ func (l *eggLayer) layEggs(e ecs.Entity) []ecs.Entity {
 
 	// also if no eggs were laid
 	_, mother, _, _, _, _ = l.beeMap.Get(e)
-	mother.PersonalTime = mother.PersonalTime + 24*3600
+	mother.PersonalTime = mother.PersonalTime + l.constants.Activities.EggLayingTime
 	return eggs
 }
 
@@ -135,7 +135,7 @@ func (l *eggLayer) initEggs(e ecs.Entity, beesInCohort int, diploid bool) {
 	f.PollenSource = ecs.Entity{}
 	b.Stage = stage.Egg
 	b.Mated = false
-	*th = thresholds(sitEgg)
+	*th = thresholds(&l.constants.Thresholds, sitEgg)
 	f.KnownNectarPatches = []ecs.Entity{}
 	f.KnownPollenPatches = []ecs.Entity{}
 	b.Weight = sp.EggWeight

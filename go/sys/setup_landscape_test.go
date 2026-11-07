@@ -21,7 +21,7 @@ func TestMergeHedges(t *testing.T) {
 	big := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 100, Y: 0, Area: 500}}
 	h1 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 2, Y: 0, Area: 300}}
 	h2 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 3, Y: 0, Area: 200}}
-	mergeHedges([]*flowerPatch{field, small, h1, h2, big}, rand.New(rand.NewPCG(1, 2)))
+	mergeHedges([]*flowerPatch{field, small, h1, h2, big}, 6500, rand.New(rand.NewPCG(1, 2)))
 
 	// the largest hedge is the master hedge, it keeps its position and gets the area of the others.
 	if big.Area != 1000 || h1.Area != 0 || h2.Area != 0 {
@@ -43,7 +43,7 @@ func TestMergeHedgesEqualAreaIsRandom(t *testing.T) {
 		field := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Woodland", X: 0, Y: 0, Area: 7000}}
 		a := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 1, Y: 0, Area: 100}}
 		b := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 2, Y: 0, Area: 100}}
-		mergeHedges([]*flowerPatch{field, a, b}, rand.New(rand.NewPCG(seed, 7)))
+		mergeHedges([]*flowerPatch{field, a, b}, 6500, rand.New(rand.NewPCG(seed, 7)))
 		switch {
 		case a.Area == 200 && b.Area == 0:
 			masters["a"]++
@@ -66,7 +66,7 @@ func TestMergeHedgesEquallyNearFieldIsRandom(t *testing.T) {
 		right := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Woodland", X: 5, Y: 0, Area: 7000}}
 		h1 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: 0, Y: 0, Area: 300}}
 		h2 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Hedgerow", X: -4, Y: 0, Area: 100}} // always linked to left
-		mergeHedges([]*flowerPatch{left, right, h1, h2}, rand.New(rand.NewPCG(seed, 3)))
+		mergeHedges([]*flowerPatch{left, right, h1, h2}, 6500, rand.New(rand.NewPCG(seed, 3)))
 		if h2.Area == 0 {
 			linked["left"]++ // h1 and h2 share the field, h1 (larger) got the area
 		} else {
@@ -111,7 +111,7 @@ func TestCreateLayers(t *testing.T) {
 		Area: 100, Flowers: []params.FlowerEntry{{Name: "B", Value: 1, HasValue: true}}}}
 	p3 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Scrub", X: 50, Y: 50, Area: 400}}
 
-	masterpatches, err := createLayers(w, []*flowerPatch{p1, p2, p3}, flowers, file, []string{"Margin", "Plot"}, rand.New(rand.NewPCG(1, 1)))
+	masterpatches, err := createLayers(w, []*flowerPatch{p1, p2, p3}, flowers, file, &defaults.Landscape, []string{"Margin", "Plot"}, rand.New(rand.NewPCG(1, 1)))
 	if err != nil {
 		t.Fatal(err)
 	}

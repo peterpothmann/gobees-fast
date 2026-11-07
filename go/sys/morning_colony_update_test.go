@@ -268,7 +268,7 @@ func TestCompetitionPointDate(t *testing.T) {
 	}
 	for _, c := range cases {
 		col := comp.Colony{EusocialPhaseDate: day.At(c.eus), QueenProductionDate: day.At(c.qpd)}
-		if got := competitionPointDate(&col); got != c.want {
+		if got := competitionPointDate(&col, &defaults.Colony); got != c.want {
 			t.Errorf("competitionPointDate(eus %v, qpd %v) = %v, want %v", c.eus, c.qpd, got, c.want)
 		}
 	}

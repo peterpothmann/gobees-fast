@@ -100,7 +100,7 @@ func (s *larvaeFeeding) feedColony(col ecs.Entity, myLarvae []ecs.Entity) {
 		totalPollenFedToday = totalPollenFedToday + (float64(b.Number) * pollenReceivedToday / 1000)
 	}
 
-	totalEnergyFedToday := totalPollenFedToday * s.constants.PollenAssimilationEnergy // [kJ]
+	totalEnergyFedToday := totalPollenFedToday * s.constants.Colony.PollenAssimilationEnergy // [kJ]
 	stores.Pollen = stores.Pollen - totalPollenFedToday
 	if stores.Pollen < 0 {
 		// message as in NetLogo, with the Ark entity ID of the colony instead of its who number

@@ -117,7 +117,7 @@ func TestEmergenceSplitsCohort(t *testing.T) {
 		_, _, gen, th, _, _ := beeMap.Get(e)
 		// resting, no colony, thresholds of the initiation phase
 		if b.Number != 1 || b.Weight != orig.Weight || b.Activity != activity.Resting || !b.Colony.IsZero() ||
-			*th != thresholds(sitQueenInitiationPhase) || gen.Alleles[1] != origGen.Alleles[1] {
+			*th != thresholds(&defaults.Thresholds, sitQueenInitiationPhase) || gen.Alleles[1] != origGen.Alleles[1] {
 			t.Errorf("queen %+v %+v", b, *th)
 		}
 	}

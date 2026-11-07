@@ -78,7 +78,8 @@ func (c *colonyFounder) found(w *ecs.World) {
 			Species:         speciesID,
 			QueenProduction: false,
 		}
-		stores := comp.ColonyStores{Energy: 100 * c.constants.SucroseEnergy * 1.5}
+		stores := comp.ColonyStores{Energy: c.constants.Colony.StartNectar * c.constants.Foraging.SucroseEnergy *
+			c.constants.Colony.StartConcentration}
 		counts := comp.ColonyCounts{}
 		e := c.colonyMap.NewEntity(&pos, &colony, &stores, &comp.ColonyStimuli{}, &counts, &comp.ColonyRange{})
 
@@ -97,7 +98,7 @@ func (c *colonyFounder) found(w *ecs.World) {
 // patchesInRange sets allPatchesInRangeList of a colony: all foodsources (every layer) within Constants.MaxForagingRange.
 func (c *colonyFounder) patchesInRange(colony ecs.Entity) {
 	pos := *c.positionMap.Get(colony)
-	maxDist := c.constants.MaxForagingRange * c.landscape.Scale
+	maxDist := c.constants.Foraging.MaxForagingRange * c.landscape.Scale
 
 	// ORDER: MATTERS for the list order, which flowersInRange keeps.
 	// NetLogo builds the list with fput in random ask order. Here: shuffle, then append. Both give a list in random

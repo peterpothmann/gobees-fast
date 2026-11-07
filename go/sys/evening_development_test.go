@@ -122,10 +122,10 @@ func TestDevelopmentWorkerTimeline(t *testing.T) {
 		}
 	}
 	b, _, th, f, _ := bw.bee(e)
-	if b.Stage != stage.Adult || b.Number != 12 || b.AdultAge != 0 || *th != thresholds(sitWorker) {
+	if b.Stage != stage.Adult || b.Number != 12 || b.AdultAge != 0 || *th != thresholds(&defaults.Thresholds, sitWorker) {
 		t.Errorf("new workers: stage %v, number %v, adultAge %v, thresholds %+v", b.Stage, b.Number, b.AdultAge, *th)
 	}
-	if f.CropVolume != cropVolume(b.Weight, bw.sp) || f.GlossaLength != proboscisLength(b.Weight, bw.sp) {
+	if f.CropVolume != cropVolume(b.Weight, bw.sp, &defaults.Foraging) || f.GlossaLength != proboscisLength(b.Weight, bw.sp) {
 		t.Errorf("crop %v, glossa %v", f.CropVolume, f.GlossaLength)
 	}
 	if bw.tally.queensEmerged != 0 {
@@ -147,7 +147,7 @@ func TestDevelopmentQueenTimeline(t *testing.T) {
 	if !b.EmergenceDate.IsSet() || b.EmergenceDate.Day() <= 365 || b.EmergenceDate.Day() > 365+305 {
 		t.Errorf("EmergenceDate %v, want a day in (365, 670]", b.EmergenceDate)
 	}
-	if *th != thresholds(sitYoungQueen) || f.PollenPellets != pollenLoad(980, bw.sp) {
+	if *th != thresholds(&defaults.Thresholds, sitYoungQueen) || f.PollenPellets != pollenLoad(980, bw.sp, &defaults.Foraging) {
 		t.Errorf("thresholds %+v, pollen load %v", *th, f.PollenPellets)
 	}
 	// event.QueenEmerged for the output (obs.Counters.TotalAdultQueensEverProduced)
@@ -220,10 +220,10 @@ func TestDevelopmentSocialPhaseThresholds(t *testing.T) {
 	psithSpecies := addParasiticSpecies(bw.w, bw.sp)
 	b, _, th, _, _ := bw.bee(psith)
 	b.Species = psithSpecies
-	*th = thresholds(sitPsith)
+	*th = thresholds(&defaults.Thresholds, sitPsith)
 	for _, e := range []ecs.Entity{host, alone} {
 		_, _, th, _, _ := bw.bee(e)
-		*th = thresholds(sitQueenInitiationPhase)
+		*th = thresholds(&defaults.Thresholds, sitQueenInitiationPhase)
 	}
 	bw.dev.Update(bw.w)
 	for _, tc := range []struct {
@@ -232,7 +232,7 @@ func TestDevelopmentSocialPhaseThresholds(t *testing.T) {
 		want string
 	}{{"host queen", host, sitQueenSocialPhase}, {"Psithyrus queen", psith, sitQueenSocialPhase},
 		{"queen without workers", alone, sitQueenInitiationPhase}} {
-		if _, _, th, _, _ := bw.bee(tc.e); *th != thresholds(tc.want) {
+		if _, _, th, _, _ := bw.bee(tc.e); *th != thresholds(&defaults.Thresholds, tc.want) {
 			t.Errorf("%s: %+v, want %s", tc.name, *th, tc.want)
 		}
 	}
@@ -249,7 +249,7 @@ func TestDevelopmentBackgroundMortality(t *testing.T) {
 	if bw.tally.beesDied != 0 {
 		t.Errorf("value 0: %v bees died", bw.tally.beesDied)
 	}
-	bw.constants.AdultBackgroundMortality = 0.01
+	bw.constants.Bees.AdultBackgroundMortality = 0.01
 	bw.dev.Update(bw.w)
 	if died := bw.tally.beesDied; died < 975 || died > 1000 {
 		t.Errorf("value 0.01: %v of 1000 bees died, want about 990", died)

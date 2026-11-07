@@ -75,7 +75,7 @@ func (s *activities) Update(w *ecs.World) {
 	for continueWorking && s.activeAdults() > 0 && s.colonies() > 0 {
 		e := s.nextActiveBee()
 		_, b, _, _, _, _ := s.beeMap.Get(e)
-		if b.PersonalTime > s.constants.CallItADay {
+		if b.PersonalTime > s.constants.Activities.CallItADay {
 			continueWorking = false
 		} else {
 			s.daytime.Time = b.PersonalTime // Model has no global time, each bee has her own personalTime_s and the one with the lowest is next
@@ -88,7 +88,7 @@ func (s *activities) Update(w *ecs.World) {
 		_, b, _, _, _, _ = s.beeMap.Get(e)
 		// Queens without a colony are inactive for the rest of the day.
 		if b.Colony.IsZero() {
-			b.PersonalTime = s.constants.CallItADay + 1
+			b.PersonalTime = s.constants.Activities.CallItADay + 1
 		}
 	}
 }
@@ -166,7 +166,7 @@ func (s *activities) nextActiveBee() ecs.Entity {
 
 // act lets the bee e choose one task and do it.
 func (s *activities) act(w *ecs.World, e ecs.Entity) {
-	pause := 0.5 * 3600 // [s]
+	pause := s.constants.Activities.Pause // [s]
 	_, b, _, th, _, _ := s.beeMap.Get(e)
 	b.Activity = activity.Resting
 	if !b.Colony.IsZero() {
@@ -174,8 +174,10 @@ func (s *activities) act(w *ecs.World, e ecs.Entity) {
 		colony, stores, stim, counts := s.colonyMap.Get(b.Colony)
 		sp := s.speciesMap.Get(colony.Species)
 		stim.Egglaying = egglayingStimulus(stores, counts, sp)
-		stim.NectarForaging = nectarStimulus(stores, s.daytime.Time, s.constants.Sunrise, s.calendar.ForagingPeriod)
-		stim.PollenForaging = pollenStimulus(stores, sp, s.daytime.Time, s.constants.Sunrise, s.calendar.ForagingPeriod)
+		stim.NectarForaging = nectarStimulus(stores, &s.constants.Stimuli, s.daytime.Time, s.constants.Activities.Sunrise,
+			s.calendar.ForagingPeriod)
+		stim.PollenForaging = pollenStimulus(stores, sp, &s.constants.Stimuli, s.daytime.Time, s.constants.Activities.Sunrise,
+			s.calendar.ForagingPeriod)
 		stim.Nursing = nursingStimulus(stores, counts, sp)
 
 		// the last matching task wins: no "else if".
@@ -217,8 +219,8 @@ func (s *activities) act(w *ecs.World, e ecs.Entity) {
 
 // incubateBrood lets the nurse e heat the brood of her colony for 48 min.
 func (s *activities) incubateBrood(w *ecs.World, e ecs.Entity) {
-	heatingPeriod := 2880.0               // [s]
-	incubationEnergy := 0.000000217013888 // [kJ/(mg s)]
+	heatingPeriod := s.constants.Activities.NursingTime         // [s]
+	incubationEnergy := s.constants.Activities.IncubationEnergy // [kJ/(mg s)]
 	_, b, _, _, _, _ := s.beeMap.Get(e)
 	heatProvided := heatingPeriod * incubationEnergy * b.Weight * float64(b.Number) // [kJ]
 	// the divisor uses this morning's counts, brood laid today is not in it

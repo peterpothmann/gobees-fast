@@ -92,7 +92,7 @@ func (s *development) ageAdult(w *ecs.World, e ecs.Entity) {
 		}
 	}
 	if bee.Caste == caste.Male {
-		if bee.AdultAge > s.constants.MaxLifespanMales {
+		if bee.AdultAge > s.constants.Bees.MaxLifespanMales {
 			s.death.die(w, e, "Male: adultAge > MaxLifespanMales")
 			return
 		}
@@ -101,13 +101,13 @@ func (s *development) ageAdult(w *ecs.World, e ecs.Entity) {
 	// no species check: a Psithyrus queen also gets the social-phase thresholds, as in NetLogo
 	if bee.Caste == caste.Queen && bee.Mated && !bee.Colony.IsZero() {
 		if _, counts := s.colonyMap.Get(bee.Colony); counts.AdultWorkers > 0 {
-			*th = thresholds(sitQueenSocialPhase)
+			*th = thresholds(&s.constants.Thresholds, sitQueenSocialPhase)
 		}
 	}
 
 	// inverted condition as in NetLogo: a bee dies with probability 1 - AdultBackgroundMortality. With the value 0,
 	// no random number is drawn.
-	if s.constants.AdultBackgroundMortality > 0 && s.rng.Float64() > s.constants.AdultBackgroundMortality {
+	if s.constants.Bees.AdultBackgroundMortality > 0 && s.rng.Float64() > s.constants.Bees.AdultBackgroundMortality {
 		s.death.die(w, e, "Adult bee: mortality in colony")
 	}
 }
@@ -119,9 +119,9 @@ func (s *development) developPupa(e ecs.Entity) {
 	if bee.Caste == caste.Worker {
 		if dev.IncubationReceived >= sp.EmergenceIncubation && float64(bee.BroodAge) >= sp.EmergenceAgeMin {
 			bee.Stage = stage.Adult
-			forager.CropVolume = cropVolume(bee.Weight, sp)
-			forager.PollenPellets = pollenLoad(bee.Weight, sp)
-			*th = thresholds(sitWorker)
+			forager.CropVolume = cropVolume(bee.Weight, sp, &s.constants.Foraging)
+			forager.PollenPellets = pollenLoad(bee.Weight, sp, &s.constants.Foraging)
+			*th = thresholds(&s.constants.Thresholds, sitWorker)
 			forager.GlossaLength = proboscisLength(bee.Weight, sp)
 		}
 	}
@@ -143,9 +143,9 @@ func (s *development) developPupa(e ecs.Entity) {
 			}
 			bee.Stage = stage.Adult
 			s.queenEmerged.Emit(e) // the observers count the emerged queens
-			forager.CropVolume = cropVolume(bee.Weight, sp)
-			forager.PollenPellets = pollenLoad(bee.Weight, sp)
-			*th = thresholds(sitYoungQueen)
+			forager.CropVolume = cropVolume(bee.Weight, sp, &s.constants.Foraging)
+			forager.PollenPellets = pollenLoad(bee.Weight, sp, &s.constants.Foraging)
+			*th = thresholds(&s.constants.Thresholds, sitYoungQueen)
 			forager.GlossaLength = proboscisLength(bee.Weight, sp)
 		}
 	}

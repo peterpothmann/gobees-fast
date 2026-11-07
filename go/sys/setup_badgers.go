@@ -13,7 +13,7 @@ import (
 )
 
 // badgersSetup creates Parameters.Badgers badgers, each in the centre of the patch cell of a "Scrub" masterpatch,
-// more than 300 m from the badgers placed before. The example farm has no badgers.
+// more than Constants.Badgers.MinDistance from the badgers placed before. The example farm has no badgers.
 //
 // NetLogo: CreateBadgersProc.
 type badgersSetup struct{}
@@ -22,7 +22,8 @@ func (s *badgersSetup) Initialize(w *ecs.World) {
 	file := ecs.GetResource[params.Parameters](w)
 	landscape := ecs.GetResource[globals.Landscape](w)
 	rng := rand.New(ecs.GetResource[resource.Rand](w))
-	createBadgers(w, file.Badgers, landscape.Scale, rng)
+	constants := ecs.GetResource[params.Constants](w)
+	createBadgers(w, file.Badgers, landscape.Scale, constants.Badgers.MinDistance, rng)
 }
 
 func (s *badgersSetup) Update(w *ecs.World) {}
@@ -30,10 +31,9 @@ func (s *badgersSetup) Update(w *ecs.World) {}
 func (s *badgersSetup) Finalize(w *ecs.World) {}
 
 // createBadgers creates n badgers on "Scrub" masterpatches.
-// scale is in NetLogo patches per metre [1/m].
-func createBadgers(w *ecs.World, n int, scale float64, rng *rand.Rand) {
+// scale is in NetLogo patches per metre [1/m], distanceLimit in [m].
+func createBadgers(w *ecs.World, n int, scale, distanceLimit float64, rng *rand.Rand) {
 	burrowHabitatsList := []string{"Scrub"} // case-sensitive, as member?
-	const distanceLimit = 300               // [m]
 	limitDistance := distanceLimit * scale  // [NetLogo patches]
 
 	type burrow struct {
