@@ -3,6 +3,7 @@ package input
 import (
 	"bytes"
 	"embed"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -26,6 +27,9 @@ type Files struct {
 	Config     Config
 	Landscapes map[string]Landscape // the landscape files by their name in Config
 	Raw        map[string][]byte    // the bytes of each landscape file, by its name in Config
+
+	source []byte                                   // the run file as read
+	open   func(name string) (io.ReadCloser, error) // opens a file relative to the folder of the run file
 }
 
 // Load reads the run file at path and its landscape files, relative to the folder of the run file, and returns the
@@ -82,27 +86,54 @@ func openExampleFarm(name string) (io.ReadCloser, error) {
 // readAll reads the run file name and the landscape files it names (the start and, with a crop rotation, every file
 // of the crop rotation, each once).
 func readAll(name string, open func(string) (io.ReadCloser, error)) (Files, error) {
-	f := Files{Landscapes: map[string]Landscape{}, Raw: map[string][]byte{}}
-	if _, err := readFile(name, open, func(r io.Reader) (err error) { f.Config, err = ReadConfig(r); return }); err != nil {
-		return f, err
+	r, err := open(name)
+	if err != nil {
+		return Files{}, err
 	}
-	names := []string{f.Config.Landscape}
-	if len(f.Config.CropRotation) > 1 {
-		names = append(names, f.Config.CropRotation...)
+	data, err := io.ReadAll(r)
+	r.Close()
+	if err != nil {
+		return Files{}, fmt.Errorf("%s: %w", name, err)
 	}
-	for _, n := range names {
-		if _, ok := f.Landscapes[n]; ok {
-			continue
+	f, err := readFrom(data, open, Files{})
+	if err != nil {
+		var landscape landscapeError
+		if errors.As(err, &landscape) {
+			return f, err // names its file
 		}
-		var l Landscape
-		raw, err := readFile(n, open, func(r io.Reader) (err error) { l, err = ReadLandscape(r); return })
-		if err != nil {
-			return f, err
-		}
-		f.Landscapes[n] = l
-		f.Raw[n] = raw
+		return f, fmt.Errorf("%s: %w", name, err)
 	}
 	return f, nil
+}
+
+// landscapeNames returns the landscape files of the run file c: the start and, with a crop rotation, every file of
+// the crop rotation.
+func landscapeNames(c Config) []string {
+	names := []string{c.Landscape}
+	if len(c.CropRotation) > 1 {
+		names = append(names, c.CropRotation...)
+	}
+	return names
+}
+
+// landscapeError is an error in a landscape file. Its message names the file.
+type landscapeError struct{ error }
+
+func (e landscapeError) Unwrap() error { return e.error }
+
+// readLandscape reads the landscape file name into f, once.
+func (f *Files) readLandscape(name string) error {
+	if _, ok := f.Landscapes[name]; ok {
+		return nil
+	}
+	var l Landscape
+	raw, err := readFile(name, f.open, func(r io.Reader) (err error) { l, err = ReadLandscape(r); return })
+	if err != nil {
+		return landscapeError{err}
+	}
+	f.Landscapes[name] = l
+	f.Raw[name] = raw
+	return nil
 }
 
 // readFile reads the file name with read and returns its bytes.

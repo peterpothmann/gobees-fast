@@ -160,10 +160,6 @@ func TestRunCountAndThreads(t *testing.T) {
 	cfg.Run = &input.Run{Seed: 1, Days: &days, Runs: 4, Threads: 3}
 	dir := t.TempDir()
 	writeRunFile(t, dir, "run.yaml", cfg, map[string]input.Landscape{cfg.Landscape: landscapes[cfg.Landscape]})
-	file, err := input.Read(filepath.Join(dir, "run.yaml"))
-	if err != nil {
-		t.Fatal(err)
-	}
 	for _, tc := range []struct {
 		args          []string
 		runs, threads int
@@ -171,12 +167,15 @@ func TestRunCountAndThreads(t *testing.T) {
 		{nil, 4, 3},
 		{[]string{"--threads", "2", "--runs", "5"}, 5, 2},
 	} {
-		c := parse(t, tc.args...)
-		runs, err := c.runCount(file)
-		if err != nil || runs != tc.runs {
-			t.Errorf("%v: runs = %d, %v, want %d", tc.args, runs, err, tc.runs)
+		c := parse(t, append([]string{"-c", filepath.Join(dir, "run.yaml")}, tc.args...)...)
+		e, err := c.newExperiment(c.Config[0])
+		if err != nil {
+			t.Fatal(err)
 		}
-		threads, err := c.threadCount(file)
+		if e.runs != tc.runs {
+			t.Errorf("%v: runs = %d, want %d", tc.args, e.runs, tc.runs)
+		}
+		threads, err := c.threadCount([]*experiment{e})
 		if err != nil || threads != tc.threads {
 			t.Errorf("%v: threads = %d, %v, want %d", tc.args, threads, err, tc.threads)
 		}
@@ -200,12 +199,24 @@ func TestRunCountAndThreads(t *testing.T) {
 func TestRunSetFailure(t *testing.T) {
 	// A run that fails (here: parameters without input, the model panics) ends the call with an error that names the
 	// run. The other runs do not hang.
-	rs := runSet{p: params.Default(), runs: 4, threads: 2}
-	rs.p.Seed = 1
+	p := params.Default()
+	p.Seed = 1
+	rs := runSet{threads: 2, jobs: seedJobs(p, 4)}
 	err := rs.run(func(i int, r runResult) error { return nil })
 	if err == nil || !strings.Contains(err.Error(), "run 1 (seed 1)") {
 		t.Errorf("error = %v, want the failed run 1", err)
 	}
+}
+
+// seedJobs returns n jobs of p without output, the job i with the seed p.Seed + i.
+func seedJobs(p params.Params, n int) []job {
+	jobs := make([]job, n)
+	for i := range jobs {
+		jobs[i].p = p
+		jobs[i].p.Seed += int64(i)
+		jobs[i].label = fmt.Sprintf("run %d (seed %d)", i+1, jobs[i].p.Seed)
+	}
+	return jobs
 }
 
 func TestRunSetDoneError(t *testing.T) {
@@ -217,7 +228,7 @@ func TestRunSetDoneError(t *testing.T) {
 	}
 	p.Termination.MaxTicks = 2
 	p.Seed = 3
-	rs := runSet{p: p, runs: 5, threads: 2}
+	rs := runSet{threads: 2, jobs: seedJobs(p, 5)}
 	var seen []int
 	err = rs.run(func(i int, r runResult) error {
 		seen = append(seen, i)

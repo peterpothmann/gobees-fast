@@ -17,6 +17,20 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
+// parameters returns the parameters of the first combination of the first run file of the flags (the example farm
+// without -c), with the flags applied, and the files read.
+func (c *cli) parameters() (params.Params, input.Files, error) {
+	config := ""
+	if len(c.Config) > 0 {
+		config = c.Config[0]
+	}
+	e, err := c.newExperiment(config)
+	if err != nil {
+		return params.Params{}, input.Files{}, err
+	}
+	return e.params[0], e.files, nil
+}
+
 // parse parses the command-line flags args.
 func parse(t *testing.T, args ...string) cli {
 	t.Helper()
@@ -33,8 +47,8 @@ func parse(t *testing.T, args ...string) cli {
 
 func TestCLIDefaults(t *testing.T) {
 	c := parse(t)
-	if c.Config != "" {
-		t.Errorf("Config = %q, want empty (example farm)", c.Config)
+	if len(c.Config) != 0 {
+		t.Errorf("Config = %q, want none (example farm)", c.Config)
 	}
 	// not set: the section run of the run file applies (TestParametersRunSection)
 	if c.Seed != nil || c.Days != nil || c.Runs != nil || c.Threads != nil {
