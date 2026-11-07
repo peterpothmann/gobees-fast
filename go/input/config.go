@@ -20,6 +20,9 @@ import (
 // the converter maps by name. A key missing in the file keeps its zero value, except in the section constants,
 // which must hold every key. An unknown key is an error.
 type Config struct {
+	// Run holds the seed and the days of the run and, in a run info, the record of a run. The section is optional.
+	Run *Run `yaml:"run,omitempty"`
+
 	Parameters params.Parameters `yaml:"parameters"`
 
 	// Output are the options of the output. NetLogo: the parameter KeepDeadColonies?.
