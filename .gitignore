@@ -27,3 +27,7 @@ compare-comment.md
 # program of go build in tools/netlogo2gobees
 tools/netlogo2gobees/netlogo2gobees
 tools/netlogo2gobees/netlogo2gobees.exe
+
+# program of go build in go/
+go/gobees
+go/gobees.exe

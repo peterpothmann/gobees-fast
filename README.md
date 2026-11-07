@@ -46,6 +46,7 @@ output:
 | `--output-file PATH` | `-f` | write the daily output to `PATH` |
 | `--columns A,B,C` | | write only these columns |
 | `--list-columns` | | print the columns of the daily output and exit |
+| `--ui` | | show the run in a window while it runs (one run only; on Linux build with `-tags ui`) |
 | `--help` | `-h` | show all flags |
 
 Flags override the section `run` of the run file.
@@ -72,6 +73,22 @@ variations:
 Every output comes with a run info file (`<output>_run_info.yaml`). Running it with `-c` repeats the run byte for byte.
 
 Details on run files, the converter, experiments, the daily output and the run info: [docs/usage.md](docs/usage.md). All keys with unit and NetLogo name: [docs/names.md](docs/names.md).
+
+## Watching a run
+
+With `--ui` a run opens a window: map with flower patches and colonies, daily plots, colony and patch info, going back in time. The run, its output and run info are the same as without the window.
+
+```shell
+cd go
+go run . --ui
+go run . --ui -c compare/scenarios/step8_species.yaml -o
+```
+
+On Linux the window is built only with the tag `ui` (`go run -tags ui . --ui`), because Ebitengine needs cgo and the X11 and OpenGL headers there. Without the tag, gobees stays pure Go, e.g. on a cluster. On macOS cgo must be on (Xcode command line tools).
+
+![the window of --ui](docs/ui-screenshot.png)
+
+Details: [go/ui/README.md](go/ui/README.md).
 
 ## gobees and gobees-fast
 
@@ -116,11 +133,12 @@ One comment in the pull request shows the results. Details: [go/compare/README.m
 | `go/validation` | comparison with NetLogo |
 | `go/benchmark` | run time of NetLogo, gobees and gobees-fast |
 | `go/enum` | castes, stages and activities |
+| `go/ui` | window of `--ui` |
 | `tools/netlogo2gobees` | converter of NetLogo input files into run files |
 | `netlogo` | the annotated NetLogo model and its input files |
 | `trans` | findings on the NetLogo code |
 
-The layout follows [beecs](https://github.com/mlange-42/beecs). A graphical interface for gobees is available in [gobees-ui](https://github.com/peterpothmann/gobees-ui).
+The layout follows [beecs](https://github.com/mlange-42/beecs).
 
 ## What the model does
 

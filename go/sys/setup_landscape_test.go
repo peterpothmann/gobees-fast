@@ -78,18 +78,14 @@ func TestMergeHedgesEquallyNearFieldIsRandom(t *testing.T) {
 	}
 }
 
-// testFlower returns the flower species of a layer of TestCreateLayers, from its values in the test table:
-// the foodsource does not store its flower species.
+// testFlower returns the flower species of a layer of TestCreateLayers (Flower, an index in the flower species
+// A, B, C of the test), or the patch type of a flower patch that is not split (NetLogo:
+// flowerSpecies_relativeAbundanceList (list patchType 1)).
 func testFlower(fs comp.Foodsource) string {
-	switch {
-	case fs.PatchType == "Scrub":
-		return "Scrub" // not split, NetLogo: flowerSpecies_relativeAbundanceList (list patchType 1)
-	case fs.StartDay == 100:
-		return "A"
-	case fs.NectarPerFlower == 0:
-		return "C"
+	if fs.Flower == -1 {
+		return fs.PatchType
 	}
-	return "B"
+	return []string{"A", "B", "C"}[fs.Flower]
 }
 
 func TestCreateLayers(t *testing.T) {

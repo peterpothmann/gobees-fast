@@ -243,6 +243,7 @@ func createLayers(w *ecs.World, patches []*flowerPatch, flowers *params.FlowerSp
 			relAbundance := file.AbundanceBoost * e.Value
 			fs := comp.Foodsource{
 				ID:                  p.ID,
+				Flower:              slices.Index(flowers.Names, e.Name), // the row of flowers.Get
 				PatchType:           p.PatchType,
 				Area:                p.Area,
 				Radius:              p.Radius,
@@ -295,6 +296,7 @@ func createLayers(w *ecs.World, patches []*flowerPatch, flowers *params.FlowerSp
 		}
 		e := newFoodsource(p, comp.Foodsource{
 			ID:        p.ID,
+			Flower:    -1,
 			PatchType: p.PatchType,
 			Area:      p.Area,
 			Radius:    p.Radius,

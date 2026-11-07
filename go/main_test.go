@@ -265,3 +265,20 @@ func TestCLIRemovedFlags(t *testing.T) {
 		}
 	}
 }
+
+// TestUIOneRun: --ui shows one run, several runs are an error (also in a build with the window, before it opens).
+func TestUIOneRun(t *testing.T) {
+	for _, args := range [][]string{
+		{"--ui", "--runs", "2"},
+		{"--ui", "-c", "compare/scenarios/step7.yaml", "-c", "compare/scenarios/step7_crop.yaml"},
+	} {
+		c := parse(t, args...)
+		if err := c.run(io.Discard); err == nil || !strings.Contains(err.Error(), "--ui shows one run") {
+			t.Errorf("%v: error %v, want --ui shows one run", args, err)
+		}
+	}
+	c := parse(t, "--ui-screenshot", "shot.png")
+	if err := c.run(io.Discard); err == nil || !strings.Contains(err.Error(), "needs --ui") {
+		t.Errorf("--ui-screenshot alone: error %v", err)
+	}
+}

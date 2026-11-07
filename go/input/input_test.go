@@ -358,3 +358,16 @@ func TestBuildNoFlowers(t *testing.T) {
 		t.Errorf("Flowers = %v, %v, want nil without error", p.Input.Flowers, err)
 	}
 }
+
+// TestReadRelativePath: a run file given by a relative path with folders is read with its landscape files (the
+// command line gives an absolute path, the user interface the path as typed).
+func TestReadRelativePath(t *testing.T) {
+	t.Chdir("..")
+	f, err := Read("compare/scenarios/step7_crop.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(f.Landscapes) < 2 {
+		t.Errorf("%d landscape files, want the start and the crop rotation", len(f.Landscapes))
+	}
+}

@@ -44,6 +44,11 @@ func Load(path string) (params.Params, error) {
 
 // Read reads the run file at path and its landscape files, relative to the folder of the run file.
 func Read(path string) (Files, error) {
+	// absolute, because the opener also opens the run file itself and would put its folder in front a second time
+	path, err := filepath.Abs(path)
+	if err != nil {
+		return Files{}, err
+	}
 	dir := filepath.Dir(path)
 	return readAll(path, func(name string) (io.ReadCloser, error) {
 		if !filepath.IsAbs(name) {
