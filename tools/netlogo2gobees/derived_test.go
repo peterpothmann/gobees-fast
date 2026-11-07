@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"gobees/examplefiles"
-	"gobees/globals"
 	"gobees/input"
+	"gobees/params"
 )
 
 // wantCSOList are the stewardship option names in _SYSTEM_Habitats.csv, in file order [CSO].
@@ -59,7 +59,7 @@ func TestConvertExampleFarm(t *testing.T) {
 		t.Errorf("Parameters:\n got  %+v\n want %+v", c.Parameters, wantExampleFarmParameters.ParameterFile)
 	}
 	// [QINI] "B_terrestris 500"
-	if !reflect.DeepEqual(c.InitialQueens, []globals.SpeciesQueens{{Species: "B_terrestris", Queens: 500}}) {
+	if !reflect.DeepEqual(c.InitialQueens, []params.SpeciesQueens{{Species: "B_terrestris", Queens: 500}}) {
 		t.Errorf("InitialQueens = %+v", c.InitialQueens)
 	}
 	if !reflect.DeepEqual(c.StewardshipOptions, wantCSOList) {
@@ -179,14 +179,14 @@ func TestAllCSOListMissingFile(t *testing.T) {
 func TestQueensInitialProc(t *testing.T) {
 	cases := []struct {
 		input   string
-		queens  []globals.SpeciesQueens
+		queens  []params.SpeciesQueens
 		species []string
 	}{
 		{"B_hortorum 100 B_terrestris 500",
-			[]globals.SpeciesQueens{{Species: "B_hortorum", Queens: 100}, {Species: "B_terrestris", Queens: 500}},
+			[]params.SpeciesQueens{{Species: "B_hortorum", Queens: 100}, {Species: "B_terrestris", Queens: 500}},
 			[]string{"B_hortorum", "B_terrestris"}},
-		{"A 1 B", []globals.SpeciesQueens{{Species: "A", Queens: 1}}, []string{"A"}}, // trailing name is dropped
-		{"", []globals.SpeciesQueens{}, []string{}},                                  // [""] gives no species
+		{"A 1 B", []params.SpeciesQueens{{Species: "A", Queens: 1}}, []string{"A"}}, // trailing name is dropped
+		{"", []params.SpeciesQueens{}, []string{}},                                  // [""] gives no species
 	}
 	for _, c := range cases {
 		q, s, err := QueensInitialProc(c.input)

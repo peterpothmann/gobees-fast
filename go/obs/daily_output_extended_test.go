@@ -28,8 +28,8 @@ func TestDailyOutputExtended(t *testing.T) {
 
 	// species indices: the bees without SpeciesID belong to species 0, B_terrestris
 	const terrestris, hortorum, pascuorum, psithyrus = 0, 1, 2, 3
-	ecs.AddResource(w, &params.Input{Species: []comp.Species{{Name: "B_terrestris"}, {Name: "B_hortorum"},
-		{Name: "B_pascuorum"}, {Name: "Psithyrus", Parasitic: true}}})
+	ecs.AddResource(w, &params.Input{Species: []params.Species{{SpeciesFile: params.SpeciesFile{Name: "B_terrestris"}}, {SpeciesFile: params.SpeciesFile{Name: "B_hortorum"}},
+		{SpeciesFile: params.SpeciesFile{Name: "B_pascuorum"}}, {SpeciesFile: params.SpeciesFile{Name: "Psithyrus", Parasitic: true}}}})
 
 	// activity.Hibernate is the zero value: all other bees rest.
 	bees := []ecs.Entity{}
@@ -112,7 +112,7 @@ func TestDailyOutputExtended(t *testing.T) {
 
 func TestDailyOutputExtendedNoCompetitionPoint(t *testing.T) {
 	w := newWorld(t)
-	ecs.AddResource(w, &params.Input{Species: []comp.Species{{Name: "B_terrestris"}}})
+	ecs.AddResource(w, &params.Input{Species: []params.Species{{SpeciesFile: params.SpeciesFile{Name: "B_terrestris"}}}})
 	ecs.NewMap2[comp.Colony, comp.ColonyStores](w).NewEntity(
 		&comp.Colony{CompetitionPointDate: day.Date{}, SpeciesIDcolony: 0}, &comp.ColonyStores{})
 

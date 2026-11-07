@@ -6,10 +6,9 @@ import (
 	"slices"
 	"testing"
 
-	"gobees/globals"
 	"gobees/input"
-	"gobees/model"
 	"gobees/params"
+	"gobees/schedule"
 
 	"github.com/mlange-42/ark/ecs"
 )
@@ -61,7 +60,7 @@ func TestParametersExampleFarm(t *testing.T) {
 func TestParametersRunFile(t *testing.T) {
 	// A run file with all 7 species. Its landscape file lies in a subfolder, relative to the run file.
 	c, landscapes := input.ExampleFarmConfig()
-	c.InitialQueens = []globals.SpeciesQueens{{Species: "B_terrestris", Queens: 150}, {Species: "B_pascuorum", Queens: 150},
+	c.InitialQueens = []params.SpeciesQueens{{Species: "B_terrestris", Queens: 150}, {Species: "B_pascuorum", Queens: 150},
 		{Species: "B_lapidarius", Queens: 150}, {Species: "B_hortorum", Queens: 150}, {Species: "B_pratorum", Queens: 150},
 		{Species: "B_hypnorum", Queens: 150}, {Species: "Psithyrus", Queens: 100}}
 	landscape := landscapes[c.Landscape]
@@ -93,9 +92,9 @@ func TestParametersRunFile(t *testing.T) {
 		t.Errorf("Seed, MaxTicks = %v, %d, want 7, 1", p.Seed, p.Termination.MaxTicks)
 	}
 
-	a := model.Default(p, nil)
+	a := schedule.Default(p, nil)
 	a.Run()
-	derived := ecs.GetResource[globals.Derived](a.World)
+	derived := ecs.GetResource[params.Derived](a.World)
 	wantSpecies := []string{"B_terrestris", "B_pascuorum", "B_lapidarius", "B_hortorum", "B_pratorum", "B_hypnorum", "Psithyrus"}
 	if !slices.Equal(derived.SpeciesList, wantSpecies) {
 		t.Errorf("SpeciesList = %v, want %v", derived.SpeciesList, wantSpecies)

@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"gobees/globals"
 	"gobees/params"
 )
 
@@ -27,8 +26,8 @@ func TestExampleFarm(t *testing.T) {
 	p := ExampleFarm()
 	in := p.Input
 	// [PAR-01], [PAR-04] to [PAR-07]
-	want := globals.Derived{
-		BeeSpeciesInitialQueensList: []globals.SpeciesQueens{{Species: "B_terrestris", Queens: 500}},
+	want := params.Derived{
+		BeeSpeciesInitialQueensList: []params.SpeciesQueens{{Species: "B_terrestris", Queens: 500}},
 		SpeciesList:                 []string{"B_terrestris"},
 		MortalityForager_per_s:      1.0e-05,
 		FoodsourcesFile:             "_SYSTEM_Example_Farm_Foodsources.yaml",
@@ -74,7 +73,7 @@ func TestDeriveSpecies(t *testing.T) {
 		s.SpecMax_pollenPellets_g, s.MinToMaxFactor, s.DevAgeHatchingMin_d, s.DevAgePupationMin_d, s.DevAgeEmergingMin_d,
 		s.DevWeightEgg_mg, s.DevWeightPupationMin_mg, s.DevWeightPupationMax_mg, s.PollenToBodymassFactor,
 		s.Dev_Q_DeterminationWeight_mg, s.DevAge_Q_PupationMin_d, s.DevWeight_Q_PupationMin_mg, s.DevWeight_Q_PupationMax_mg,
-		s.DevAge_Q_EmergingMin_d, s.ChanceFindNest}
+		s.DevAge_Q_EmergingMin_d, s.DailyNestSiteChance}
 	wantRead := []float64{91, 28, 6.9, 11.1, 1.88, 305, 60, 12, 5, 2500, 165, 173, 0.15, 2, 5, 12.9, 23.8, 1.5, 62.4, 249.5, 1, 0, 17, 590, 980, 32, 0.2}
 	if s.Name != "B_terrestris" || !reflect.DeepEqual(read, wantRead) {
 		t.Errorf("B_terrestris:\n got  %v %v\n want %v", s.Name, read, wantRead)
@@ -128,7 +127,7 @@ func TestBuildSpeciesOrder(t *testing.T) {
 	// finding 20 (see trans/netlogo-findings.md#finding-20): species are created in the order of the run file (the
 	// order of the BeespeciesFile), a name missing in the file creates no species, names are case-sensitive.
 	c, landscapes := ExampleFarmConfig()
-	c.InitialQueens = []globals.SpeciesQueens{{Species: "B_pascuorum", Queens: 1}, {Species: "B_terrestris", Queens: 1},
+	c.InitialQueens = []params.SpeciesQueens{{Species: "B_pascuorum", Queens: 1}, {Species: "B_terrestris", Queens: 1},
 		{Species: "B_missing", Queens: 1}, {Species: "b_hortorum", Queens: 1}}
 	p, err := Build(c, landscapes)
 	if err != nil {

@@ -1,4 +1,3 @@
-// Package caste contains the values of the NetLogo bee variable caste.
 package caste
 
 // Caste of a bee. NetLogo: caste (a string).

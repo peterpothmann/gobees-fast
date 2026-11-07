@@ -9,14 +9,14 @@ import (
 	"strconv"
 	"strings"
 
-	"gobees/globals"
+	"gobees/params"
 )
 
 // QueensInitialProc parses BeeSpeciesInitialQueensListAsString, e.g. "B_hortorum 100 B_terrestris 500" [QINI].
 //
 // Items alternate between species name and number of queens. A trailing name without number is dropped.
-func QueensInitialProc(s string) ([]globals.SpeciesQueens, []string, error) {
-	queens := []globals.SpeciesQueens{}
+func QueensInitialProc(s string) ([]params.SpeciesQueens, []string, error) {
+	queens := []params.SpeciesQueens{}
 	// [QINI-01]
 	items := ListFromStringREP(s)
 	// [QINI-02]
@@ -29,7 +29,7 @@ func QueensInitialProc(s string) ([]globals.SpeciesQueens, []string, error) {
 		if !ok {
 			return nil, nil, fmt.Errorf("BeeSpeciesInitialQueensListAsString: %q is not a whole number", items[i+1])
 		}
-		queens = append(queens, globals.SpeciesQueens{Species: items[i], Queens: n})
+		queens = append(queens, params.SpeciesQueens{Species: items[i], Queens: n})
 	}
 	// [QINI-03]
 	species := make([]string, len(queens))

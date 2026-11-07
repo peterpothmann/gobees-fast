@@ -4,29 +4,27 @@ import (
 	"fmt"
 	"slices"
 
-	"gobees/comp"
 	"gobees/day"
-	"gobees/globals"
 )
 
 // Input holds the content of the run file and its landscape files, and the values that ParametersProc derives from
 // the parameters [INIT-05]. Package input reads it before the setup, so no system opens a file. Read-only during the
 // run.
 type Input struct {
-	Derived globals.Derived // [PAR] start values of the derived globals, sys.Parameters adds a copy as resource
-	Weather globals.Weather // [FPER] daily foraging period of the parameter Weather
+	Derived Derived // [PAR] the derived globals, Params.Apply adds them as resource
+	Weather Weather // [FPER] daily foraging period of the parameter Weather, Params.Apply adds it as resource
 
 	// Species are the species of the run file whose name is in Derived.SpeciesList, in file order, with the
 	// derived values [SPEC-01] to [SPEC-03], [SPEC-05], [SPEC-07]. NestHabitatsList is as in the file: the
 	// expansion [SPEC-04] and the nest sites [SPEC-06] need the foodsources and happen in sys.CreateSpecies.
-	Species []comp.Species
+	Species []Species
 
 	// Flowers are the flower species of the run file [LAYR-02], nil without them (NetLogo: FlowerspeciesFile is
 	// "No Input File" [FSRC-12]).
 	Flowers *FlowerSpeciesTable
 
 	// Foodsources holds the landscape files by their name in the run file [FSRC-02] to [FSRC-04]: the one of the
-	// start (Derived.FoodsourcesFile) and, if there is a crop rotation, every file of Derived.CropRotationList
+	// start (Derived.FoodsourcesFile, the current one is globals.Landscape.FoodsourcesFile) and, if there is a crop rotation, every file of Derived.CropRotationList
 	// [CROP-01].
 	Foodsources map[string]Foodsources
 }

@@ -1,4 +1,3 @@
-// Package stage contains the values of the NetLogo bee variable stage.
 package stage
 
 // Stage of a bee. NetLogo: stage (a string). Decision A in trans/data-model.md: a field, not a component.
