@@ -29,7 +29,7 @@ type QueenProductionDate struct {
 	beeFilter    *ecs.Filter1[comp.Bee]
 	colonyMap    *ecs.Map2[comp.Colony, comp.ColonyCounts]
 	beeMap       *ecs.Map2[comp.Bee, comp.Development]
-	speciesMap   *ecs.Map1[comp.Species]
+	speciesMap   *speciesTable
 
 	larvae map[ecs.Entity][]ecs.Entity // buffer of beesByColony
 }
@@ -43,7 +43,7 @@ func (s *QueenProductionDate) Initialize(w *ecs.World) {
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
 	s.colonyMap = ecs.NewMap2[comp.Colony, comp.ColonyCounts](w)
 	s.beeMap = ecs.NewMap2[comp.Bee, comp.Development](w)
-	s.speciesMap = ecs.NewMap1[comp.Species](w)
+	s.speciesMap = newSpeciesTable(w)
 }
 
 func (s *QueenProductionDate) Update(w *ecs.World) {

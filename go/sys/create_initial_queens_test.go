@@ -17,7 +17,7 @@ func TestCreateInitialQueensExampleFarm(t *testing.T) {
 	a := newExampleFarmSetup(t, 3, &CreateInitialQueens{})
 	w := a.World
 	sp := terrestris(t)
-	speciesE := speciesEntities(w)["B_terrestris"][0]
+	spIndex := speciesIndices(w)["B_terrestris"][0]
 
 	query := ecs.NewFilter7[comp.Who, comp.Position, comp.Bee, comp.Genetics, comp.Thresholds, comp.Forager, comp.Development](w).Query()
 	n := 0
@@ -30,7 +30,7 @@ func TestCreateInitialQueensExampleFarm(t *testing.T) {
 		// [IQUE-03], [IQUE-04]
 		// brood? false: stage adult, ploidy 2: 2 alleles (below), speciesName: the species (step F9)
 		if b.Caste != caste.Queen || b.Stage != stage.Adult || b.Activity != activity.Hibernate || !b.Mated ||
-			b.Number != 1 || b.AdultAge != 180 || b.BroodAge != 36 || !b.ColonyID.IsZero() || b.SpeciesID != speciesE {
+			b.Number != 1 || b.AdultAge != 180 || b.BroodAge != 36 || !b.ColonyID.IsZero() || b.SpeciesID != spIndex {
 			t.Fatalf("queen state: %+v", b)
 		}
 		if len(g.AllelesList) != 2 || len(g.SpermathecaList) != 1 || g.MtDNA < 0 || g.MtDNA >= 139.9 {

@@ -41,7 +41,7 @@ type ActivityLoop struct {
 	colonyFilter *ecs.Filter1[comp.Colony]
 	beeMap       *beeMapper
 	colonyMap    *ecs.Map4[comp.Colony, comp.ColonyStores, comp.ColonyStimuli, comp.ColonyCounts]
-	speciesMap   *ecs.Map1[comp.Species]
+	speciesMap   *speciesTable
 
 	// broodOf holds the brood of each colony for BroodIncubationProc. NetLogo: bees with [ colonyID = x and
 	// (stage = "egg" or stage = "larva" or stage = "pupa") ]. Built at the start of the loop. During the day
@@ -62,7 +62,7 @@ func (s *ActivityLoop) Initialize(w *ecs.World) {
 	s.colonyFilter = ecs.NewFilter1[comp.Colony](w)
 	s.beeMap = newBeeMapper(w)
 	s.colonyMap = ecs.NewMap4[comp.Colony, comp.ColonyStores, comp.ColonyStimuli, comp.ColonyCounts](w)
-	s.speciesMap = ecs.NewMap1[comp.Species](w)
+	s.speciesMap = newSpeciesTable(w)
 	s.broodOf = map[ecs.Entity][]ecs.Entity{}
 }
 

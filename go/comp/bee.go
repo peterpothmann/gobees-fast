@@ -20,7 +20,7 @@ type Bee struct {
 	Caste          caste.Caste       // undefined, queen, worker, male
 	Activity       activity.Activity // current task
 	ColonyID       ecs.Entity        // the colony, zero entity for none (NetLogo -1)
-	SpeciesID      ecs.Entity        // the species entity. NetLogo speciesName: the Name of the species (step F9)
+	SpeciesID      int               // index in params.Input.Species (step F11). NetLogo speciesName: the Name of the species (step F9)
 	Mated          bool              // mated?
 	AdultAge       int               // [d]
 	BroodAge       int               // [d]

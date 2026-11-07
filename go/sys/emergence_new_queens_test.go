@@ -27,10 +27,11 @@ type emergenceWorld struct {
 	derived   *globals.Derived
 	tally     *tally
 	active    *globals.ActiveBees
-	species   ecs.Entity
+	species   int // index of B_terrestris
 	sp        *comp.Species
-	bigSite   ecs.Entity // Grassland, 10000 m2 at (100, 100)
-	smallSite ecs.Entity // Hedgerow, 100 m2 at (50.3, 50.2), radius 0.564 patches: only the patch centre (50, 50)
+	ns        *globals.SpeciesNestSites // nest sites of B_terrestris
+	bigSite   ecs.Entity                // Grassland, 10000 m2 at (100, 100)
+	smallSite ecs.Entity                // Hedgerow, 100 m2 at (50.3, 50.2), radius 0.564 patches: only the patch centre (50, 50)
 }
 
 func newEmergenceWorld(t *testing.T, seed uint64) *emergenceWorld {
@@ -62,11 +63,14 @@ func newEmergenceWorld(t *testing.T, seed uint64) *emergenceWorld {
 		&comp.Foodsource{PatchType: "Hedgerow", Area_sqm: 100, Radius_m: math.Sqrt(100 / math.Pi)},
 		&comp.FoodsourceState{}, &comp.Layer{Masterpatch: true})
 
-	sp := *terrestris(t)
-	sp.NestsiteFoodsourceList = []ecs.Entity{ew.bigSite, ew.smallSite}
-	sp.NestSiteArea = 10100
-	ew.species = ecs.NewMap2[comp.Who, comp.Species](w).NewEntity(&comp.Who{Who: 2}, &sp)
-	ew.sp = ecs.NewMap1[comp.Species](w).Get(ew.species)
+	in := &params.Input{Species: []comp.Species{*terrestris(t)}}
+	ecs.AddResource(w, in)
+	ew.species = 0
+	ew.sp = &in.Species[ew.species]
+	nestSites := &globals.NestSites{BySpecies: []globals.SpeciesNestSites{
+		{NestsiteFoodsourceList: []ecs.Entity{ew.bigSite, ew.smallSite}, NestSiteArea: 10100}}}
+	ecs.AddResource(w, nestSites)
+	ew.ns = &nestSites.BySpecies[ew.species]
 
 	ew.sys = &EmergenceNewQueens{}
 	ew.sys.Initialize(w)
@@ -220,7 +224,7 @@ func TestNestSearchMortality(t *testing.T) {
 
 func TestNestSearchWithoutNestSites(t *testing.T) {
 	ew := newEmergenceWorld(t, 5)
-	ew.sp.NestsiteFoodsourceList = nil
+	ew.ns.NestsiteFoodsourceList = nil
 	ew.addQueen(10, 1, 700)
 	ew.addQueen(10, 1, 700)
 	ew.sys.Update(ew.w)
@@ -239,8 +243,8 @@ func TestNestSearchNoPatchCentre(t *testing.T) {
 		&comp.Who{Who: 3}, &comp.Position{X: 133.548, Y: 112.5},
 		&comp.Foodsource{PatchType: "Hedgerow", Area_sqm: 100, Radius_m: math.Sqrt(100 / math.Pi)},
 		&comp.FoodsourceState{}, &comp.Layer{Masterpatch: true})
-	ew.sp.NestsiteFoodsourceList = []ecs.Entity{hedge}
-	ew.sp.NestSiteArea = 100
+	ew.ns.NestsiteFoodsourceList = []ecs.Entity{hedge}
+	ew.ns.NestSiteArea = 100
 	ew.sp.ChanceFindNest = 1
 	ew.addQueen(10, 1, 700)
 	ew.sys.Update(ew.w)
@@ -260,10 +264,10 @@ func TestNestSiteChoicePastEnd(t *testing.T) {
 	// [NSFS-01] finding 27, fixed in step F5: the shares sum to 0.5, so p lies above the sum in about half of the
 	// draws. The loop runs past the end and the last site of the list is chosen (NetLogo: runtime error).
 	ew := newEmergenceWorld(t, 7)
-	ew.sp.NestsiteFoodsourceList = []ecs.Entity{ew.bigSite}
-	ew.sp.NestSiteArea = 20000
+	ew.ns.NestsiteFoodsourceList = []ecs.Entity{ew.bigSite}
+	ew.ns.NestSiteArea = 20000
 	for range 100 {
-		if got := ew.sys.NestSiteFoodSourceREP(ew.sp); got != ew.bigSite {
+		if got := ew.sys.NestSiteFoodSourceREP(ew.ns); got != ew.bigSite {
 			t.Fatalf("NestSiteFoodSourceREP = %v, want the grassland %v", got, ew.bigSite)
 		}
 	}

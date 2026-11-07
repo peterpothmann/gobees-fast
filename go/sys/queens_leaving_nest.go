@@ -55,7 +55,7 @@ func (s *QueensLeavingNest) Update(w *ecs.World) {
 	}
 	// [QLN-02] the adult males per species, anywhere in the landscape. Collected once: no male is created or dies
 	// in this system, and a queen that dies is not a male. NetLogo evaluates the agentset per queen.
-	males := map[ecs.Entity][]ecs.Entity{}
+	males := map[int][]ecs.Entity{}
 	query := s.beeFilter.Query()
 	for query.Next() {
 		if b := query.Get(); b.Caste == caste.Male && b.Stage == stage.Adult {

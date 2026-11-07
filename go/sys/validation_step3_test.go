@@ -7,6 +7,8 @@ import (
 	"gobees/comp"
 	"gobees/enum/activity"
 	"gobees/enum/caste"
+	"gobees/globals"
+	"gobees/params"
 	"gobees/validation"
 
 	"github.com/mlange-42/ark/ecs"
@@ -24,11 +26,11 @@ func step3Metrics(w *ecs.World) map[string]float64 {
 			m["masterpatches"]++
 		}
 	}
-	sp := ecs.NewFilter1[comp.Species](w).Query()
-	for sp.Next() {
-		if s := sp.Get(); s.Name == "B_terrestris" {
-			m["nestsites"] = float64(len(s.NestsiteFoodsourceList))
-			m["nestsite_area"] = s.NestSiteArea
+	nestSites := ecs.GetResource[globals.NestSites](w).BySpecies
+	for i, s := range ecs.GetResource[params.Input](w).Species {
+		if s.Name == "B_terrestris" {
+			m["nestsites"] = float64(len(nestSites[i].NestsiteFoodsourceList))
+			m["nestsite_area"] = nestSites[i].NestSiteArea
 		}
 	}
 	// TotalColoniesEverProduced: without UpdateColonies no colony dies, so the living colonies are all colonies

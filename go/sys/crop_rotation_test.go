@@ -144,15 +144,10 @@ func TestCropRotation(t *testing.T) {
 	founder := newColonyFounder(w, rand.New(ecs.GetResource[resource.Rand](w)))
 	expectPanic(t, "FoodsourcesInFlowerAndRangeProc after a crop rotation", func() { founder.FoodsourcesInFlowerAndRangeProc(col) })
 
-	// [SPEC-06], [SPEC-07] for B_terrestris: Scrub and Garden are nest habitats
-	sq := ecs.NewFilter1[comp.Species](w).Query()
-	for sq.Next() {
-		sp := sq.Get()
-		if len(sp.NestsiteFoodsourceList) != 2 || sp.NestSiteArea != 150000 {
-			t.Errorf("%s: %d nest sites, area %v; want 2 and 150000", sp.Name, len(sp.NestsiteFoodsourceList), sp.NestSiteArea)
-		}
-		if want := 0.5 * 0.001 * sp.DevWeightPupationMin_mg * float64(sp.Batchsize) / sp.PollenToBodymassFactor; sp.MinPollenStore_g != want {
-			t.Errorf("minPollenStore_g %v, want %v", sp.MinPollenStore_g, want)
+	// [SPEC-06] for B_terrestris: Scrub and Garden are nest habitats. [SPEC-07] is not computed again (step F11).
+	for i, ns := range ecs.GetResource[globals.NestSites](w).BySpecies {
+		if len(ns.NestsiteFoodsourceList) != 2 || ns.NestSiteArea != 150000 {
+			t.Errorf("species %d: %d nest sites, area %v; want 2 and 150000", i, len(ns.NestsiteFoodsourceList), ns.NestSiteArea)
 		}
 	}
 

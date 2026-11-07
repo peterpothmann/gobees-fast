@@ -29,8 +29,8 @@ func (s *CreateInitialQueens) Initialize(w *ecs.World) {
 	who := ecs.GetResource[globals.WhoCounter](w)
 	rng := rand.New(ecs.GetResource[resource.Rand](w))
 	beeMapper := newBeeMapper(w)
-	speciesByName := speciesEntities(w)
-	speciesMap := ecs.NewMap1[comp.Species](w)
+	speciesByName := speciesIndices(w)
+	speciesMap := newSpeciesTable(w)
 
 	// [IQUE-01]
 	for _, sq := range derived.BeeSpeciesInitialQueensList {
@@ -44,8 +44,8 @@ func (s *CreateInitialQueens) Initialize(w *ecs.World) {
 		if len(candidates) == 0 {
 			panic(fmt.Sprintf("species %q of BeeSpeciesInitialQueensList does not exist (see [SPEC-02])", sq.Species))
 		}
-		speciesE := candidates[rng.IntN(len(candidates))]
-		sp := speciesMap.Get(speciesE)
+		spIndex := candidates[rng.IntN(len(candidates))]
+		sp := speciesMap.Get(spIndex)
 
 		// [IQUE-02] ORDER: irrelevant, each queen only uses her own random draws.
 		for range newQueens {
@@ -57,7 +57,7 @@ func (s *CreateInitialQueens) Initialize(w *ecs.World) {
 				Mated:    true,
 				Number:   1,
 				// [IQUE-04]
-				SpeciesID: speciesE,
+				SpeciesID: spIndex,
 				Stage:     stage.Adult,
 				Activity:  activity.Hibernate,
 				// [IQUE-06] -3599 to 3600 s, no effect (finding 31, see trans/netlogo-findings.md#finding-31)
@@ -106,13 +106,11 @@ func newBeeMapper(w *ecs.World) *beeMapper {
 	return ecs.NewMap7[comp.Who, comp.Position, comp.Bee, comp.Genetics, comp.Thresholds, comp.Forager, comp.Development](w)
 }
 
-// speciesEntities returns the species entities by name. NetLogo: Species with [ name = x ].
-func speciesEntities(w *ecs.World) map[string][]ecs.Entity {
-	result := map[string][]ecs.Entity{}
-	query := ecs.NewFilter1[comp.Species](w).Query()
-	for query.Next() {
-		sp := query.Get()
-		result[sp.Name] = append(result[sp.Name], query.Entity())
+// speciesIndices returns the indices of the species by name, in file order. NetLogo: Species with [ name = x ].
+func speciesIndices(w *ecs.World) map[string][]int {
+	result := map[string][]int{}
+	for i, sp := range ecs.GetResource[params.Input](w).Species {
+		result[sp.Name] = append(result[sp.Name], i)
 	}
 	return result
 }

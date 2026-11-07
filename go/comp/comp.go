@@ -62,7 +62,9 @@ type Layer struct {
 	LayersInPatchList []ecs.Entity // all layers of the same flower patch, sorted by who [LAYR-10], finding 15 (see trans/netlogo-findings.md#finding-15), fixed in step F5
 }
 
-// Species holds the parameters of one bee species.
+// Species holds the parameters of one bee species. Not a component since step F11: the species lie in
+// params.Input.Species, bees and colonies hold their index. Read-only during the run. The values that depend on the
+// landscape are in globals.NestSites.
 //
 // NetLogo: species-own (oneSpecies agents), created in CreateSpeciesProc [SPEC].
 type Species struct {
@@ -82,7 +84,7 @@ type Species struct {
 	TimeUnloading                      float64
 	SpecMax_cropVolume_myl             float64
 	SpecMax_pollenPellets_g            float64
-	NestHabitatsList                   []string // expanded by NestHabitatsListREP [SPEC-04]
+	NestHabitatsList                   []string // as in the file, the expansion [SPEC-04] is in globals.NestSites
 	MinToMaxFactor                     float64
 	DevAgeHatchingMin_d                float64
 	DevAgePupationMin_d                float64
@@ -112,7 +114,5 @@ type Species struct {
 	DevAge_Q_EmergingMax_d             float64
 	DevIncubation_Q_PupationTH_kJ      float64
 	DevIncubation_Q_EmergingTH_kJ      float64
-	NestsiteFoodsourceList             []ecs.Entity // [SPEC-06] masterpatches, sorted by who (an agentset in NetLogo)
-	NestSiteArea                       float64
 	MinPollenStore_g                   float64 // [SPEC-07]
 }

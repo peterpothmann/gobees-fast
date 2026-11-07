@@ -11,6 +11,7 @@ import (
 	"gobees/enum/stage"
 	"gobees/event"
 	"gobees/globals"
+	"gobees/params"
 
 	"github.com/mlange-42/ark/ecs"
 )
@@ -25,8 +26,10 @@ func TestDailyOutputExtended(t *testing.T) {
 	calendar := ecs.GetResource[globals.Calendar](w)
 	calendar.DailyForagingPeriod_s = 28800
 
-	species := ecs.NewMap1[comp.Species](w)
-	psithyrus := species.NewEntity(&comp.Species{Name: "Psithyrus", Parasitic: true})
+	// species indices: the bees without SpeciesID belong to species 0, B_terrestris
+	const terrestris, hortorum, pascuorum, psithyrus = 0, 1, 2, 3
+	ecs.AddResource(w, &params.Input{Species: []comp.Species{{Name: "B_terrestris"}, {Name: "B_hortorum"},
+		{Name: "B_pascuorum"}, {Name: "Psithyrus", Parasitic: true}}})
 
 	// activity.Hibernate is the zero value: all other bees rest.
 	bees := []ecs.Entity{}
@@ -48,9 +51,6 @@ func TestDailyOutputExtended(t *testing.T) {
 	genetics := ecs.NewMap1[comp.Genetics](w)
 	genetics.Get(bees[3]).AllelesList = []float64{10, 20}
 	genetics.Get(bees[9]).AllelesList = []float64{10}
-	terrestris := species.NewEntity(&comp.Species{Name: "B_terrestris"})
-	hortorum := species.NewEntity(&comp.Species{Name: "B_hortorum"})
-	pascuorum := species.NewEntity(&comp.Species{Name: "B_pascuorum"})
 	colonies := ecs.NewMap2[comp.Colony, comp.ColonyStores](w)
 	colonies.NewEntity(&comp.Colony{CompetitionPointDate: day.At(150), SpeciesIDcolony: terrestris},
 		&comp.ColonyStores{EnergyStore_kJ: 100, PollenStore_g: 2})
@@ -112,9 +112,9 @@ func TestDailyOutputExtended(t *testing.T) {
 
 func TestDailyOutputExtendedNoCompetitionPoint(t *testing.T) {
 	w := newWorld(t)
-	terrestris := ecs.NewMap1[comp.Species](w).NewEntity(&comp.Species{Name: "B_terrestris"})
+	ecs.AddResource(w, &params.Input{Species: []comp.Species{{Name: "B_terrestris"}}})
 	ecs.NewMap2[comp.Colony, comp.ColonyStores](w).NewEntity(
-		&comp.Colony{CompetitionPointDate: day.Date{}, SpeciesIDcolony: terrestris}, &comp.ColonyStores{})
+		&comp.Colony{CompetitionPointDate: day.Date{}, SpeciesIDcolony: 0}, &comp.ColonyStores{})
 
 	o := DailyOutputExtended{}
 	o.Initialize(w)
