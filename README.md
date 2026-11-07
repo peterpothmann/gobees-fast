@@ -74,18 +74,18 @@ Other scenarios need a run file (YAML) and its landscape files (see [Run files](
 The model (`go/`, `go run .`):
 
 
-| Flag                 | Short | Default                                    | Meaning                                                                                                                                                         |
-| -------------------- | ----- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--config PATH`      | `-c`  | the example farm (built in)                | run file (YAML). Its landscape files are relative to its folder.                                                                                                |
-| `--seed N`           | `-s`  | `run.seed` of the run file                 | random seed of the first run, 1 or more (NetLogo:`RAND_SEED`).                                                                                                  |
-| `--days N`           |       | `run.days` of the run file, else `365`     | number of days to run.`0`: no limit, the run ends only when the population is extinct and `stopExtinct` is true.                                                |
-| `--runs N`           |       | `run.runs` of the run file, else `1`       | number of runs, in one process. Run i has the seed `SEED + i - 1`. All runs go into one output file.                                                            |
-| `--threads T`        |       | `run.threads` of the run file              | number of runs at the same time, 1 or more (on a cluster: the CPUs of the job, e.g. `--threads $SLURM_CPUS_PER_TASK`). The output does not depend on it.        |
-| `--output`           | `-o`  | off                                        | write the daily output to`daily_output.csv` in the working directory (`go/`), tab separated, one row per day and run, and the [run info](#run-info) next to it. |
-| `--output-file PATH` | `-f`  |                                            | write the daily output to`PATH` instead (implies `-o`). Missing folders are created.                                                                            |
-| `--columns A,B,C`    |       | `output.columns` of the run file, else all | columns of the daily output, in this order (needs `-o` or `-f`). `ticks` is always first. An unknown name is an error that lists the columns.                   |
-| `--list-columns`     |       |                                            | print the columns of the daily output with a description and exit.                                                                                              |
-| `--help`             | `-h`  |                                            | show all flags.                                                                                                                                                 |
+| Flag                 | Short | Default                                    | Meaning                                                                                                                                                                              |
+| -------------------- | ----- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--config PATH`      | `-c`  | the example farm (built in)                | run file (YAML). Its landscape files are relative to its folder. Repeat `-c` for several run files ([experiments](#experiments)).                                                    |
+| `--seed N`           | `-s`  | `run.seed` of the run file                 | random seed of the first run, 1 or more (NetLogo:`RAND_SEED`).                                                                                                                       |
+| `--days N`           |       | `run.days` of the run file, else `365`     | number of days to run.`0`: no limit, the run ends only when the population is extinct and `stopExtinct` is true.                                                                     |
+| `--runs N`           |       | `run.runs` of the run file                 | number of runs (of each combination of an [experiment](#experiments)), 1 or more, in one process. Run i has the seed `SEED + i - 1`. All runs of a run file go into one output file. |
+| `--threads T`        |       | `run.threads` of the run file              | number of runs at the same time, 1 or more (on a cluster: the CPUs of the job, e.g. `--threads $SLURM_CPUS_PER_TASK`). The output does not depend on it.                             |
+| `--output`           | `-o`  | off                                        | write the daily output to`daily_output.csv` in the working directory (`go/`), tab separated, one row per day and run, and the [run info](#run-info) next to it.                      |
+| `--output-file PATH` | `-f`  |                                            | write the daily output to`PATH` instead (implies `-o`). Missing folders are created.                                                                                                 |
+| `--columns A,B,C`    |       | `output.columns` of the run file, else all | columns of the daily output, in this order (needs `-o` or `-f`). `ticks` is always first. An unknown name is an error that lists the columns.                                        |
+| `--list-columns`     |       |                                            | print the columns of the daily output with a description and exit.                                                                                                                   |
+| `--help`             | `-h`  |                                            | show all flags.                                                                                                                                                                      |
 
 ```shell
 go run . -c path/to/run.yaml -s 3 --days 730   # own run file, seed 3, 2 years
@@ -95,6 +95,7 @@ go run . -f path/to/output.csv                 # output to any path
 go run . -c path/to/output_run_info.yaml -f x.csv  # repeat the run of path/to/output.csv
 go run . --list-columns                        # the columns of the daily output
 go run . -o --columns colonies,workers,eggs    # only these columns (and ticks)
+go run . -c a.yaml -c b.yaml -f out/d.csv      # two run files on one pool of threads: out/d_a.csv, out/d_b.csv
 ```
 
 The converter of the NetLogo input files (`tools/netlogo2gobees`, `go run . <command>`, see
@@ -119,6 +120,7 @@ A run file has these sections. All keys are in lowerCamelCase, values are in the
 | Key                  | Content                                                                                                                                                                                                                                                                         | NetLogo                                                                         |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | `run`                | `seed`, `days`, `runs` and `threads` (the flags `-s`, `--days`, `--runs` and `--threads` override them). Needed: `seed`, `runs` and `threads`, each 1 or more. The converter writes seed 1, 365 days, 1 run and 1 thread. In a [run info](#run-info) also the record of the run | `RAND_SEED`                                                                     |
+| `variations`         | optional: keys and their values, every combination runs (an [experiment](#experiments))                                                                                                                                                                                         |                                                                                 |
 | `parameters`         | the model parameters                                                                                                                                                                                                                                                            | the columns of the parameter file                                               |
 | `output`             | output options (`keepDeadColonies`, `columns`), change no model value                                                                                                                                                                                                           | `KeepDeadColonies?`                                                             |
 | `constants`          | the values that NetLogo hard-codes, every key needed (see below)                                                                                                                                                                                                                | `ParametersProc` and local values of the procedures                             |
@@ -176,6 +178,36 @@ The daily output (`-o`, `-f`) is a tab-separated file. It holds the totals of `O
 With `--runs N` (or `run.runs`), gobees-fast runs the model N times in one process, at most `--threads` runs at the same time (or `run.threads`). Run i has the seed `seed + i - 1`, so the same `seed` and `runs` always give the same runs. Seed, runs and threads have no special value: each must be 1 or more, nothing is drawn at random or taken from the machine. The output holds the runs one after the other, in the order of the runs, so the file does not depend on the number of threads. The runs share the input read at the start, the model does not change it.
 
 `go run . --list-columns` prints all columns with a description. The key `output.columns` of the run file (a list of names) or the flag `--columns a,b,c` (which overrides the key) selects columns and their order. `ticks` is always the first column after `t`: it is added if missing and moved to the front. Without a selection, all columns are written. An unknown or repeated name is an error that lists the available columns, also when the run has no output. Every value is still computed, so the values of the selected columns do not depend on the selection.
+
+### Experiments
+
+The optional section `variations` makes a run file an experiment: each listed key takes each of its values, and every combination (full factorial) runs `run.runs` times.
+
+```yaml
+run:
+  seed: 1
+  days: 365
+  runs: 10      # per combination
+  threads: 8
+variations:
+  - key: parameters.badgers
+    values: [0, 2, 4]
+  - key: constants.foraging.maxForagingRange
+    values: [500, 758, 1000]
+parameters:
+  ...
+```
+
+This gives 3 × 3 combinations × 10 runs = 90 runs. Rules:
+
+- `key` is the path of a key in the run file, its parts separated by dots. A number selects an item of a list, e.g. `initialQueens.0.queens` (the first species) or `species.6.name`. A value is written as in the run file: a number, a text, a list.
+- `values` lists every value. There are no ranges, so every value of an experiment is written out.
+- Every combination is the run file with these values, read and checked like a run file: an unknown key, a fraction in a whole number and so on are errors at the start, naming the combination.
+- Every combination runs with the same seeds (`seed` to `seed + runs - 1`), so combinations differ only in the varied values, not in the random numbers.
+- The section `run` (seed, days, runs, threads), `output.columns`, `landscape` and `cropRotation` cannot vary. Other landscapes are other run files (see below).
+- The daily output is one file: the columns `run`, `seed`, then one column per varied key (named by the key, holding the value), then `t` and the columns. The first variation changes slowest. The run info holds the variations, so it repeats the whole experiment.
+
+Several run files run together with `-c a.yaml -c b.yaml`: their runs share one pool of `--threads` threads (the run files must ask for the same `threads`, or the flag sets it). Each run file writes its own output and run info, named after the run file: `-f out/daily.csv` gives `out/daily_a.csv` and `out/daily_b.csv`. Two run files with the same name are an error. The flags `-s`, `--days`, `--runs` and `--columns` apply to all run files.
 
 ### Run info
 

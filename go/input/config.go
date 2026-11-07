@@ -20,8 +20,12 @@ import (
 // the converter maps by name. A key missing in the file keeps its zero value, except in the section constants,
 // which must hold every key. An unknown key is an error.
 type Config struct {
-	// Run holds the seed and the days of the run and, in a run info, the record of a run. The section is optional.
+	// Run holds the seed, the days, the runs and the threads and, in a run info, the record of a run (checkRun).
 	Run *Run `yaml:"run,omitempty"`
+
+	// Variations make the run file an experiment: every combination of their values runs run.runs times (see
+	// Variation, Files.Combinations). The section is optional.
+	Variations []Variation `yaml:"variations,omitempty"`
 
 	Parameters params.Parameters `yaml:"parameters"`
 
@@ -135,10 +139,13 @@ func flowNode(v any) (*yaml.Node, error) {
 	return n, nil
 }
 
-// ReadConfig reads a run file. An unknown key or a second document is an error.
+// ReadConfig reads a run file. An unknown key, a second document and a wrong section variations are errors.
 func ReadConfig(r io.Reader) (Config, error) {
 	c := Config{}
-	return c, decodeStrict(r, &c)
+	if err := decodeStrict(r, &c); err != nil {
+		return c, err
+	}
+	return c, checkVariations(c.Variations)
 }
 
 // ReadLandscape reads a landscape file. An unknown key or a second document is an error.
