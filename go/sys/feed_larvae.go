@@ -31,6 +31,8 @@ type FeedLarvae struct {
 	colonyMap    *ecs.Map2[comp.Who, comp.ColonyStores]
 	beeMap       *ecs.Map1[comp.Bee]
 	speciesMap   *ecs.Map1[comp.Species]
+
+	larvae map[ecs.Entity][]ecs.Entity // buffer of beesByColony
 }
 
 func (s *FeedLarvae) Initialize(w *ecs.World) {
@@ -48,9 +50,9 @@ func (s *FeedLarvae) Initialize(w *ecs.World) {
 func (s *FeedLarvae) Update(w *ecs.World) {
 	// ORDER of the colonies: irrelevant, each colony only feeds its own larvae from its own stores. Shuffled
 	// (decision C). The larvae are grouped by colony once: nothing changes stage or colony here.
-	larvae := beesByColony(s.beeFilter, func(b *comp.Bee) bool { return b.Stage == stage.Larva })
+	s.larvae = beesByColony(s.larvae, s.beeFilter, func(b *comp.Bee) bool { return b.Stage == stage.Larva })
 	for _, col := range askColonies(s.colonyFilter, s.rng) {
-		s.feedColony(col, larvae[col])
+		s.feedColony(col, s.larvae[col])
 	}
 }
 

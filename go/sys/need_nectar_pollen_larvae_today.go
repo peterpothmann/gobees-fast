@@ -29,6 +29,8 @@ type NeedNectarPollenLarvaeToday struct {
 	storesMap    *ecs.Map1[comp.ColonyStores]
 	beeMap       *ecs.Map1[comp.Bee]
 	speciesMap   *ecs.Map1[comp.Species]
+
+	larvae map[ecs.Entity][]ecs.Entity // buffer of beesByColony
 }
 
 func (s *NeedNectarPollenLarvaeToday) Initialize(w *ecs.World) {
@@ -45,10 +47,10 @@ func (s *NeedNectarPollenLarvaeToday) Initialize(w *ecs.World) {
 func (s *NeedNectarPollenLarvaeToday) Update(w *ecs.World) {
 	// [NEED-01] ORDER: irrelevant, sums. Shuffled (decision C).
 	// The larvae are grouped by colony once: nothing changes stage or colony here.
-	larvae := beesByColony(s.beeFilter, func(b *comp.Bee) bool { return b.Stage == stage.Larva })
+	s.larvae = beesByColony(s.larvae, s.beeFilter, func(b *comp.Bee) bool { return b.Stage == stage.Larva })
 	for _, col := range askColonies(s.colonyFilter, s.rng) {
 		pollenNeedMyColony_g := 0.0
-		myLarvae := larvae[col]
+		myLarvae := s.larvae[col]
 		util.Shuffle(s.rng, myLarvae)
 		for _, e := range myLarvae {
 			b := s.beeMap.Get(e)

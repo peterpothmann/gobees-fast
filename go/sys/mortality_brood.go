@@ -27,6 +27,8 @@ type MortalityBrood struct {
 	beeMap     *ecs.Map2[comp.Bee, comp.Development]
 	colonyMap  *ecs.Map1[comp.Colony]
 	speciesMap *ecs.Map1[comp.Species]
+
+	bees []ecs.Entity // buffer of askAllBees
 }
 
 func (s *MortalityBrood) Initialize(w *ecs.World) {
@@ -45,7 +47,8 @@ func (s *MortalityBrood) Update(w *ecs.World) {
 	// [MORB-01] to [MORB-04] in this order for each bee. ORDER of the bees: irrelevant, each bee changes only
 	// itself and the counters of its colony (sums). Shuffled (decision C).
 	// DieProc ends the bee's code (finding 28, see trans/netlogo-findings.md#finding-28): continue after it.
-	for _, e := range askAllBees(s.beeFilter, s.rng) {
+	s.bees = askAllBees(s.bees, s.beeFilter, s.rng)
+	for _, e := range s.bees {
 		b, dev := s.beeMap.Get(e)
 		sp := s.speciesMap.Get(b.SpeciesID)
 		// memoNumber and the brood death counters of the colony (eggDeathsIncubation, larvaDeathsWeight,

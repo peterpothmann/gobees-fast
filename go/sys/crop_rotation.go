@@ -35,6 +35,8 @@ type CropRotation struct {
 	foragerMap    *ecs.Map1[comp.Forager]
 	rangeMap      *ecs.Map1[comp.ColonyRange]
 	speciesMap    *ecs.Map1[comp.Species]
+
+	bees []ecs.Entity // buffer of askAllBees
 }
 
 func (s *CropRotation) Initialize(w *ecs.World) {
@@ -79,7 +81,8 @@ func (s *CropRotation) CropRotationProc(w *ecs.World) {
 		w.RemoveEntity(e)
 	}
 	// every bee forgets her foodsources. ORDER: irrelevant, each bee only changes herself. Shuffled (decision C).
-	for _, e := range askAllBees(s.beeFilter, s.rng) {
+	s.bees = askAllBees(s.bees, s.beeFilter, s.rng)
+	for _, e := range s.bees {
 		f := s.foragerMap.Get(e)
 		f.KnownMasterpatchesNectarList = []ecs.Entity{}
 		f.KnownMasterpatchesPollenList = []ecs.Entity{}

@@ -36,6 +36,8 @@ type UpdateSeasonalEvents struct {
 	beeFilter     *ecs.Filter1[comp.Bee]
 	speciesMap    *ecs.Map1[comp.Species]
 	beeMap        *ecs.Map1[comp.Bee]
+
+	bees []ecs.Entity // buffer of askBees, for one call after the other
 }
 
 func (s *UpdateSeasonalEvents) Initialize(w *ecs.World) {
@@ -67,9 +69,10 @@ func (s *UpdateSeasonalEvents) Update(w *ecs.World) {
 		if s.calendar.Day != s.speciesMap.Get(sp).SeasonStop {
 			continue
 		}
-		for _, e := range askBees(s.beeFilter, s.rng, func(b *comp.Bee) bool {
+		s.bees = askBees(s.bees, s.beeFilter, s.rng, func(b *comp.Bee) bool {
 			return b.SpeciesID == sp && b.Activity != activity.Hibernate
-		}) {
+		})
+		for _, e := range s.bees {
 			// broodDeathEndSeason of the colony: read only by the egg accounting [CHK-04], removed in step F4
 			s.death.DieProc(w, e, "End of season")
 		}
@@ -80,7 +83,8 @@ func (s *UpdateSeasonalEvents) Update(w *ecs.World) {
 	totals := s.totals.Get()
 	if totalHibernatingQueens == totalQueens && totals.TotalEggs+totals.TotalLarvae+totals.TotalPupae == 0 &&
 		totalMales > 0 {
-		for _, e := range askBees(s.beeFilter, s.rng, func(b *comp.Bee) bool { return b.Caste == caste.Male }) {
+		s.bees = askBees(s.bees, s.beeFilter, s.rng, func(b *comp.Bee) bool { return b.Caste == caste.Male })
+		for _, e := range s.bees {
 			s.death.DieProc(w, e, "Males: all queens in hibernation!")
 		}
 	}
@@ -97,9 +101,10 @@ func (s *UpdateSeasonalEvents) Update(w *ecs.World) {
 		// distribution. A cohort can remove more queens than needed.
 		hibernating := []ecs.Entity{}
 		if queensToKill > 0 {
-			hibernating = askBees(s.beeFilter, s.rng, func(b *comp.Bee) bool {
+			s.bees = askBees(s.bees, s.beeFilter, s.rng, func(b *comp.Bee) bool {
 				return b.Caste == caste.Queen && b.Activity == activity.Hibernate
 			})
+			hibernating = s.bees
 		}
 		for queensToKill > 0 {
 			if len(hibernating) == 0 {

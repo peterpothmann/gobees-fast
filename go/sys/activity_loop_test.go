@@ -297,7 +297,7 @@ func TestBroodIncubationProc(t *testing.T) {
 	eggs := aw.addBrood(col, stage.Egg, caste.Undefined, 12, 2, 1.5, 0.1)
 	foreign := aw.addBrood(other, stage.Egg, caste.Undefined, 12, 2, 1.5, 0.1)
 	queen := aw.adult(col, caste.Queen, 1, 800, sitQueenSocialPhase)
-	aw.loop.broodOf = beesByColony(aw.loop.beeFilter, func(b *comp.Bee) bool { return b.Stage != stage.Adult })
+	aw.loop.broodOf = beesByColony(aw.loop.broodOf, aw.loop.beeFilter, func(b *comp.Bee) bool { return b.Stage != stage.Adult })
 
 	aw.loop.BroodIncubationProc(aw.w, queen)
 

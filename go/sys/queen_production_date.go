@@ -30,6 +30,8 @@ type QueenProductionDate struct {
 	colonyMap    *ecs.Map2[comp.Colony, comp.ColonyCounts]
 	beeMap       *ecs.Map2[comp.Bee, comp.Development]
 	speciesMap   *ecs.Map1[comp.Species]
+
+	larvae map[ecs.Entity][]ecs.Entity // buffer of beesByColony
 }
 
 func (s *QueenProductionDate) Initialize(w *ecs.World) {
@@ -47,7 +49,7 @@ func (s *QueenProductionDate) Initialize(w *ecs.World) {
 func (s *QueenProductionDate) Update(w *ecs.World) {
 	ticks := s.ticks.Ticks
 	// ORDER: irrelevant, each colony only reads its own larvae and changes itself. Shuffled (decision C).
-	larvae := beesByColony(s.beeFilter, func(b *comp.Bee) bool { return b.Stage == stage.Larva })
+	s.larvae = beesByColony(s.larvae, s.beeFilter, func(b *comp.Bee) bool { return b.Stage == stage.Larva })
 	for _, col := range askColonies(s.colonyFilter, s.rng) {
 		colony, counts := s.colonyMap.Get(col)
 
@@ -56,7 +58,7 @@ func (s *QueenProductionDate) Update(w *ecs.World) {
 		timeEggToLarvalAgeAtQueenDetermination := averageCumulTimeEgg_d + s.speciesMap.Get(colony.SpeciesIDcolony).Dev_larvalAge_QueenDetermination_d
 		found := false
 		maxBroodAge := 0
-		for _, e := range larvae[col] {
+		for _, e := range s.larvae[col] {
 			b, dev := s.beeMap.Get(e)
 			// speciesID of the larva, as in NetLogo (the same species as the colony's)
 			if dev.CumulTimeLarva_d == s.speciesMap.Get(b.SpeciesID).Dev_larvalAge_QueenDetermination_d {

@@ -27,6 +27,8 @@ type BadgersOnTheProwl struct {
 	colonyFilter *ecs.Filter2[comp.Position, comp.Colony]
 	beeFilter    *ecs.Filter1[comp.Bee]
 	colonyMap    *ecs.Map1[comp.ColonyStores]
+
+	beesOf map[ecs.Entity][]ecs.Entity // buffer of beesByColony
 }
 
 func (s *BadgersOnTheProwl) Initialize(w *ecs.World) {
@@ -60,7 +62,7 @@ func (s *BadgersOnTheProwl) Update(w *ecs.World) {
 	util.Shuffle(s.rng, badgers)
 
 	// the members of each colony, grouped once. Bees that died on the way are skipped with w.Alive.
-	beesOf := beesByColony(s.beeFilter, func(b *comp.Bee) bool { return true })
+	s.beesOf = beesByColony(s.beesOf, s.beeFilter, func(b *comp.Bee) bool { return true })
 
 	for _, b := range badgers {
 		// colonies with distancexy < range, strict, in NetLogo patch units, no wrapping
@@ -83,7 +85,7 @@ func (s *BadgersOnTheProwl) Update(w *ecs.World) {
 			stores.PollenStore_g = 0
 			// every bee of the colony dies, in random order. Each bee dies independently.
 			victims := []ecs.Entity{}
-			for _, e := range beesOf[col] {
+			for _, e := range s.beesOf[col] {
 				if w.Alive(e) {
 					victims = append(victims, e)
 				}

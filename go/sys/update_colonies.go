@@ -39,6 +39,8 @@ type UpdateColonies struct {
 	colonyMap    *ecs.Map3[comp.Colony, comp.ColonyStores, comp.ColonyCounts]
 	beeMap       *ecs.Map1[comp.Bee]
 	speciesMap   *ecs.Map1[comp.Species]
+
+	beesOf map[ecs.Entity][]ecs.Entity // buffer of beesByColony
 }
 
 func (s *UpdateColonies) Initialize(w *ecs.World) {
@@ -71,16 +73,10 @@ func (s *UpdateColonies) Update(w *ecs.World) {
 	// NetLogo: bees with [ colonyID = whoCol ]. The bees in the same colony are grouped once, as no bee is created and no bee
 	// changes its colony here. Bees that die on the way are skipped with w.Alive.
 	// makes updateColony run faster
-	beesOf := map[ecs.Entity][]ecs.Entity{}
-	bees := s.beeFilter.Query()
-	for bees.Next() {
-		if b := bees.Get(); !b.ColonyID.IsZero() {
-			beesOf[b.ColonyID] = append(beesOf[b.ColonyID], bees.Entity())
-		}
-	}
+	s.beesOf = beesByColony(s.beesOf, s.beeFilter, func(b *comp.Bee) bool { return true })
 
 	for _, col := range colonies {
-		s.updateColony(w, col, beesOf[col])
+		s.updateColony(w, col, s.beesOf[col])
 	}
 
 	// [UCOL-12] removing the dead colonies on 1 January: the record of the dead colonies is output, kept by the
