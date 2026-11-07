@@ -1,6 +1,8 @@
 package schedule
 
 import (
+	"reflect"
+	"slices"
 	"testing"
 
 	"gobees/comp"
@@ -9,7 +11,9 @@ import (
 	"gobees/globals"
 	"gobees/input"
 	"gobees/internal/check"
+	"gobees/obs"
 	"gobees/params"
+	"gobees/sys"
 
 	"github.com/mlange-42/ark/ecs"
 )
@@ -72,5 +76,86 @@ func TestDefaultYearCycle(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+// dailyRows is an app system that keeps the daily output (all columns) of every day.
+type dailyRows struct {
+	o    obs.DailyOutputExtended
+	rows [][]float64
+}
+
+func (d *dailyRows) Initialize(w *ecs.World) {
+	d.o.Columns = obs.AllColumns()
+	d.o.Initialize(w)
+}
+
+func (d *dailyRows) Update(w *ecs.World) {
+	d.o.Update(w)
+	d.rows = append(d.rows, slices.Clone(d.o.Values(w)))
+}
+
+func (d *dailyRows) Finalize(w *ecs.World) {}
+
+// TestHooks: with sys.Hooks the parts are reported in schedule order and every bee turn after its turn, in the order
+// of the personal times, and the run is the same as without them (the hooks read the world).
+func TestHooks(t *testing.T) {
+	const days = 150
+	// run runs the example farm, with hooks made by newHooks for its world if not nil.
+	run := func(newHooks func(w *ecs.World) *sys.Hooks) [][]float64 {
+		p := exampleFarm(t, 1)
+		p.Termination.MaxTicks = days
+		a := Default(p, nil)
+		if newHooks != nil {
+			ecs.AddResource(a.World, newHooks(a.World)) // after Default (it resets the app), before Initialize
+		}
+		out := &dailyRows{}
+		a.AddSystem(out)
+		a.Run()
+		return out.rows
+	}
+
+	var parts []string
+	turns, day, lastTime := 0, 0, 0.0
+	withHooks := run(func(w *ecs.World) *sys.Hooks {
+		bees := ecs.NewFilter1[comp.Bee](w)
+		return &sys.Hooks{
+			AfterPart: func(system, part string) {
+				if part == "tick" { // a new day
+					day++
+					lastTime = 0
+				}
+				if day == 1 {
+					parts = append(parts, system+"."+part)
+				}
+				q := bees.Query() // reading the world must not change the run
+				q.Count()
+				q.Close()
+			},
+			AfterTurn: func(bee ecs.Entity) {
+				turns++
+				daytime := ecs.GetResource[globals.Daytime](w).Time
+				if daytime < lastTime {
+					t.Fatalf("day %d: turn at %v after a turn at %v", day, daytime, lastTime)
+				}
+				lastTime = daytime
+				_ = w.Alive(bee)
+			},
+		}
+	})
+
+	want := []string{"Morning.tick", "Morning.calendarUpdate", "Morning.flowerRefill", "Morning.seasonalEvents",
+		"Morning.queenEmergence", "Morning.wakeUp", "Morning.cropRotation", "Morning.colonyUpdate",
+		"Morning.broodTotals", "Morning.larvaeNeeds", "Day.activities", "Day.nightRest", "Evening.queensLeavingNest",
+		"Evening.larvaeFeeding", "Evening.queenProductionDate", "Evening.development", "Evening.broodMortality",
+		"Evening.badgers", "Evening.extinction"}
+	if !slices.Equal(parts, want) {
+		t.Errorf("parts of day 1:\n%v\nwant\n%v", parts, want)
+	}
+	if day != days || turns == 0 {
+		t.Errorf("%d days, %d turns, want %d days and turns", day, turns, days)
+	}
+	if plain := run(nil); !reflect.DeepEqual(withHooks, plain) {
+		t.Error("the daily output with hooks differs from the one without")
 	}
 }

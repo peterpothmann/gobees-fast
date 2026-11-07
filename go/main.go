@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -29,6 +30,12 @@ type cli struct {
 	ListColumns bool     `help:"Print the columns of the daily output with a description and exit."`
 	Runs        *int     `placeholder:"N" help:"Number of runs (of each combination of the variations), 1 or more. The run i has the seed SEED + i - 1. Default: run.runs of the run file."`
 	Threads     *int     `placeholder:"T" help:"Number of runs at the same time, 1 or more (on a cluster: the CPUs of the job). It does not change the output. Default: run.threads of the run files, which must then be equal."`
+	UI          bool     `name:"ui" help:"Show the run in a window while it runs: map, daily plots, colonies, flower patches. The run, its output and run info are the same as without the window. One run only (one run file, runs 1, no variations). Closing the window ends the run on that day. On Linux only in a build with the tag ui: go run -tags ui . --ui"`
+
+	// for the window, not shown in --help
+	UIExplain    bool   `name:"ui-explain" hidden:"" help:"Open only the window that explains the model (started by the button of --ui)."`
+	UIScreenshot string `name:"ui-screenshot" type:"path" hidden:"" placeholder:"PATH" help:"With --ui: run to the end at once, save a screenshot of the window to PATH (PNG) and close it."`
+	UIShotTurns  int    `name:"ui-screenshot-turns" hidden:"" placeholder:"N" help:"With --ui-screenshot: stop after N bee turns of the last day and show the debug tab."`
 }
 
 // outputFile returns the daily output file of the flags, "" without output.
@@ -87,8 +94,14 @@ func (c *cli) run(w io.Writer) error {
 		listColumns(w)
 		return nil
 	}
+	if c.UIExplain {
+		return explainWindow()
+	}
 	if len(c.Columns) > 0 && c.outputFile() == "" {
 		return errors.New("--columns needs an output: add -o or -f")
+	}
+	if c.UIScreenshot != "" && !c.UI {
+		return errors.New("--ui-screenshot needs --ui")
 	}
 	started := time.Now()
 	configs := c.Config
@@ -110,8 +123,17 @@ func (c *cli) run(w io.Writer) error {
 	if err := outputFiles(c.outputFile(), experiments); err != nil {
 		return err
 	}
+	var watch watchFunc
+	if c.UI {
+		if err := checkWatch(experiments); err != nil {
+			return err
+		}
+		if watch, err = watcher(experiments[0].title(), c.UIScreenshot, c.UIShotTurns); err != nil {
+			return err
+		}
+	}
 
-	rs := runSet{threads: threads}
+	rs := runSet{threads: threads, watch: watch}
 	writers := make([]*outputWriter, len(experiments))
 	defer func() {
 		for _, o := range writers {
@@ -163,6 +185,24 @@ func (c *cli) run(w io.Writer) error {
 		e.summary(w, len(experiments) > 1, min(threads, len(rs.jobs)))
 	}
 	return nil
+}
+
+// checkWatch reports an error unless the experiments are one run: the window (--ui) shows one run.
+func checkWatch(experiments []*experiment) error {
+	e := experiments[0]
+	if len(experiments) > 1 || len(e.combinations) > 1 || e.runs > 1 {
+		return fmt.Errorf("--ui shows one run: one run file (-c), runs 1 (--runs 1), no variations; here %d run "+
+			"files, %d combinations, %d runs", len(experiments), len(e.combinations), e.runs)
+	}
+	return nil
+}
+
+// title names the run file of the experiment in the window.
+func (e *experiment) title() string {
+	if e.config == "" {
+		return "example farm"
+	}
+	return filepath.Base(e.config)
 }
 
 // summary writes the summary of the experiment to w. One run keeps the lines that the benchmark reads.

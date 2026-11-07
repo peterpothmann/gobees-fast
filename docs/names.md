@@ -165,6 +165,7 @@ F15c), `Landscape.Masterpatches`, `Ticks`, `ActiveBees`, `NestSites`.
 | Type | gobees | NetLogo | gobees-fast | Unit |
 | --- | --- | --- | --- | --- |
 | `Foodsource` | `Id_Beescout` | `id_Beescout` | `ID` |  |
+| `Foodsource` | `FlowerSpecies` (name) | `flowerSpecies` | `Flower` (index in `params.Input.Flowers`, -1 without flower species, read only by `ui`) |  |
 | `Foodsource` | `Area_sqm` | `area_sqm` | `Area` | [m2] |
 | `Foodsource` | `Radius_m` | `radius_m` | `Radius` | [m] |
 | `Foodsource` | `NectarMax_myl` | `nectarMax_myl` | `NectarMax` | [µl] |

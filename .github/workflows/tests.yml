@@ -2,7 +2,7 @@
 #
 #   - test: formatting, go vet and all Go tests of gobees-fast, incl. the comparisons of parts of the model with
 #     NetLogo (go/sys/validation_step*_test.go), and the same for the converter tools/netlogo2gobees, whose tests check
-#     that the run files in the repository are up to date.
+#     that the run files in the repository are up to date, and vet and tests of the window (build tag ui).
 #   - compare: at the same time, the check of the step (go/compare/run_compare.sh): every scenario of the full model
 #     against the previous step (reference commit), gobees and NetLogo, and the speed against gobees. It writes one
 #     comment with the results, in the pull request (updated on every run) and in the summary of the run, and the
@@ -69,6 +69,16 @@ jobs:
           fi
           go vet ./...
           go test -count=1 ./...
+
+      # The window of gobees --ui (go/ui and go/ui_on.go) is built on Linux only with the tag ui, which the steps
+      # above leave out. Ebitengine needs the X11 and OpenGL headers to build on Linux and a display for its tests, here a
+      # virtual one (xvfb-run).
+      - name: Window (-tags ui)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libc6-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev libasound2-dev pkg-config xvfb
+          go vet -tags ui ./...
+          xvfb-run go test -tags ui -short -count=1 . ./ui/
 
       - name: Summary of all tests
         if: always()

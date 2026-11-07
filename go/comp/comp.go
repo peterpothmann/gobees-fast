@@ -16,11 +16,12 @@ type Position struct {
 type Badger struct{}
 
 // Foodsource holds the static data of a foodsource layer: one flower species on one flower patch.
-// ID is read only by an error message.
+// ID is read only by an error message, Flower only by the user interface (ui).
 //
 // NetLogo: foodsources-own.
 type Foodsource struct {
 	ID                  float64    // column 1 of the foodsources file. NetLogo: id_Beescout
+	Flower              int        // index of the flower species in params.Input.Flowers, -1 for a flower patch without flower species (not split). NetLogo: flowerSpecies
 	PatchType           string     // habitat type, e.g. "Hedgerow"
 	Area                float64    // area of the whole flower patch [m2]. NetLogo: area_sqm
 	Radius              float64    // radius of a circle with this area [m]. NetLogo: radius_m

@@ -17,6 +17,7 @@ import (
 	"gobees/params"
 	"gobees/schedule"
 
+	"github.com/mlange-42/ark-tools/app"
 	"github.com/mlange-42/ark-tools/observer"
 	"github.com/mlange-42/ark/ecs"
 )
@@ -72,7 +73,12 @@ type job struct {
 type runSet struct {
 	jobs    []job
 	threads int
+	watch   watchFunc // runs each job in the window (--ui), nil: without window
 }
+
+// watchFunc runs the app a (set up, not initialized) in the window instead of a.Run (ui.Watch). counters is a system
+// of a.
+type watchFunc func(a *app.App, counters *obs.Counters) error
 
 // errSkipped is the result of a run that did not start because another run failed.
 var errSkipped = errors.New("not run")
@@ -98,7 +104,12 @@ func (rs runSet) one(i int) (res runResult) {
 		rows = &csvRows{observer: &obs.DailyOutputExtended{Columns: j.columns}, prefix: j.prefix}
 		a.AddSystem(rows)
 	}
-	a.Run()
+	if rs.watch == nil {
+		a.Run()
+	} else if err := rs.watch(a, &counters); err != nil {
+		res.err = fmt.Errorf("%s: %w", j.label, err)
+		return res
+	}
 
 	res.species = fmt.Sprint(ecs.GetResource[params.Derived](a.World).InitialQueens)
 	res.founded = counters.TotalColoniesEverProduced
@@ -116,6 +127,19 @@ func (rs runSet) one(i int) (res runResult) {
 // started are skipped, running ones finish.
 func (rs runSet) run(done func(i int, r runResult) error) error {
 	n := len(rs.jobs)
+	if rs.watch != nil { // the window needs the main goroutine: the runs one after the other in this one
+		for i := range n {
+			r := rs.one(i)
+			err := r.err
+			if err == nil {
+				err = done(i, r)
+			}
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
 	results := make([]chan runResult, n)
 	for i := range results {
 		results[i] = make(chan runResult, 1)
