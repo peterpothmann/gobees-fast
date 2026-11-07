@@ -39,6 +39,7 @@ func Convert(dir, path, mapName string) (Converted, error) {
 
 func convert(dir string, file *netLogoParameters, mapName string) (Converted, error) {
 	c := input.Config{Parameters: file.ParameterFile}
+	c.Output.KeepDeadColonies = file.KeepDeadColonies // step F13
 
 	// [PAR-01], [QINI]
 	queens, _, err := QueensInitialProc(file.BeeSpeciesInitialQueensListAsString)

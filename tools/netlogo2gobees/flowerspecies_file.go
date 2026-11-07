@@ -10,6 +10,7 @@ import (
 
 // parseFlowerspeciesFile reads the FlowerspeciesFile [LAYR-02].
 // The names are stored as """Name""" in the file; read-from-string turns them into plain strings.
+// The column proteinPollenProp is not read: NetLogo never reads its value (removed in step F13).
 func parseFlowerspeciesFile(r io.Reader) (params.FlowerSpeciesTable, error) {
 	t, err := readCSVTable(r)
 	if err != nil {
@@ -32,7 +33,6 @@ func parseFlowerspeciesFile(r io.Reader) (params.FlowerSpeciesTable, error) {
 		}{
 			{"pollen_g/flower", &d.Pollen_g_per_flower},
 			{"nectar_ml/flower", &d.Nectar_ml_per_flower},
-			{"proteinPollenProp", &d.ProteinPollenProp},
 			{"concentration_mol/l", &d.Concentration_mol_per_l},
 			{"corollaDepth_mm", &d.CorollaDepth_mm},
 			{"intFlowerTime_s", &d.IntFlowerTime_s},

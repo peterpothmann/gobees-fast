@@ -35,6 +35,7 @@ type Params struct {
 	Seed        int64 // Random seed (RAND_SEED). 0 means a random seed [INIT-01].
 	World       World
 	File        ParameterFile // The parameters of the run file, read with input.Load [INIT-04].
+	Output      Output        // The output options of the run file (step F13).
 	Input       Input         // The other content of the run file and its landscape files, read with input.Load.
 	Constants   Constants
 	Termination Termination
@@ -68,6 +69,7 @@ func (p *Params) Apply(w *ecs.World) {
 	pCopy := *p
 	ecs.AddResource(w, &pCopy.World)
 	ecs.AddResource(w, &pCopy.File)
+	ecs.AddResource(w, &pCopy.Output)
 	ecs.AddResource(w, &pCopy.Input)
 	ecs.AddResource(w, &pCopy.Constants)
 	ecs.AddResource(w, &pCopy.Termination)

@@ -81,11 +81,12 @@ A run file has these sections. Keys of NetLogo values keep their NetLogo names, 
 | Key                   | Content                                                                 | NetLogo                                |
 | --------------------- | ----------------------------------------------------------------------- | -------------------------------------- |
 | `parameters`          | the model parameters                                                    | the columns of the parameter file      |
+| `output`              | output options (`KeepDeadColonies?`), change no model value             | `KeepDeadColonies?`                    |
 | `initial_queens`      | species and number of initial queens                                    | `BeeSpeciesInitialQueensListAsString`  |
 | `foraging_period_s`   | foraging period in seconds, 365 values per year, one or more years, the years repeat | `Weather`                 |
 | `stewardship_options` | names of the stewardship options                                        | from the `HabitatsFile`                |
-| `species`             | bee species (only those of `initial_queens` are used)                   | rows of the `BeespeciesFile`           |
-| `flowers`             | flower species, without the key no flower values                        | rows of the `FlowerspeciesFile`        |
+| `species`             | bee species, found by `name` (only those of `initial_queens` are used), `parasitic: true` for a cuckoo bumblebee | rows of the `BeespeciesFile` (columns `species` = `name`, Psithyrus by its name) |
+| `flowers`             | flower species, without the key no flower values                        | rows of the `FlowerspeciesFile` (without `proteinPollenProp`) |
 | `landscape`           | landscape file of the start                                             | foodsources file of `MyMap`            |
 | `crop_rotation`       | landscape files of the crop rotation (fewer than 2: none)               | `CropRotationListAsString`             |
 
@@ -111,7 +112,9 @@ go run . generate   # the run files of the repository: example farm and the scen
 weather file in the folder of the NetLogo files: a CSV table with the columns `Day` (1 to 365) and `ForagingPeriod_s`
 (0 to 86400), and optionally `Year` (1, 2, ...). NetLogo's example year `"foragingHoursExample"`, a list in the NetLogo
 code, is the file [netlogo/_SYSTEM_Weather_foragingHoursExample.csv](netlogo/_SYSTEM_Weather_foragingHoursExample.csv).
-A missing parameter file is an error (NetLogo loads `_SYSTEM_Parameters.csv` instead). The tests of the converter check
+A missing parameter file is an error (NetLogo loads `_SYSTEM_Parameters.csv` instead). Also an error: `COLONIES_IBM`
+other than 0, `MapAreaIncluded` other than `"complete"` (a part of a map is its own landscape file), and a species row
+whose columns `species` and `name` differ. The tests of the converter check
 that the run files of the repository are the conversion of the NetLogo files.
 
 The daily output can be written to a tab-separated file. It holds the totals of `OutputDailyProc` (colonies, queens, males, mean weights, ...), followed by brood, workers, stores, foraging trips, forager deaths, queens produced and the mean competition point date (`obs.DailyOutputExtended`). The CSV reporter of ark-tools adds one row at the end of every tick. Its first column `t` counts from 0, the column `ticks` holds the NetLogo ticks (1 on the first day). The totals of `OutputDailyProc` keep their NetLogo names.

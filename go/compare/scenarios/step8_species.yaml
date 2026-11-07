@@ -4,9 +4,7 @@ parameters:
   ForagingMortalityFactor: 1
   ForagingMortalityModel: high
   InitialQueensModifierBehaviorSpace: 1
-  KeepDeadColonies?: true
   Lambda_detectProb: -0.005
-  MapAreaIncluded: complete
   MaxHibernatingQueens: 10000
   MergeHedges?: true
   MinSizeFoodSources?: true
@@ -16,6 +14,8 @@ parameters:
   StopExtinct?: false
   UnlimitedMales?: true
   WinterMortality?: true
+output:
+  KeepDeadColonies?: true
 initial_queens:
   - species: B_terrestris
     queens: 150
@@ -41,8 +41,7 @@ stewardship_options:
   - GameCover_Plot
   - Plot
 species:
-  - species: B_terrestris
-    name: B_terrestris
+  - name: B_terrestris
     emergingDay_mean: 91
     emergingDay_sd: 28
     nestHabitatsList:
@@ -77,8 +76,7 @@ species:
     devWeight_Q_PupationMax_mg: 980
     devAge_Q_EmergingMin_d: 32
     dailyNestSiteChance: 0.2
-  - species: B_pascuorum
-    name: B_pascuorum
+  - name: B_pascuorum
     emergingDay_mean: 136
     emergingDay_sd: 14.5
     nestHabitatsList:
@@ -113,8 +111,7 @@ species:
     devWeight_Q_PupationMax_mg: 461
     devAge_Q_EmergingMin_d: 32
     dailyNestSiteChance: 0.2
-  - species: B_lapidarius
-    name: B_lapidarius
+  - name: B_lapidarius
     emergingDay_mean: 143
     emergingDay_sd: 20.5
     nestHabitatsList:
@@ -149,8 +146,7 @@ species:
     devWeight_Q_PupationMax_mg: 850
     devAge_Q_EmergingMin_d: 32
     dailyNestSiteChance: 0.2
-  - species: B_hortorum
-    name: B_hortorum
+  - name: B_hortorum
     emergingDay_mean: 120
     emergingDay_sd: 8
     nestHabitatsList:
@@ -185,8 +181,7 @@ species:
     devWeight_Q_PupationMax_mg: 751
     devAge_Q_EmergingMin_d: 32
     dailyNestSiteChance: 0.2
-  - species: B_pratorum
-    name: B_pratorum
+  - name: B_pratorum
     emergingDay_mean: 110
     emergingDay_sd: 30.5
     nestHabitatsList:
@@ -220,8 +215,7 @@ species:
     devWeight_Q_PupationMax_mg: 491
     devAge_Q_EmergingMin_d: 32
     dailyNestSiteChance: 0.2
-  - species: B_hypnorum
-    name: B_hypnorum
+  - name: B_hypnorum
     emergingDay_mean: 100
     emergingDay_sd: 10
     nestHabitatsList:
@@ -255,8 +249,8 @@ species:
     devWeight_Q_PupationMax_mg: 410
     devAge_Q_EmergingMin_d: 32
     dailyNestSiteChance: 0.2
-  - species: Psithyrus
-    name: Psithyrus
+  - name: Psithyrus
+    parasitic: true
     emergingDay_mean: 120
     emergingDay_sd: 15
     nestHabitatsList:
@@ -295,7 +289,6 @@ flowers:
   - Flowerspecies: Alsike_clover
     pollen_g/flower: 0.0005
     nectar_ml/flower: 0.00046
-    proteinPollenProp: 0.2
     concentration_mol/l: 0.7
     startDay: 181
     stopDay: 242
@@ -304,7 +297,6 @@ flowers:
   - Flowerspecies: American_willowherb
     pollen_g/flower: 2e-05
     nectar_ml/flower: 0.00035
-    proteinPollenProp: 0.2
     concentration_mol/l: 1.34
     startDay: 152
     stopDay: 243
@@ -313,7 +305,6 @@ flowers:
   - Flowerspecies: Average_Willow
     pollen_g/flower: 0.01
     nectar_ml/flower: 0.00261
-    proteinPollenProp: 0.25
     concentration_mol/l: 1.13
     startDay: 59
     stopDay: 119
@@ -322,7 +313,6 @@ flowers:
   - Flowerspecies: Bell_heather
     pollen_g/flower: 0.00073
     nectar_ml/flower: 0.0002
-    proteinPollenProp: 0.018285
     concentration_mol/l: 1.17
     startDay: 121
     stopDay: 334
@@ -331,7 +321,6 @@ flowers:
   - Flowerspecies: Birdsfoot_trefoil
     pollen_g/flower: 0.00036
     nectar_ml/flower: 0.00035
-    proteinPollenProp: 0.31
     concentration_mol/l: 0.96
     startDay: 120
     stopDay: 303
@@ -340,7 +329,6 @@ flowers:
   - Flowerspecies: Blackthorn
     pollen_g/flower: 0.00014
     nectar_ml/flower: 9e-05
-    proteinPollenProp: 0.23
     concentration_mol/l: 0.77
     startDay: 59
     stopDay: 150
@@ -349,7 +337,6 @@ flowers:
   - Flowerspecies: Bramble
     pollen_g/flower: 0.00048
     nectar_ml/flower: 0.00682
-    proteinPollenProp: 0.21
     concentration_mol/l: 0.5
     startDay: 120
     stopDay: 272
@@ -358,7 +345,6 @@ flowers:
   - Flowerspecies: Buckwheat
     pollen_g/flower: 8e-05
     nectar_ml/flower: 0.00011
-    proteinPollenProp: 0.11
     concentration_mol/l: 1.33
     startDay: 162
     stopDay: 222
@@ -367,7 +353,6 @@ flowers:
   - Flowerspecies: Bugle
     pollen_g/flower: 0.00065
     nectar_ml/flower: 0.00044
-    proteinPollenProp: 0.14
     concentration_mol/l: 0.67
     startDay: 120
     stopDay: 211
@@ -376,7 +361,6 @@ flowers:
   - Flowerspecies: Burdock
     pollen_g/flower: 0.00043
     nectar_ml/flower: 0.00229
-    proteinPollenProp: 0.11
     concentration_mol/l: 0.88
     startDay: 181
     stopDay: 272
@@ -385,7 +369,6 @@ flowers:
   - Flowerspecies: Buttercup
     pollen_g/flower: 0.00077
     nectar_ml/flower: 0.0002
-    proteinPollenProp: 0.12
     concentration_mol/l: 0.71
     startDay: 120
     stopDay: 303
@@ -394,7 +377,6 @@ flowers:
   - Flowerspecies: Charlock
     pollen_g/flower: 0.00026
     nectar_ml/flower: 1e-05
-    proteinPollenProp: 0.24
     concentration_mol/l: 1.74
     startDay: 121
     stopDay: 212
@@ -403,7 +385,6 @@ flowers:
   - Flowerspecies: Chicory
     pollen_g/flower: 0.00086
     nectar_ml/flower: 0.00184
-    proteinPollenProp: 0.13
     concentration_mol/l: 1.74
     startDay: 172
     stopDay: 256
@@ -412,7 +393,6 @@ flowers:
   - Flowerspecies: Comfrey
     pollen_g/flower: 0.00095
     nectar_ml/flower: 0.00432
-    proteinPollenProp: 0.17
     concentration_mol/l: 0.98
     startDay: 120
     stopDay: 211
@@ -421,7 +401,6 @@ flowers:
   - Flowerspecies: Common_bluebell
     pollen_g/flower: 0.00188
     nectar_ml/flower: 0
-    proteinPollenProp: 0.36
     concentration_mol/l: 0
     startDay: 90
     stopDay: 180
@@ -430,7 +409,6 @@ flowers:
   - Flowerspecies: Common_cats_ear
     pollen_g/flower: 0.43
     nectar_ml/flower: 0.00309
-    proteinPollenProp: 0.15
     concentration_mol/l: 1.74
     startDay: 152
     stopDay: 273
@@ -439,7 +417,6 @@ flowers:
   - Flowerspecies: Common_field_speedwell
     pollen_g/flower: 3e-05
     nectar_ml/flower: 0.00049
-    proteinPollenProp: 0.08
     concentration_mol/l: 0.1
     startDay: 1
     stopDay: 365
@@ -448,7 +425,6 @@ flowers:
   - Flowerspecies: Common_fumitory
     pollen_g/flower: 0
     nectar_ml/flower: 3e-05
-    proteinPollenProp: 0.24
     concentration_mol/l: 1.83
     startDay: 121
     stopDay: 304
@@ -457,7 +433,6 @@ flowers:
   - Flowerspecies: Common_knapweed
     pollen_g/flower: 0.00239
     nectar_ml/flower: 0.00229
-    proteinPollenProp: 0.21
     concentration_mol/l: 1.54
     startDay: 151
     stopDay: 272
@@ -466,7 +441,6 @@ flowers:
   - Flowerspecies: Common_mouse_ear
     pollen_g/flower: 0.01
     nectar_ml/flower: 3e-05
-    proteinPollenProp: 0.1
     concentration_mol/l: 1.55
     startDay: 91
     stopDay: 273
@@ -475,7 +449,6 @@ flowers:
   - Flowerspecies: Common_vetch
     pollen_g/flower: 0.00038
     nectar_ml/flower: 0.00086
-    proteinPollenProp: 0.42
     concentration_mol/l: 0.81
     startDay: 120
     stopDay: 272
@@ -484,7 +457,6 @@ flowers:
   - Flowerspecies: Creeping_buttercup
     pollen_g/flower: 0.00043
     nectar_ml/flower: 0.00035
-    proteinPollenProp: 0.1
     concentration_mol/l: 0.85
     startDay: 121
     stopDay: 304
@@ -493,7 +465,6 @@ flowers:
   - Flowerspecies: Crop_Apple
     pollen_g/flower: 0.0017
     nectar_ml/flower: 0.0006
-    proteinPollenProp: 0.23
     concentration_mol/l: 0.39
     startDay: 97
     stopDay: 125
@@ -502,7 +473,6 @@ flowers:
   - Flowerspecies: Crop_Cereals
     pollen_g/flower: 0
     nectar_ml/flower: 0
-    proteinPollenProp: 0
     concentration_mol/l: 0
     startDay: 0
     stopDay: 0
@@ -511,7 +481,6 @@ flowers:
   - Flowerspecies: Crop_Field_beans
     pollen_g/flower: 0.00065
     nectar_ml/flower: 0.00086
-    proteinPollenProp: 0.2
     concentration_mol/l: 1.28
     startDay: 153
     stopDay: 182
@@ -520,7 +489,6 @@ flowers:
   - Flowerspecies: Crop_Maize
     pollen_g/flower: 0.03
     nectar_ml/flower: 0
-    proteinPollenProp: 0.2
     concentration_mol/l: 0
     startDay: 197
     stopDay: 210
@@ -529,7 +497,6 @@ flowers:
   - Flowerspecies: Crop_Oilseed_rape
     pollen_g/flower: 0.00024
     nectar_ml/flower: 0.00055
-    proteinPollenProp: 0.2
     concentration_mol/l: 1.5
     startDay: 114
     stopDay: 136
@@ -538,7 +505,6 @@ flowers:
   - Flowerspecies: Cross_leaved_heath
     pollen_g/flower: 0.003
     nectar_ml/flower: 0.0002
-    proteinPollenProp: 0.31
     concentration_mol/l: 1.17
     startDay: 152
     stopDay: 273
@@ -547,7 +513,6 @@ flowers:
   - Flowerspecies: Daisy
     pollen_g/flower: 0.22
     nectar_ml/flower: 0.00012
-    proteinPollenProp: 0.1
     concentration_mol/l: 1.74
     startDay: 1
     stopDay: 365
@@ -556,7 +521,6 @@ flowers:
   - Flowerspecies: Dandelion
     pollen_g/flower: 0.00122
     nectar_ml/flower: 0.00154
-    proteinPollenProp: 0.09
     concentration_mol/l: 1.07
     startDay: 1
     stopDay: 364
@@ -565,7 +529,6 @@ flowers:
   - Flowerspecies: Dog_rose
     pollen_g/flower: 0.00067
     nectar_ml/flower: 0
-    proteinPollenProp: 0.11
     concentration_mol/l: 0
     startDay: 151
     stopDay: 211
@@ -574,7 +537,6 @@ flowers:
   - Flowerspecies: Field_pansy
     pollen_g/flower: 0.00097
     nectar_ml/flower: 0.00018
-    proteinPollenProp: 0.17
     concentration_mol/l: 0.88
     startDay: 91
     stopDay: 304
@@ -583,7 +545,6 @@ flowers:
   - Flowerspecies: Field_scabious
     pollen_g/flower: 0.00488
     nectar_ml/flower: 0.0015
-    proteinPollenProp: 0.13
     concentration_mol/l: 0.25
     startDay: 181
     stopDay: 272
@@ -592,7 +553,6 @@ flowers:
   - Flowerspecies: Field_woundwort
     pollen_g/flower: 0.0008
     nectar_ml/flower: 0.00087
-    proteinPollenProp: 0.14
     concentration_mol/l: 1.04
     startDay: 91
     stopDay: 334
@@ -601,7 +561,6 @@ flowers:
   - Flowerspecies: Foxglove
     pollen_g/flower: 0.02
     nectar_ml/flower: 0.00163
-    proteinPollenProp: 0.21
     concentration_mol/l: 0.82
     startDay: 151
     stopDay: 272
@@ -610,7 +569,6 @@ flowers:
   - Flowerspecies: Germander_speedwell
     pollen_g/flower: 0.00164
     nectar_ml/flower: 0.00033
-    proteinPollenProp: 0.08
     concentration_mol/l: 0.1
     startDay: 60
     stopDay: 212
@@ -619,7 +577,6 @@ flowers:
   - Flowerspecies: Giant_bindweed
     pollen_g/flower: 0.00091
     nectar_ml/flower: 0.00995
-    proteinPollenProp: 0.26
     concentration_mol/l: 0.66
     startDay: 181
     stopDay: 272
@@ -628,7 +585,6 @@ flowers:
   - Flowerspecies: Gorse
     pollen_g/flower: 0.00411
     nectar_ml/flower: 2e-05
-    proteinPollenProp: 0.22
     concentration_mol/l: 1.74
     startDay: 60
     stopDay: 273
@@ -637,7 +593,6 @@ flowers:
   - Flowerspecies: Greater_birdsfoot_trefoil
     pollen_g/flower: 0.00098
     nectar_ml/flower: 0.00015
-    proteinPollenProp: 0.35
     concentration_mol/l: 0.69
     startDay: 152
     stopDay: 243
@@ -646,7 +601,6 @@ flowers:
   - Flowerspecies: Greater_knapweed
     pollen_g/flower: 0.0024
     nectar_ml/flower: 0
-    proteinPollenProp: 0.26
     concentration_mol/l: 0
     startDay: 181
     stopDay: 272
@@ -655,7 +609,6 @@ flowers:
   - Flowerspecies: Ground_ivy
     pollen_g/flower: 0.00046
     nectar_ml/flower: 0.00105
-    proteinPollenProp: 0.16
     concentration_mol/l: 1.01
     startDay: 59
     stopDay: 150
@@ -664,7 +617,6 @@ flowers:
   - Flowerspecies: Hawthorn
     pollen_g/flower: 0.00016
     nectar_ml/flower: 0.00188
-    proteinPollenProp: 0.15
     concentration_mol/l: 1.02
     startDay: 120
     stopDay: 180
@@ -673,7 +625,6 @@ flowers:
   - Flowerspecies: Heath_speedwell
     pollen_g/flower: 0.03
     nectar_ml/flower: 3e-05
-    proteinPollenProp: 0.2
     concentration_mol/l: 1.37
     startDay: 121
     stopDay: 304
@@ -682,7 +633,6 @@ flowers:
   - Flowerspecies: Hedge_bindweed
     pollen_g/flower: 0.01
     nectar_ml/flower: 0.00715
-    proteinPollenProp: 0.13
     concentration_mol/l: 1.4
     startDay: 182
     stopDay: 273
@@ -691,7 +641,6 @@ flowers:
   - Flowerspecies: Hedge_woundwort
     pollen_g/flower: 0.0008
     nectar_ml/flower: 0.00146
-    proteinPollenProp: 0.19
     concentration_mol/l: 1.04
     startDay: 181
     stopDay: 242
@@ -700,7 +649,6 @@ flowers:
   - Flowerspecies: Ling
     pollen_g/flower: 0
     nectar_ml/flower: 0.0001
-    proteinPollenProp: 0.18
     concentration_mol/l: 1.17
     startDay: 182
     stopDay: 273
@@ -709,7 +657,6 @@ flowers:
   - Flowerspecies: Marsh_thistle
     pollen_g/flower: 0.00505
     nectar_ml/flower: 0.00064
-    proteinPollenProp: 0.14
     concentration_mol/l: 0.89
     startDay: 181
     stopDay: 272
@@ -718,7 +665,6 @@ flowers:
   - Flowerspecies: Meadow_buttercup
     pollen_g/flower: 0.0003
     nectar_ml/flower: 0.00026
-    proteinPollenProp: 0.17
     concentration_mol/l: 0.94
     startDay: 121
     stopDay: 304
@@ -727,7 +673,6 @@ flowers:
   - Flowerspecies: Meadowsweet
     pollen_g/flower: 0.0077
     nectar_ml/flower: 0
-    proteinPollenProp: 0.19
     concentration_mol/l: 1.74
     startDay: 152
     stopDay: 273
@@ -736,7 +681,6 @@ flowers:
   - Flowerspecies: Oilseed_rape
     pollen_g/flower: 0.00151
     nectar_ml/flower: 0.01
-    proteinPollenProp: 0.21
     concentration_mol/l: 1.41
     startDay: 120
     stopDay: 242
@@ -745,7 +689,6 @@ flowers:
   - Flowerspecies: Ox-eye_daisy
     pollen_g/flower: 0.00122
     nectar_ml/flower: 0.00086
-    proteinPollenProp: 0.18
     concentration_mol/l: 1.74
     startDay: 152
     stopDay: 243
@@ -754,7 +697,6 @@ flowers:
   - Flowerspecies: Phacelia
     pollen_g/flower: 0.00047
     nectar_ml/flower: 0.00028
-    proteinPollenProp: 0.3
     concentration_mol/l: 1.64
     startDay: 152
     stopDay: 243
@@ -763,7 +705,6 @@ flowers:
   - Flowerspecies: Prickly_sow_thistle
     pollen_g/flower: 0.00045
     nectar_ml/flower: 0.00183
-    proteinPollenProp: 0.24
     concentration_mol/l: 0.94
     startDay: 152
     stopDay: 243
@@ -772,7 +713,6 @@ flowers:
   - Flowerspecies: Ragwort
     pollen_g/flower: 0.00017
     nectar_ml/flower: 0
-    proteinPollenProp: 0.15
     concentration_mol/l: 0
     startDay: 151
     stopDay: 303
@@ -781,7 +721,6 @@ flowers:
   - Flowerspecies: Red_campion
     pollen_g/flower: 0.0004
     nectar_ml/flower: 0.00335
-    proteinPollenProp: 0.15
     concentration_mol/l: 2.35
     startDay: 91
     stopDay: 273
@@ -790,7 +729,6 @@ flowers:
   - Flowerspecies: Red_clover
     pollen_g/flower: 0.00018
     nectar_ml/flower: 0.00032
-    proteinPollenProp: 0.26
     concentration_mol/l: 0.97
     startDay: 120
     stopDay: 272
@@ -799,7 +737,6 @@ flowers:
   - Flowerspecies: Red_dead_nettle
     pollen_g/flower: 0.00024
     nectar_ml/flower: 0.00282
-    proteinPollenProp: 0.14
     concentration_mol/l: 1.37
     startDay: 59
     stopDay: 303
@@ -808,7 +745,6 @@ flowers:
   - Flowerspecies: Redshank
     pollen_g/flower: 0
     nectar_ml/flower: 6e-05
-    proteinPollenProp: 0.24
     concentration_mol/l: 1.74
     startDay: 121
     stopDay: 304
@@ -817,7 +753,6 @@ flowers:
   - Flowerspecies: Ribwort_plantain
     pollen_g/flower: 7e-05
     nectar_ml/flower: 0
-    proteinPollenProp: 0.17
     concentration_mol/l: 0.87
     startDay: 91
     stopDay: 304
@@ -826,7 +761,6 @@ flowers:
   - Flowerspecies: Rosebay_willowherb
     pollen_g/flower: 0.00612
     nectar_ml/flower: 0.00024
-    proteinPollenProp: 0.15
     concentration_mol/l: 0.87
     startDay: 181
     stopDay: 272
@@ -835,7 +769,6 @@ flowers:
   - Flowerspecies: Salad_burnet
     pollen_g/flower: 0
     nectar_ml/flower: 0.00011
-    proteinPollenProp: 0
     concentration_mol/l: 0
     startDay: 121
     stopDay: 243
@@ -844,7 +777,6 @@ flowers:
   - Flowerspecies: Scarlet_pimpernel
     pollen_g/flower: 0.00019
     nectar_ml/flower: 0
-    proteinPollenProp: 0.19
     concentration_mol/l: 0
     startDay: 152
     stopDay: 243
@@ -853,7 +785,6 @@ flowers:
   - Flowerspecies: Selfheal
     pollen_g/flower: 0.00019
     nectar_ml/flower: 0.00039
-    proteinPollenProp: 0.2
     concentration_mol/l: 0.87
     startDay: 151
     stopDay: 272
@@ -862,7 +793,6 @@ flowers:
   - Flowerspecies: Silverweed
     pollen_g/flower: 0.00053
     nectar_ml/flower: 1e-05
-    proteinPollenProp: 0.12
     concentration_mol/l: 2.17
     startDay: 152
     stopDay: 243
@@ -871,7 +801,6 @@ flowers:
   - Flowerspecies: Smooth_hawksbeard
     pollen_g/flower: 0.00017
     nectar_ml/flower: 1e-05
-    proteinPollenProp: 0.1
     concentration_mol/l: 1.34
     startDay: 152
     stopDay: 273
@@ -880,7 +809,6 @@ flowers:
   - Flowerspecies: Spear_thistle
     pollen_g/flower: 0.00254
     nectar_ml/flower: 0.00306
-    proteinPollenProp: 0.18
     concentration_mol/l: 1.51
     startDay: 151
     stopDay: 303
@@ -889,7 +817,6 @@ flowers:
   - Flowerspecies: St_Johns_wort
     pollen_g/flower: 0.0005
     nectar_ml/flower: 0
-    proteinPollenProp: 0.13
     concentration_mol/l: 0
     startDay: 151
     stopDay: 272
@@ -898,7 +825,6 @@ flowers:
   - Flowerspecies: Sunflower
     pollen_g/flower: 0.35
     nectar_ml/flower: 0.02
-    proteinPollenProp: 0.15
     concentration_mol/l: 0.7
     startDay: 237
     stopDay: 264
@@ -907,7 +833,6 @@ flowers:
   - Flowerspecies: Tormentil
     pollen_g/flower: 0.00395
     nectar_ml/flower: 4e-05
-    proteinPollenProp: 0.16
     concentration_mol/l: 2.17
     startDay: 152
     stopDay: 273
@@ -916,7 +841,6 @@ flowers:
   - Flowerspecies: Tufted_vetch
     pollen_g/flower: 0.00044
     nectar_ml/flower: 0.0007
-    proteinPollenProp: 0.12
     concentration_mol/l: 0.61
     startDay: 151
     stopDay: 242
@@ -925,7 +849,6 @@ flowers:
   - Flowerspecies: Vipers_bugloss
     pollen_g/flower: 0.00071
     nectar_ml/flower: 0.00104
-    proteinPollenProp: 0.26
     concentration_mol/l: 1.2
     startDay: 151
     stopDay: 272
@@ -934,7 +857,6 @@ flowers:
   - Flowerspecies: White_clover
     pollen_g/flower: 0.00014
     nectar_ml/flower: 0.00038
-    proteinPollenProp: 0.29
     concentration_mol/l: 0.97
     startDay: 151
     stopDay: 272
@@ -943,7 +865,6 @@ flowers:
   - Flowerspecies: White_dead_nettle
     pollen_g/flower: 0.0007
     nectar_ml/flower: 0.00217
-    proteinPollenProp: 0.21
     concentration_mol/l: 0.75
     startDay: 120
     stopDay: 364
@@ -952,7 +873,6 @@ flowers:
   - Flowerspecies: White_mustard
     pollen_g/flower: 0.00019
     nectar_ml/flower: 0.00061
-    proteinPollenProp: 0.24
     concentration_mol/l: 0.9
     startDay: 152
     stopDay: 243
@@ -961,7 +881,6 @@ flowers:
   - Flowerspecies: Wild_carrot
     pollen_g/flower: 2e-05
     nectar_ml/flower: 2e-05
-    proteinPollenProp: 0.16
     concentration_mol/l: 0.88
     startDay: 152
     stopDay: 243
@@ -970,7 +889,6 @@ flowers:
   - Flowerspecies: Wild_radish
     pollen_g/flower: 0.0007
     nectar_ml/flower: 0.00016
-    proteinPollenProp: 0.24
     concentration_mol/l: 2.24
     startDay: 121
     stopDay: 277
@@ -979,7 +897,6 @@ flowers:
   - Flowerspecies: Wild_teasel
     pollen_g/flower: 0.01
     nectar_ml/flower: 0.00976
-    proteinPollenProp: 0.17
     concentration_mol/l: 1.08
     startDay: 181
     stopDay: 242
@@ -988,7 +905,6 @@ flowers:
   - Flowerspecies: Yarrow
     pollen_g/flower: 0.00019
     nectar_ml/flower: 3e-05
-    proteinPollenProp: 0.08
     concentration_mol/l: 1.79
     startDay: 152
     stopDay: 243
@@ -997,7 +913,6 @@ flowers:
   - Flowerspecies: Yellow_rattle
     pollen_g/flower: 0.01
     nectar_ml/flower: 0.00025
-    proteinPollenProp: 0.2
     concentration_mol/l: 0.917323
     startDay: 121
     stopDay: 243

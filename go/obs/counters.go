@@ -33,7 +33,7 @@ type Counters struct {
 	// it every morning in CheckNumbersProc [CHK-02]).
 	TotalForagingTripsToday float64
 	// DeadColonies is the number of dead colonies that NetLogo keeps as deadCols [DIE-02]: since the last 1 January,
-	// or since the start with KeepDeadColonies? [UCOL-12].
+	// or since the start with the output option KeepDeadColonies? [UCOL-12] (params.Output, step F13).
 	DeadColonies int
 	// TimeToExtinction is the ticks of the first day without colonies and bees, 0 before [GO-20].
 	TimeToExtinction float64
@@ -41,6 +41,7 @@ type Counters struct {
 	ticks    *globals.Ticks
 	calendar *globals.Calendar
 	file     *params.ParameterFile
+	output   *params.Output
 
 	beeFilter    *ecs.Filter1[comp.Bee]
 	colonyFilter *ecs.Filter1[comp.Colony]
@@ -54,6 +55,7 @@ func (c *Counters) Initialize(w *ecs.World) {
 	c.ticks = ecs.GetResource[globals.Ticks](w)
 	c.calendar = ecs.GetResource[globals.Calendar](w)
 	c.file = ecs.GetResource[params.ParameterFile](w)
+	c.output = ecs.GetResource[params.Output](w)
 	c.beeFilter = ecs.NewFilter1[comp.Bee](w)
 	c.colonyFilter = ecs.NewFilter1[comp.Colony](w)
 
@@ -83,7 +85,7 @@ func (c *Counters) Update(w *ecs.World) {
 	c.TotalForagingTripsToday, c.tripsToday = c.tripsToday, 0
 
 	// [UCOL-12] UpdateColonies removes the dead colonies on day 1 after the colonies of that day have died
-	if c.calendar.Day == 1 && !c.file.KeepDeadColonies {
+	if c.calendar.Day == 1 && !c.output.KeepDeadColonies {
 		c.DeadColonies = 0
 	} else {
 		c.DeadColonies += c.deadColoniesToday

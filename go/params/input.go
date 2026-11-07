@@ -61,7 +61,6 @@ type FlowerSpecies struct {
 	Name                    string     `yaml:"Flowerspecies"`
 	Pollen_g_per_flower     float64    `yaml:"pollen_g/flower"`
 	Nectar_ml_per_flower    float64    `yaml:"nectar_ml/flower"`
-	ProteinPollenProp       float64    `yaml:"proteinPollenProp"`
 	Concentration_mol_per_l float64    `yaml:"concentration_mol/l"`
 	StartDay                day.OfYear `yaml:"startDay"`
 	StopDay                 day.OfYear `yaml:"stopDay"`
