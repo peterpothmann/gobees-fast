@@ -6,255 +6,127 @@
 
 </div>
 
-`gobees-fast` is the optimized version of [gobees](https://github.com/peterpothmann/gobees), a port of [BEE-STEWARD](https://beehave-model.net/bee-steward-is-published/) ([Twiston-Davies et al. 2021](#ref-twiston-davies2021)) from `NetLogo` to `Go`, built on the [Ark](https://github.com/mlange-42/ark) entity component system. `BEE-STEWARD` is a research and decision support tool for land management that promotes bumblebee populations. It combines the bumblebee population model [Bumble-BEEHAVE](https://beehave-model.net/category/bumblebeehave/) ([Becher et al. 2018](#ref-becher2018)) with the landscape module [BEESCOUT](https://beehave-model.net/category/beescout/) ([Becher et al. 2016](#ref-becher2016)). It simulates colonies of six *Bombus* species and the cuckoo bumblebee *Psithyrus*, from queen emergence through foraging and brood rearing to hibernation, over several years. The bees forage in a nectar and pollen landscape built from maps, with the flowering period of each plant species. Agri-environment schemes, such as flower strips, and crop rotations can be applied to selected fields.
+`gobees-fast` is a fast version of the bumblebee model [BEE-STEWARD](https://beehave-model.net/bee-steward-is-published/) ([Twiston-Davies et al. 2021](#ref-twiston-davies2021)) in Go, built on the [Ark](https://github.com/mlange-42/ark) entity component system. It started as a copy of [gobees](https://github.com/peterpothmann/gobees), the faithful port of the NetLogo model, and is simplified step by step.
 
-All credit for the scientific model, its development, and parameterisation belongs to the original authors and contributors of `BEE-STEWARD` and its component models.
-
-> [!NOTE]
-> gobees-fast is at its first step: apart from a longer daily output and the comparisons in [go/compare](go/compare/README.md), it is still the code of gobees (commit `40dc301`). The rest of this README describes gobees.
-
-A graphical interface for gobees is available in [gobees-ui](https://github.com/peterpothmann/gobees-ui). It shows the landscape, the flowering calendar and the queens of a running simulation, and explains how the model works in a schematic animation.
-
-## gobees and gobees-fast
-
-- **gobees** stays as close as possible to the NetLogo code: same quirks, same variable and procedure names, same structure. It is meant for users who know BEE-STEWARD in NetLogo and want to move to Go, and who need to trace every result back to the NetLogo code.
-- **gobees-fast** (this repository) starts as a copy of gobees, with its history. It is changed in small steps: dead code and unused data are removed, the data model is simplified, and the quirks of the NetLogo code ([trans/netlogo-findings.md](trans/netlogo-findings.md)) are fixed. It is meant for users who learn BEE-STEWARD from scratch, and for applications where performance matters most.
-
-Every step is compared with an earlier commit of gobees-fast, first value by value, later by distributions over 100 seeds ([go/compare](go/compare/README.md)), and with NetLogo ([go/validation](go/validation/README.md)). Once a quirk that is active in the default run is fixed, the results differ from NetLogo, and gobees-fast is a modified model version, not BEE-STEWARD in Go.
-
-`git diff upstream/main` shows every change against gobees, with the remote `upstream` set to [https://github.com/peterpothmann/gobees](https://github.com/peterpothmann/gobees).
-
-## How the translation works
-
-Each step follows the same order:
-
-1. The NetLogo procedures of the step are annotated in [netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo](netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo). Annotations change comments only. Every procedure gets a header, and every step inside it gets a code such as `[UCOL-02]`.
-2. Questionable behaviour of the NetLogo code is recorded in [trans/netlogo-findings.md](trans/netlogo-findings.md) and checked in NetLogo.
-3. The step is translated to Go. Every system and function names the codes it translates, and every finding gets a test.
-4. Where possible, gobees is compared with NetLogo (see [Validation](#validation)).
-
-The reference is written in NetLogo 5.3.1.
-
-## Repository layout
-
-
-| Folder                 | Content                                                                                                             |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `go/schedule`          | system order of setup and one simulated day                                                                         |
-| `go/sys`               | 4 systems (Setup, Morning, Day, Evening), their parts one per NetLogo procedure, file names prefixed with the group |
-| `go/comp`              | components of the entities (bees, colonies, foodsources, ...)                                                       |
-| `go/globals`           | global state of the run (changes during the run)                                                                    |
-| `go/params`            | parameters, the content of the input files and the values derived from them (read-only during the run)              |
-| `go/input`             | reader of the run files (YAML), the built-in example farm                                                           |
-| `go/obs`               | observers of the model output                                                                                       |
-| `go/benchmark`         | run time of NetLogo, gobees and gobees-fast                                                                         |
-| `go/compare`           | check of each step: scenarios against the previous step, gobees and NetLogo                                         |
-| `go/enum`              | castes, stages and activities as Go constants                                                                       |
-| `tools/netlogo2gobees` | converter of the NetLogo input files into run files (own Go module)                                                 |
-| `netlogo`              | the annotated NetLogo model and its input files                                                                     |
-| `trans`                | findings on the NetLogo code and the validation against NetLogo                                                     |
-
-The layout follows [beecs](https://github.com/mlange-42/beecs).
-
-## Usage
+## Quick start
 
 Requires Go 1.26 or later.
 
 ```shell
 cd go
-go run .
+# example farm, 365 days, prints a summary
+go run .                                  
+# also write the daily output to go/daily_output.csv
+go run . -o                               
+# 10 runs with the seeds 1 to 10, 4 at a time (parallel runs)
+go run . -o -s 1 --runs 10 --threads 4    
+# own scenario (run file)
+go run . -c path/to/run.yaml              
+# columns of the daily output
+go run . --list-columns                   
+# write only these columns (ticks is always added)
+go run . -o --columns colonies,workers,eggs
 ```
 
-This runs the example farm for 365 days and prints a short summary. The example farm is built in
-([go/input/examplefarm](go/input/examplefarm), converted from `netlogo/_SYSTEM_Example_Farm_Parameters.csv`).
-Other scenarios need a run file (YAML) and its landscape files (see [Run files](#run-files)).
+To fix the columns in a run file instead of the flag:
 
-### Command-line arguments
-
-The model (`go/`, `go run .`):
-
-
-| Flag                 | Short | Default                                    | Meaning                                                                                                                                                                              |
-| -------------------- | ----- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `--config PATH`      | `-c`  | the example farm (built in)                | run file (YAML). Its landscape files are relative to its folder. Repeat `-c` for several run files ([experiments](#experiments)).                                                    |
-| `--seed N`           | `-s`  | `run.seed` of the run file                 | random seed of the first run, 1 or more (NetLogo:`RAND_SEED`).                                                                                                                       |
-| `--days N`           |       | `run.days` of the run file, else `365`     | number of days to run.`0`: no limit, the run ends only when the population is extinct and `stopExtinct` is true.                                                                     |
-| `--runs N`           |       | `run.runs` of the run file                 | number of runs (of each combination of an [experiment](#experiments)), 1 or more, in one process. Run i has the seed `SEED + i - 1`. All runs of a run file go into one output file. |
-| `--threads T`        |       | `run.threads` of the run file              | number of runs at the same time, 1 or more (on a cluster: the CPUs of the job, e.g. `--threads $SLURM_CPUS_PER_TASK`). The output does not depend on it.                             |
-| `--output`           | `-o`  | off                                        | write the daily output to`daily_output.csv` in the working directory (`go/`), tab separated, one row per day and run, and the [run info](#run-info) next to it.                      |
-| `--output-file PATH` | `-f`  |                                            | write the daily output to`PATH` instead (implies `-o`). Missing folders are created.                                                                                                 |
-| `--columns A,B,C`    |       | `output.columns` of the run file, else all | columns of the daily output, in this order (needs `-o` or `-f`). `ticks` is always first. An unknown name is an error that lists the columns.                                        |
-| `--list-columns`     |       |                                            | print the columns of the daily output with a description and exit.                                                                                                                   |
-| `--help`             | `-h`  |                                            | show all flags.                                                                                                                                                                      |
-
-```shell
-go run . -c path/to/run.yaml -s 3 --days 730   # own run file, seed 3, 2 years
-go run . -o -s 1 --runs 10                     # 10 runs with the seeds 1 to 10, in one file
-go run . -o                                    # example farm, output in go/daily_output.csv
-go run . -f path/to/output.csv                 # output to any path
-go run . -c path/to/output_run_info.yaml -f x.csv  # repeat the run of path/to/output.csv
-go run . --list-columns                        # the columns of the daily output
-go run . -o --columns colonies,workers,eggs    # only these columns (and ticks)
-go run . -c a.yaml -c b.yaml -f out/d.csv      # two run files on one pool of threads: out/d_a.csv, out/d_b.csv
+```yaml
+output:
+  columns: [colonies, workers, eggs]
 ```
 
-The converter of the NetLogo input files (`tools/netlogo2gobees`, `go run . <command>`, see
-[NetLogo input files](#netlogo-input-files)):
+| Flag | Short | Meaning |
+| --- | --- | --- |
+| `--config PATH` | `-c` | run file (YAML). Default: the built-in example farm. Repeat `-c` for several run files. |
+| `--seed N` | `-s` | seed of the first run, 1 or more |
+| `--days N` | | days to run, 0 = until the population is extinct |
+| `--runs N` | | number of runs. Run i gets the seed `seed + i - 1`. |
+| `--threads T` | | runs at the same time, each on one CPU core. `1` = one after the other. The output does not depend on it. |
+| `--output` | `-o` | write the daily output to `daily_output.csv` |
+| `--output-file PATH` | `-f` | write the daily output to `PATH` |
+| `--columns A,B,C` | | write only these columns |
+| `--list-columns` | | print the columns of the daily output and exit |
+| `--help` | `-h` | show all flags |
 
+Flags override the section `run` of the run file.
 
-| Command    | Flag                | Short | Default                    | Meaning                                                                                                                                      |
-| ---------- | ------------------- | ----- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `convert`  | `--parameters PATH` | `-p`  | (required)                 | NetLogo parameter file (`MyParametersFile`).                                                                                                 |
-| `convert`  | `--dir PATH`        | `-d`  | `../../netlogo`            | folder of the NetLogo input files (the folder of the`.nlogo`). The file names in the parameter file are relative to it.                      |
-| `convert`  | `--map NAME`        | `-m`  | `_SYSTEM_Example_Farm.png` | map (`MyMap`). The foodsources are read from `<NAME without .png>_Foodsources.txt` in `--dir`.                                               |
-| `convert`  | `--out PATH`        | `-o`  | (required)                 | folder of the run file and its landscape files, created if missing.                                                                          |
-| `convert`  | `--run NAME`        |       | `run.yaml`                 | name of the run file in`--out`.                                                                                                              |
-| `generate` | `--root PATH`       |       | `../..`                    | root of the repository. Writes the run files of the repository: the example farm (`go/input/examplefarm`) and the scenarios of `go/compare`. |
+## Own scenarios
 
-### Run files
-
-A run file has these sections. All keys are in lowerCamelCase, values are in the unit of the model (e.g. seconds).
-[docs/names.md](docs/names.md) lists every key with its unit and the NetLogo name.
-
-
-| Key                  | Content                                                                                                                                                                                                                                                                         | NetLogo                                                                         |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `run`                | `seed`, `days`, `runs` and `threads` (the flags `-s`, `--days`, `--runs` and `--threads` override them). Needed: `seed`, `runs` and `threads`, each 1 or more. The converter writes seed 1, 365 days, 1 run and 1 thread. In a [run info](#run-info) also the record of the run | `RAND_SEED`                                                                     |
-| `variations`         | optional: keys and their values, every combination runs (an [experiment](#experiments))                                                                                                                                                                                         |                                                                                 |
-| `parameters`         | the model parameters                                                                                                                                                                                                                                                            | the columns of the parameter file                                               |
-| `output`             | output options (`keepDeadColonies`, `columns`), change no model value                                                                                                                                                                                                           | `KeepDeadColonies?`                                                             |
-| `constants`          | the values that NetLogo hard-codes, every key needed (see below)                                                                                                                                                                                                                | `ParametersProc` and local values of the procedures                             |
-| `initialQueens`      | species and number of initial queens                                                                                                                                                                                                                                            | `BeeSpeciesInitialQueensListAsString`                                           |
-| `foragingPeriod`     | foraging period [s], 365 values per year, one or more years, the years repeat                                                                                                                                                                                                   | `Weather`                                                                       |
-| `stewardshipOptions` | names of the stewardship options                                                                                                                                                                                                                                                | from the`HabitatsFile`                                                          |
-| `species`            | bee species, found by`name` (only those of `initialQueens` are used), `parasitic: true` for a cuckoo bumblebee                                                                                                                                                                  | rows of the`BeespeciesFile` (columns `species` = `name`, Psithyrus by its name) |
-| `flowers`            | flower species, without the key no flower values                                                                                                                                                                                                                                | rows of the`FlowerspeciesFile` (without `proteinPollenProp`)                    |
-| `landscape`          | landscape file of the start                                                                                                                                                                                                                                                     | foodsources file of`MyMap`                                                      |
-| `cropRotation`       | landscape files of the crop rotation (fewer than 2: none)                                                                                                                                                                                                                       | `CropRotationListAsString`                                                      |
-
-A landscape file holds `metresPerPatch` and the flower patches (`id`, `patchType`, `xcor`, `ycor`, `area`, `flowers`),
-the columns of the NetLogo foodsources file without the GUI columns. All files are read at the start (package `input`),
-also the landscapes of a crop rotation. An unknown key is an error, a missing key keeps its zero value, except in
-`constants`. Unlike NetLogo,
-a missing file is an error at the start, also a landscape of the crop rotation (NetLogo: on its day 365).
-
-The section `constants` holds the values that NetLogo sets in its code and that NetLogo's parameter files cannot
-change: the values of `ParametersProc` and the local values of the procedures (e.g. the pause of a bee, the
-probabilities of the badgers and the cuckoo bumblebees, the task thresholds). It is grouped by part of the model
-(`activities`, `stimuli`, `foraging`, `colony`, `bees`, `psithyrus`, `badgers`, `landscape`, `initialQueens`,
-`thresholds`) and must hold every key: a run file without a key of `constants` is an error, so that no value of a
-run comes from the code unseen. The converter writes the NetLogo values (`params.DefaultConstants`) with unit and
-source as a comment at each key. The coefficients of fitted equations (handling time, competition point, winter
-survival) stay in the code.
-
-### NetLogo input files
-
-[tools/netlogo2gobees](tools/netlogo2gobees) converts a NetLogo parameter file and the files it names into a run file
-(its own Go module, the model does not import it). The map (`MyMap`, a setting of the NetLogo interface) gives the
-foodsources file of the start.
+A scenario is a run file (YAML) plus its landscape files. Convert NetLogo input files into a run file with the converter:
 
 ```shell
 cd tools/netlogo2gobees
 go run . convert -d ../../netlogo -p ../../netlogo/_SYSTEM_Sussex1_Parameters.csv -m _SYSTEM_Sussex1.png -o sussex
-go run . generate
+cd ../../go
+go run . -c ../tools/netlogo2gobees/sussex/run.yaml
 ```
 
-`Weather` is either one of NetLogo's constant options (`"Constant 8 hrs"`, ...: 365 equal values) or the name of a
-weather file in the folder of the NetLogo files: a CSV table with the columns `Day` (1 to 365) and `ForagingPeriod_s`
-(0 to 86400), and optionally `Year` (1, 2, ...). NetLogo's example year `"foragingHoursExample"`, a list in the NetLogo
-code, is the file [netlogo/_SYSTEM_Weather_foragingHoursExample.csv](netlogo/_SYSTEM_Weather_foragingHoursExample.csv).
-A missing parameter file is an error (NetLogo loads `_SYSTEM_Parameters.csv` instead). Also an error: `COLONIES_IBM`
-other than 0, `MapAreaIncluded` other than `"complete"` (a part of a map is its own landscape file), and a species row
-whose columns `species` and `name` differ. The converter prints every column it does not take over, with the
-reason. NetLogo's parameter files set `MaxForagingRange_m` = 10000, which has no effect in NetLogo: NetLogo uses the
-constant `ForagingRangeMax_m` = 758 m. The converter writes 758 and says so, in its output and in the comment at
-`constants.foraging.maxForagingRange`. The tests of the converter check
-that the run files of the repository are the conversion of the NetLogo files.
-
-### Daily output
-
-The daily output (`-o`, `-f`) is a tab-separated file. It holds the totals of `OutputDailyProc` (colonies, queens, males, mean weights, ...), followed by brood, workers, stores, foraging trips, forager deaths, queens produced and the mean competition point date (`obs.DailyOutputExtended`). It has one row per run and day, with the state at the end of the day. The first columns are `run` (from 1), `seed` (the seed of the run) and `t`, which counts the days from 0 as the CSV reporter of ark-tools does. The column `ticks` holds the NetLogo ticks (1 on the first day). The totals of `OutputDailyProc` keep their NetLogo names.
-
-With `--runs N` (or `run.runs`), gobees-fast runs the model N times in one process, at most `--threads` runs at the same time (or `run.threads`). Run i has the seed `seed + i - 1`, so the same `seed` and `runs` always give the same runs. Seed, runs and threads have no special value: each must be 1 or more, nothing is drawn at random or taken from the machine. The output holds the runs one after the other, in the order of the runs, so the file does not depend on the number of threads. The runs share the input read at the start, the model does not change it.
-
-`go run . --list-columns` prints all columns with a description. The key `output.columns` of the run file (a list of names) or the flag `--columns a,b,c` (which overrides the key) selects columns and their order. `ticks` is always the first column after `t`: it is added if missing and moved to the front. Without a selection, all columns are written. An unknown or repeated name is an error that lists the available columns, also when the run has no output. Every value is still computed, so the values of the selected columns do not depend on the selection.
-
-### Experiments
-
-The optional section `variations` makes a run file an experiment: each listed key takes each of its values, and every combination (full factorial) runs `run.runs` times.
+An optional section `variations` in the run file turns it into an experiment: every combination of the listed values runs.
 
 ```yaml
-run:
-  seed: 1
-  days: 365
-  runs: 10      # per combination
-  threads: 8
 variations:
   - key: parameters.badgers
     values: [0, 2, 4]
-  - key: constants.foraging.maxForagingRange
-    values: [500, 758, 1000]
-parameters:
-  ...
 ```
 
-This gives 3 × 3 combinations × 10 runs = 90 runs. Rules:
+Every output comes with a run info file (`<output>_run_info.yaml`). Running it with `-c` repeats the run byte for byte.
 
-- `key` is the path of a key in the run file, its parts separated by dots. A number selects an item of a list, e.g. `initialQueens.0.queens` (the first species) or `species.6.name`. A value is written as in the run file: a number, a text, a list.
-- `values` lists every value. There are no ranges, so every value of an experiment is written out.
-- Every combination is the run file with these values, read and checked like a run file: an unknown key, a fraction in a whole number and so on are errors at the start, naming the combination.
-- Every combination runs with the same seeds (`seed` to `seed + runs - 1`), so combinations differ only in the varied values, not in the random numbers.
-- The section `run` (seed, days, runs, threads), `output.columns`, `landscape` and `cropRotation` cannot vary. Other landscapes are other run files (see below).
-- The daily output is one file: the columns `run`, `seed`, then one column per varied key (named by the key, holding the value), then `t` and the columns. The first variation changes slowest. The run info holds the variations, so it repeats the whole experiment.
+Details on run files, the converter, experiments, the daily output and the run info: [docs/usage.md](docs/usage.md). All keys with unit and NetLogo name: [docs/names.md](docs/names.md).
 
-Several run files run together with `-c a.yaml -c b.yaml`: their runs share one pool of `--threads` threads (the run files must ask for the same `threads`, or the flag sets it). Each run file writes its own output and run info, named after the run file: `-f out/daily.csv` gives `out/daily_a.csv` and `out/daily_b.csv`. Two run files with the same name are an error. The flags `-s`, `--days`, `--runs` and `--columns` apply to all run files.
+## gobees and gobees-fast
 
-### Run info
+| Version | For whom |
+| --- | --- |
+| **[gobees](https://github.com/peterpothmann/gobees)** | users who know BEE-STEWARD in NetLogo and need to trace every result back to the NetLogo code. Same quirks, names and structure as NetLogo. |
+| **gobees-fast** (this repository) | users who learn BEE-STEWARD from scratch or need speed. Dead code removed, data model simplified, names cleaned up. Quirks of the NetLogo code ([trans/netlogo-findings.md](trans/netlogo-findings.md)) will be fixed. |
 
-With an output (`-o`, `-f`), gobees-fast writes the run info next to it, before the run: the name of the output
-without extension plus `_run_info.yaml` (`daily_output.csv` → `daily_output_run_info.yaml`). The run info is a run
-file that repeats the run: `go run . -c daily_output_run_info.yaml -f again.csv` writes the same daily output, byte
-for byte (keyword: reproduceability). It holds all sections of the run file as read (the constants included) and the section `run`:
+Once a quirk that is active in the default run is fixed, gobees-fast gives different results than NetLogo. From then on, gobees-fast is a modified model, not BEE-STEWARD in Go. `git diff upstream/main` shows every change against gobees (remote `upstream` = [gobees](https://github.com/peterpothmann/gobees)).
 
-
-| Key               | Content                                                                                                                                                                                                   |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `seed`            | the seed of the first run                                                                                                                                                                                 |
-| `days`            | the number of days                                                                                                                                                                                        |
-| `runs`, `threads` | the numbers of runs and threads                                                                                                                                                                           |
-| `started`         | start time (RFC 3339)                                                                                                                                                                                     |
-| `command`         | command line                                                                                                                                                                                              |
-| `version`         | module, version, VCS revision, its time and`modified` (changes against the revision), Go version. The VCS keys are only known in a binary built with `go build` inside the repository, not with `go run`. |
-| `config`          | the run file given with`-c`, or `built-in example farm`                                                                                                                                                   |
-| `output`          | the output file. Its columns are the key `columns` of the section `output` of the run info, always written in full                                                                                        |
-| `landscapes`      | per landscape file: the copy (`file`), the name in the run file (`source`) and the SHA-256                                                                                                                |
-
-The landscape files are copied byte for byte next to the run info, with the name of the output in front
-(`daily_output__SYSTEM_Example_Farm_Foodsources.yaml`). The keys `landscape` and `cropRotation` of the run info name
-the copies, so the run info and its copies can be moved or archived together. Only `seed`, `days`, `runs` and `threads` of the section
-`run` are read, the other keys are a record.
-
-Tests:
+## Tests and checks
 
 ```shell
 cd go
-go test -timeout 30m ./...   # all tests, incl. the comparison with NetLogo (about 10 minutes)
-go test -short ./...         # without the comparison with NetLogo
+go test -short ./...         # unit tests (fast)
+go test -timeout 30m ./...   # including the comparison with NetLogo (about 10 minutes)
+compare/run_compare.sh       # check of a step, as in the CI
 ```
 
-## Validation
+The CI checks every pull request. It runs each scenario 100 times and compares the results with three versions:
 
-Single runs of gobees and NetLogo cannot be compared, because NetLogo's random number sequence cannot be reproduced in Go. Instead, 100 NetLogo runs give quantiles per day for each compared quantity, and a Go test requires the median of 100 gobees runs to lie within the NetLogo 5–95 % band. The NetLogo results are embedded in the repository, so NetLogo does not have to be installed to run the tests.
+| Compared with | How |
+| --- | --- |
+| previous step of gobees-fast | value by value, or by distributions if the step changes random draws |
+| gobees | by distributions |
+| NetLogo | median of gobees-fast within the 5–95 % band of 100 NetLogo runs |
 
-The experiments of the full model run as scenarios of the check of each step (below), which writes the report [go/validation/validation-report.md](go/validation/validation-report.md) with one plot per scenario and, in a pull request, commits it to the branch. The experiments of parts of the model are Go tests. Details on the experiments: [go/validation/README.md](go/validation/README.md).
+One comment in the pull request shows the results. Details: [go/compare/README.md](go/compare/README.md), [go/validation/README.md](go/validation/README.md). In pull requests with the label `benchmark`, the CI also times NetLogo, gobees and gobees-fast ([go/benchmark/README.md](go/benchmark/README.md)).
 
-## Check of each step
+## Repository layout
 
-The CI checks every pull request and every push to `main`: it runs each scenario (the example farm and the settings of the NetLogo experiments) 100 times with gobees-fast and compares it with three versions: its previous step (a reference commit of gobees-fast, value by value while a step must not change any random draw, otherwise by distributions), gobees (by distributions, to catch differences that add up over several steps) and NetLogo (the band of the NetLogo runs). It also times gobees-fast against gobees. One comment in the pull request shows the results as a table, one row per scenario and one column per comparison. Locally: `go/compare/run_compare.sh`. Details: [go/compare/README.md](go/compare/README.md).
+| Folder | Content |
+| --- | --- |
+| `go/schedule` | order of the systems in setup and in one day |
+| `go/sys` | 4 systems (Setup, Morning, Day, Evening) and their parts |
+| `go/comp` | components of the entities (bees, colonies, foodsources, ...) |
+| `go/globals` | state of the run |
+| `go/params` | parameters and input (read-only during the run) |
+| `go/input` | reader of the run files, built-in example farm |
+| `go/obs` | observers of the model output |
+| `go/compare` | check of each step |
+| `go/validation` | comparison with NetLogo |
+| `go/benchmark` | run time of NetLogo, gobees and gobees-fast |
+| `go/enum` | castes, stages and activities |
+| `tools/netlogo2gobees` | converter of NetLogo input files into run files |
+| `netlogo` | the annotated NetLogo model and its input files |
+| `trans` | findings on the NetLogo code |
 
-## Benchmarks
+The layout follows [beecs](https://github.com/mlange-42/beecs). A graphical interface for gobees is available in [gobees-ui](https://github.com/peterpothmann/gobees-ui).
 
-In pull requests with the label `benchmark`, the CI runs the example farm in NetLogo 5.3.1, in gobees (the fork point) and in gobees-fast on the same runner, with the same seeds and days, and times each run. It commits the report [go/benchmark/benchmark-report.md](go/benchmark/benchmark-report.md) to the branch. How the comparison is kept fair: [go/benchmark/README.md](go/benchmark/README.md).
+## What the model does
+
+BEE-STEWARD is a research and decision support tool for land management that promotes bumblebee populations. It combines the population model [Bumble-BEEHAVE](https://beehave-model.net/category/bumblebeehave/) ([Becher et al. 2018](#ref-becher2018)) with the landscape module [BEESCOUT](https://beehave-model.net/category/beescout/) ([Becher et al. 2016](#ref-becher2016)). It simulates colonies of six *Bombus* species and the cuckoo bumblebee *Psithyrus* over several years, from queen emergence through foraging and brood rearing to hibernation. The bees forage in a nectar and pollen landscape built from maps. Flower strips and crop rotations can be applied to selected fields.
+
+All credit for the scientific model belongs to the authors of BEE-STEWARD and its component models.
 
 ## References
 
@@ -266,4 +138,4 @@ In pull requests with the label `benchmark`, the CI runs the example farm in Net
 ## Related projects
 
 - [BEE-STEWARD](https://beehave-model.net/bee-steward-is-published/): the original NetLogo model.
-- [beecs](https://github.com/mlange-42/beecs): the honeybee model [BEEHAVE](https://beehave-model.net/) ([Becher et al. 2014](#ref-becher2014)) translated to Go with Ark. gobees took its layout and several ideas from it. Worth a look.
+- [beecs](https://github.com/mlange-42/beecs): the honeybee model [BEEHAVE](https://beehave-model.net/) ([Becher et al. 2014](#ref-becher2014)) in Go with Ark. gobees took its layout and several ideas from it.
