@@ -41,7 +41,10 @@ func Convert(dir, path, mapName string) (Converted, error) {
 }
 
 func convert(dir string, file *netLogoParameters, mapName string) (Converted, error) {
-	c := input.Config{Parameters: file.Parameters}
+	// NetLogo's RAND_SEED is a setting of the interface, not of the parameter file: seed 1. days: the default of
+	// gobees, NetLogo runs until it is stopped. One run on one thread.
+	days := params.Default().Termination.MaxTicks
+	c := input.Config{Run: &input.Run{Seed: 1, Days: &days, Runs: 1, Threads: 1}, Parameters: file.Parameters}
 	c.Output.KeepDeadColonies = file.KeepDeadColonies // step F13
 	// the constants come from the code, as in NetLogo, never from the parameter file
 	c.Constants = params.DefaultConstants()

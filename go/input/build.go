@@ -12,16 +12,17 @@ import (
 const daysPerYear = 365
 
 // Build returns the parameters of a run: params.Default with the run file c and the values derived from it. The
-// section run, if present, sets the seed and the number of days.
+// section run (needed, checkRun) sets the seed and the number of days.
 // landscapes holds the landscape files by their name in c, at least c.Landscape and, with a crop rotation,
 // every file of c.CropRotation.
 func Build(c Config, landscapes map[string]Landscape) (params.Params, error) {
 	p := params.Default()
-	if c.Run != nil {
-		p.Seed = c.Run.Seed
-		if c.Run.Days != nil {
-			p.Termination.MaxTicks = *c.Run.Days
-		}
+	if err := checkRun(c.Run); err != nil {
+		return p, err
+	}
+	p.Seed = c.Run.Seed
+	if c.Run.Days != nil {
+		p.Termination.MaxTicks = *c.Run.Days
 	}
 	p.Parameters = c.Parameters
 	p.Output = c.Output

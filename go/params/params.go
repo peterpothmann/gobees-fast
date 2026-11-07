@@ -24,7 +24,7 @@ type Termination struct {
 //
 // Of the NetLogo interface settings, only RAND_SEED (Seed) and the world size (World) remain.
 type Params struct {
-	Seed        int64 // Random seed. 0 means a random seed. NetLogo: RAND_SEED
+	Seed        int64 // Random seed, used as it is (the run file needs 1 or more). NetLogo: RAND_SEED
 	World       World
 	Parameters  Parameters // The parameters of the run file, read with input.Load.
 	Output      Output     // The output options of the run file.
@@ -48,14 +48,10 @@ func Default() Params {
 	}
 }
 
-// Apply seeds the random number generator and adds all parameters to the world as resources.
+// Apply seeds the random number generator with Seed and adds all parameters to the world as resources.
 func (p *Params) Apply(w *ecs.World) {
-	seed := uint64(p.Seed)
-	if p.Seed == 0 {
-		seed = rand.Uint64()
-	}
 	rng := ecs.GetResource[resource.Rand](w)
-	rng.Source = rand.NewPCG(0, seed)
+	rng.Source = rand.NewPCG(0, uint64(p.Seed))
 
 	pCopy := *p
 	ecs.AddResource(w, &pCopy.World)

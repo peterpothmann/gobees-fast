@@ -27,17 +27,9 @@ func TestRunInfoPath(t *testing.T) {
 	}
 }
 
-func TestRandomSeed(t *testing.T) {
-	for range 100 {
-		if randomSeed() <= 0 {
-			t.Fatal("want a positive seed")
-		}
-	}
-}
-
 func TestRunInfoRepeatsRun(t *testing.T) {
 	// A run with output writes the run info. The run info as run file repeats the run: the same daily output, byte
-	// for byte. The example farm with seed 0 (drawn and recorded) and a run file with crop rotation over the turn of
+	// for byte. The example farm and a run file with crop rotation over the turn of
 	// the year (two landscape files, the first one is also the start).
 	for _, tc := range []struct {
 		name       string
@@ -45,7 +37,7 @@ func TestRunInfoRepeatsRun(t *testing.T) {
 		config     string
 		landscapes []string // the landscape files in the run file of the run
 	}{
-		{"example farm", []string{"-s", "0", "--days", "5"}, exampleFarmConfig,
+		{"example farm", []string{"-s", "6", "--days", "5"}, exampleFarmConfig,
 			[]string{"_SYSTEM_Example_Farm_Foodsources.yaml"}},
 		{"crop rotation", []string{"-c", filepath.Join("compare", "scenarios", "step7_crop.yaml"), "-s", "3",
 			"--days", "370"}, filepath.Join("compare", "scenarios", "step7_crop.yaml"),
@@ -67,8 +59,8 @@ func TestRunInfoRepeatsRun(t *testing.T) {
 			if run == nil {
 				t.Fatal("run info without section run")
 			}
-			if run.Seed == 0 || run.Days == nil || *run.Days != *c.Days {
-				t.Errorf("run.seed, run.days = %d, %v, want a seed other than 0 and %d", run.Seed, run.Days, *c.Days)
+			if run.Seed != *c.Seed || run.Days == nil || *run.Days != *c.Days {
+				t.Errorf("run.seed, run.days = %d, %v, want %d and %d", run.Seed, run.Days, *c.Seed, *c.Days)
 			}
 			config := tc.config
 			if config != exampleFarmConfig {
@@ -136,8 +128,8 @@ func TestRunInfoColumns(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []string{"ticks", "colonies", "eggs", "TotalColonies"}
-	if got := header(t, first); !slices.Equal(got, append([]string{"t"}, want...)) {
-		t.Errorf("header = %v, want t and %v", got, want)
+	if got := header(t, first); !slices.Equal(got, append([]string{"run", "seed", "t"}, want...)) {
+		t.Errorf("header = %v, want run, seed, t and %v", got, want)
 	}
 	info, err := input.Read(runInfoPath(first))
 	if err != nil {
@@ -162,8 +154,8 @@ func TestRunInfoColumns(t *testing.T) {
 	if err := c.run(io.Discard); err != nil {
 		t.Fatal(err)
 	}
-	if got := header(t, third); !slices.Equal(got, []string{"t", "ticks", "males"}) {
-		t.Errorf("header = %v, want t, ticks, males", got)
+	if got := header(t, third); !slices.Equal(got, []string{"run", "seed", "t", "ticks", "males"}) {
+		t.Errorf("header = %v, want run, seed, t, ticks, males", got)
 	}
 }
 

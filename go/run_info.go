@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"runtime/debug"
@@ -19,16 +18,6 @@ import (
 
 // exampleFarmConfig is the key run.config of a run without a run file.
 const exampleFarmConfig = "built-in example farm"
-
-// randomSeed returns a random seed other than 0, so that a run with seed 0 can be repeated with the seed recorded in
-// the run info.
-func randomSeed() int64 {
-	for {
-		if s := rand.Int64(); s != 0 {
-			return s
-		}
-	}
-}
 
 // runInfoPath returns the run info of the daily output file output: its name without extension plus
 // "_run_info.yaml", in the same folder (daily_output.csv -> daily_output_run_info.yaml).
@@ -44,10 +33,11 @@ type runInfo struct {
 }
 
 // newRunInfo returns the run info of a run with the files f (read from the run file config, "" for the example farm)
-// and the parameters p, which hold the seed and the days actually used. output is the daily output file with the
+// and the parameters p, which hold the seed (of the first run) and the days actually used. runs and threads are the
+// numbers of runs and threads used. output is the daily output file with the
 // columns columns (the key output.columns of the run info, always written in full). The landscape files are copied
 // next to output, byte for byte.
-func newRunInfo(f input.Files, config string, p *params.Params, output string, columns []string,
+func newRunInfo(f input.Files, config string, p *params.Params, runs, threads int, output string, columns []string,
 	started time.Time) runInfo {
 	c := f.Config
 	if config == "" {
@@ -57,6 +47,8 @@ func newRunInfo(f input.Files, config string, p *params.Params, output string, c
 	run := &input.Run{
 		Seed:    p.Seed,
 		Days:    &days,
+		Runs:    runs,
+		Threads: threads,
 		Started: started.Format(time.RFC3339),
 		Command: slices.Clone(os.Args),
 		Version: buildVersion(),

@@ -108,7 +108,9 @@ func MissingColumnsCell(missing []string) Cell {
 	return Cell{Ran: true, Text: "columns missing: " + strings.Join(missing, ", ")}
 }
 
-// dataColumns returns the columns without the time columns.
+// dataColumns returns the columns without the time columns (t, ticks) and the columns of the run (run, seed).
 func dataColumns(columns []string) []string {
-	return slices.DeleteFunc(slices.Clone(columns), func(c string) bool { return c == "t" || c == "ticks" })
+	return slices.DeleteFunc(slices.Clone(columns), func(c string) bool {
+		return c == "t" || c == "ticks" || c == "run" || c == "seed"
+	})
 }
