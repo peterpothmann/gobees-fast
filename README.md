@@ -76,7 +76,7 @@ Details on run files, the converter, experiments, the daily output and the run i
 
 ## Watching a run
 
-With `--ui` a run opens a window: map with flower patches and colonies, daily plots, colony and patch info, going back in time. The run, its output and run info are the same as without the window.
+With `--ui` a run opens a window: map with flower patches and colonies, daily plots, colony and patch info, going back in time, and a debug tab that steps through a day part by part and bee turn by bee turn (time per part, entities, resources, the task choice of each bee). The run, its output and run info are the same as without the window.
 
 ```shell
 cd go

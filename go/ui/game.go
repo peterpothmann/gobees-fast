@@ -35,6 +35,9 @@ type Config struct {
 	// Screenshot: if set, the run goes to its end at once, then a screenshot is saved to this PNG file and the
 	// window closes. For checks without clicking.
 	Screenshot string
+	// ScreenshotTurns: with Screenshot, the run goes to the end of its second last day instead, then this many bee
+	// turns of the last day, and the screenshot shows the debug tab.
+	ScreenshotTurns int
 }
 
 // ExplainFlag is the flag of gobees that opens only the explanation window. The button "How the model works"
@@ -47,17 +50,24 @@ const doubleClick = 400 * time.Millisecond
 // speeds are the selectable simulation speeds in days per second.
 var speeds = []float64{0.5, 1, 2, 5, 10, 20, 50, 100, 365}
 
-// Game is the ebiten.Game of the UI. It steps one model run, day by day.
+// Game is the ebiten.Game of the UI. It steps one model run, day by day, or part by part and turn by turn in the
+// debug tab.
 type Game struct {
 	cfg Config
 
 	app           *app.App
+	drv           *driver
 	ticks         *globals.Ticks
 	world         *params.World
 	land          *landscape
 	model         *modelState
 	hist          history
-	snap          snapshot                 // model state at the end of the latest day
+	snap          snapshot   // model state at the end of the latest day
+	live          *snapshot  // model state where the model stopped in the middle of a day, else nil
+	stopAt        *stop      // where the model stopped in the middle of a day, else nil
+	dbg           debugState // the debug tab, read where the model stopped
+	dbgReader     *debugReader
+	tab           int                      // 0: model output, 1: debug
 	days          []snapshot               // the latest days, oldest first, the last one is snap
 	viewing       bool                     // an earlier day is shown (← key)
 	viewTick      int64                    // the tick shown while viewing
@@ -90,17 +100,32 @@ type Game struct {
 	shotErr error // error of saving the screenshot
 }
 
-// Watch opens the window and steps the run a day by day, at the speed chosen in the window. a must be set up with all
-// systems of the run but not initialized: Watch calls Initialize, Update once per day and Finalize, like a.Run, so
-// the run gives the same results and output as without the window. counters must be a system of a (the foraging
-// trips of the day). Watch returns when the window is closed: at the end of the run, or before, then the run ends
-// on that day. It must be called from the main goroutine. A failed day (panic) is returned as error.
+// Watch opens the window and steps the run a day by day, at the speed chosen in the window, or part by part and turn
+// by turn in the debug tab. a must be set up with all systems of the run but not initialized: Watch adds sys.Hooks,
+// calls Initialize, Update once per day and Finalize, like a.Run, so the run gives the same results and output as
+// without the window. counters must be a system of a (the foraging trips of the day). Watch returns when the window
+// is closed: at the end of the run, or before, then the run ends at the end of that day. It must be called from the
+// main goroutine. A failed day (panic) is returned as error.
 func Watch(a *app.App, counters *obs.Counters, cfg Config) error {
-	g := &Game{cfg: cfg, paused: true, speed: 3}
+	g := &Game{cfg: cfg, paused: true, speed: 3, drv: newDriver(a)}
 	if err := g.setup(a, counters); err != nil {
 		return err
 	}
-	if cfg.Screenshot != "" {
+	g.drv.start()
+	defer g.drv.close()
+	switch {
+	case cfg.Screenshot != "" && cfg.ScreenshotTurns > 0:
+		last := int64(ecs.GetResource[params.Termination](a.World).MaxTicks)
+		for !g.finished && g.snap.Tick < last-1 {
+			g.step()
+		}
+		g.setTab(1)
+		for range cfg.ScreenshotTurns {
+			if g.stepTurn(); g.stopAt == nil {
+				break
+			}
+		}
+	case cfg.Screenshot != "":
 		for !g.finished {
 			g.step()
 		}
@@ -112,6 +137,9 @@ func Watch(a *app.App, counters *obs.Counters, cfg Config) error {
 	err := ebiten.RunGame(g)
 	if g.explainOpen.Load() {
 		_ = g.explain.Process.Kill()
+	}
+	if g.drv.inDay {
+		g.stepTo(toDayEnd) // the window was closed in the middle of a day: the day ends
 	}
 	if !g.finished {
 		g.app.Finalize() // the window was closed before the end of the run
@@ -169,49 +197,70 @@ func (g *Game) setup(a *app.App, counters *obs.Counters) (err error) {
 	g.days, g.viewing = []snapshot{g.snap}, false
 	g.hist.record(&g.snap)
 	recordColonies(g.colHist, &g.snap, int64(g.ticks.Ticks))
+	g.dbgReader = newDebugReader(a.World)
+	g.dbg = g.dbgReader.read(ecs.Entity{}, g.model.known)
 	return nil
 }
 
-// step simulates one day.
+// step simulates one day, or the rest of the day if the model stopped in the middle of one.
 func (g *Game) step() {
+	g.stepTo(toDayEnd)
+}
+
+// stepTo runs the model to the next stop of cmd (driver) and reads its state. At the end of a day the day is kept
+// for the plots and for going back, in the middle of a day the state is shown but not kept.
+func (g *Game) stepTo(cmd command) {
 	if g.finished {
 		return
 	}
-	defer func() {
-		if r := recover(); r != nil {
-			g.runErr = fmt.Errorf("day %d: %v", g.ticks.Ticks, r)
-			g.finished = true
-		}
-	}()
-	if !g.app.Update() {
+	s := g.drv.run(cmd)
+	if s.err != nil {
+		g.runErr = fmt.Errorf("day %d: %v", g.ticks.Ticks, s.err)
 		g.finished = true
-		g.app.Finalize()
+		return // the state after a panic is not read
 	}
+	g.finished = s.finished
 	// The crop rotation replaces all foodsources on day 365: read the new patches. The days before show the old
 	// patches, so they can no longer be viewed.
 	if len(g.land.Patches) > 0 && !g.app.World.Alive(g.land.Patches[0].Entity) {
 		g.land = newLandscape(g.app.World)
 		g.hover, g.selected = nil, nil
-		g.days = nil
+		g.days, g.viewing = nil, false
 	}
-	g.snap = g.model.read(int64(g.ticks.Ticks), g.land)
-	g.days = append(g.days, g.snap)
-	if len(g.days) > maxBackDays+1 {
-		g.days = slices.Clone(g.days[1:]) // a copy, so the dropped days are freed
+	tick := int64(g.ticks.Ticks)
+	if s.kind == stopDayEnd {
+		g.live, g.stopAt = nil, nil
+		g.snap = g.model.read(tick, g.land)
+		g.days = append(g.days, g.snap)
+		if len(g.days) > maxBackDays+1 {
+			g.days = slices.Clone(g.days[1:]) // a copy, so the dropped days are freed
+		}
+		g.hist.record(&g.snap)
+		recordColonies(g.colHist, &g.snap, tick)
+	} else {
+		live := g.model.read(tick, g.land)
+		g.live, g.stopAt = &live, &s
+		g.viewing = false
 	}
-	g.hist.record(&g.snap)
-	recordColonies(g.colHist, &g.snap, int64(g.ticks.Ticks))
+	// the debug state costs a pass over the world: only for the debug tab or a stop in the middle of a day
+	if g.tab == 1 || s.kind != stopDayEnd {
+		g.dbg = g.dbgReader.read(s.bee, g.model.known)
+	}
 }
 
 // maxBackDays is how many days the ← key goes back.
 const maxBackDays = 365
 
-// shown is the snapshot on screen: an earlier day while viewing, else the latest.
+// shown is the snapshot on screen: an earlier day while viewing, else the state where the model stopped in the
+// middle of a day, else the latest day.
 func (g *Game) shown() *snapshot {
 	if g.viewing {
 		if i := int(g.viewTick - g.days[0].Tick); i >= 0 && i < len(g.days) {
 			return &g.days[i]
 		}
+	}
+	if g.live != nil {
+		return g.live
 	}
 	return &g.snap
 }
@@ -309,6 +358,25 @@ func (g *Game) handleKeys() {
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		g.selected, g.nest, g.selColony = nil, nil, nil
+	}
+	// T and P step through the day: to the end of the next bee turn or part
+	if inpututil.IsKeyJustPressed(ebiten.KeyT) {
+		g.stepTurn()
+	}
+	if inpututil.IsKeyJustPressed(ebiten.KeyP) {
+		g.stepPart()
+	}
+}
+
+// setTab shows the tab i (0: model output, 1: debug). The debug tab reads the state of the model, which waits.
+func (g *Game) setTab(i int) {
+	g.tab = i
+	if i == 1 {
+		var bee ecs.Entity
+		if g.stopAt != nil {
+			bee = g.stopAt.bee
+		}
+		g.dbg = g.dbgReader.read(bee, g.model.known)
 	}
 }
 

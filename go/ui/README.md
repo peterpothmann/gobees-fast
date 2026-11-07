@@ -14,12 +14,13 @@ go run . --ui -c compare/scenarios/step8_species.yaml -o
 
 The run is the normal run of the command line: the run file and the flags (`-c`, `-s`, `--days`, `-o`, `-f`,
 `--columns`) define it, the output and the run info are written as without the window. The window only decides
-when the next day runs (play, step, speed). It calls `Initialize`, one `Update` per day and `Finalize` of the
-same app as `a.Run` does, so the output is byte for byte the same.
+when the model goes on (play, step, speed, and in the debug tab part by part and turn by turn). It calls
+`Initialize`, one `Update` per day and `Finalize` of the same app as `a.Run` does, so the output is byte for byte
+the same.
 
 - One run only: one run file, `runs` 1, no `variations`. Otherwise `--ui` is an error.
-- Closing the window ends the run on that day. The output then holds the days up to then, the run info was
-  written before the run.
+- Closing the window ends the run at the end of that day (a day stopped in the middle is run to its end). The
+  output then holds the days up to then, the run info was written before the run.
 - Platforms: on Windows the window is always built in. On macOS it needs cgo (the Xcode command line tools). On
   Linux it is built only with the tag `ui` (`go run -tags ui . --ui`), because Ebitengine needs cgo and the X11
   and OpenGL headers there. Without the tag, gobees on Linux stays pure Go (CI, benchmark, cluster) and `--ui`
@@ -57,13 +58,35 @@ same app as `a.Run` does, so the output is byte for byte the same.
   computes this itself, the test nest is not part of the model.
 * **Patch info:** its flower species (`comp.Foodsource.Flower`) with their flowering periods, nectar and pollen
   left at the end of the day, and the colonies whose bees know the patch. The model counts no visits per patch.
+* **Debug tab:** steps through a day and shows the model where it stopped.
+  * `Next turn` (`T`) runs to the end of the next bee turn of the activity loop, `Next part` (`P`) to the end of the
+    next part of Morning, Day or Evening (19 parts, e.g. `flowerRefill`, `activities`, `development`), `End of
+    day` (`→`) to the end of the day. A day always stops at its end, also when it has no bee turns (winter).
+  * After a turn: the bee (stage, caste, cohort size, colony, her personal time before and after the turn), the
+    task she chose and why: the four stimuli of her colony against her four thresholds (the last task above its
+    threshold wins, a parasitic bee never nurses or forages), the stores of her colony and her load. The map marks
+    her nest and the flower patches of her next nectar trip (yellow) and pollen trip (blue).
+  * Time per part in µs: of the day so far (or the last full day) and the mean over all days, without the time the
+    model waited for the window. On Windows measured with `QueryPerformanceCounter`, because the clock of Go
+    advances there in steps of about 0.4 ms.
+  * Entities: the archetypes of the Ark world (entities with the same components) with their number, and the
+    memory of the components. Resources: the fields of the resources of package `globals` (state of the run that is
+    not part of an entity), slices by their length.
+  * The map and the info show the state where the model stopped. The plots and going back keep only the ends of
+    the days.
+
+  How it works: the model runs in a goroutine of its own and stops at the hooks `sys.Hooks.AfterPart` and
+  `AfterTurn` (a resource that only the window adds; without it, the model calls nothing). The window reads the
+  world only while the model waits.
 * **How the model works:** the button opens a second window (`gobees --ui-explain`) with a schematic animation of
   the processes in BEE-STEWARD, "A year" and "A day". It does not run the model and names the NetLogo procedures.
 
 | Key | Action |
 | --- | --- |
 | `Space` | play or pause |
-| `→` | one day, held down: runs at the selected speed |
+| `→` | to the end of the day, held down: runs at the selected speed |
+| `T` | to the end of the next bee turn |
+| `P` | to the end of the next part |
 | `←` | one day back, held down: goes back |
 | `↑`, `↓` | speed |
 | `Esc` | clear selection and test nest |
@@ -74,4 +97,6 @@ to remove it.
 ## Checks without clicking
 
 `--ui-screenshot PATH` (hidden flag, with `--ui`) runs to the end at once, saves a screenshot of the window and
-closes it. The tests (`go test ./ui/`, on Linux with `-tags ui`) step the example farm as the window does.
+closes it. With `--ui-screenshot-turns N` it stops after N bee turns of the last day and shows the debug tab. The
+tests (`go test ./ui/`, on Linux with `-tags ui`) step the example farm as the window does, by days, parts and
+turns, and check that stepping by parts and turns gives the same run as stepping by days.

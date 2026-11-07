@@ -10,6 +10,6 @@ import "errors"
 var errNoUI = errors.New("--ui: this gobees is built without the window. On Linux run it with go run -tags ui . --ui " +
 	"(needs cgo and the X11 and OpenGL headers), on macOS cgo must be on (Xcode command line tools)")
 
-func watcher(title, screenshot string) (watchFunc, error) { return nil, errNoUI }
+func watcher(title, screenshot string, shotTurns int) (watchFunc, error) { return nil, errNoUI }
 
 func explainWindow() error { return errNoUI }

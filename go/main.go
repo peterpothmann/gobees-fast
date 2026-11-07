@@ -35,6 +35,7 @@ type cli struct {
 	// for the window, not shown in --help
 	UIExplain    bool   `name:"ui-explain" hidden:"" help:"Open only the window that explains the model (started by the button of --ui)."`
 	UIScreenshot string `name:"ui-screenshot" type:"path" hidden:"" placeholder:"PATH" help:"With --ui: run to the end at once, save a screenshot of the window to PATH (PNG) and close it."`
+	UIShotTurns  int    `name:"ui-screenshot-turns" hidden:"" placeholder:"N" help:"With --ui-screenshot: stop after N bee turns of the last day and show the debug tab."`
 }
 
 // outputFile returns the daily output file of the flags, "" without output.
@@ -127,7 +128,7 @@ func (c *cli) run(w io.Writer) error {
 		if err := checkWatch(experiments); err != nil {
 			return err
 		}
-		if watch, err = watcher(experiments[0].title(), c.UIScreenshot); err != nil {
+		if watch, err = watcher(experiments[0].title(), c.UIScreenshot, c.UIShotTurns); err != nil {
 			return err
 		}
 	}

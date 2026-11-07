@@ -62,15 +62,18 @@ func (g *Game) drawPanel(screen *ebiten.Image) {
 	if g.runErr != nil {
 		y += drawText(screen, wrap(g.runErr.Error(), faceSmall, w), faceSmall, x, y, colError) + 8
 	}
-	vector.StrokeLine(screen, float32(x), float32(y), float32(x+w), float32(y), 1, colBorder, false)
-	y += 12
+	y = g.drawTabs(screen, x, y, w) + 12
 
-	help := "Space play/pause · → one day, ← one day back (hold: more) · ↑↓ speed · click: keep patch or follow colony · right-click: test nest · double right-click or Esc: remove · closing the window ends the run"
+	help := "Space play/pause · → to the end of the day, ← one day back (hold: more) · T next bee turn · P next part · ↑↓ speed · click: keep patch or follow colony · right-click: test nest · double right-click or Esc: remove · closing the window ends the run at the end of the day"
 	help = wrap(help, faceSmall, w)
 	lines := float64(strings.Count(help, "\n") + 1)
 	helpY := float64(r.Max.Y-pad) - lines*faceSmall.Size*1.35
 	drawText(screen, help, faceSmall, x, helpY, colMuted)
 
+	if g.tab == 1 {
+		g.drawDebug(screen, x, y, w, helpY-10)
+		return
+	}
 	if g.selColony != nil {
 		y = g.drawColonySeries(screen, x, y, w, g.selColony)
 	} else {
@@ -86,6 +89,44 @@ func (g *Game) drawPanel(screen *ebiten.Image) {
 	default:
 		g.drawPatchInfo(info, x, y, w)
 	}
+}
+
+// drawTabs draws the tabs "Model output" and "Debug".
+func (g *Game) drawTabs(screen *ebiten.Image, x, y, w float64) float64 {
+	labels := []string{"Model output", "Debug"}
+	tw := w / float64(len(labels))
+	mx, my := ebiten.CursorPosition()
+	for i, l := range labels {
+		rect := image.Rect(int(x+float64(i)*tw), int(y), int(x+float64(i+1)*tw), int(y+28))
+		b := button{rect: rect, label: l, action: func() { g.setTab(i) }}
+		g.buttons = append(g.buttons, b)
+		c := colMuted
+		if g.tab == i {
+			c = colText
+			vector.DrawFilledRect(screen, float32(rect.Min.X), float32(rect.Max.Y-3), float32(rect.Dx()), 3, colAccent, false)
+		} else if b.contains(mx, my) {
+			c = colText
+		}
+		lw := measure(l)
+		drawText(screen, l, faceNormal, float64(rect.Min.X)+(tw-lw)/2, y+4, c)
+	}
+	vector.StrokeLine(screen, float32(x), float32(y+28), float32(x+w), float32(y+28), 1, colBorder, false)
+	return y + 28
+}
+
+// addButton draws a button with a label in the small font and registers it for clicks.
+func (g *Game) addButton(dst *ebiten.Image, rect image.Rectangle, label string, action func()) {
+	b := button{rect: rect, label: label, action: action}
+	g.buttons = append(g.buttons, b)
+	c := colButton
+	mx, my := ebiten.CursorPosition()
+	if b.contains(mx, my) {
+		c = colButtonHi
+	}
+	fillRect(dst, rect, c)
+	tw, th := measureFace(label, faceSmall)
+	drawText(dst, label, faceSmall, float64(rect.Min.X)+(float64(rect.Dx())-tw)/2,
+		float64(rect.Min.Y)+(float64(rect.Dy())-th)/2-1, colText)
 }
 
 func (g *Game) drawButtons(screen *ebiten.Image, x, y, w float64) float64 {

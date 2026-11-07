@@ -37,6 +37,25 @@ func exampleFarm(t *testing.T, seed int64, queens []params.SpeciesQueens) (*app.
 	return a, counters
 }
 
+// newTestGame returns the window state of the example farm with seed, set up and with the model goroutine running,
+// as Watch does it without opening the window.
+func newTestGame(t *testing.T, seed int64) *Game {
+	t.Helper()
+	a, counters := exampleFarm(t, seed, nil)
+	g := &Game{drv: newDriver(a)}
+	if err := g.setup(a, counters); err != nil {
+		t.Fatal(err)
+	}
+	g.drv.start()
+	t.Cleanup(func() {
+		if g.drv.inDay {
+			g.stepTo(toDayEnd)
+		}
+		g.drv.close()
+	})
+	return g
+}
+
 // patchLayout returns position and size of every flower patch of the example farm after setup.
 func patchLayout(t *testing.T, seed int64, queens []params.SpeciesQueens) []flowerPatch {
 	t.Helper()
@@ -100,10 +119,7 @@ func TestLandscapeFlowers(t *testing.T) {
 // TestRunDays steps the example farm through spring as the window does: the UI numbers the colonies once, in the
 // order it first sees them, and the day of foundation is that day.
 func TestRunDays(t *testing.T) {
-	g := &Game{}
-	if err := g.setup(exampleFarm(t, 1, nil)); err != nil {
-		t.Fatal(err)
-	}
+	g := newTestGame(t, 1)
 	for range 150 {
 		g.step()
 	}

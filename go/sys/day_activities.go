@@ -33,6 +33,7 @@ type activities struct {
 	calendar  *globals.Calendar
 	active    *globals.ActiveBees
 	daytime   *globals.Daytime
+	hooks     *Hooks // nil without the resource (the window of --ui)
 	eggs      eggLayer
 	foraging  forager
 
@@ -54,6 +55,7 @@ func (s *activities) Initialize(w *ecs.World) {
 	s.calendar = ecs.GetResource[globals.Calendar](w)
 	s.active = ecs.GetResource[globals.ActiveBees](w)
 	s.daytime = ecs.GetResource[globals.Daytime](w)
+	s.hooks = ecs.GetResource[Hooks](w)
 	s.eggs = newEggLayer(w, s.rng)
 	s.foraging = newForager(w, s.rng)
 
@@ -80,6 +82,9 @@ func (s *activities) Update(w *ecs.World) {
 		} else {
 			s.daytime.Time = b.PersonalTime // Model has no global time, each bee has her own personalTime_s and the one with the lowest is next
 			s.act(w, e)
+			if s.hooks != nil {
+				s.hooks.AfterTurn(e)
+			}
 			if !w.Alive(e) {
 				continue // died during her task (foraging): the rest of her turn is skipped
 			}

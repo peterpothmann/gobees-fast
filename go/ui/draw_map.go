@@ -65,6 +65,7 @@ func (g *Game) drawMap(full *ebiten.Image) {
 	if g.nest != nil {
 		g.drawSearchLines(screen)
 	}
+	g.drawTurnBee(screen)
 	var labels []mapLabel // drawn last, on top of everything
 	if hc != nil {
 		labels = g.drawKnownPatches(screen, hc)
@@ -501,4 +502,26 @@ func (g *Game) patchAt(sx, sy float64) *flowerPatch {
 // dimmed returns c with its red, green and blue multiplied by f.
 func dimmed(c color.RGBA, f float64) color.RGBA {
 	return color.RGBA{uint8(float64(c.R) * f), uint8(float64(c.G) * f), uint8(float64(c.B) * f), c.A}
+}
+
+// drawTurnBee marks, after a bee turn (debug tab), the nest of the bee and the flower patches of her next nectar
+// trip (yellow) and pollen trip (blue).
+func (g *Game) drawTurnBee(screen *ebiten.Image) {
+	b := g.dbg.bee
+	if g.viewing || g.stopAt == nil || g.stopAt.kind != stopTurn || b == nil || !b.alive || b.colony == 0 {
+		return
+	}
+	cx, cy := g.layout.toScreen(b.colonyX, b.colonyY)
+	for _, t := range []struct {
+		patch ecs.Entity
+		col   color.RGBA
+	}{{b.nectarSrc, colAccent}, {b.pollenSrc, colSecond}} {
+		if p := g.land.patch(t.patch); p != nil {
+			px, py := g.layout.toScreen(p.X, p.Y)
+			vector.StrokeLine(screen, float32(cx), float32(cy), float32(px), float32(py), 2, t.col, true)
+			vector.StrokeCircle(screen, float32(px), float32(py), float32(max(p.Radius*g.layout.scale, minRadius)+3),
+				2, t.col, true)
+		}
+	}
+	vector.StrokeCircle(screen, float32(cx), float32(cy), 14, 3, colAccent, true)
 }
