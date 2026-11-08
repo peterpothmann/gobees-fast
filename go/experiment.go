@@ -12,16 +12,18 @@ import (
 )
 
 // experiment is one run file of a call (flag -c) with its variations: its combinations, their parameters and its
-// daily output. Without variations it has one combination, the run file itself.
+// output. Without variations it has one combination, the run file itself.
 type experiment struct {
 	config       string // the run file of -c, "" for the built-in example farm
+	name         string // the key name of the run file, the folder of its output
 	files        input.Files
 	combinations []input.Combination
 	params       []params.Params // the parameters of each combination, with the flags applied
-	runs         int             // runs per combination
+	repetitions  int             // runs per combination
 	threads      int             // run.threads of the run file
 	columns      []string        // the columns of the daily output
-	output       string          // the daily output file, "" without
+	dir          string          // the output folder, "" without output
+	output       string          // the daily output file in dir, "" without
 	results      []runResult     // the results of its runs, in the order of its jobs
 }
 
@@ -45,15 +47,16 @@ func (c *cli) newExperiment(config string) (*experiment, error) {
 		}
 		e.params = append(e.params, p)
 	}
-	// the section run is checked by input.Build in paramsOf, and the variations cannot change it
+	// the name and the section run are checked by input.Build in paramsOf, and the variations cannot change them
+	e.name = e.files.Config.Name
 	run := e.files.Config.Run
 	e.threads = run.Threads
-	if e.runs, err = c.runCount(run.Runs); err != nil {
+	if e.repetitions, err = c.repetitionCount(run.Repetitions); err != nil {
 		return nil, err
 	}
-	if seed := e.params[0].Seed; seed > math.MaxInt64-int64(e.runs)+1 {
-		return nil, fmt.Errorf("seed %d: the seed of the last of %d runs is larger than %d", seed, e.runs,
-			int64(math.MaxInt64))
+	if seed := e.params[0].Seed; seed > math.MaxInt64-int64(e.repetitions)+1 {
+		return nil, fmt.Errorf("seed %d: the seed of the last of %d repetitions is larger than %d", seed,
+			e.repetitions, int64(math.MaxInt64))
 	}
 	e.columns, _ = obs.SelectColumns(e.params[0].Output.Columns) // checked in paramsOf
 	return e, nil
@@ -84,15 +87,16 @@ func (c *cli) paramsOf(f input.Files) (params.Params, error) {
 	return p, nil
 }
 
-// runCount returns the number of runs per combination: the flag --runs, else runs of the run file.
-func (c *cli) runCount(runs int) (int, error) {
-	if c.Runs == nil {
-		return runs, nil
+// repetitionCount returns the number of runs per combination: the flag --repetitions, else repetitions of the run
+// file.
+func (c *cli) repetitionCount(repetitions int) (int, error) {
+	if c.Repetitions == nil {
+		return repetitions, nil
 	}
-	if *c.Runs < 1 {
-		return 0, fmt.Errorf("--runs is %d, want 1 or more", *c.Runs)
+	if *c.Repetitions < 1 {
+		return 0, fmt.Errorf("--repetitions is %d, want 1 or more", *c.Repetitions)
 	}
-	return *c.Runs, nil
+	return *c.Repetitions, nil
 }
 
 // threadCount returns the number of runs at the same time: the flag --threads, else threads of the run files, which
@@ -108,40 +112,44 @@ func (c *cli) threadCount(experiments []*experiment) (int, error) {
 	for _, e := range experiments[1:] {
 		if e.threads != threads {
 			return 0, fmt.Errorf("the run files ask for different threads (%s: %d, %s: %d): set --threads",
-				experiments[0].config, threads, e.config, e.threads)
+				experiments[0].source(), threads, e.source(), e.threads)
 		}
 	}
 	return threads, nil
 }
 
-// outputFiles sets the daily output file of each experiment: output for one experiment, else output with the name
-// of the run file in front of the extension (out.csv, -c a.yaml -c b.yaml: out_a.csv, out_b.csv). Two run files with
-// the same name are an error, their outputs would overwrite each other.
-func outputFiles(output string, experiments []*experiment) error {
+// outputDirs sets the output folder of each experiment: the folder of its name (the key name of its run file) in the
+// folder output, one or several run files alike (-o out, -c farm.yaml -c sussex.yaml: out/farm, out/sussex). Two run
+// files with the same name are an error, their outputs would overwrite each other. Names that differ only in case are
+// the same name, as for the file system of Windows and macOS.
+func outputDirs(output string, experiments []*experiment) error {
 	if output == "" {
 		return nil
 	}
-	if len(experiments) == 1 {
-		experiments[0].output = output
-		return nil
-	}
-	ext := filepath.Ext(output)
-	stem := strings.TrimSuffix(output, ext)
-	used := map[string]string{}
+	used := map[string]*experiment{}
 	for _, e := range experiments {
-		name := strings.TrimSuffix(filepath.Base(e.config), filepath.Ext(e.config))
-		e.output = stem + "_" + name + ext
-		if other, ok := used[e.output]; ok {
-			return fmt.Errorf("the run files %s and %s have the same name, their outputs would both be %s",
-				other, e.config, e.output)
+		e.dir = filepath.Join(output, e.name)
+		e.output = filepath.Join(e.dir, dailyOutputFile)
+		if other, ok := used[strings.ToLower(e.name)]; ok {
+			return fmt.Errorf("the run files %s and %s have the same name %q, their outputs would both go to %s: "+
+				"change the key name of one of them", other.source(), e.source(), e.name, e.dir)
 		}
-		used[e.output] = e.config
+		used[strings.ToLower(e.name)] = e
 	}
 	return nil
 }
 
-// jobs returns the runs of the experiment number index: each combination run e.runs times, the run r (from 0) with
-// the seed of the run file + r. All combinations get the same seeds.
+// source returns the run file of the experiment for messages: its path, or the built-in example farm.
+func (e *experiment) source() string {
+	if e.config == "" {
+		return exampleFarmConfig
+	}
+	return e.config
+}
+
+// jobs returns the runs of the experiment number index: each combination run e.repetitions times, the repetition r
+// (from 0) with the seed of the run file + r. All combinations get the same seeds. The runs are numbered from 1 over
+// all combinations, so that the column run tells each run of the daily output apart.
 func (e *experiment) jobs(index int, several bool) []job {
 	var jobs []job
 	for k, combination := range e.combinations {
@@ -149,17 +157,18 @@ func (e *experiment) jobs(index int, several bool) []job {
 		if len(combination.Values) > 0 {
 			describe = ", " + e.files.Describe(combination)
 		}
-		for r := range e.runs {
+		for r := range e.repetitions {
 			p := e.params[k] // the input is shared by all runs, the model does not change it
 			p.Seed += int64(r)
+			number := k*e.repetitions + r + 1
 			j := job{p: p, exp: index}
-			j.label = fmt.Sprintf("run %d (seed %d%s)", r+1, p.Seed, describe)
+			j.label = fmt.Sprintf("run %d (seed %d%s)", number, p.Seed, describe)
 			if several {
-				j.label = e.config + ": " + j.label
+				j.label = e.name + ": " + j.label
 			}
 			if e.output != "" {
 				j.columns = e.columns
-				j.prefix = fmt.Sprintf("%d\t%d\t", r+1, p.Seed)
+				j.prefix = fmt.Sprintf("%d\t%d\t", number, p.Seed)
 				for _, v := range combination.Values {
 					j.prefix += v + "\t"
 				}
@@ -170,8 +179,8 @@ func (e *experiment) jobs(index int, several bool) []job {
 	return jobs
 }
 
-// header returns the columns of the daily output of the experiment: run, seed, the keys of the variations, t and the
-// columns.
+// header returns the columns of the daily output of the experiment: run (from 1 over all combinations), seed, the keys
+// of the variations, t and the columns.
 func (e *experiment) header() []string {
 	h := []string{"run", "seed"}
 	for _, v := range e.files.Config.Variations {

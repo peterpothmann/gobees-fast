@@ -349,6 +349,26 @@ func TestBuildCropRotation(t *testing.T) {
 	}
 }
 
+func TestBuildName(t *testing.T) {
+	// the name is needed and names a folder: letters, digits, - and _ only
+	c, landscapes := ExampleFarmConfig()
+	if c.Name != "example_farm" {
+		t.Errorf("name of the example farm = %q, want example_farm", c.Name)
+	}
+	for _, name := range []string{"farm", "Farm-2", "step7_crop", "a"} {
+		c.Name = name
+		if _, err := Build(c, landscapes); err != nil {
+			t.Errorf("name %q: %v", name, err)
+		}
+	}
+	for _, name := range []string{"", "my farm", "a/b", "..", "a.b", "färm", `a\b`} {
+		c.Name = name
+		if _, err := Build(c, landscapes); err == nil || !strings.Contains(err.Error(), "name") {
+			t.Errorf("name %q: error = %v, want an error about the name", name, err)
+		}
+	}
+}
+
 func TestBuildNoFlowers(t *testing.T) {
 	// without flower species there is no table.
 	c, landscapes := ExampleFarmConfig()

@@ -114,7 +114,7 @@ func TestScenarios(t *testing.T) {
 func runScenario(t *testing.T, s Scenario, dir, cur, ref, base string, phase int) ScenarioResult {
 	t.Helper()
 	run := func(bin string, in Input) []Run {
-		runs, err := RunPrograms(bin, in.Args(dir, &s), Seeds(seeds), s.Days, threads(t), true)
+		runs, err := RunPrograms(bin, in, in.Args(dir, &s), Seeds(seeds), s.Days, threads(t), true)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -179,11 +179,11 @@ func TestSpeedAgainstBase(t *testing.T) {
 	dir := inputDir(t)
 	var baseRuns, curRuns []Run
 	for _, seed := range Seeds(speedSeeds) {
-		b, err := RunProgram(base, NetLogoInput.Args(dir, nil), seed, speedDays, false)
+		b, err := RunProgram(base, NetLogoInput, NetLogoInput.Args(dir, nil), seed, speedDays, false)
 		if err != nil {
 			t.Fatal(err)
 		}
-		c, err := RunProgram(cur, YAMLInput.Args(dir, nil), seed, speedDays, false)
+		c, err := RunProgram(cur, YAMLInput, YAMLInput.Args(dir, nil), seed, speedDays, false)
 		if err != nil {
 			t.Fatal(err)
 		}

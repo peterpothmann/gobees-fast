@@ -126,6 +126,7 @@ func TestVariationErrors(t *testing.T) {
 		want       string // in the error
 	}{
 		{"  - key: run.seed\n    values: [1, 2]\n", "run.seed cannot vary"},
+		{"  - key: name\n    values: [a, b]\n", "name cannot vary"},
 		{"  - key: output.columns\n    values: [[eggs]]\n", "output.columns cannot vary"},
 		{"  - key: landscape\n    values: [a.yaml]\n", "landscape cannot vary"},
 		{"  - key: cropRotation\n    values: [[a.yaml, b.yaml]]\n", "cropRotation cannot vary"},

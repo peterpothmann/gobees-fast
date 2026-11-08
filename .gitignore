@@ -8,13 +8,11 @@ test-results.xml
 data-model.md
 # lock file of the comparison report while a test writes it
 validation-report.md.lock
-# daily output of go run . -o
-go/daily_output.csv
+# output of go run . -o output (README, quick start)
+go/output/
 # local benchmark runs (go/benchmark/README.md; the table is covered by *_netlogo.csv)
 benchmark_netlogo_console.txt
 benchmark-report-local.md
-# daily output of go run . -o
-go/daily_output.csv
 # plan of gobees-fast, kept local
 docs/plan.md
 docs/inventory.md

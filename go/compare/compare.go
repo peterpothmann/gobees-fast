@@ -128,9 +128,11 @@ type Run struct {
 type Input string
 
 const (
-	// NetLogoInput: the NetLogo input files, with -d and -p (gobees, and gobees-fast before step F7).
+	// NetLogoInput: the NetLogo input files, with -d and -p (gobees, and gobees-fast before step F7). The program
+	// writes the daily output into the file of -f.
 	NetLogoInput Input = "netlogo"
-	// YAMLInput: a run file, with --config (gobees-fast from step F7 on).
+	// YAMLInput: a run file of the current format, with --config. The program writes its output into a folder of the
+	// key name of the run file in the folder of -o.
 	YAMLInput Input = "yaml"
 )
 
@@ -161,21 +163,44 @@ func (in Input) Args(dir string, s *Scenario) []string {
 	return args
 }
 
-// RunProgram runs the gobees program bin once with the input arguments input (Input.Args). With output, it returns
-// the daily output in Run.Table, otherwise the program writes none (for timing).
-func RunProgram(bin string, input []string, seed int64, days int, output bool) (Run, error) {
-	args := append(slices.Clone(input), "-s", strconv.FormatInt(seed, 10), "--days", strconv.Itoa(days))
-	out := ""
+// outputArgs returns the flags that make a program of the input format write its daily output into the folder dir.
+func (in Input) outputArgs(dir string) []string {
+	if in == YAMLInput {
+		return []string{"-o", dir}
+	}
+	return []string{"-f", filepath.Join(dir, "daily_output.csv")}
+}
+
+// dailyOutput returns the daily output file that a program of the input format wrote with outputArgs(dir). A run file
+// writes daily.csv into the folder of its key name, the only folder in dir.
+func (in Input) dailyOutput(dir string) (string, error) {
+	if in != YAMLInput {
+		return filepath.Join(dir, "daily_output.csv"), nil
+	}
+	files, err := filepath.Glob(filepath.Join(dir, "*", "daily.csv"))
+	if err != nil {
+		return "", err
+	}
+	if len(files) != 1 {
+		return "", fmt.Errorf("%d daily outputs in %s, want one", len(files), dir)
+	}
+	return files[0], nil
+}
+
+// RunProgram runs the gobees program bin once with the input arguments args of the input format in (Input.Args).
+// With output, it returns the daily output in Run.Table, otherwise the program writes none (for timing).
+func RunProgram(bin string, in Input, args []string, seed int64, days int, output bool) (Run, error) {
+	args = append(slices.Clone(args), "-s", strconv.FormatInt(seed, 10), "--days", strconv.Itoa(days))
+	dir := ""
 	if output {
-		// a folder of its own: gobees-fast writes the run info and the copies of the landscape files next to the
-		// output
-		dir, err := os.MkdirTemp("", "gobees-compare-*")
-		if err != nil {
+		// a folder of its own: gobees-fast writes the provenance and the copies of the landscape files next to the
+		// daily output
+		var err error
+		if dir, err = os.MkdirTemp("", "gobees-compare-*"); err != nil {
 			return Run{}, err
 		}
 		defer os.RemoveAll(dir)
-		out = filepath.Join(dir, "daily_output.csv")
-		args = append(args, "-f", out)
+		args = append(args, in.outputArgs(dir)...)
 	}
 
 	start := time.Now()
@@ -187,6 +212,10 @@ func RunProgram(bin string, input []string, seed int64, days int, output bool) (
 		return run, nil
 	}
 
+	out, err := in.dailyOutput(dir)
+	if err != nil {
+		return run, fmt.Errorf("%s, seed %d: %w", filepath.Base(bin), seed, err)
+	}
 	f, err := os.Open(out)
 	if err != nil {
 		return run, err
@@ -200,7 +229,7 @@ func RunProgram(bin string, input []string, seed int64, days int, output bool) (
 
 // RunPrograms runs the program once per seed (RunProgram), with threads runs at the same time. The runs are in the
 // order of the seeds.
-func RunPrograms(bin string, input []string, seeds []int64, days, threads int, output bool) ([]Run, error) {
+func RunPrograms(bin string, in Input, args []string, seeds []int64, days, threads int, output bool) ([]Run, error) {
 	runs := make([]Run, len(seeds))
 	errs := make([]error, len(seeds))
 	next := make(chan int)
@@ -208,7 +237,7 @@ func RunPrograms(bin string, input []string, seeds []int64, days, threads int, o
 	for range threads {
 		wg.Go(func() {
 			for i := range next {
-				runs[i], errs[i] = RunProgram(bin, input, seeds[i], days, output)
+				runs[i], errs[i] = RunProgram(bin, in, args, seeds[i], days, output)
 			}
 		})
 	}

@@ -50,7 +50,7 @@ The experiments of parts of the model (`step3`, `step4a`, `step6`) cannot run as
 
 ## The comparisons
 
-Every version runs as a command line program (`go/main.go`) with `-s <seed> --days <days> -f <file>` and its input:
+Every version runs as a command line program (`go/main.go`) with `-s <seed> --days <days>`, the flag of its daily output (`-f <file>`, the current code `-o <folder>`) and its input:
 gobees (`BASE_COMMIT`) the NetLogo files (`-d <folder> -p <parameter file>`), the current code the run file of the
 scenario (`--config`, converted with `tools/netlogo2gobees` into [scenarios](scenarios)), the reference the format of
 `REFERENCE_INPUT` in `commits.env`. The programs run with seeds 1 to 100, and is compared on its daily output (`obs.DailyOutputExtended`) from day 1 on (the

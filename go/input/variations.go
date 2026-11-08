@@ -14,8 +14,8 @@ import (
 const variationsKey = "variations"
 
 // Variation is one key of a run file and the values it takes in an experiment (section variations). The run file
-// with its variations is an experiment: every combination of the values (full factorial) runs run.runs times, with the
-// seeds of the section run (each combination the same seeds).
+// with its variations is an experiment: every combination of the values (full factorial) runs run.repetitions times,
+// with the seeds of the section run (each combination the same seeds).
 type Variation struct {
 	// Key is the path of the key in the run file, its parts separated by dots, e.g. parameters.badgers or
 	// constants.foraging.maxForagingRange. A number selects an item of a list, e.g. initialQueens.0.queens.
@@ -32,9 +32,10 @@ type Combination struct {
 	Files  Files
 }
 
-// checkVariations checks the section variations: each key once, with at least one value, not in the sections run
-// and variations, not output.columns (all combinations of an experiment write the same columns into one file) and not
-// landscape or cropRotation (the run info copies the landscape files of the run file only).
+// checkVariations checks the section variations: each key once, with at least one value, not name (the folder of the
+// one output of all combinations), not in the sections run and variations, not output.columns (all combinations of an
+// experiment write the same columns into one file) and not landscape or cropRotation (the provenance copies the
+// landscape files of the run file only).
 func checkVariations(vs []Variation) error {
 	seen := map[string]bool{}
 	for i, v := range vs {
@@ -43,9 +44,12 @@ func checkVariations(vs []Variation) error {
 		}
 		first, _, _ := strings.Cut(v.Key, ".")
 		switch {
+		case first == nameKey:
+			return fmt.Errorf("%s: %s cannot vary: all combinations write into the one folder of the name",
+				variationsKey, v.Key)
 		case first == runKey || first == variationsKey || v.Key == "output.columns":
-			return fmt.Errorf("%s: %s cannot vary: seed, days, runs and threads are the same for all combinations, "+
-				"and so are the columns of the output", variationsKey, v.Key)
+			return fmt.Errorf("%s: %s cannot vary: seed, days, repetitions and threads are the same for all "+
+				"combinations, and so are the columns of the output", variationsKey, v.Key)
 		case first == "landscape" || first == "cropRotation":
 			return fmt.Errorf("%s: %s cannot vary: other landscapes are other run files, run them together with "+
 				"-c a.yaml -c b.yaml", variationsKey, v.Key)

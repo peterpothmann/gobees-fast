@@ -29,22 +29,26 @@ type Converted struct {
 
 // Convert reads the NetLogo parameter file at path [INIT-04] and all files it names, relative to dir (the folder of
 // the .nlogo), and returns them as run file and landscape files. mapName is the NetLogo setting MyMap, which gives the
-// foodsources file of the start [PAR-05].
+// foodsources file of the start [PAR-05]. name is the key name of the run file (input.CheckName), NetLogo has none.
 //
 // Only the format changes: the values are those that NetLogo reads, the run file has no derived values.
-func Convert(dir, path, mapName string) (Converted, error) {
+func Convert(dir, path, mapName, name string) (Converted, error) {
+	if err := input.CheckName(name); err != nil {
+		return Converted{}, err
+	}
 	file, err := ReadParameterFile(path)
 	if err != nil {
 		return Converted{}, err
 	}
-	return convert(dir, &file, mapName)
+	return convert(dir, &file, mapName, name)
 }
 
-func convert(dir string, file *netLogoParameters, mapName string) (Converted, error) {
+func convert(dir string, file *netLogoParameters, mapName, name string) (Converted, error) {
 	// NetLogo's RAND_SEED is a setting of the interface, not of the parameter file: seed 1. days: the default of
-	// gobees, NetLogo runs until it is stopped. One run on one thread.
+	// gobees, NetLogo runs until it is stopped. One repetition on one thread.
 	days := params.Default().Termination.MaxTicks
-	c := input.Config{Run: &input.Run{Seed: 1, Days: &days, Runs: 1, Threads: 1}, Parameters: file.Parameters}
+	c := input.Config{Name: name, Run: &input.Run{Seed: 1, Days: &days, Repetitions: 1, Threads: 1},
+		Parameters: file.Parameters}
 	c.Output.KeepDeadColonies = file.KeepDeadColonies // step F13
 	// the constants come from the code, as in NetLogo, never from the parameter file
 	c.Constants = params.DefaultConstants()

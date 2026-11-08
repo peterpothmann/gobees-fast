@@ -20,10 +20,15 @@ import (
 // the converter maps by name. A key missing in the file keeps its zero value, except in the section constants,
 // which must hold every key. An unknown key is an error.
 type Config struct {
-	// Run holds the seed, the days, the runs and the threads and, in a run info, the record of a run (checkRun).
+	// Name names the run file: its output goes into the folder of this name (main.go). Needed, only letters, digits,
+	// - and _ (CheckName).
+	Name string `yaml:"name"`
+
+	// Run holds the seed, the days, the repetitions and the threads and, in a provenance, the record of a run
+	// (checkRun).
 	Run *Run `yaml:"run,omitempty"`
 
-	// Variations make the run file an experiment: every combination of their values runs run.runs times (see
+	// Variations make the run file an experiment: every combination of their values runs run.repetitions times (see
 	// Variation, Files.Combinations). The section is optional.
 	Variations []Variation `yaml:"variations,omitempty"`
 
@@ -236,12 +241,18 @@ const constantsKey = "constants"
 // runKey is the key of the section run in a run file.
 const runKey = "run"
 
+// nameKey is the key of the name of a run file.
+const nameKey = "name"
+
+// nameComment is the comment at the key name.
+const nameComment = "folder of the output, letters, digits, - and _"
+
 // constantsComment is the comment above the section constants.
 const constantsComment = "Fixed in the NetLogo code, not settable in NetLogo's parameter files. Defaults: the NetLogo values.\n" +
 	"Every key is needed. The comment at a key gives unit and source."
 
 // WriteConfig writes a run file. The section constants gets a comment above it and, at each key, the tag doc of the
-// field (unit and source). The keys seed, days and runs of the section run get the tag doc of their field.
+// field (unit and source). The keys of the section run get the tag doc of their field, the key name a comment.
 func WriteConfig(w io.Writer, c Config) error {
 	return WriteConfigNotes(w, c, nil)
 }
@@ -260,6 +271,8 @@ func WriteConfigNotes(w io.Writer, c Config, notes map[string]string) error {
 			commentKeys(n.Content[i+1], reflect.TypeFor[params.Constants](), "", notes)
 		case runKey:
 			commentKeys(n.Content[i+1], reflect.TypeFor[Run](), "", nil)
+		case nameKey:
+			n.Content[i+1].LineComment = nameComment
 		}
 	}
 	return encode(w, n)

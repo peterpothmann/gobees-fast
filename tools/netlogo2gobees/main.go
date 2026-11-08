@@ -18,11 +18,12 @@ type convertCmd struct {
 	Dir        string `short:"d" type:"path" default:"../../netlogo" placeholder:"PATH" help:"Folder of the input files, the folder of the .nlogo in NetLogo. The file names in the parameter file are relative to it."`
 	Map        string `short:"m" default:"${default_map}" placeholder:"NAME" help:"Map (MyMap). Only the name is used: the foodsources are read from <NAME without .png>_Foodsources.txt in --dir [PAR-05]."`
 	Out        string `short:"o" type:"path" required:"" placeholder:"PATH" help:"Folder of the run file and its landscape files, created if missing."`
+	Name       string `short:"n" required:"" placeholder:"NAME" help:"Key name of the run file: gobees-fast writes its output into a folder of this name. Letters, digits, - and _."`
 	RunFile    string `name:"run" default:"run.yaml" help:"Name of the run file in --out."`
 }
 
 func (c *convertCmd) Run() error {
-	converted, err := Convert(c.Dir, c.Parameters, c.Map)
+	converted, err := Convert(c.Dir, c.Parameters, c.Map, c.Name)
 	if err != nil {
 		return err
 	}
