@@ -39,7 +39,9 @@ type activities struct {
 
 	beeFilter    *ecs.Filter1[comp.Bee]
 	colonyFilter *ecs.Filter1[comp.Colony]
-	beeMap       *beeMapper
+	beeMap       *ecs.Map1[comp.Bee] // only the Bee: the cheapest lookup per turn
+	actMap       *ecs.Map2[comp.Bee, comp.Thresholds]
+	devMap       *ecs.Map1[comp.Development]
 	colonyMap    *ecs.Map4[comp.Colony, comp.ColonyStores, comp.ColonyStimuli, comp.ColonyCounts]
 	speciesMap   *speciesTable
 
@@ -61,7 +63,9 @@ func (s *activities) Initialize(w *ecs.World) {
 
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
 	s.colonyFilter = ecs.NewFilter1[comp.Colony](w)
-	s.beeMap = newBeeMapper(w)
+	s.beeMap = ecs.NewMap1[comp.Bee](w)
+	s.actMap = ecs.NewMap2[comp.Bee, comp.Thresholds](w)
+	s.devMap = ecs.NewMap1[comp.Development](w)
 	s.colonyMap = ecs.NewMap4[comp.Colony, comp.ColonyStores, comp.ColonyStimuli, comp.ColonyCounts](w)
 	s.speciesMap = newSpeciesTable(w)
 	s.broodOf = map[ecs.Entity][]ecs.Entity{}
@@ -73,10 +77,13 @@ func (s *activities) Update(w *ecs.World) {
 	// the queue holds exactly the active adult workers and queens: wakeUp put all of them into it, no bee becomes
 	// one during the day, and beeDeath.die removes dying bees from it. Its length is therefore NetLogo's count,
 	// without counting all bees in every turn.
+	// The colonies are counted once: during the day no colony is founded (queenEmergence) and none dies
+	// (colonyUpdate), both happen in the morning. NetLogo counts them in every turn.
+	colonies := s.colonies()
 	continueWorking := true
-	for continueWorking && s.activeAdults() > 0 && s.colonies() > 0 {
+	for continueWorking && s.activeAdults() > 0 && colonies > 0 {
 		e := s.nextActiveBee()
-		_, b, _, _, _, _ := s.beeMap.Get(e)
+		b := s.beeMap.Get(e)
 		if b.PersonalTime > s.constants.Activities.CallItADay {
 			continueWorking = false
 		} else {
@@ -90,7 +97,7 @@ func (s *activities) Update(w *ecs.World) {
 			}
 		}
 		// get the bee again: act may have created entities
-		_, b, _, _, _, _ = s.beeMap.Get(e)
+		b = s.beeMap.Get(e)
 		// Queens without a colony are inactive for the rest of the day.
 		if b.Colony.IsZero() {
 			b.PersonalTime = s.constants.Activities.CallItADay + 1
@@ -131,8 +138,7 @@ func (s *activities) colonies() int {
 // NetLogo's order.
 func (s *activities) nextActiveBee() ecs.Entity {
 	time := func(e ecs.Entity) float64 {
-		_, b, _, _, _, _ := s.beeMap.Get(e)
-		return b.PersonalTime
+		return s.beeMap.Get(e).PersonalTime
 	}
 	list := s.active.List
 	activeBee := list[0]
@@ -172,7 +178,7 @@ func (s *activities) nextActiveBee() ecs.Entity {
 // act lets the bee e choose one task and do it.
 func (s *activities) act(w *ecs.World, e ecs.Entity) {
 	pause := s.constants.Activities.Pause // [s]
-	_, b, _, th, _, _ := s.beeMap.Get(e)
+	b, th := s.actMap.Get(e)
 	b.Activity = activity.Resting
 	if !b.Colony.IsZero() {
 		// ORDER of the four: irrelevant.
@@ -226,7 +232,7 @@ func (s *activities) act(w *ecs.World, e ecs.Entity) {
 func (s *activities) incubateBrood(w *ecs.World, e ecs.Entity) {
 	heatingPeriod := s.constants.Activities.NursingTime         // [s]
 	incubationEnergy := s.constants.Activities.IncubationEnergy // [kJ/(mg s)]
-	_, b, _, _, _, _ := s.beeMap.Get(e)
+	b := s.beeMap.Get(e)
 	heatProvided := heatingPeriod * incubationEnergy * b.Weight * float64(b.Number) // [kJ]
 	// the divisor uses this morning's counts, brood laid today is not in it
 	heatPerBrood := 0.0 // [kJ]
@@ -239,7 +245,7 @@ func (s *activities) incubateBrood(w *ecs.World, e ecs.Entity) {
 		if !w.Alive(x) {
 			continue
 		}
-		_, _, _, _, _, dev := s.beeMap.Get(x)
+		dev := s.devMap.Get(x)
 		dev.IncubationReceived = dev.IncubationReceived + heatPerBrood
 	}
 	stores.IncubationToday = stores.IncubationToday + heatProvided

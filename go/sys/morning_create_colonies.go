@@ -125,4 +125,5 @@ func (c *colonyFounder) flowersInRange(colony ecs.Entity) {
 	}
 	r.PollenPatches = removeDuplicates(polM)
 	r.NectarPatches = removeDuplicates(necM)
+	r.PollenDetection, r.NectarDetection = nil, nil // new lists: the search computes them again
 }

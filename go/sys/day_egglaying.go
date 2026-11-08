@@ -26,6 +26,7 @@ type eggLayer struct {
 	constants  *params.Constants
 
 	beeMap     *beeMapper
+	motherMap  *ecs.Map1[comp.Bee]
 	colonyMap  *ecs.Map2[comp.Colony, comp.ColonyStores]
 	speciesMap *speciesTable
 }
@@ -37,6 +38,7 @@ func newEggLayer(w *ecs.World, rng *rand.Rand) eggLayer {
 		parameters: ecs.GetResource[params.Parameters](w),
 		constants:  ecs.GetResource[params.Constants](w),
 		beeMap:     newBeeMapper(w),
+		motherMap:  ecs.NewMap1[comp.Bee](w),
 		colonyMap:  ecs.NewMap2[comp.Colony, comp.ColonyStores](w),
 		speciesMap: newSpeciesTable(w),
 	}
@@ -45,7 +47,7 @@ func newEggLayer(w *ecs.World, rng *rand.Rand) eggLayer {
 // layEggs lets the bee e (the mother) lay one batch of eggs if the colony stores cover the cost, and takes
 // 24 h of her time. It returns the new egg cohorts (none if the stores were too small).
 func (l *eggLayer) layEggs(e ecs.Entity) []ecs.Entity {
-	_, mother, _, _, _, _ := l.beeMap.Get(e)
+	mother := l.motherMap.Get(e)
 	sp := l.speciesMap.Get(mother.Species)
 	colonyID := mother.Colony
 
@@ -83,7 +85,7 @@ func (l *eggLayer) layEggs(e ecs.Entity) []ecs.Entity {
 	}
 
 	// also if no eggs were laid
-	_, mother, _, _, _, _ = l.beeMap.Get(e)
+	mother = l.motherMap.Get(e)
 	mother.PersonalTime = mother.PersonalTime + l.constants.Activities.EggLayingTime
 	return eggs
 }
@@ -144,6 +146,7 @@ func (l *eggLayer) initEggs(e ecs.Entity, beesInCohort int, diploid bool) {
 	f.ExpectedNectarTrip = 0
 	f.ExpectedPollenTrip = 0
 	f.GlossaLength = 0
+	f.IngestionFactor = 0
 	f.CarriedNectar = 0
 	b.PersonalTime = 0
 	f.PollenForager = false

@@ -94,6 +94,7 @@ func (s *cropRotation) rotate(w *ecs.World) {
 		r := s.rangeMap.Get(e)
 		r.NectarPatches = []ecs.Entity{}
 		r.PollenPatches = []ecs.Entity{}
+		r.NectarDetection, r.PollenDetection = nil, nil
 	}
 
 	// the new landscape: new entities, random numbers for the hedges and layers
