@@ -15,6 +15,8 @@ A run of gobees-fast with the same seed gives other numbers than NetLogo and gob
 
 ### Random order
 
+Changed in [#47](https://github.com/peterpothmann/gobees-fast/pull/47).
+
 NetLogo asks agents (`ask bees`, `ask colonies`, ...) in random order, so every `ask` shuffles. gobees-fast shuffles only where the result depends on the order. Everywhere else it goes through the agents in storage order.
 
 A shuffle is left out when each agent changes only itself (or adds to a sum) and either draws no random number or draws its own. The draws are independent and identically distributed, so which draw goes to which agent does not change the distribution. Sums in another order differ only in the last bits.
