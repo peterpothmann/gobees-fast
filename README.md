@@ -61,15 +61,7 @@ cd ../../go
 go run . -c ../tools/netlogo2gobees/sussex/run.yaml
 ```
 
-Every run file has a name (key `name`, letters, digits, `-` and `_`). With `-o DIR`, the output of a run file goes into the folder `DIR/<name>`:
-
-| File | Content |
-| --- | --- |
-| `daily.csv` | daily output: one row per run and day |
-| `provenance.yaml` | the run file as run, with seed, command and program version. Running it with `-c` repeats the run byte for byte. |
-| landscape files | copies of the landscape files of the run |
-
-Several run files (`-c a.yaml -c b.yaml -o out`) each get their own folder, `out/<name of a>` and `out/<name of b>`.
+With `-o DIR`, each run file writes into `DIR/<name>` (key `name` of the run file) its daily output `daily.csv` and `provenance.yaml`. Running `provenance.yaml` with `-c` repeats the run byte for byte.
 
 An optional section `variations` in the run file turns it into an experiment: every combination of the listed values runs.
 
@@ -78,8 +70,6 @@ variations:
   - key: parameters.badgers
     values: [0, 2, 4]
 ```
-
-The daily output holds all combinations, the column `run` numbers the runs from 1 over all combinations.
 
 Details on run files, the converter, experiments, the daily output and the provenance: [docs/usage.md](docs/usage.md). All keys with unit and NetLogo name: [docs/names.md](docs/names.md).
 
