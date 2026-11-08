@@ -1,15 +1,12 @@
 package sys
 
 import (
-	"math/rand/v2"
-
 	"gobees/comp"
 	"gobees/day"
 	"gobees/enum/stage"
 	"gobees/globals"
 	"gobees/params"
 
-	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
 )
 
@@ -20,7 +17,6 @@ import (
 //
 // NetLogo: QueenProductionDateProc.
 type queenProductionDate struct {
-	rng       *rand.Rand
 	ticks     *globals.Ticks
 	constants *params.Constants
 
@@ -34,7 +30,6 @@ type queenProductionDate struct {
 }
 
 func (s *queenProductionDate) Initialize(w *ecs.World) {
-	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.ticks = ecs.GetResource[globals.Ticks](w)
 	s.constants = ecs.GetResource[params.Constants](w)
 
@@ -47,10 +42,10 @@ func (s *queenProductionDate) Initialize(w *ecs.World) {
 
 func (s *queenProductionDate) Update(w *ecs.World) {
 	ticks := s.ticks.Ticks
-	// ORDER: irrelevant, each colony only reads its own larvae and changes itself. Shuffled, as NetLogo asks the
-	// colonies in random order.
+	// ORDER: irrelevant, each colony only reads its own larvae and changes itself. Not shuffled (NetLogo: random
+	// order).
 	s.larvae = beesByColony(s.larvae, s.beeFilter, func(b *comp.Bee) bool { return b.Stage == stage.Larva })
-	for _, col := range askColonies(s.colonyFilter, s.rng) {
+	for _, col := range allColonies(s.colonyFilter) {
 		colony, counts := s.colonyMap.Get(col)
 
 		// 7 d + QueenDeterminationAge, or the largest broodAge of the larvae at larval day 3

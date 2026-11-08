@@ -50,15 +50,14 @@ func createBadgers(w *ecs.World, n int, scale, distanceLimit float64, rng *rand.
 		}
 	}
 
-	// ALL badgers are created first, at the origin (0, 0). Then each is placed, in random order, as NetLogo asks
-	// them in random order.
+	// ALL badgers are created first, at the origin (0, 0). Then each is placed. ORDER: irrelevant, the badgers are
+	// identical until placed. Not shuffled (NetLogo: random order).
 	badgerMap := ecs.NewMap2[comp.Position, comp.Badger](w)
 	badgers := make([]ecs.Entity, n)
 	for i := range badgers {
 		badgers[i] = badgerMap.NewEntity(&comp.Position{}, &comp.Badger{})
 	}
 	placed := []ecs.Entity{}
-	shuffle(rng, badgers)
 
 	// burrowFsSet before the badgers were created: every Scrub masterpatch
 	burrowFsSet := slices.Clone(sites)

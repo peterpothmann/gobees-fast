@@ -53,7 +53,7 @@ func (s *queenEmergence) Initialize(w *ecs.World) {
 	s.nestSites = ecs.GetResource[globals.NestSites](w)
 	s.world = ecs.GetResource[params.World](w)
 	s.death = newBeeDeath(w)
-	s.colonies = newColonyFounder(w, s.rng)
+	s.colonies = newColonyFounder(w)
 
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
 	s.colonyFilter = ecs.NewFilter2[comp.Position, comp.Colony](w)
@@ -92,14 +92,16 @@ func (s *queenEmergence) Update(w *ecs.World) {
 		bee.Colony = ecs.Entity{}
 	}
 
-	// ORDER: irrelevant for social species, the queens choose nest sites independently (no check whether a site is
-	// taken). For cuckoo bees the order decides which cuckoo bee may kill a host queen first.
+	// ORDER: MATTERS. Irrelevant for social species, the queens choose nest sites independently (no check whether a
+	// site is taken). For cuckoo bees the order decides which cuckoo bee may kill another one in the same host first.
+	// Shuffled, as NetLogo asks the queens in random order.
 	searching := s.collectBees(func(b *comp.Bee) bool {
 		return b.Caste == caste.Queen && b.Colony.IsZero() && b.Activity != activity.Hibernate
 	})
 	if len(searching) == 0 {
 		return
 	}
+	shuffle(s.rng, searching)
 	for _, e := range searching {
 		if !w.Alive(e) {
 			continue // killed by a cuckoo bee of this loop
@@ -128,7 +130,10 @@ func (s *queenEmergence) Update(w *ecs.World) {
 
 func (s *queenEmergence) Finalize(w *ecs.World) {}
 
-// collectBees returns all bees for which keep is true, shuffled, as NetLogo asks the bees in random order.
+// collectBees returns all bees for which keep is true, in storage order. NetLogo asks them in random order. The
+// emerging cohorts, the emerged queens and the victims of a cuckoo bee each change only themselves with their own
+// draws, the counts of the queens in nest construction only use the length: not shuffled. Update shuffles the
+// searching queens itself.
 func (s *queenEmergence) collectBees(keep func(b *comp.Bee) bool) []ecs.Entity {
 	result := []ecs.Entity{}
 	query := s.beeFilter.Query()
@@ -137,7 +142,6 @@ func (s *queenEmergence) collectBees(keep func(b *comp.Bee) bool) []ecs.Entity {
 			result = append(result, query.Entity())
 		}
 	}
-	shuffle(s.rng, result)
 	return result
 }
 
@@ -191,9 +195,9 @@ func (s *queenEmergence) searchMortality() float64 {
 
 // chooseNestSite chooses a nest site, weighted by area.
 func (s *queenEmergence) chooseNestSite(ns *globals.SpeciesNestSites) ecs.Entity {
-	// Sites is in the order of globals.Landscape.Masterpatches. SIMPLIFY: shuffle not needed for the distribution.
-	list := slices.Clone(ns.Sites)
-	shuffle(s.rng, list)
+	// Sites is in the order of globals.Landscape.Masterpatches. ORDER: irrelevant, with one uniform number p each
+	// site is chosen with the probability area / total area in any order. Not shuffled (NetLogo: shuffle).
+	list := ns.Sites
 	p := s.rng.Float64()
 	probsSummedUp := 0.0
 	for _, e := range list {

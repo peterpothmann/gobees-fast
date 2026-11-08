@@ -29,7 +29,7 @@ type queensLeavingNest struct {
 	beeFilter *ecs.Filter1[comp.Bee]
 	beeMap    *ecs.Map3[comp.Bee, comp.Genetics, comp.Thresholds]
 
-	queens []ecs.Entity // buffer of askBees
+	queens []ecs.Entity // buffer of beesWhere
 }
 
 func (s *queensLeavingNest) Initialize(w *ecs.World) {
@@ -42,8 +42,9 @@ func (s *queensLeavingNest) Initialize(w *ecs.World) {
 }
 
 func (s *queensLeavingNest) Update(w *ecs.World) {
-	// ORDER: irrelevant. Each queen only changes herself, and mating does not use up the male.
-	s.queens = askBees(s.queens, s.beeFilter, s.rng, func(b *comp.Bee) bool {
+	// ORDER: irrelevant. Each queen only changes herself with her own random draws, and mating does not use up the
+	// male. Not shuffled (NetLogo: random order).
+	s.queens = beesWhere(s.queens, s.beeFilter, func(b *comp.Bee) bool {
 		return b.Stage == stage.Adult && b.Caste == caste.Queen && !b.Mated && !b.Colony.IsZero()
 	})
 	if len(s.queens) == 0 {

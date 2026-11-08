@@ -48,7 +48,8 @@ func (s *badgers) Update(w *ecs.World) {
 	encounterProb := s.constants.Badgers.EncounterProb // Kowalczyk et al. 2006: daily range 19 % of the home range
 	digUpProb := s.constants.Badgers.DigUpProb
 
-	// ORDER: irrelevant for the state. A colony dug up twice in one evening has nothing left to lose.
+	// ORDER: irrelevant. Each badger and colony in range draws once, a colony dug up twice in one evening has nothing
+	// left to lose, and all its bees die. Badgers, colonies and victims are not shuffled (NetLogo: random order).
 	type badger struct{ x, y float64 }
 	badgers := []badger{}
 	bq := s.badgerFilter.Query()
@@ -59,7 +60,6 @@ func (s *badgers) Update(w *ecs.World) {
 	if len(badgers) == 0 {
 		return
 	}
-	shuffle(s.rng, badgers)
 
 	// the members of each colony, grouped once. Bees that died on the way are skipped with w.Alive.
 	s.beesOf = beesByColony(s.beesOf, s.beeFilter, func(b *comp.Bee) bool { return true })
@@ -74,7 +74,6 @@ func (s *badgers) Update(w *ecs.World) {
 				inRange = append(inRange, cq.Entity())
 			}
 		}
-		shuffle(s.rng, inRange)
 
 		for _, col := range inRange {
 			if s.rng.Float64() >= encounterProb*digUpProb {
@@ -83,16 +82,11 @@ func (s *badgers) Update(w *ecs.World) {
 			stores := s.colonyMap.Get(col)
 			stores.Energy = 0
 			stores.Pollen = 0
-			// every bee of the colony dies, in random order. Each bee dies independently.
-			victims := []ecs.Entity{}
+			// every bee of the colony dies
 			for _, e := range s.beesOf[col] {
 				if w.Alive(e) {
-					victims = append(victims, e)
+					s.death.die(w, e, "Colony killed by badger!")
 				}
-			}
-			shuffle(s.rng, victims)
-			for _, e := range victims {
-				s.death.die(w, e, "Colony killed by badger!")
 			}
 		}
 	}

@@ -1,8 +1,6 @@
 package sys
 
 import (
-	"math/rand/v2"
-
 	"gobees/comp"
 	"gobees/enum/activity"
 	"gobees/globals"
@@ -23,7 +21,6 @@ type colonyMapper = ecs.Map6[
 
 // colonyFounder creates colonies and their foodsource lists.
 type colonyFounder struct {
-	rng        *rand.Rand
 	ticks      *globals.Ticks
 	parameters *params.Parameters
 	constants  *params.Constants
@@ -38,9 +35,8 @@ type colonyFounder struct {
 	foodsourceMap    *ecs.Map2[comp.FoodsourceState, comp.Layer]
 }
 
-func newColonyFounder(w *ecs.World, rng *rand.Rand) colonyFounder {
+func newColonyFounder(w *ecs.World) colonyFounder {
 	return colonyFounder{
-		rng:              rng,
 		ticks:            ecs.GetResource[globals.Ticks](w),
 		parameters:       ecs.GetResource[params.Parameters](w),
 		constants:        ecs.GetResource[params.Constants](w),
@@ -57,7 +53,8 @@ func newColonyFounder(w *ecs.World, rng *rand.Rand) colonyFounder {
 
 // found creates one colony per bee in "nestConstruction".
 func (c *colonyFounder) found(w *ecs.World) {
-	// each new colony takes one-of the remaining queens: shuffle the queens, pair them in order.
+	// each new colony takes one-of the remaining queens. ORDER: irrelevant, every queen founds her own colony and no
+	// site is taken. Not shuffled (NetLogo: one-of, random order).
 	queens := []ecs.Entity{}
 	query := c.beeFilter.Query()
 	for query.Next() {
@@ -65,7 +62,6 @@ func (c *colonyFounder) found(w *ecs.World) {
 			queens = append(queens, query.Entity())
 		}
 	}
-	shuffle(c.rng, queens)
 
 	for _, q := range queens {
 		qPos, qBee := c.beeMap.Get(q)
@@ -100,24 +96,14 @@ func (c *colonyFounder) patchesInRange(colony ecs.Entity) {
 	pos := *c.positionMap.Get(colony)
 	maxDist := c.constants.Foraging.MaxForagingRange * c.landscape.Scale
 
-	// ORDER: MATTERS for the list order, which flowersInRange keeps.
-	// NetLogo builds the list with fput in random ask order. Here: shuffle, then append. Both give a list in random
-	// order.
-	type item struct {
-		e    ecs.Entity
-		x, y float64
-	}
-	all := []item{}
+	// ORDER: irrelevant. flowersInRange keeps the list order in PollenPatches and NectarPatches, which only the search
+	// of a forager reads, and the search chooses at random among the detected patches in any order
+	// (forager.search). Storage order (NetLogo: fput in random ask order).
+	list := []ecs.Entity{}
 	query := c.foodsourceFilter.Query()
 	for query.Next() {
-		p, _ := query.Get()
-		all = append(all, item{query.Entity(), p.X, p.Y})
-	}
-	shuffle(c.rng, all)
-	list := []ecs.Entity{}
-	for _, it := range all {
-		if distanceBetween(pos.X, pos.Y, it.x, it.y) <= maxDist {
-			list = append(list, it.e)
+		if p, _ := query.Get(); distanceBetween(pos.X, pos.Y, p.X, p.Y) <= maxDist {
+			list = append(list, query.Entity())
 		}
 	}
 	c.rangeMap.Get(colony).Layers = list

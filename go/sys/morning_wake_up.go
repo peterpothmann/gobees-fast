@@ -29,7 +29,7 @@ type wakeUp struct {
 	beeFilter *ecs.Filter1[comp.Bee]
 	beeMap    *ecs.Map1[comp.Bee]
 
-	bees []ecs.Entity // buffer of askBees
+	bees []ecs.Entity // buffer of beesWhere
 }
 
 func (s *wakeUp) Initialize(w *ecs.World) {
@@ -43,10 +43,12 @@ func (s *wakeUp) Initialize(w *ecs.World) {
 }
 
 func (s *wakeUp) Update(w *ecs.World) {
-	// ORDER: MATTERS for ties. NetLogo puts the bees in the random order of ask into the list (fput,
-	// i.e. in reverse), then sorts it with the stable sort-by. Here: shuffle in askBees, then a stable sort.
+	// ORDER: MATTERS for ties: the order of the active list decides which bee acts first at the same time, e.g. who
+	// empties a foodsource. NetLogo puts the bees in the random order of ask into the list (fput, i.e. in reverse),
+	// then sorts it with the stable sort-by. Here: shuffle, then a stable sort.
 	randomTimeToGetUp := s.constants.Activities.GetUpSpread // [s]
-	s.bees = askBees(s.bees, s.beeFilter, s.rng, isActiveAdult)
+	s.bees = beesWhere(s.bees, s.beeFilter, isActiveAdult)
+	shuffle(s.rng, s.bees)
 	list := make([]ecs.Entity, 0, len(s.bees))
 	for _, e := range s.bees {
 		b := s.beeMap.Get(e)
