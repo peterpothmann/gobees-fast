@@ -20,7 +20,7 @@ go run .
 go run . -o output
 # 10 runs with the seeds 1 to 10, 4 at a time (parallel runs)
 go run . -o output -s 1 --repetitions 10 --threads 4
-# own scenario (run file)
+# own run file
 go run . -c path/to/run.yaml
 # columns of the daily output
 go run . --list-columns
@@ -50,9 +50,9 @@ output:
 
 Flags override the section `run` of the run file.
 
-## Own scenarios
+## Own run files
 
-A scenario is a run file (YAML) plus its landscape files. Convert NetLogo input files into a run file with the converter:
+A run file (YAML) holds all inputs of a run and names its landscape files. Convert NetLogo input files into a run file with the converter:
 
 ```shell
 cd tools/netlogo2gobees

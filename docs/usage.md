@@ -6,8 +6,8 @@ The short version is in the [README](../README.md#quick-start). This file is the
 | Section                                           | Read it to ...                                              |
 | ------------------------------------------------- | ----------------------------------------------------------- |
 | [Command-line arguments](#command-line-arguments) | start a run and choose seed, days, runs and output          |
-| [Run files](#run-files)                           | write or change a scenario (parameters, species, landscape) |
-| [NetLogo input files](#netlogo-input-files)       | turn a NetLogo scenario into a gobees-fast run file         |
+| [Run files](#run-files)                           | write or change a run file (parameters, species, landscape) |
+| [NetLogo input files](#netlogo-input-files)       | turn NetLogo input files into a gobees-fast run file        |
 | [Daily output](#daily-output)                     | read the result file of a run                               |
 | [Several runs](#several-runs)                     | run the model many times, e.g. for statistics               |
 | [Experiments](#experiments)                       | vary parameters and run every combination                   |
@@ -16,7 +16,7 @@ The short version is in the [README](../README.md#quick-start). This file is the
 
 ## Command-line arguments
 
-The flags control a single call of the model: which scenario runs, for how long, how often and where the output goes. Flags override the section `run` of the run file.
+The flags control a single call of the model: which run file runs, for how long, how often and where the output goes. Flags override the section `run` of the run file.
 
 The flags of the model (`go/`, `go run .`). The flags of the converter are in [NetLogo input files](#netlogo-input-files).
 
@@ -43,7 +43,7 @@ go run . -c a.yaml -c b.yaml -o out --threads 1    # two run files, one run afte
 
 ## Run files
 
-A run file (YAML) describes one scenario completely: parameters, species, flowers, landscape and run settings. The model reads nothing else, so the run file and its landscape files are all you need to run or share a scenario.
+A run file (YAML) describes a run completely: parameters, species, flowers, landscape and run settings. The model reads nothing else, so the run file and its landscape files are all you need to run or share it.
 
 A run file has the sections below. All keys are in lowerCamelCase, values are in the unit of the model (e.g. seconds). [names.md](names.md) lists every key with its unit and the NetLogo name.
 
@@ -70,11 +70,11 @@ The section `constants` holds the values that NetLogo sets in its code and that 
 
 ## NetLogo input files
 
-gobees-fast does not read the NetLogo input files. To run a scenario that exists for NetLogo, convert it once into a run file with [tools/netlogo2gobees](../tools/netlogo2gobees). The converter is its own Go module, the model does not import it.
+gobees-fast does not read the NetLogo input files. To run NetLogo input files, convert them once into a run file with [tools/netlogo2gobees](../tools/netlogo2gobees). The converter is its own Go module, the model does not import it.
 
 The converter has two commands:
 
-- `convert` turns one NetLogo scenario into a run file: the parameter file, the files it names, and the map (`MyMap`, a setting of the NetLogo interface), which gives the foodsources file of the start. This is the command for users.
+- `convert` turns NetLogo input files into a run file: the parameter file, the files it names, and the map (`MyMap`, a setting of the NetLogo interface), which gives the foodsources file of the start. This is the command for users.
 - `generate` is for developers of gobees-fast. The repository contains run files made from NetLogo files: the built-in example farm (`go/input/examplefarm`) and the scenarios of the step check (`go/compare/scenarios`). `generate` writes them all again. Call it after a change of the NetLogo files, the scenarios or the run file format. A test fails if these run files are out of date.
 
 The flags of the converter (`tools/netlogo2gobees`, `go run . <command>`):
@@ -104,7 +104,7 @@ go run . convert --help
 go run . generate
 ```
 
-`-p` is a path from the folder you call the converter in. The files named in the parameter file and the map are looked up in `-d`. Run the converted scenario with the model:
+`-p` is a path from the folder you call the converter in. The files named in the parameter file and the map are looked up in `-d`. Run the converted run file with the model:
 
 ```shell
 cd ../../go
@@ -137,7 +137,7 @@ The daily output (`daily.csv` in the [output](#output) folder) is a tab-separate
 
 ## Several runs
 
-The model is stochastic: two seeds give two different results. To see the spread of the results, run the same scenario with many seeds.
+The model is stochastic: two seeds give two different results. To see the spread of the results, run the same run file with many seeds.
 
 With `--repetitions N` (or `run.repetitions`), gobees-fast runs the model N times in one process, at most `--threads` runs at the same time (or `run.threads`). Repetition i has the seed `seed + i - 1`, so the same `seed` and `repetitions` always give the same runs. Seed, repetitions and threads have no special value: each must be 1 or more, nothing is drawn at random or taken from the machine. The output holds the runs one after the other, in the order of the runs, so the file does not depend on the number of threads. The runs share the input read at the start, the model does not change it.
 
