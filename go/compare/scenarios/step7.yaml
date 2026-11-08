@@ -1,7 +1,8 @@
+name: step7 # folder of the output, letters, digits, - and _
 run:
-  seed: 1 # 1 or more. Run i (from 1) has the seed seed + i - 1
+  seed: 1 # 1 or more. Repetition i (from 1) has the seed seed + i - 1
   days: 365 # [d] 0: no limit, the run ends when the population is extinct (stopExtinct)
-  runs: 1 # 1 or more, the daily output holds all runs (columns run and seed)
+  repetitions: 1 # 1 or more, runs of each combination of the variations, each with its own seed
   threads: 1 # runs at the same time, 1 or more. Does not change the output
 parameters:
   abundanceBoost: 1

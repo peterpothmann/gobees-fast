@@ -16,16 +16,16 @@ Requires Go 1.26 or later.
 cd go
 # example farm, 365 days, prints a summary
 go run .                                  
-# also write the daily output to go/daily_output.csv
-go run . -o                               
+# also write the output into the folder output: output/example_farm/daily.csv
+go run . -o output
 # 10 runs with the seeds 1 to 10, 4 at a time (parallel runs)
-go run . -o -s 1 --runs 10 --threads 4    
+go run . -o output -s 1 --repetitions 10 --threads 4
 # own scenario (run file)
-go run . -c path/to/run.yaml              
+go run . -c path/to/run.yaml
 # columns of the daily output
-go run . --list-columns                   
+go run . --list-columns
 # write only these columns (ticks is always added)
-go run . -o --columns colonies,workers,eggs
+go run . -o output --columns colonies,workers,eggs
 ```
 
 To fix the columns in a run file instead of the flag:
@@ -40,10 +40,9 @@ output:
 | `--config PATH` | `-c` | run file (YAML). Default: the built-in example farm. Repeat `-c` for several run files. |
 | `--seed N` | `-s` | seed of the first run, 1 or more |
 | `--days N` | | days to run, 0 = until the population is extinct |
-| `--runs N` | | number of runs. Run i gets the seed `seed + i - 1`. |
+| `--repetitions N` | | number of runs (of each combination of the variations). Repetition i gets the seed `seed + i - 1`. |
 | `--threads T` | | runs at the same time, each on one CPU core. `1` = one after the other. The output does not depend on it. |
-| `--output` | `-o` | write the daily output to `daily_output.csv` |
-| `--output-file PATH` | `-f` | write the daily output to `PATH` |
+| `--output DIR` | `-o` | write the output into the folder `DIR/<name>` (`name`: key of the run file) |
 | `--columns A,B,C` | | write only these columns |
 | `--list-columns` | | print the columns of the daily output and exit |
 | `--ui` | | show the run in a window while it runs (one run only; on Linux build with `-tags ui`) |
@@ -57,10 +56,20 @@ A scenario is a run file (YAML) plus its landscape files. Convert NetLogo input 
 
 ```shell
 cd tools/netlogo2gobees
-go run . convert -d ../../netlogo -p ../../netlogo/_SYSTEM_Sussex1_Parameters.csv -m _SYSTEM_Sussex1.png -o sussex
+go run . convert -d ../../netlogo -p ../../netlogo/_SYSTEM_Sussex1_Parameters.csv -m _SYSTEM_Sussex1.png -o sussex -n sussex
 cd ../../go
 go run . -c ../tools/netlogo2gobees/sussex/run.yaml
 ```
+
+Every run file has a name (key `name`, letters, digits, `-` and `_`). With `-o DIR`, the output of a run file goes into the folder `DIR/<name>`:
+
+| File | Content |
+| --- | --- |
+| `daily.csv` | daily output: one row per run and day |
+| `provenance.yaml` | the run file as run, with seed, command and program version. Running it with `-c` repeats the run byte for byte. |
+| landscape files | copies of the landscape files of the run |
+
+Several run files (`-c a.yaml -c b.yaml -o out`) each get their own folder, `out/<name of a>` and `out/<name of b>`.
 
 An optional section `variations` in the run file turns it into an experiment: every combination of the listed values runs.
 
@@ -70,18 +79,18 @@ variations:
     values: [0, 2, 4]
 ```
 
-Every output comes with a run info file (`<output>_run_info.yaml`). Running it with `-c` repeats the run byte for byte.
+The daily output holds all combinations, the column `run` numbers the runs from 1 over all combinations.
 
-Details on run files, the converter, experiments, the daily output and the run info: [docs/usage.md](docs/usage.md). All keys with unit and NetLogo name: [docs/names.md](docs/names.md).
+Details on run files, the converter, experiments, the daily output and the provenance: [docs/usage.md](docs/usage.md). All keys with unit and NetLogo name: [docs/names.md](docs/names.md).
 
 ## Watching a run
 
-With `--ui` a run opens a window: map with flower patches and colonies, daily plots, colony and patch info, going back in time, and a debug tab that steps through a day part by part and bee turn by bee turn (time per part, entities, resources, the task choice of each bee). The run, its output and run info are the same as without the window.
+With `--ui` a run opens a window: map with flower patches and colonies, daily plots, colony and patch info, going back in time, and a debug tab that steps through a day part by part and bee turn by bee turn (time per part, entities, resources, the task choice of each bee). The run, its output and provenance are the same as without the window.
 
 ```shell
 cd go
 go run . --ui
-go run . --ui -c compare/scenarios/step8_species.yaml -o
+go run . --ui -c compare/scenarios/step8_species.yaml -o output
 ```
 
 On Linux the window is built only with the tag `ui` (`go run -tags ui . --ui`), because Ebitengine needs cgo and the X11 and OpenGL headers there. Without the tag, gobees stays pure Go, e.g. on a cluster. On macOS cgo must be on (Xcode command line tools).

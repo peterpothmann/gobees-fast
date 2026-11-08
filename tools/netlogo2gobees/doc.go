@@ -4,6 +4,6 @@
 // files (findings in trans/netlogo-findings.md). The values do not change, only the format: gobees-fast derives the
 // same values from a run file that it derived from the NetLogo files before.
 //
-//	go run . convert -d ../../netlogo -p my_Parameters.csv -o out   # out/run.yaml and its landscape files
-//	go run . generate                                                # the run files in the repository
+//	go run . convert -d ../../netlogo -p my_Parameters.csv -o out -n mine   # out/run.yaml (name: mine) and its landscape files
+//	go run . generate                                                        # the run files in the repository
 package main

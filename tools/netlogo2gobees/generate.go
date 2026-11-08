@@ -15,6 +15,9 @@ const (
 	scenariosFolder   = "go/compare/scenarios" // the scenarios of go/compare
 )
 
+// exampleFarmName is the key name of the run file of the example farm. The scenarios are named by compare.Scenario.Name.
+const exampleFarmName = "example_farm"
+
 // Generate converts the NetLogo files that gobees-fast needs as run files: the example farm and the scenarios of
 // go/compare (compare.Scenarios). It returns the files by their path relative to the root of the repository and the
 // report of the converter for each run file.
@@ -33,12 +36,12 @@ func Generate() (map[string][]byte, []string, error) {
 
 	result := map[string][]byte{}
 	report := []string{}
-	add := func(folder, run, parameters string) error {
+	add := func(folder, run, name, parameters string) error {
 		file := filepath.Join(dir, "parameters.csv")
 		if err := os.WriteFile(file, []byte(parameters), 0o644); err != nil {
 			return err
 		}
-		c, err := Convert(dir, file, DefaultMap)
+		c, err := Convert(dir, file, DefaultMap, name)
 		if err != nil {
 			return err
 		}
@@ -56,7 +59,7 @@ func Generate() (map[string][]byte, []string, error) {
 		return nil
 	}
 
-	if err := add(exampleFarmFolder, "run.yaml", examplefiles.ExampleFarmParameters); err != nil {
+	if err := add(exampleFarmFolder, "run.yaml", exampleFarmName, examplefiles.ExampleFarmParameters); err != nil {
 		return nil, nil, err
 	}
 	for _, s := range compare.Scenarios {
@@ -64,7 +67,7 @@ func Generate() (map[string][]byte, []string, error) {
 		if err != nil {
 			return nil, nil, err
 		}
-		if err := add(scenariosFolder, s.ConfigFile(), text); err != nil {
+		if err := add(scenariosFolder, s.ConfigFile(), s.Name, text); err != nil {
 			return nil, nil, err
 		}
 	}

@@ -7,20 +7,20 @@
 ```shell
 cd go
 go run . --ui                                         # example farm
-go run . --ui -c compare/scenarios/step8_species.yaml -o
+go run . --ui -c compare/scenarios/step8_species.yaml -o output
 ```
 
 ## The run
 
-The run is the normal run of the command line: the run file and the flags (`-c`, `-s`, `--days`, `-o`, `-f`,
-`--columns`) define it, the output and the run info are written as without the window. The window only decides
+The run is the normal run of the command line: the run file and the flags (`-c`, `-s`, `--days`, `-o`,
+`--columns`) define it, the output and the provenance are written as without the window. The window only decides
 when the model goes on (play, step, speed, and in the debug tab part by part and turn by turn). It calls
 `Initialize`, one `Update` per day and `Finalize` of the same app as `a.Run` does, so the output is byte for byte
 the same.
 
-- One run only: one run file, `runs` 1, no `variations`. Otherwise `--ui` is an error.
+- One run only: one run file, `repetitions` 1, no `variations`. Otherwise `--ui` is an error.
 - Closing the window ends the run at the end of that day (a day stopped in the middle is run to its end). The
-  output then holds the days up to then, the run info was written before the run.
+  output then holds the days up to then, the provenance was written before the run.
 - Platforms: on Windows the window is always built in. On macOS it needs cgo (the Xcode command line tools). On
   Linux it is built only with the tag `ui` (`go run -tags ui . --ui`), because Ebitengine needs cgo and the X11
   and OpenGL headers there. Without the tag, gobees on Linux stays pure Go (CI, benchmark, cluster) and `--ui`

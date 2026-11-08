@@ -51,8 +51,9 @@ func TestCLIDefaults(t *testing.T) {
 		t.Errorf("Config = %q, want none (example farm)", c.Config)
 	}
 	// not set: the section run of the run file applies (TestParametersRunSection)
-	if c.Seed != nil || c.Days != nil || c.Runs != nil || c.Threads != nil {
-		t.Errorf("Seed, Days, Runs, Threads = %v, %v, %v, %v, want nil", c.Seed, c.Days, c.Runs, c.Threads)
+	if c.Seed != nil || c.Days != nil || c.Repetitions != nil || c.Threads != nil || c.Output != "" {
+		t.Errorf("Seed, Days, Repetitions, Threads, Output = %v, %v, %v, %v, %q, want nil and no output", c.Seed,
+			c.Days, c.Repetitions, c.Threads, c.Output)
 	}
 	// days set to 0: no limit, also against the run file
 	c = parse(t, "-s", "2", "--days", "0")
@@ -100,7 +101,7 @@ func TestColumnsUnknown(t *testing.T) {
 func TestColumnsNeedOutput(t *testing.T) {
 	c := parse(t, "--columns", "eggs", "--days", "1")
 	if err := c.run(io.Discard); err == nil {
-		t.Error("want an error for --columns without -o or -f")
+		t.Error("want an error for --columns without -o")
 	}
 }
 
@@ -126,7 +127,7 @@ func TestParametersRunSection(t *testing.T) {
 	// the section run of a run file sets seed and days, the flags override it
 	c, landscapes := input.ExampleFarmConfig()
 	days := 3
-	c.Run = &input.Run{Seed: 5, Days: &days, Runs: 1, Threads: 1}
+	c.Run = &input.Run{Seed: 5, Days: &days, Repetitions: 1, Threads: 1}
 	dir := t.TempDir()
 	writeRunFile(t, dir, "run.yaml", c, map[string]input.Landscape{c.Landscape: landscapes[c.Landscape]})
 	path := filepath.Join(dir, "run.yaml")
@@ -151,16 +152,16 @@ func TestParametersRunSection(t *testing.T) {
 		}
 	}
 
-	// the section run and its keys seed, runs and threads are needed, each 1 or more
+	// the section run and its keys seed, repetitions and threads are needed, each 1 or more
 	for _, tc := range []struct {
 		run       *input.Run
 		situation string
 	}{
 		{nil, "no section run"},
-		{&input.Run{Runs: 1, Threads: 1}, "no seed"},
-		{&input.Run{Seed: 1, Threads: 1}, "no runs"},
-		{&input.Run{Seed: 1, Runs: 1}, "no threads"},
-		{&input.Run{Seed: -1, Runs: 1, Threads: 1}, "seed below 1"},
+		{&input.Run{Repetitions: 1, Threads: 1}, "no seed"},
+		{&input.Run{Seed: 1, Threads: 1}, "no repetitions"},
+		{&input.Run{Seed: 1, Repetitions: 1}, "no threads"},
+		{&input.Run{Seed: -1, Repetitions: 1, Threads: 1}, "seed below 1"},
 	} {
 		c.Run = tc.run
 		writeRunFile(t, dir, "run.yaml", c, map[string]input.Landscape{c.Landscape: landscapes[c.Landscape]})
@@ -253,8 +254,10 @@ func TestParametersMissingFile(t *testing.T) {
 }
 
 func TestCLIRemovedFlags(t *testing.T) {
-	// the flags of older versions (-m, -p, -d) are errors: the landscape and all parameters are in the run file
-	for _, args := range [][]string{{"-m", "_SYSTEM_Example_Farm.png"}, {"-p", "x.csv"}, {"-d", "."}} {
+	// the flags of older versions are errors: -m, -p, -d (the landscape and all parameters are in the run file), -f
+	// (the output is a folder, -o DIR) and --runs (--repetitions)
+	for _, args := range [][]string{{"-m", "_SYSTEM_Example_Farm.png"}, {"-p", "x.csv"}, {"-d", "."},
+		{"-f", "out.csv"}, {"--output-file", "out.csv"}, {"--runs", "2"}, {"-o"}} {
 		var c cli
 		parser, err := newParser(&c)
 		if err != nil {
@@ -269,7 +272,7 @@ func TestCLIRemovedFlags(t *testing.T) {
 // TestUIOneRun: --ui shows one run, several runs are an error (also in a build with the window, before it opens).
 func TestUIOneRun(t *testing.T) {
 	for _, args := range [][]string{
-		{"--ui", "--runs", "2"},
+		{"--ui", "--repetitions", "2"},
 		{"--ui", "-c", "compare/scenarios/step7.yaml", "-c", "compare/scenarios/step7_crop.yaml"},
 	} {
 		c := parse(t, args...)

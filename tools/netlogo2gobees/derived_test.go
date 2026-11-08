@@ -50,11 +50,14 @@ func exampleFarmFile(t *testing.T) netLogoParameters {
 
 func TestConvertExampleFarm(t *testing.T) {
 	dir := exampleFarmDir(t, nil)
-	conv, err := Convert(dir, filepath.Join(dir, "_SYSTEM_Example_Farm_Parameters.csv"), DefaultMap)
+	conv, err := Convert(dir, filepath.Join(dir, "_SYSTEM_Example_Farm_Parameters.csv"), DefaultMap, "farm")
 	if err != nil {
 		t.Fatal(err)
 	}
 	c := conv.Config
+	if c.Name != "farm" {
+		t.Errorf("Name = %q, want farm", c.Name)
+	}
 	if c.Parameters != wantExampleFarmParameters.Parameters {
 		t.Errorf("Parameters:\n got  %+v\n want %+v", c.Parameters, wantExampleFarmParameters.Parameters)
 	}
@@ -94,7 +97,7 @@ func TestConvertCropRotation(t *testing.T) {
 	dir := exampleFarmDir(t, map[string]string{"Example_Farm_PlotTest_Foodsources.txt": examplefiles.ExampleFarmPlotTestFoodsources})
 	file := exampleFarmFile(t)
 	file.CropRotationListAsString = "_SYSTEM_Example_Farm_Foodsources.txt Example_Farm_PlotTest_Foodsources.txt Example_Farm_PlotTest_Foodsources.txt"
-	conv, err := convert(dir, &file, DefaultMap)
+	conv, err := convert(dir, &file, DefaultMap, "farm")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,12 +109,12 @@ func TestConvertCropRotation(t *testing.T) {
 
 	// A missing file of the crop rotation is an error.
 	file.CropRotationListAsString = "_SYSTEM_Example_Farm_Foodsources.txt missing_Foodsources.txt"
-	if _, err := convert(dir, &file, DefaultMap); err == nil {
+	if _, err := convert(dir, &file, DefaultMap, "farm"); err == nil {
 		t.Error("expected an error for a missing file of the crop rotation")
 	}
 	// Without crop rotation (one item), the item is not converted: "" is no file (finding 3).
 	file.CropRotationListAsString = "missing_Foodsources.txt"
-	if conv, err := convert(dir, &file, DefaultMap); err != nil || conv.Config.CropRotation != nil {
+	if conv, err := convert(dir, &file, DefaultMap, "farm"); err != nil || conv.Config.CropRotation != nil {
 		t.Errorf("a crop rotation list with one item must not be converted: %v", err)
 	}
 }
@@ -120,7 +123,7 @@ func TestConvertOtherMap(t *testing.T) {
 	// MyMap gives the foodsources file of the start [PAR-05].
 	dir := exampleFarmDir(t, map[string]string{"Example_Farm_PlotTest_Foodsources.txt": examplefiles.ExampleFarmPlotTestFoodsources})
 	file := exampleFarmFile(t)
-	conv, err := convert(dir, &file, "Example_Farm_PlotTest.png")
+	conv, err := convert(dir, &file, "Example_Farm_PlotTest.png", "farm")
 	if err != nil || conv.Config.Landscape != "Example_Farm_PlotTest_Foodsources.yaml" ||
 		len(conv.Landscapes[conv.Config.Landscape].Patches) != 36 {
 		t.Errorf("Landscape %q, %v", conv.Config.Landscape, err)
@@ -132,7 +135,7 @@ func TestConvertNoFlowerspeciesFile(t *testing.T) {
 	dir := exampleFarmDir(t, nil)
 	file := exampleFarmFile(t)
 	file.FlowerspeciesFile = "No Input File"
-	conv, err := convert(dir, &file, DefaultMap)
+	conv, err := convert(dir, &file, DefaultMap, "farm")
 	if err != nil || conv.Config.Flowers != nil {
 		t.Errorf("Flowers = %v, %v, want none without error", conv.Config.Flowers, err)
 	}
@@ -147,11 +150,18 @@ func TestConvertMissingFiles(t *testing.T) {
 			t.Fatal(err)
 		}
 		file := exampleFarmFile(t)
-		if _, err := convert(dir, &file, DefaultMap); err == nil {
+		if _, err := convert(dir, &file, DefaultMap, "farm"); err == nil {
 			t.Errorf("expected an error without %s", name)
 		}
 	}
-	if _, err := Convert(t.TempDir(), "missing.csv", DefaultMap); err == nil {
+	// the name is needed and checked before anything is read
+	for _, name := range []string{"", "my farm"} {
+		if _, err := Convert(t.TempDir(), "missing.csv", DefaultMap, name); err == nil ||
+			!strings.Contains(err.Error(), "name") {
+			t.Errorf("name %q: error = %v, want an error about the name", name, err)
+		}
+	}
+	if _, err := Convert(t.TempDir(), "missing.csv", DefaultMap, "farm"); err == nil {
 		t.Error("expected an error for a missing parameter file")
 	}
 }
