@@ -76,13 +76,17 @@ func TestNextActiveBee(t *testing.T) {
 			names[e] = string(rune('A' + i))
 			list = append(list, e)
 		}
-		aw.active.List = list
+		// A is the first bee of the queue, then she acts and gets her new time
+		b, _, _, _, _ := aw.bee(list[0])
+		b.PersonalTime = 0
+		aw.active.Set(list, aw.loop.personalTime)
+		b.PersonalTime = tc.times[0]
 		first := aw.loop.nextActiveBee()
 		got := ""
-		for _, e := range aw.active.List {
+		for _, e := range aw.active.Entities() {
 			got += names[e]
 		}
-		if got != tc.want || first != aw.active.List[0] {
+		if got != tc.want || first != aw.active.Entities()[0] {
 			t.Errorf("%s: %s, want %s", tc.name, got, tc.want)
 		}
 	}
@@ -109,11 +113,11 @@ func TestWakeUp(t *testing.T) {
 
 	aw.wake.Update(aw.w)
 
-	if len(aw.active.List) != len(want) {
-		t.Fatalf("%d bees in the queue, want %d", len(aw.active.List), len(want))
+	if aw.active.Len() != len(want) {
+		t.Fatalf("%d bees in the queue, want %d", aw.active.Len(), len(want))
 	}
 	last := 0.0
-	for _, e := range aw.active.List {
+	for _, e := range aw.active.Entities() {
 		if !slices.Contains(want, e) {
 			t.Errorf("bee %v should not be in the queue", e)
 		}
@@ -355,7 +359,7 @@ func TestActivitiesDay(t *testing.T) {
 		}
 	}
 	// the day ends when the first bee of the queue is beyond 24 h, then everybody rests
-	for _, e := range aw.active.List {
+	for _, e := range aw.active.Entities() {
 		b, _, _, _, _ := aw.bee(e)
 		if b.PersonalTime <= aw.constants.Activities.CallItADay || b.Activity != activity.Resting {
 			t.Errorf("after the loop: PersonalTime %v, activity %v", b.PersonalTime, b.Activity)
@@ -396,7 +400,7 @@ func TestActivitiesExampleFarm(t *testing.T) {
 		if err := check.Day(a.World, false); err != nil {
 			t.Fatal(err)
 		}
-		maxQueue = max(maxQueue, len(active.List))
+		maxQueue = max(maxQueue, active.Len())
 	}
 	if maxQueue == 0 {
 		t.Error("no bee was ever active")
@@ -420,12 +424,12 @@ func TestNextActiveBeeAfterDeath(t *testing.T) {
 		names[e] = string(rune('A' + i))
 		list = append(list, e)
 	}
-	aw.active.List = list
+	aw.active.Set(list, aw.loop.personalTime)
 	death := newBeeDeath(aw.w)
 	death.die(aw.w, list[0], "test") // A
 	aw.loop.nextActiveBee()
 	got := ""
-	for _, e := range aw.active.List {
+	for _, e := range aw.active.Entities() {
 		got += names[e]
 	}
 	if got != "CBD" {

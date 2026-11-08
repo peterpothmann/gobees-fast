@@ -2,7 +2,6 @@ package sys
 
 import (
 	"log"
-	"slices"
 
 	"gobees/globals"
 
@@ -28,7 +27,7 @@ func newBeeDeath(w *ecs.World) beeDeath {
 
 // die removes the bee e. causeOfDeath is not used, as in NetLogo (only printed for badgers).
 func (d *beeDeath) die(w *ecs.World, e ecs.Entity, causeOfDeath string) {
-	d.active.List = slices.DeleteFunc(d.active.List, func(x ecs.Entity) bool { return x == e })
+	d.active.Remove(e)
 	w.RemoveEntity(e)
 }
 

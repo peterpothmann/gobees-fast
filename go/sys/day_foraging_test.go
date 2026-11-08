@@ -297,14 +297,14 @@ func TestForagingMortality(t *testing.T) {
 		bee := aw.worker(col, 1)
 		b, _, _, _, _ := aw.bee(bee)
 		b.Activity = activity.NectarForaging
-		aw.active.List = append(aw.active.List, bee)
+		aw.active.Set(append(aw.active.Entities(), bee), func(ecs.Entity) float64 { return 0 })
 		f.forage(aw.w, bee)
 	}
 	died := float64(aw.tally.beesDied) / float64(n)
 	if want := 1 - math.Pow(1-1e-03, 500); math.Abs(died-want) > 0.03 {
 		t.Errorf("%v of the foragers died, want about %v", died, want)
 	}
-	if len(aw.active.List) != n-aw.tally.beesDied {
+	if aw.active.Len() != n-aw.tally.beesDied {
 		t.Errorf("dead foragers still in the activity queue")
 	}
 	// event.DiedForaging for the output (obs.Counters.TotalForagersEverDiedForaging), event.ForagingTrip for each trip
