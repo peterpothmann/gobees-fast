@@ -123,7 +123,7 @@ jobs:
           COMPARE_REPORT_DIR: ${{ github.workspace }}/go/validation
           # the report in the branch where it is there (on main, and committed in a pull request into main), else
           # the run, whose summary holds the report and whose artifact "validation" holds report and plots
-          COMPARE_REPORT_URL: ${{ (github.event_name == 'push' || github.base_ref == 'main') && format('{0}/{1}/blob/{2}/go/validation/validation-report.md', github.server_url, github.repository, github.head_ref || github.ref_name) || format('{0}/{1}/actions/runs/{2}', github.server_url, github.repository, github.run_id) }}
+          COMPARE_REPORT_URL: ${{ (github.event_name == 'push' || github.event.pull_request.base.ref == 'main') && format('{0}/{1}/blob/{2}/go/validation/validation-report.md', github.server_url, github.repository, github.head_ref || github.ref_name) || format('{0}/{1}/actions/runs/{2}', github.server_url, github.repository, github.run_id) }}
           COMPARE_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: bash go/compare/run_compare.sh
 
@@ -173,8 +173,10 @@ jobs:
       # commit pushed with the GITHUB_TOKEN does not start a new workflow run. The runs use fixed seeds, so the report
       # changes only when the results change, and only then a commit is made. The Benchmark workflow may push its
       # report to the same branch at the same time, so the push is retried on top of the newest state of the branch.
+      # The base branch is github.event.pull_request.base.ref: in a stack, github.base_ref was main also in a pull
+      # request into the previous step.
       - name: Commit the report to the pull request
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.base_ref == 'main' && steps.compare.outcome == 'success'
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.base.ref == 'main' && steps.compare.outcome == 'success'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

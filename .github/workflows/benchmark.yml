@@ -117,7 +117,7 @@ jobs:
           BENCHMARK_COMMENT: ${{ runner.temp }}/benchmark-comment.md
           # the report in the branch where it is committed (pull request into main, see the last step), else the
           # summary of this run, which holds the whole report
-          BENCHMARK_REPORT_URL: ${{ github.base_ref == 'main' && format('{0}/{1}/blob/{2}/go/benchmark/benchmark-report.md', github.server_url, github.repository, github.head_ref) || format('{0}/{1}/actions/runs/{2}', github.server_url, github.repository, github.run_id) }}
+          BENCHMARK_REPORT_URL: ${{ github.event.pull_request.base.ref == 'main' && format('{0}/{1}/blob/{2}/go/benchmark/benchmark-report.md', github.server_url, github.repository, github.head_ref) || format('{0}/{1}/actions/runs/{2}', github.server_url, github.repository, github.run_id) }}
           BENCHMARK_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           BENCHMARK_REPORT: ${{ github.workspace }}/go/benchmark/benchmark-report.md
         run: |
@@ -177,8 +177,10 @@ jobs:
       # committed in the run started when the pull request is retargeted to main. A commit pushed with the
       # GITHUB_TOKEN does not start a new workflow run. The Tests workflow may push its report to the same branch at
       # the same time, so the push is retried on top of the newest state of the branch.
+      # The base branch is github.event.pull_request.base.ref: in a stack, github.base_ref was main also in a pull
+      # request into the previous step.
       - name: Commit the report to the pull request
-        if: github.event.pull_request.head.repo.full_name == github.repository && github.base_ref == 'main'
+        if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.base.ref == 'main'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
