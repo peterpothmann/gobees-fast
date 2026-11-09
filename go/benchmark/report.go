@@ -60,12 +60,7 @@ func (r Report) Markdown() string {
 		"the program to its end, including reading the input files. Details: go/benchmark/README.md.\n\n",
 		len(n.Runs), n.Days, r.Threads, r.BaseCommit)
 
-	whole := func(run Run) time.Duration { return run.Whole() }
-	nl, base, cur := durations(n.Runs, whole), durations(r.Base, whole), durations(r.Current, whole)
-	b.WriteString("| | NetLogo median (min-max) | gobees median (min-max) | gobees-fast median (min-max) | " +
-		"NetLogo / gobees-fast | gobees / gobees-fast |\n| --- | ---: | ---: | ---: | ---: | ---: |\n")
-	fmt.Fprintf(&b, "| Whole run | %s | %s | %s | %.0f | %.2f |\n", spread(nl), spread(base), spread(cur),
-		float64(median(nl))/float64(median(cur)), float64(median(base))/float64(median(cur)))
+	r.writeMainTable(&b)
 
 	b.WriteString("\n## Runs\n\nThe runs of NetLogo and of the Go versions with the same seed are not the same " +
 		"run: NetLogo's random numbers cannot be reproduced in Go. The colonies founded show that all did a " +
@@ -99,19 +94,69 @@ func (r Report) Markdown() string {
 	return b.String()
 }
 
-// writeBelow writes the section of the comparison with the base branch of the pull request.
-func writeBelow(b *strings.Builder, below Below, days int) {
+// CommentMarker starts the comment of the benchmark in a pull request. The workflow updates the comment that starts
+// with it instead of adding a new one on every run.
+const CommentMarker = "<!-- benchmark-report -->"
+
+// WriteComment writes the comment for the pull request (Comment) to path.
+func WriteComment(path string, r Report, reportURL, runURL string) error {
+	return os.WriteFile(path, []byte(r.Comment(reportURL, runURL)), 0o644)
+}
+
+// Comment returns the comment for the pull request: the main table of the report and, with the branch below, its
+// table, then links to the whole report (reportURL) and to the run of the workflow (runURL). Empty URLs are left
+// out.
+func (r Report) Comment(reportURL, runURL string) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "%s\n## Benchmark\n\nThe example farm, %d seeds, %d days each.\n\n", CommentMarker,
+		len(r.NetLogo.Runs), r.NetLogo.Days)
+	r.writeMainTable(&b)
+	if below := r.Below; len(below.Runs) > 0 {
+		fmt.Fprintf(&b, "\nAgainst the branch below, %s (commit %s), alternating runs, the fastest of %d per seed:\n\n",
+			below.Branch, below.Commit, below.Rounds)
+		writeBelowTable(&b, below)
+	}
+	links := []string{}
+	if reportURL != "" {
+		links = append(links, fmt.Sprintf("[whole report](%s)", reportURL))
+	}
+	if runURL != "" {
+		links = append(links, fmt.Sprintf("[run](%s)", runURL))
+	}
+	if len(links) > 0 {
+		fmt.Fprintf(&b, "\n%s\n", strings.Join(links, " · "))
+	}
+	return b.String()
+}
+
+// writeMainTable writes the table of the whole runs of NetLogo, gobees and gobees-fast.
+func (r Report) writeMainTable(b *strings.Builder) {
+	whole := func(run Run) time.Duration { return run.Whole() }
+	nl, base, cur := durations(r.NetLogo.Runs, whole), durations(r.Base, whole), durations(r.Current, whole)
+	b.WriteString("| | NetLogo median (min-max) | gobees median (min-max) | gobees-fast median (min-max) | " +
+		"NetLogo / gobees-fast | gobees / gobees-fast |\n| --- | ---: | ---: | ---: | ---: | ---: |\n")
+	fmt.Fprintf(b, "| Whole run | %s | %s | %s | %.0f | %.2f |\n", spread(nl), spread(base), spread(cur),
+		float64(median(nl))/float64(median(cur)), float64(median(base))/float64(median(cur)))
+}
+
+// writeBelowTable writes the table of the whole runs of the branch below and gobees-fast.
+func writeBelowTable(b *strings.Builder, below Below) {
 	whole := func(run Run) time.Duration { return run.Whole() }
 	old, cur := durations(below.Runs, whole), durations(below.Current, whole)
+	fmt.Fprintf(b, "| | %s median (min-max) | gobees-fast median (min-max) | Change |\n| --- | ---: | ---: | ---: |\n",
+		below.Branch)
+	fmt.Fprintf(b, "| Whole run | %s | %s | %s |\n", spread(old), spread(cur), change(median(old), median(cur)))
+}
+
+// writeBelow writes the section of the comparison with the base branch of the pull request.
+func writeBelow(b *strings.Builder, below Below, days int) {
 	fmt.Fprintf(b, "\n## Against the branch below\n\n"+
 		"gobees-fast against the base branch of the pull request, %s (commit %s): the same %d seeds, %d days "+
 		"each. Both programs run one run at a time and alternately, each seed %d times per program, the order "+
 		"switches every round. The time of a seed is its fastest run. Change: median of gobees-fast against the "+
 		"median of %s, negative is faster.\n\n", below.Branch, below.Commit, len(below.Runs), days, below.Rounds,
 		below.Branch)
-	fmt.Fprintf(b, "| | %s median (min-max) | gobees-fast median (min-max) | Change |\n| --- | ---: | ---: | ---: |\n",
-		below.Branch)
-	fmt.Fprintf(b, "| Whole run | %s | %s | %s |\n", spread(old), spread(cur), change(median(old), median(cur)))
+	writeBelowTable(b, below)
 	fmt.Fprintf(b, "\n| Seed | %s | %s colonies founded | gobees-fast | gobees-fast colonies founded | Change |\n"+
 		"| ---: | ---: | ---: | ---: | ---: | ---: |\n", below.Branch, below.Branch)
 	for i, o := range below.Runs {

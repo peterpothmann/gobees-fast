@@ -35,6 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write # to commit the report to the branch of the pull request
+      pull-requests: write # to comment in the pull request
     steps:
       # the full history: the base commit is checked out as a worktree
       - uses: actions/checkout@v4
@@ -104,6 +105,9 @@ jobs:
           BENCHMARK_BASE_BIN: ${{ runner.temp }}/gobees
           BENCHMARK_CURRENT_BIN: ${{ runner.temp }}/gobees-fast
           BENCHMARK_BELOW_BIN: ${{ runner.temp }}/below-bin
+          BENCHMARK_COMMENT: ${{ runner.temp }}/benchmark-comment.md
+          BENCHMARK_REPORT_URL: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.head_ref }}/go/benchmark/benchmark-report.md
+          BENCHMARK_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           BENCHMARK_REPORT: ${{ github.workspace }}/go/benchmark/benchmark-report.md
         run: |
           export BENCHMARK_JAVA="$(java -version 2>&1 | head -n 1)"
@@ -117,6 +121,33 @@ jobs:
           else
             echo "No benchmark report was written." >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      # One comment per pull request with the main tables, updated on every run (marker benchmark.CommentMarker).
+      # Only in a pull request from this repository: the token of a fork cannot write comments. No comment if the
+      # benchmark failed before writing it.
+      - name: Comment on the pull request
+        if: always() && github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@v7
+        env:
+          COMMENT_FILE: ${{ runner.temp }}/benchmark-comment.md
+        with:
+          script: |
+            const fs = require('fs');
+            if (!fs.existsSync(process.env.COMMENT_FILE)) {
+              core.info('No comment was written.');
+              return;
+            }
+            const body = fs.readFileSync(process.env.COMMENT_FILE, 'utf8');
+            const marker = '<!-- benchmark-report -->';
+            const {owner, repo} = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments, {owner, repo, issue_number});
+            const old = comments.find(c => c.body.startsWith(marker));
+            if (old) {
+              await github.rest.issues.updateComment({owner, repo, comment_id: old.id, body});
+            } else {
+              await github.rest.issues.createComment({owner, repo, issue_number, body});
+            }
 
       - name: Upload results
         if: always()

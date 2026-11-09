@@ -35,7 +35,7 @@ The section "Against the branch below" of the report compares `gobees-fast` with
 
 ## When it runs
 
-The workflow `.github/workflows/benchmark.yml` runs in pull requests with the label `benchmark` (when the label is added and on every push). It builds `gobees` from the base commit and the program of the branch below from the newest commit of the base branch of the pull request, each in a git worktree. It commits the report to the branch and adds it to the summary of the run. It runs in parallel to the tests.
+The workflow `.github/workflows/benchmark.yml` runs in pull requests with the label `benchmark` (when the label is added and on every push). It builds `gobees` from the base commit and the program of the branch below from the newest commit of the base branch of the pull request, each in a git worktree. It commits the report to the branch and adds it to the summary of the run. It also comments in the pull request with the main table and the table against the branch below, and links to the whole report and the run. The comment is one per pull request, updated on every run. It runs in parallel to the tests.
 
 The comparison in [go/compare](../compare/README.md) also times `gobees-fast` against the base commit, in every pull request, but without NetLogo.
 

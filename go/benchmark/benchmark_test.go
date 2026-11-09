@@ -28,6 +28,10 @@ const (
 	belowBranchEnv = "BENCHMARK_BELOW_BRANCH"
 	belowCommitEnv = "BENCHMARK_BELOW_COMMIT"
 	roundsEnv      = "BENCHMARK_ROUNDS"
+	// optional: the path of the comment for the pull request (WriteComment), and the links in it
+	commentEnv   = "BENCHMARK_COMMENT"
+	reportURLEnv = "BENCHMARK_REPORT_URL"
+	runURLEnv    = "BENCHMARK_RUN_URL"
 )
 
 // TestCompareWithNetLogo runs gobees and then gobees-fast as programs with the seeds and days of the NetLogo
@@ -94,6 +98,11 @@ func TestCompareWithNetLogo(t *testing.T) {
 		Threads: threads, Machine: machine, Below: below}
 	if err := WriteReport(reportPath, r); err != nil {
 		t.Fatal(err)
+	}
+	if path := os.Getenv(commentEnv); path != "" {
+		if err := WriteComment(path, r, os.Getenv(reportURLEnv), os.Getenv(runURLEnv)); err != nil {
+			t.Fatal(err)
+		}
 	}
 	t.Log("\n" + r.Markdown())
 }
@@ -260,5 +269,28 @@ func TestMarkdown(t *testing.T) {
 	}
 	if i, j := strings.Index(md, "## Against the branch below"), strings.Index(md, "## Machine"); i > j {
 		t.Errorf("the section on the branch below must come before the machine:\n%s", md)
+	}
+
+	// the comment: the two main tables and the links
+	c := r.Comment("https://example.org/report", "https://example.org/run")
+	for _, want := range []string{
+		CommentMarker + "\n## Benchmark\n\nThe example farm, 2 seeds, 365 days each.\n\n",
+		"| Whole run | 25.8 s (21.2 s-30.4 s) | 400 ms (300 ms-500 ms) | 100 ms (100 ms-100 ms) | 258 | 4.00 |",
+		"Against the branch below, step-S4 (commit 45c6b6c), alternating runs, the fastest of 5 per seed:",
+		"| Whole run | 250 ms (200 ms-300 ms) | 200 ms (100 ms-300 ms) | -20.0 % |",
+		"[whole report](https://example.org/report) · [run](https://example.org/run)",
+	} {
+		if !strings.Contains(c, want) {
+			t.Errorf("comment lacks %q:\n%s", want, c)
+		}
+	}
+	for _, not := range []string{"| 1 | 200 ms", "## Machine", "## Runs"} {
+		if strings.Contains(c, not) {
+			t.Errorf("comment must not contain %q:\n%s", not, c)
+		}
+	}
+	plain := Report{NetLogo: r.NetLogo, Base: r.Base, Current: r.Current}.Comment("", "")
+	if strings.Contains(plain, "branch below") || strings.Contains(plain, "](") {
+		t.Errorf("comment without branch below and links:\n%s", plain)
 	}
 }
