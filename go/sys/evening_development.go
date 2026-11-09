@@ -26,8 +26,8 @@ type development struct {
 	ticks     *globals.Ticks
 	constants *params.Constants
 	death     beeDeath
-	// queenEmerged is event.QueenEmerged.
-	queenEmerged ecs.Event
+	// adultEmerged is event.AdultEmerged.
+	adultEmerged ecs.Event
 
 	beeFilter  *ecs.Filter1[comp.Bee]
 	beeMap     *beeMapper
@@ -41,7 +41,7 @@ func (s *development) Initialize(w *ecs.World) {
 	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.ticks = ecs.GetResource[globals.Ticks](w)
 	s.constants = ecs.GetResource[params.Constants](w)
-	s.queenEmerged = w.Event(event.QueenEmerged).For(ecs.C[comp.Bee]())
+	s.adultEmerged = w.Event(event.AdultEmerged).For(ecs.C[comp.Bee]())
 	s.death = newBeeDeath(w)
 
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
@@ -120,6 +120,7 @@ func (s *development) developPupa(e ecs.Entity) {
 	if bee.Caste == caste.Worker {
 		if dev.IncubationReceived >= sp.EmergenceIncubation && float64(bee.BroodAge) >= sp.EmergenceAgeMin {
 			bee.Stage = stage.Adult
+			s.adultEmerged.Emit(e) // the observers count the emerged adults
 			forager.CropVolume = cropVolume(bee.Weight, sp, &s.constants.Foraging)
 			forager.PollenPellets = pollenLoad(bee.Weight, sp, &s.constants.Foraging)
 			*th = thresholds(&s.constants.Thresholds, sitWorker)
@@ -131,6 +132,7 @@ func (s *development) developPupa(e ecs.Entity) {
 	if bee.Caste == caste.Male {
 		if dev.IncubationReceived >= sp.EmergenceIncubation && float64(bee.BroodAge) >= sp.EmergenceAgeMin {
 			bee.Stage = stage.Adult
+			s.adultEmerged.Emit(e)
 		}
 	}
 
@@ -143,7 +145,7 @@ func (s *development) developPupa(e ecs.Entity) {
 				bee.EmergenceDate = day.At(yearStartSeason + day.Abs(round(randomNormal(s.rng, sp.EmergenceDayMean, sp.EmergenceDaySD))))
 			}
 			bee.Stage = stage.Adult
-			s.queenEmerged.Emit(e) // the observers count the emerged queens
+			s.adultEmerged.Emit(e)
 			forager.CropVolume = cropVolume(bee.Weight, sp, &s.constants.Foraging)
 			forager.PollenPellets = pollenLoad(bee.Weight, sp, &s.constants.Foraging)
 			*th = thresholds(&s.constants.Thresholds, sitYoungQueen)

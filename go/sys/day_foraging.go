@@ -29,6 +29,7 @@ type forager struct {
 	death      beeDeath
 	trip       ecs.Event // event.ForagingTrip
 	died       ecs.Event // event.DiedForaging
+	collected  ecs.Event // event.Collected
 
 	beeMap     *ecs.Map2[comp.Bee, comp.Forager]
 	colonyMap  *ecs.Map4[comp.Position, comp.Colony, comp.ColonyStores, comp.ColonyRange]
@@ -48,6 +49,7 @@ func newForager(w *ecs.World, rng *rand.Rand) forager {
 		death:      newBeeDeath(w),
 		trip:       w.Event(event.ForagingTrip).For(ecs.C[comp.Bee]()),
 		died:       w.Event(event.DiedForaging).For(ecs.C[comp.Bee]()),
+		collected:  w.Event(event.Collected).For(ecs.C[comp.Bee](), ecs.C[comp.Forager]()),
 		beeMap:     ecs.NewMap2[comp.Bee, comp.Forager](w),
 		colonyMap:  ecs.NewMap4[comp.Position, comp.Colony, comp.ColonyStores, comp.ColonyRange](w),
 		patchMap:   ecs.NewMap2[comp.Position, comp.FlowerPatch](w),
@@ -228,6 +230,7 @@ func (f *forager) collect(t *tripBee) {
 			b.Activity = activity.BringingPollen
 			memoPollenLoad := fo.CarriedPollen
 			l.Pollen = l.Pollen - memoPollenLoad
+			f.collected.Emit(t.e) // output only, the observers count the visits
 		} else {
 			b.Activity = activity.ReturningEmpty
 		}
@@ -239,6 +242,7 @@ func (f *forager) collect(t *tripBee) {
 			fo.CarriedNectar = nectarRemoved * f.constants.Foraging.SucroseEnergy * l.NectarConcentration
 			b.Activity = activity.BringingNectar
 			l.Nectar = l.Nectar - nectarRemoved
+			f.collected.Emit(t.e) // output only, the observers count the visits
 		} else {
 			b.Activity = activity.ReturningEmpty
 		}

@@ -56,7 +56,7 @@ A run file has the sections below. All keys are in lowerCamelCase, values are in
 | `run`                | `seed`, `days`, `repetitions` and `threads` (the flags `-s`, `--days`, `--repetitions` and `--threads` override them). Needed: `seed`, `repetitions` and `threads`, each 1 or more. Optional `part` (`I/N`, the flag `--part` overrides it). The converter writes seed 1, 365 days, 1 repetition and 1 thread. In a [provenance](#provenance) also the record of the run. | `RAND_SEED`                                                                     |
 | `variations`         | optional: keys and their values, or the [sites](#sites), every combination runs (an [experiment](#experiments))                                                                                                                                                                  |                                                                                 |
 | `parameters`         | the model parameters                                                                                                                                                                                                                                                             | the columns of the parameter file                                               |
-| `output`             | output options (`keepDeadColonies`, `columns`), change no model value                                                                                                                                                                                                            | `KeepDeadColonies?`                                                             |
+| `output`             | output options (`keepDeadColonies`, `columns`, `visits`), change no model value                                                                                                                                                                                                  | `KeepDeadColonies?`                                                             |
 | `constants`          | the values that NetLogo hard-codes, every key needed (see below)                                                                                                                                                                                                                 | `ParametersProc` and local values of the procedures                             |
 | `initialQueens`      | species and number of initial queens                                                                                                                                                                                                                                             | `BeeSpeciesInitialQueensListAsString`                                           |
 | `foragingPeriod`     | foraging period [s], 365 values per year, one or more years, the years repeat                                                                                                                                                                                                    | `Weather`                                                                       |
@@ -154,7 +154,7 @@ What the converter does with the NetLogo values:
 
 The daily output is the result of a run: the state of the bee population on every day, for analysis in R, Python or a spreadsheet.
 
-The daily output (`daily.csv` in the [output](#output) folder) is a tab-separated file with one row per run and day, holding the state at the end of the day. It holds the totals of `OutputDailyProc` (colonies, queens, males, mean weights, ...), followed by brood, workers, stores, foraging trips, forager deaths, queens produced and the mean competition point date (`obs.DailyOutputExtended`).
+The daily output (`daily.csv` in the [output](#output) folder) is a tab-separated file with one row per run and day, holding the state at the end of the day. It holds the totals of `OutputDailyProc` (colonies, queens, males, mean weights, ...), followed by brood, workers, stores, foraging trips, forager deaths, queens produced, the mean competition point date and the adults produced (`obs.DailyOutputExtended`). The adult queens are `young_queens + TotalMatedQueens`: every mated queen is an adult.
 
 
 | Column   | Content                                                 |
@@ -166,6 +166,24 @@ The daily output (`daily.csv` in the [output](#output) folder) is a tab-separate
 | the rest | the totals of`OutputDailyProc` keep their NetLogo names |
 
 `go run . --list-columns` prints all columns with a description. The key `output.columns` of the run file (a list of names) or the flag `--columns a,b,c` (which overrides the key) selects columns and their order. `ticks` is always the first column after `t`: it is added if missing and moved to the front. Without a selection, all columns are written. An unknown or repeated name is an error that lists the available columns, also when the run has no output. Every value is still computed, so the values of the selected columns do not depend on the selection.
+
+## Visits output
+
+The visits output tells which foodsources the foragers use: the visits per foodsource and day. It replaces the visits file of NetLogo (`BBCT_WriteNPvisitsProc`).
+
+With the key `visits: true` in the section `output` of the run file, gobees-fast writes `visits.csv` into the [output](#output) folder, next to the daily output. It is a tab-separated file with one row per run, day and foodsource with at least one visit. A foodsource without visits on a day has no row.
+
+| Column          | Content                                                                                                   |
+| --------------- | --------------------------------------------------------------------------------------------------------- |
+| `run`, `seed`, the varied keys, `t` | as in the [daily output](#daily-output)                                               |
+| `ticks`         | NetLogo ticks, 1 on the first day                                                                         |
+| `landscape`     | the landscape file of the foodsource, named as its copy in the output folder. With [sites](#sites), which are not copied, its name relative to the folder of the run file |
+| `id`            | the id of its flower patch in the landscape file. Merged hedges keep the id of the largest hedge          |
+| `flowerSpecies` | its flower species                                                                                        |
+| `nectarVisits`  | visits that took nectar on this day                                                                       |
+| `pollenVisits`  | visits that took pollen on this day                                                                       |
+
+A foodsource is one flower species on one flower patch, so `landscape`, `id` and `flowerSpecies` together name it. A visit counts every bee of a cohort, as in NetLogo. A trip to an empty foodsource is no visit. Unlike NetLogo, the visits are counted per day, not summed since the start, so `CumulVisitsOnlyLastYear?` is not needed: the sum over days gives NetLogo's numbers. Area, position and patch type of a foodsource are in the landscape file, joined by `id`. The rows of a day are sorted by landscape, id and flower species.
 
 ## Several runs
 
@@ -200,7 +218,7 @@ This gives 3 × 3 combinations × 10 repetitions = 90 runs. Rules:
 - `values` lists every value. There are no ranges, so every value of an experiment is written out.
 - Every combination is the run file with these values, read and checked like a run file: an unknown key, a fraction in a whole number and so on are errors at the start, naming the combination. After the check, gobees-fast keeps only the values of each combination. A combination is read again when its first run starts, and dropped when its last run ends. So the memory depends on `--threads`, not on the number of combinations.
 - Every combination runs with the same seeds (`seed` to `seed + repetitions - 1`), so combinations differ only in the varied values, not in the random numbers.
-- `name`, the section `run` (seed, days, repetitions, threads) and `output.columns` cannot vary. `landscape` and `cropRotation` cannot vary as keys: a landscape and its crop rotation vary together, as [sites](#sites).
+- `name`, the section `run` (seed, days, repetitions, threads), `output.columns` and `output.visits` cannot vary. `landscape` and `cropRotation` cannot vary as keys: a landscape and its crop rotation vary together, as [sites](#sites).
 - The daily output is one file: the columns `run`, `seed`, then one column per varied key (named by the key, holding the value), then `t` and the columns. `run` counts from 1 over all combinations, so each run has its own number: in the example above runs 1 to 10 are the first combination, 11 to 20 the second. The first variation changes slowest. The provenance holds the variations, so it repeats the whole experiment.
 
 ### Sites
@@ -282,6 +300,7 @@ With `-o DIR`, gobees-fast writes the output of each run file into the folder `D
 | File               | Content                                                                                                     |
 | ------------------ | ----------------------------------------------------------------------------------------------------------- |
 | `daily.csv`        | the [daily output](#daily-output): all runs of the run file, one row per run and day                        |
+| `visits.csv`       | the [visits output](#visits-output), only with `output.visits: true`                                        |
 | `provenance.yaml`  | the [provenance](#provenance): the run file as run, it repeats the run                                      |
 | landscape files    | copies of the landscape files of the run and their tables, with their names (see [Provenance](#provenance)). Not for [sites](#sites). |
 
@@ -308,7 +327,7 @@ With an output (`-o DIR`), gobees-fast writes the provenance `provenance.yaml` i
 | `landscapes`             | per landscape file and table: the copy (`file`), the name in the run file or, for a table, relative to the folder of the run file (`source`) and the SHA-256 of the source                               |
 | `sites`                  | with [sites](#sites): per site its name (`site`), its site file (`file`) and per landscape file the name in the run file (`source`) and the SHA-256 at the start                                          |
 
-The landscape files and their tables are copied into the output folder and keep their names (`_SYSTEM_Example_Farm_Foodsources.yaml`). A second file of the same name from another folder gets `_2` in front of the extension, as does a file named `daily.csv` or `provenance.yaml`. A table of several landscape files is copied once. The tables are copied byte for byte. A landscape file is copied byte for byte if its tables keep their names, else it is written again with the names of the copies (its SHA-256 is the one of the source). The keys `landscape` and `cropRotation` of the provenance name the copies.
+The landscape files and their tables are copied into the output folder and keep their names (`_SYSTEM_Example_Farm_Foodsources.yaml`). A second file of the same name from another folder gets `_2` in front of the extension, as does a file named `daily.csv`, `visits.csv` or `provenance.yaml`. A table of several landscape files is copied once. The tables are copied byte for byte. A landscape file is copied byte for byte if its tables keep their names, else it is written again with the names of the copies (its SHA-256 is the one of the source). The keys `landscape` and `cropRotation` of the provenance name the copies.
 
 With sites, the provenance copies no landscape files: 1000 sites would copy 1000 landscapes into every output. Its key `sites` lists the site files that ran, relative to the output folder, instead of the pattern of the run file. So it repeats the same sites, also when the folder of the sites gets more files later, as long as the sites stay in their place. The SHA-256 in `run.sites` shows whether a landscape file changed since the run.
 

@@ -40,6 +40,7 @@ var netLogoSpecies = []string{"B_terrestris", "B_pascuorum", "B_lapidarius", "B_
 //   - ForagerDeathsToday: bees that died on a foraging trip today
 //   - TotalAdultQueensEverProduced: queens emerged from pupae since the start
 //   - MeanCompetitionPointDate: mean competition point date (ticks) of the living colonies that have one, 0 if none
+//   - TotalAdultsEverProduced: bees of all castes emerged from pupae since the start
 //
 // Update must run once at the end of every day (reporter.CSV calls it on every tick), for the counters.
 //
@@ -215,7 +216,7 @@ func (o *DailyOutputExtended) allValues(w *ecs.World) []float64 {
 	}
 	values = append(values, perSpecies...)
 	values = append(values, psithyrus, o.calendar.Get().ForagingPeriod, float64(counters.TotalHibernatingQueensEverRemoved),
-		foragerDeaths, counters.TotalAdultQueensEverProduced, meanCP)
+		foragerDeaths, counters.TotalAdultQueensEverProduced, meanCP, counters.TotalAdultsEverProduced)
 	copy(o.values[n:], values)
 	return o.values
 }

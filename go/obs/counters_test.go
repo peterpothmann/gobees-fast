@@ -20,21 +20,23 @@ func TestCountersEvents(t *testing.T) {
 	c := Counters{}
 	c.Initialize(w)
 
-	// removed bees count with their number new colonies queens emerged
+	// removed bees count with their number, new colonies, emerged adults (all castes and queens)
 	colonies := ecs.NewMap1[comp.Colony](w)
 	col := colonies.NewEntity(&comp.Colony{})
 	colonies.NewEntity(&comp.Colony{})
 	squadron := addBee(w, comp.Bee{Stage: stage.Adult, Caste: caste.Worker, Number: 5})
 	queen := addBee(w, comp.Bee{Stage: stage.Adult, Caste: caste.Queen, Number: 3})
-	emit(w, event.QueenEmerged, queen)
+	emit(w, event.AdultEmerged, queen)
+	emit(w, event.AdultEmerged, squadron)
 	emit(w, event.ForagingTrip, squadron)
 	emit(w, event.DiedForaging, squadron)
 	w.RemoveEntity(squadron)
 	w.RemoveEntity(queen)
 	if c.TotalBeesEverDied != 8 || c.TotalColoniesEverProduced != 2 || c.TotalAdultQueensEverProduced != 3 ||
-		c.TotalForagersEverDiedForaging != 5 {
-		t.Errorf("died %v, colonies %v, queens %v, foragers died %v; want 8, 2, 3, 5", c.TotalBeesEverDied,
-			c.TotalColoniesEverProduced, c.TotalAdultQueensEverProduced, c.TotalForagersEverDiedForaging)
+		c.TotalAdultsEverProduced != 8 || c.TotalForagersEverDiedForaging != 5 {
+		t.Errorf("died %v, colonies %v, queens %v, adults %v, foragers died %v; want 8, 2, 3, 8, 5",
+			c.TotalBeesEverDied, c.TotalColoniesEverProduced, c.TotalAdultQueensEverProduced,
+			c.TotalAdultsEverProduced, c.TotalForagersEverDiedForaging)
 	}
 	// the trips of a day show after its Update
 	if c.TotalForagingTripsToday != 0 {

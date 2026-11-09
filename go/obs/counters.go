@@ -3,6 +3,7 @@ package obs
 import (
 	"gobees/comp"
 	"gobees/enum/activity"
+	"gobees/enum/caste"
 	"gobees/event"
 	"gobees/globals"
 	"gobees/params"
@@ -19,8 +20,11 @@ import (
 // Update must run once at the end of every day, after all model systems. Counters is an app system and is also
 // used by other observers (DailyOutputExtended).
 type Counters struct {
-	TotalBeesEverDied            float64 // sum of Number of the removed bees
-	TotalColoniesEverProduced    float64
+	TotalBeesEverDied         float64 // sum of Number of the removed bees
+	TotalColoniesEverProduced float64
+	// TotalAdultsEverProduced adds up the pupae of all castes that became adults.
+	TotalAdultsEverProduced float64
+	// TotalAdultQueensEverProduced adds up the queen pupae that became adults.
 	TotalAdultQueensEverProduced float64
 	// TotalHibernatingQueensEverRemoved adds up the planned number of queens to kill on 1 January, not
 	// the removed number: max(0, hibernating queens of the previous evening - MaxHibernatingQueens). Added at the
@@ -72,8 +76,13 @@ func (c *Counters) Initialize(w *ecs.World) {
 	ecs.Observe1[comp.Bee](event.DiedForaging).
 		Do(func(e ecs.Entity, b *comp.Bee) { c.TotalForagersEverDiedForaging += float64(b.Number) }).
 		Register(w)
-	ecs.Observe1[comp.Bee](event.QueenEmerged).
-		Do(func(e ecs.Entity, b *comp.Bee) { c.TotalAdultQueensEverProduced += float64(b.Number) }).
+	ecs.Observe1[comp.Bee](event.AdultEmerged).
+		Do(func(e ecs.Entity, b *comp.Bee) {
+			c.TotalAdultsEverProduced += float64(b.Number)
+			if b.Caste == caste.Queen {
+				c.TotalAdultQueensEverProduced += float64(b.Number)
+			}
+		}).
 		Register(w)
 
 	c.planQueenRemoval() // Setup is the evening before day 1 of the first year

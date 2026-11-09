@@ -2,6 +2,8 @@ package sys
 
 import (
 	"gobees/comp"
+	"gobees/enum/activity"
+	"gobees/enum/caste"
 	"gobees/event"
 
 	"github.com/mlange-42/ark/ecs"
@@ -14,7 +16,10 @@ type tally struct {
 	coloniesDied  int
 	trips         int // event.ForagingTrip, sum of Number
 	foragersDied  int // event.DiedForaging, sum of Number
-	queensEmerged int // event.QueenEmerged, sum of Number
+	adultsEmerged int // event.AdultEmerged, sum of Number
+	queensEmerged int // event.AdultEmerged of queens, sum of Number
+	nectarVisits  int // event.Collected of bees bringing nectar, sum of Number
+	pollenVisits  int // event.Collected of bees bringing pollen, sum of Number
 }
 
 // newTally registers the observers of a new tally.
@@ -32,8 +37,25 @@ func newTally(w *ecs.World) *tally {
 	ecs.Observe1[comp.Bee](event.DiedForaging).
 		Do(func(e ecs.Entity, b *comp.Bee) { c.foragersDied += b.Number }).
 		Register(w)
-	ecs.Observe1[comp.Bee](event.QueenEmerged).
-		Do(func(e ecs.Entity, b *comp.Bee) { c.queensEmerged += b.Number }).
+	ecs.Observe1[comp.Bee](event.AdultEmerged).
+		Do(func(e ecs.Entity, b *comp.Bee) {
+			c.adultsEmerged += b.Number
+			if b.Caste == caste.Queen {
+				c.queensEmerged += b.Number
+			}
+		}).
+		Register(w)
+	ecs.Observe1[comp.Bee](event.Collected).
+		Do(func(e ecs.Entity, b *comp.Bee) {
+			switch b.Activity {
+			case activity.BringingNectar:
+				c.nectarVisits += b.Number
+			case activity.BringingPollen:
+				c.pollenVisits += b.Number
+			default:
+				panic("event.Collected on a bee that brings nothing")
+			}
+		}).
 		Register(w)
 	return c
 }

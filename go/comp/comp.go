@@ -37,7 +37,7 @@ type FlowerPatch struct {
 
 // Layer is one flower species on a flower patch: its static data and its food. NetLogo: a foodsource layer.
 type Layer struct {
-	Flower              int        // index of the flower species in params.Input.Flowers, read only by the user interface (ui). NetLogo: flowerSpecies
+	Flower              int        // index of the flower species in params.Input.Flowers, read only by the user interface (ui) and the visits output (obs.Visits). NetLogo: flowerSpecies
 	NectarMax           float64    // [µl]. NetLogo: nectarMax_myl
 	PollenMax           float64    // [g]. NetLogo: pollenMax_g
 	NectarPerFlower     float64    // nectar volume of one flower [µl]. NetLogo: nectarFlowerVolume_myl

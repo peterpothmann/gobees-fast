@@ -166,6 +166,7 @@ func TestVariationErrors(t *testing.T) {
 		{"  - key: run.seed\n    values: [1, 2]\n", "run.seed cannot vary"},
 		{"  - key: name\n    values: [a, b]\n", "name cannot vary"},
 		{"  - key: output.columns\n    values: [[eggs]]\n", "output.columns cannot vary"},
+		{"  - key: output.visits\n    values: [true, false]\n", "output.visits cannot vary"},
 		{"  - key: landscape\n    values: [a.yaml]\n", "landscape cannot vary"},
 		{"  - key: cropRotation\n    values: [[a.yaml, b.yaml]]\n", "cropRotation cannot vary"},
 		{"  - key: parameters.badgers\n    values: [1]\n  - key: parameters.badgers\n    values: [2]\n", "listed twice"},

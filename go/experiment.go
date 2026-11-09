@@ -28,7 +28,11 @@ type experiment struct {
 	columns     []string          // the columns of the daily output
 	dir         string            // the output folder, "" without output
 	output      string            // the daily output file in dir, "" without
-	results     []runResult       // the results of its runs, in the order of its jobs
+	visits      string            // the visits output file in dir, "" without (no output, or output.visits false)
+	// landscapes gives the name of each landscape file of the run file in the output folder (the copies of the
+	// provenance), set when the provenance is written
+	landscapes map[string]string
+	results    []runResult // the results of its runs, in the order of its jobs
 
 	part *runPart // the part of the runs that runs (--part, run.part), nil: all runs
 	cli  *cli     // the flags, which paramsOf applies to each combination
@@ -272,6 +276,9 @@ func outputDirs(output string, experiments []*experiment) error {
 			e.dir = filepath.Join(e.dir, e.part.folder())
 		}
 		e.output = filepath.Join(e.dir, dailyOutputFile)
+		if e.first.Output.Visits { // cannot vary
+			e.visits = filepath.Join(e.dir, visitsFile)
+		}
 		if other, ok := used[strings.ToLower(e.name)]; ok {
 			return fmt.Errorf("the run files %s and %s have the same name %q, their outputs would both go to %s: "+
 				"change the key name of one of them", other.source(), e.source(), e.name, e.dir)
@@ -318,6 +325,9 @@ func (e *experiment) jobs(index int, several bool) []job {
 			}
 			if e.output != "" {
 				j.columns = e.columns
+				if e.visits != "" {
+					j.landscapes = e.landscapes
+				}
 				j.prefix = fmt.Sprintf("%d\t%d\t", number, seed)
 				for _, v := range values {
 					j.prefix += v + "\t"
@@ -329,13 +339,24 @@ func (e *experiment) jobs(index int, several bool) []job {
 	return jobs
 }
 
-// header returns the columns of the daily output of the experiment: run (from 1 over all combinations), seed, the keys
-// of the variations (site for the sites), t and the columns.
+// header returns the columns of the daily output of the experiment: the columns of each run (runColumns) and the
+// columns.
 func (e *experiment) header() []string {
+	return append(e.runColumns(), e.columns...)
+}
+
+// visitsHeader returns the columns of the visits output of the experiment: the columns of each run (runColumns) and
+// obs.VisitColumns.
+func (e *experiment) visitsHeader() []string {
+	return append(e.runColumns(), obs.VisitColumns...)
+}
+
+// runColumns returns the columns in front of each row of the outputs: run (from 1 over all combinations), seed, the
+// keys of the variations (site for the sites) and t.
+func (e *experiment) runColumns() []string {
 	h := []string{"run", "seed"}
 	for _, v := range e.files.Config.Variations {
 		h = append(h, v.Column())
 	}
-	h = append(h, "t")
-	return append(h, e.columns...)
+	return append(h, "t")
 }

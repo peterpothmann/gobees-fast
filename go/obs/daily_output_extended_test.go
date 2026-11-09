@@ -75,14 +75,15 @@ func TestDailyOutputExtended(t *testing.T) {
 		t.Fatalf("the NetLogo metrics must follow, got %v", got)
 	}
 
-	// day 1: 2 trips of the squadron of 20 workers, the single worker dies on her trip, the queen pupa emerges, a
-	// colony is founded. MaxHibernatingQueens is 0, so the 1 hibernating queen of the setup is planned for removal
+	// day 1: 2 trips of the squadron of 20 workers, the single worker dies on her trip, the queen and the 4 males
+	// emerge, a colony is founded. MaxHibernatingQueens is 0, so the 1 hibernating queen of the setup is planned for removal
 	emit(w, event.ForagingTrip, bees[4])
 	emit(w, event.ForagingTrip, bees[4])
 	emit(w, event.ForagingTrip, bees[5])
 	emit(w, event.DiedForaging, bees[5])
 	w.RemoveEntity(bees[5])
-	emit(w, event.QueenEmerged, bees[6])
+	emit(w, event.AdultEmerged, bees[6])
+	emit(w, event.AdultEmerged, bees[9])
 	founded := colonies.NewEntity(&comp.Colony{CompetitionPointDate: day.Date{}, Species: pascuorum},
 		&comp.ColonyStores{})
 	o.Update(w)
@@ -95,6 +96,7 @@ func TestDailyOutputExtended(t *testing.T) {
 		"colonies_B_terrestris": 2, "colonies_B_hortorum": 1, "colonies_B_pascuorum": 1, "colonies_B_pratorum": 0,
 		"psithyrus": 2, "foraging_period_s": 28800, "queens_removed": 1,
 		"ForagerDeathsToday": 1, "TotalAdultQueensEverProduced": 1, "MeanCompetitionPointDate": 155,
+		"TotalAdultsEverProduced": 5,
 	}
 	check(t, header, o.Values(w), want)
 

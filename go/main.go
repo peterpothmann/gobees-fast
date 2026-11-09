@@ -22,7 +22,7 @@ type cli struct {
 	Config      []string `short:"c" type:"path" sep:"none" placeholder:"PATH" help:"Run file (YAML, see package input). Its landscape files are relative to its folder. Repeat -c for several run files: their runs share the threads, each writes its own output. Default: the example farm, which is built in. tools/netlogo2gobees converts NetLogo input files into run files."`
 	Seed        *int64   `short:"s" placeholder:"SEED" help:"Random seed of the first repetition, 1 or more. Default: run.seed of the run file."`
 	Days        *int     `placeholder:"DAYS" help:"Number of days (ticks) to run. 0 means no limit: the run only ends with stopExtinct when the population is extinct. Default: run.days of the run file, else ${default_days}."`
-	Output      string   `short:"o" type:"path" placeholder:"DIR" help:"Write the output into the folder DIR, created if missing: for each run file the folder DIR/NAME (NAME: the key name of the run file) with ${daily_output} (the daily output: the daily totals and further values, see obs.DailyOutputExtended, one row per day and run, tab separated, with the columns run (from 1 over all combinations), seed, the varied keys and t in front), ${provenance} (the provenance: a run file that repeats the run) and the copies of the landscape files. Default: no output."`
+	Output      string   `short:"o" type:"path" placeholder:"DIR" help:"Write the output into the folder DIR, created if missing: for each run file the folder DIR/NAME (NAME: the key name of the run file) with ${daily_output} (the daily output: the daily totals and further values, see obs.DailyOutputExtended, one row per day and run, tab separated, with the columns run (from 1 over all combinations), seed, the varied keys and t in front), ${provenance} (the provenance: a run file that repeats the run), with output.visits of the run file visits.csv (the visits per foodsource and day) and the copies of the landscape files. Default: no output."`
 	Columns     []string `placeholder:"A,B,C" help:"Columns of the daily output, comma separated, in this order (needs -o). The column ticks is always first. Default: output.columns of the run file, else all columns. --list-columns shows the names."`
 	ListColumns bool     `help:"Print the columns of the daily output with a description and exit."`
 	Repetitions *int     `placeholder:"N" help:"Number of runs of each combination of the variations (of the run file without variations), 1 or more. Repetition i has the seed SEED + i - 1. Default: run.repetitions of the run file."`
@@ -132,28 +132,35 @@ func (c *cli) run(w io.Writer) error {
 	}
 
 	rs := runSet{threads: threads, watch: watch}
-	writers := make([]*outputWriter, len(experiments))
+	writers := make([]*outputWriter, len(experiments))      // the daily output of each experiment
+	visitWriters := make([]*outputWriter, len(experiments)) // the visits output of each experiment
 	defer func() {
-		for _, o := range writers {
+		for _, o := range append(writers, visitWriters...) {
 			if o != nil {
 				o.close()
 			}
 		}
 	}()
 	for i, e := range experiments {
+		if e.output != "" {
+			// before the runs, so that a run that fails can be repeated
+			prov := newProvenance(e.files, e.config, &e.first, e.repetitions, threads, e.output, e.columns,
+				started, e.sums, e.partText())
+			if err := prov.write(e.dir); err != nil {
+				return err
+			}
+			e.landscapes = prov.landscapeNames()
+			if writers[i], err = newOutputWriter(e.output, e.header()); err != nil {
+				return err
+			}
+			if e.visits != "" {
+				if visitWriters[i], err = newOutputWriter(e.visits, e.visitsHeader()); err != nil {
+					return err
+				}
+			}
+		}
+		// after the provenance: the jobs of the visits output need the names of the landscape copies
 		rs.jobs = append(rs.jobs, e.jobs(i, len(experiments) > 1)...)
-		if e.output == "" {
-			continue
-		}
-		// before the runs, so that a run that fails can be repeated
-		prov := newProvenance(e.files, e.config, &e.first, e.repetitions, threads, e.output, e.columns, started,
-			e.sums, e.partText())
-		if err := prov.write(e.dir); err != nil {
-			return err
-		}
-		if writers[i], err = newOutputWriter(e.output, e.header()); err != nil {
-			return err
-		}
 	}
 
 	err = rs.run(func(i int, r runResult) error {
@@ -163,17 +170,24 @@ func (c *cli) run(w io.Writer) error {
 				return err
 			}
 		}
-		r.rows = nil
+		if o := visitWriters[j.exp]; o != nil {
+			if err := o.write(r.visits); err != nil {
+				return err
+			}
+		}
+		r.rows, r.visits = nil, nil
 		r.label = j.label
 		experiments[j.exp].results = append(experiments[j.exp].results, r)
 		return nil
 	})
-	for i, o := range writers {
-		if o != nil {
-			if cerr := o.close(); err == nil {
-				err = cerr
+	for _, ws := range [][]*outputWriter{writers, visitWriters} {
+		for i, o := range ws {
+			if o != nil {
+				if cerr := o.close(); err == nil {
+					err = cerr
+				}
+				ws[i] = nil
 			}
-			writers[i] = nil
 		}
 	}
 	if err != nil {
@@ -228,5 +242,8 @@ func (e *experiment) summary(w io.Writer, several bool, threads int) {
 	if e.output != "" {
 		fmt.Fprintf(w, "daily output written to %s, provenance to %s\n", e.output,
 			filepath.Join(e.dir, provenanceFile))
+	}
+	if e.visits != "" {
+		fmt.Fprintf(w, "visits written to %s\n", e.visits)
 	}
 }

@@ -246,8 +246,9 @@ func TestForagingTripPollen(t *testing.T) {
 	if st := aw.state(p); !almostEqual(st.Pollen, 1000-0.01206) {
 		t.Errorf("foodsource: %v g", st.Pollen)
 	}
-	if fo.CarriedPollen != 0 || aw.tally.trips != 1 {
-		t.Errorf("load %v, trips %v", fo.CarriedPollen, aw.tally.trips)
+	if fo.CarriedPollen != 0 || aw.tally.trips != 1 || aw.tally.pollenVisits != 1 || aw.tally.nectarVisits != 0 {
+		t.Errorf("load %v, trips %v, pollen visits %v, nectar visits %v", fo.CarriedPollen, aw.tally.trips,
+			aw.tally.pollenVisits, aw.tally.nectarVisits)
 	}
 	if !almostEqual(fo.ExpectedPollenTrip, (412.2+b.PersonalTime-165)/2) {
 		t.Errorf("expectation %v", fo.ExpectedPollenTrip)
@@ -279,6 +280,30 @@ func TestForagingEmptiesFoodsource(t *testing.T) {
 	}
 	if st := aw.state(p); st.Nectar != 0 {
 		t.Errorf("foodsource: %v microlitres, want 0", st.Nectar)
+	}
+	// the cohort of 3 visits 3 times, also with less than 3 loads left
+	if aw.tally.nectarVisits != 3 || aw.tally.pollenVisits != 0 {
+		t.Errorf("nectar visits %v, pollen visits %v, want 3, 0", aw.tally.nectarVisits, aw.tally.pollenVisits)
+	}
+}
+
+func TestCollectEmptyFoodsource(t *testing.T) {
+	// an empty foodsource gives no load and no visit (event.Collected)
+	aw, col, f := newForagingWorld(t, 1)
+	p := aw.flowerPatch(30, 0, 10, willowherb())[0]
+	aw.state(p).Nectar, aw.state(p).Pollen = 0, 0
+	for _, a := range []activity.Activity{activity.CollectNectar, activity.CollectPollen} {
+		bee := aw.worker(col, 4)
+		b, _, _, fo, _ := aw.bee(bee)
+		b.Activity = a
+		fo.CurrentFoodsource = p
+		f.collect(f.tripOf(bee))
+		if b, _, _, _, _ = aw.bee(bee); b.Activity != activity.ReturningEmpty {
+			t.Errorf("%v: activity %v, want ReturningEmpty", a, b.Activity)
+		}
+	}
+	if aw.tally.nectarVisits != 0 || aw.tally.pollenVisits != 0 {
+		t.Errorf("nectar visits %v, pollen visits %v, want 0, 0", aw.tally.nectarVisits, aw.tally.pollenVisits)
 	}
 }
 

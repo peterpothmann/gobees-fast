@@ -7,7 +7,8 @@ import (
 )
 
 // extraColumns are the columns of DailyOutputExtended after the NetLogo metrics.
-var extraColumns = []string{"ForagerDeathsToday", "TotalAdultQueensEverProduced", "MeanCompetitionPointDate"}
+var extraColumns = []string{"ForagerDeathsToday", "TotalAdultQueensEverProduced", "MeanCompetitionPointDate",
+	"TotalAdultsEverProduced"}
 
 // timeColumn is the first column of every selection: the NetLogo ticks (1 on the first day).
 const timeColumn = "ticks"
@@ -72,6 +73,7 @@ var columnDocs = map[string]string{
 	"ForagerDeathsToday":           "foragers that died on a foraging trip today",
 	"TotalAdultQueensEverProduced": "queens that emerged from pupae since the start",
 	"MeanCompetitionPointDate":     "mean competition point date (ticks) of the living colonies that have one, 0 if none",
+	"TotalAdultsEverProduced":      "bees of all castes that emerged from pupae since the start",
 }
 
 // ColumnDoc returns the description of the column name, "" for an unknown name.

@@ -128,8 +128,8 @@ func TestDevelopmentWorkerTimeline(t *testing.T) {
 	if f.CropVolume != cropVolume(b.Weight, bw.sp, &defaults.Foraging) || f.GlossaLength != proboscisLength(b.Weight, bw.sp) {
 		t.Errorf("crop %v, glossa %v", f.CropVolume, f.GlossaLength)
 	}
-	if bw.tally.queensEmerged != 0 {
-		t.Errorf("%v queens emerged, want 0", bw.tally.queensEmerged)
+	if bw.tally.adultsEmerged != 12 || bw.tally.queensEmerged != 0 {
+		t.Errorf("%v adults, %v queens emerged, want 12, 0", bw.tally.adultsEmerged, bw.tally.queensEmerged)
 	}
 }
 
@@ -150,9 +150,33 @@ func TestDevelopmentQueenTimeline(t *testing.T) {
 	if *th != thresholds(&defaults.Thresholds, sitYoungQueen) || f.PollenPellets != pollenLoad(980, bw.sp, &defaults.Foraging) {
 		t.Errorf("thresholds %+v, pollen load %v", *th, f.PollenPellets)
 	}
-	// event.QueenEmerged for the output (obs.Counters.TotalAdultQueensEverProduced)
-	if bw.tally.queensEmerged != 12 {
-		t.Errorf("%v queens emerged, want 12", bw.tally.queensEmerged)
+	// event.AdultEmerged for the output (obs.Counters.TotalAdultQueensEverProduced)
+	if bw.tally.adultsEmerged != 12 || bw.tally.queensEmerged != 12 {
+		t.Errorf("%v adults, %v queens emerged, want 12, 12", bw.tally.adultsEmerged, bw.tally.queensEmerged)
+	}
+}
+
+func TestDevelopmentAdultsEmerged(t *testing.T) {
+	// event.AdultEmerged for every caste (obs.Counters.TotalAdultsEverProduced), not for a pupa that is too young
+	bw := newBroodWorld(t, 1)
+	col := bw.addColony(nil)
+	age := int(max(bw.sp.EmergenceAgeMin, bw.sp.QueenEmergenceAgeMin)) + 1
+	incubation := max(bw.sp.EmergenceIncubation, bw.sp.QueenEmergenceIncubation) + 1
+	workers := bw.addBrood(col, stage.Pupa, caste.Worker, 5, age, 200, incubation)
+	males := bw.addBrood(col, stage.Pupa, caste.Male, 3, age, 200, incubation)
+	queens := bw.addBrood(col, stage.Pupa, caste.Queen, 2, age, 900, incubation)
+	young := bw.addBrood(col, stage.Pupa, caste.Worker, 7, 0, 200, incubation)
+	bw.dev.Update(bw.w)
+	for _, e := range []ecs.Entity{workers, males, queens} {
+		if b, _, _, _, _ := bw.bee(e); b.Stage != stage.Adult {
+			t.Errorf("%v %v: stage %v, want adult", b.Number, b.Caste, b.Stage)
+		}
+	}
+	if b, _, _, _, _ := bw.bee(young); b.Stage != stage.Pupa {
+		t.Errorf("young pupa: stage %v, want pupa", b.Stage)
+	}
+	if bw.tally.adultsEmerged != 10 || bw.tally.queensEmerged != 2 {
+		t.Errorf("%v adults, %v queens emerged, want 10, 2", bw.tally.adultsEmerged, bw.tally.queensEmerged)
 	}
 }
 

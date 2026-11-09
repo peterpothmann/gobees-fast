@@ -32,4 +32,8 @@ type Output struct {
 	// column ticks is always the first. No key: all columns. The flag --columns overrides it. The column t, which
 	// the CSV reporter writes in front, is not listed.
 	Columns []string `yaml:"columns,omitempty,flow"`
+
+	// Visits writes the visits output: the visits of the foragers per foodsource and day. No key: false. It changes
+	// no model value.
+	Visits bool `yaml:"visits,omitempty"`
 }

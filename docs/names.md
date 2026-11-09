@@ -244,7 +244,7 @@ field `Years_s` → `Years`, `Input.Weather` → `Input.ForagingPeriod`).
 | `Seed` (flag `-s`) | `RAND_SEED` | `Run` (`input.Run`) | `run` |  | needed: `seed` (of the first repetition), `repetitions` (runs of each combination), `threads`, each 1 or more, optional `days` [d] and `part` (`I/N`, flag `--part`), written by the converter (1, 365, 1, 1), in a provenance also the record of the run (docs/usage.md, "Provenance") |
 |  | BehaviorSpace: the varied values of an experiment | `Variations` (`input.Variation`) | `variations` |  | optional: `key` (path, parts separated by dots, a number selects a list item) and `values`, or `sites` (site files that set `landscape` and `cropRotation`), every combination runs (docs/usage.md, "Experiments") |
 | `Parameters` | the columns of the parameter file | `Parameters` | `parameters` |  | the model parameters |
-| `Output` | `KeepDeadColonies?` | `Output` | `output` |  | output options: `keepDeadColonies` and `columns` (names of the columns of the daily output, `obs.AllColumns`, no NetLogo counterpart) |
+| `Output` | `KeepDeadColonies?` | `Output` | `output` |  | output options: `keepDeadColonies`, `columns` (names of the columns of the daily output, `obs.AllColumns`, no NetLogo counterpart) and `visits` (the visits output) |
 | `InitialQueens` | `BeeSpeciesInitialQueensListAsString` | `InitialQueens` | `initialQueens` |  | species (`species`) and number of initial queens (`queens`) |
 | `ForagingPeriod_s` | `Weather` | `ForagingPeriod` | `foragingPeriod` | [s] | 365 values per year, the years repeat |
 | `StewardshipOptions` | from the `HabitatsFile` | `StewardshipOptions` | `stewardshipOptions` |  | names of the stewardship options |
@@ -278,6 +278,7 @@ field `Years_s` → `Years`, `Input.Weather` → `Input.ForagingPeriod`).
 | gobees Go | NetLogo | gobees-fast Go | Key | Unit | Meaning |
 | --- | --- | --- | --- | --- | --- |
 | `KeepDeadColonies` | `KeepDeadColonies?` | `KeepDeadColonies` | `keepDeadColonies` |  | count the dead colonies of all years |
+|  | `BBCT_WriteNPvisitsProc` | `Visits` | `visits` |  | write the visits per foodsource and day (`visits.csv`) |
 
 ### Section `species` (`params.SpeciesFile`)
 

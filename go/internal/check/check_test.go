@@ -27,7 +27,7 @@ func world() (*ecs.World, *globals.Calendar, ecs.Entity) {
 		{Stage: stage.Pupa, Caste: caste.Male, Colony: col},
 		{Stage: stage.Adult, Caste: caste.Worker, Colony: col},
 		{Stage: stage.Adult, Caste: caste.Male, Colony: col},
-		{Stage: stage.Adult, Caste: caste.Queen, Activity: activity.Hibernate},
+		{Stage: stage.Adult, Caste: caste.Queen, Mated: true, Activity: activity.Hibernate},
 	} {
 		b.Number = 1
 		bees.NewEntity(&b)
@@ -60,6 +60,21 @@ func TestDayMembers(t *testing.T) {
 	w.RemoveEntity(col)
 	if err := Day(w, false); err == nil {
 		t.Error("bees of a removed colony: no error")
+	}
+}
+
+func TestDayMated(t *testing.T) {
+	// a mated bee that is no adult queen
+	for _, b := range []comp.Bee{
+		{Stage: stage.Pupa, Caste: caste.Queen, Mated: true},
+		{Stage: stage.Adult, Caste: caste.Worker, Mated: true},
+	} {
+		w, _, col := world()
+		b.Colony = col
+		ecs.NewMap1[comp.Bee](w).NewEntity(&b)
+		if err := Day(w, false); err == nil {
+			t.Errorf("mated bee of stage %v, caste %v: no error", b.Stage, b.Caste)
+		}
 	}
 }
 

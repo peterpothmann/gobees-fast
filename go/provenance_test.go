@@ -129,14 +129,14 @@ func TestProvenanceRepeatsRun(t *testing.T) {
 
 func TestProvenanceLandscapeNames(t *testing.T) {
 	// The copies keep the names of the landscape files. A second file of the same name (from another folder) gets
-	// _2, and no copy takes the name of the daily output or the provenance.
+	// _2, and no copy takes the name of the daily output, the visits output or the provenance.
 	cfg, landscapes := input.ExampleFarmConfig()
 	farm := landscapes[cfg.Landscape]
 	cfg.Landscape = "a/farm.yaml"
-	cfg.CropRotation = []string{"a/farm.yaml", "b/farm.yaml", "c/provenance.yaml", "c/daily.csv"}
+	cfg.CropRotation = []string{"a/farm.yaml", "b/farm.yaml", "c/provenance.yaml", "c/daily.csv", "c/visits.csv"}
 	dir := t.TempDir()
 	writeRunFile(t, dir, "run.yaml", cfg, map[string]input.Landscape{"a/farm.yaml": farm, "b/farm.yaml": farm,
-		"c/provenance.yaml": farm, "c/daily.csv": farm})
+		"c/provenance.yaml": farm, "c/daily.csv": farm, "c/visits.csv": farm})
 
 	out := filepath.Join(dir, "out")
 	c := parse(t, "-c", filepath.Join(dir, "run.yaml"), "--days", "2", "-o", out)
@@ -148,7 +148,7 @@ func TestProvenanceLandscapeNames(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"farm.yaml", "farm_2.yaml", "provenance_2.yaml", "daily_2.csv"}
+	want := []string{"farm.yaml", "farm_2.yaml", "provenance_2.yaml", "daily_2.csv", "visits_2.csv"}
 	if info.Config.Landscape != want[0] || !slices.Equal(info.Config.CropRotation, want) {
 		t.Errorf("landscape, cropRotation = %q, %q, want %q", info.Config.Landscape, info.Config.CropRotation, want)
 	}

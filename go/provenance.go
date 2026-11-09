@@ -19,6 +19,7 @@ import (
 // The files in the output folder of a run file (-o DIR: DIR/<name>/), next to the copies of its landscape files.
 const (
 	dailyOutputFile = "daily.csv"       // the daily output
+	visitsFile      = "visits.csv"      // the visits output (output.visits)
 	provenanceFile  = "provenance.yaml" // the provenance, a run file that repeats the run
 )
 
@@ -66,13 +67,13 @@ func newProvenance(f input.Files, config string, p *params.Params, repetitions, 
 	}
 
 	// The landscape files in the order of the run file, each with its tables. Two of them may have the same name in
-	// different folders, and none may take the name of the daily output or the provenance. Lower case, because the
-	// file system of Windows and macOS does not tell a.yaml and A.yaml apart. A table of several landscape files
-	// (e.g. ../habitats.csv) is copied once.
+	// different folders, and none may take the name of the daily output, the visits output or the provenance. Lower
+	// case, because the file system of Windows and macOS does not tell a.yaml and A.yaml apart. A table of several
+	// landscape files (e.g. ../habitats.csv) is copied once.
 	sources := []string{c.Landscape}
 	sources = append(sources, c.CropRotation...)
 	copies := map[string]string{} // name in the output folder by name in the run file (landscape) or as read (table)
-	used := map[string]bool{dailyOutputFile: true, provenanceFile: true}
+	used := map[string]bool{dailyOutputFile: true, visitsFile: true, provenanceFile: true}
 	prov := provenance{Files: map[string][]byte{}}
 	reserve := func(source string) string {
 		name := filepath.Base(source)
@@ -235,4 +236,14 @@ func buildVersion() *input.Version {
 		}
 	}
 	return v
+}
+
+// landscapeNames returns the name in the output folder of each landscape file copied, by its name in the run file.
+// The landscape files of sites are not copied and not in it.
+func (p provenance) landscapeNames() map[string]string {
+	names := map[string]string{}
+	for _, l := range p.Config.Run.Landscapes {
+		names[l.Source] = l.File
+	}
+	return names
 }

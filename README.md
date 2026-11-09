@@ -67,7 +67,7 @@ cd ../../go
 go run . -c ../tools/netlogo2gobees/sussex/run.yaml
 ```
 
-With `-o DIR`, each run file writes into `DIR/<name>` (key `name` of the run file) its daily output `daily.csv` and `provenance.yaml`. Running `provenance.yaml` with `-c` repeats the run byte for byte.
+With `-o DIR`, each run file writes into `DIR/<name>` (key `name` of the run file) its daily output `daily.csv` and `provenance.yaml`, and with `output.visits: true` the visits per foodsource and day `visits.csv`. Running `provenance.yaml` with `-c` repeats the run byte for byte.
 
 An optional section `variations` in the run file turns it into an experiment: every combination of the listed values runs.
 

@@ -49,6 +49,48 @@ func (s *csvRows) Update(w *ecs.World) {
 
 func (s *csvRows) Finalize(w *ecs.World) {}
 
+// visitRows is a system that formats the visits of each day (obs.Visits) as rows of the visits output, one row per
+// foodsource with visits: prefix, t (as csvRows), then the columns of obs.VisitColumns, tab separated. landscapes
+// gives the name of each landscape file of the run file in the output folder. The rows are kept in memory.
+type visitRows struct {
+	visits     obs.Visits
+	prefix     string
+	landscapes map[string]string
+	rows       []byte
+	step       int
+}
+
+func (s *visitRows) Initialize(w *ecs.World) { s.visits.Initialize(w) }
+
+func (s *visitRows) Update(w *ecs.World) {
+	s.visits.Update(w)
+	ticks := s.visits.Ticks()
+	for _, v := range s.visits.Day {
+		s.rows = append(s.rows, s.prefix...)
+		s.rows = strconv.AppendInt(s.rows, int64(s.step), 10)
+		s.rows = append(s.rows, '\t')
+		s.rows = strconv.AppendInt(s.rows, ticks, 10)
+		s.rows = append(s.rows, '\t')
+		name, ok := s.landscapes[v.Landscape]
+		if !ok {
+			name = v.Landscape // not copied: the built-in example farm, or the landscape file of a site
+		}
+		s.rows = append(s.rows, name...)
+		s.rows = append(s.rows, '\t')
+		s.rows = strconv.AppendInt(s.rows, int64(v.ID), 10)
+		s.rows = append(s.rows, '\t')
+		s.rows = append(s.rows, s.visits.FlowerName(v)...)
+		s.rows = append(s.rows, '\t')
+		s.rows = strconv.AppendInt(s.rows, int64(v.Nectar), 10)
+		s.rows = append(s.rows, '\t')
+		s.rows = strconv.AppendInt(s.rows, int64(v.Pollen), 10)
+		s.rows = append(s.rows, '\n')
+	}
+	s.step++
+}
+
+func (s *visitRows) Finalize(w *ecs.World) {}
+
 // runResult is the result of one run.
 type runResult struct {
 	label   string  // the run in the summary (job.label)
@@ -57,6 +99,7 @@ type runResult struct {
 	died    float64 // bees died
 	days    int     // days run
 	rows    []byte  // the rows of the daily output, nil without output
+	visits  []byte  // the rows of the visits output, nil without it
 	err     error
 }
 
@@ -65,9 +108,11 @@ type job struct {
 	input   *combinationInput // the parameters of its combination, shared with the other runs of the combination
 	seed    int64             // the seed of the run
 	columns []string          // the columns of the daily output, nil: no output
-	prefix  string            // in front of each row: run, seed and the values of the variations, each with a tab after it
-	label   string            // the run in messages, e.g. "run 2 (seed 6, parameters.badgers=2)"
-	exp     int               // the index of its experiment
+	// landscapes gives the name of each landscape file of the run file in the output folder, nil: no visits output
+	landscapes map[string]string
+	prefix     string // in front of each row: run, seed and the values of the variations, each with a tab after it
+	label      string // the run in messages, e.g. "run 2 (seed 6, parameters.badgers=2)"
+	exp        int    // the index of its experiment
 }
 
 // runSet is a list of runs, of one or more experiments.
@@ -111,6 +156,11 @@ func (rs runSet) one(i int) (res runResult) {
 		rows = &csvRows{observer: &obs.DailyOutputExtended{Columns: j.columns}, prefix: j.prefix}
 		a.AddSystem(rows)
 	}
+	var visits *visitRows
+	if j.landscapes != nil {
+		visits = &visitRows{prefix: j.prefix, landscapes: j.landscapes}
+		a.AddSystem(visits)
+	}
 	if rs.watch == nil {
 		a.Run()
 	} else if err := rs.watch(a, &counters); err != nil {
@@ -124,6 +174,9 @@ func (rs runSet) one(i int) (res runResult) {
 	res.days = int(ecs.GetResource[globals.Ticks](a.World).Ticks)
 	if rows != nil {
 		res.rows = rows.rows
+	}
+	if visits != nil {
+		res.visits = visits.rows
 	}
 	return res
 }

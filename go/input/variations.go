@@ -44,9 +44,9 @@ type Combination struct {
 }
 
 // checkVariations checks the section variations: each key once, with at least one value, not name (the folder of the
-// one output of all combinations), not in the sections run and variations, not output.columns (all combinations of an
-// experiment write the same columns into one file) and not landscape or cropRotation (a landscape and its crop rotation
-// vary together, as sites). The sites at most once, without key and values.
+// one output of all combinations), not in the sections run and variations, not output.columns and output.visits (all
+// combinations of an experiment write the same columns into the same files) and not landscape or cropRotation (a
+// landscape and its crop rotation vary together, as sites). The sites at most once, without key and values.
 func checkVariations(vs []Variation) error {
 	seen := map[string]bool{}
 	sites := false
@@ -70,9 +70,9 @@ func checkVariations(vs []Variation) error {
 		case first == nameKey:
 			return fmt.Errorf("%s: %s cannot vary: all combinations write into the one folder of the name",
 				variationsKey, v.Key)
-		case first == runKey || first == variationsKey || v.Key == "output.columns":
+		case first == runKey || first == variationsKey || v.Key == "output.columns" || v.Key == "output.visits":
 			return fmt.Errorf("%s: %s cannot vary: seed, days, repetitions and threads are the same for all "+
-				"combinations, and so are the columns of the output", variationsKey, v.Key)
+				"combinations, and so are the output files and their columns", variationsKey, v.Key)
 		case first == "landscape" || first == "cropRotation":
 			return fmt.Errorf("%s: %s cannot vary as a key: a landscape and its crop rotation vary together, list "+
 				"them as sites (sites: sites/*/site.yaml)", variationsKey, v.Key)
