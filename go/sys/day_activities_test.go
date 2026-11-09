@@ -59,8 +59,8 @@ func TestNextActiveBee(t *testing.T) {
 	}{
 		{"A 1810", []float64{1810, 900, 1200, 2000}, "BCAD"},
 		{"A 2500", []float64{2500, 900, 1200, 2000}, "BCDA"},
-		{"A 2000, tie with the last bee", []float64{2000, 900, 1200, 2000}, "BCAD"},
-		{"three ties", []float64{10, 10, 10}, "BAC"},
+		{"A 2000, tie with the last bee", []float64{2000, 900, 1200, 2000}, "BCDA"},
+		{"three ties", []float64{10, 10, 10}, "BCA"},
 		{"A smallest", []float64{5, 10, 20}, "ABC"},
 		{"two bees", []float64{30, 20}, "BA"},
 		{"one bee", []float64{30}, "A"},
@@ -412,7 +412,7 @@ func TestActivitiesExampleFarm(t *testing.T) {
 
 func TestNextActiveBeeAfterDeath(t *testing.T) {
 	// the previous bee died: the next bee has not been active yet and is re-inserted. With equal times
-	// it moves behind the next bee.
+	// it moves behind all of them.
 	aw := newActivityWorld(t, 1)
 	col := aw.addColony(nil)
 	names := map[ecs.Entity]string{}
@@ -432,8 +432,8 @@ func TestNextActiveBeeAfterDeath(t *testing.T) {
 	for _, e := range aw.active.Entities() {
 		got += names[e]
 	}
-	if got != "CBD" {
-		t.Errorf("queue %s, want CBD", got)
+	if got != "CDB" {
+		t.Errorf("queue %s, want CDB", got)
 	}
 }
 

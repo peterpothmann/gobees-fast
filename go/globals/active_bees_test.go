@@ -1,7 +1,6 @@
 package globals
 
 import (
-	"math"
 	"math/rand/v2"
 	"slices"
 	"testing"
@@ -9,38 +8,16 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// netLogoNext is NetLogo's NextActiveBeeREP on a list sorted by time: the first bee goes back at the position of
-// NetLogo's binary search (with its rounding), the new first bee is returned. The reference for ActiveBees.Next.
-func netLogoNext(list []ecs.Entity, time map[ecs.Entity]float64) ecs.Entity {
-	round := func(x float64) float64 { return math.Floor(x + 0.5) }
+// sortedNext is the reference for ActiveBees.Next on a list sorted by time: the first bee goes behind all bees with
+// a time up to hers, the new first bee is returned.
+func sortedNext(list []ecs.Entity, time map[ecs.Entity]float64) ecs.Entity {
 	activeBee := list[0]
-	activeBeeTime := time[activeBee]
-	minPosition := 0.0
-	maxPosition := float64(len(list) - 1)
-	currentPosition := round(maxPosition / 2)
-	for maxPosition-minPosition > 1 {
-		if time[list[int(currentPosition)]] > activeBeeTime {
-			maxPosition = currentPosition
-			currentPosition = round((currentPosition + minPosition) / 2)
-		} else {
-			minPosition = currentPosition
-			currentPosition = round((maxPosition + currentPosition) / 2)
-		}
+	i := 1
+	for i < len(list) && time[list[i]] <= time[activeBee] {
+		i++
 	}
-	beginningList := list[:int(currentPosition)]
-	endList := list[int(currentPosition):]
-	if len(list) > 1 {
-		beginningList = beginningList[1:]
-	} else {
-		endList = endList[1:]
-	}
-	if len(endList) == 1 && activeBeeTime > time[endList[0]] {
-		copy(list, list[1:])
-		list[len(list)-1] = activeBee
-	} else {
-		copy(list, beginningList)
-		list[len(beginningList)] = activeBee
-	}
+	copy(list, list[1:i])
+	list[i-1] = activeBee
 	return list[0]
 }
 
@@ -53,11 +30,11 @@ func TestActiveBeesWorkedExamples(t *testing.T) {
 	}{
 		{"A 1810", []float64{1810, 900, 1200, 2000}, "BCAD"},
 		{"A 2500", []float64{2500, 900, 1200, 2000}, "BCDA"},
-		{"A 2000, tie with the last bee: before it", []float64{2000, 900, 1200, 2000}, "BCAD"},
+		{"A 2000, tie with the last bee: after it", []float64{2000, 900, 1200, 2000}, "BCDA"},
 		{"A 1200, tie with a bee in the middle: after it", []float64{1200, 900, 1200, 2000}, "BCAD"},
-		{"three ties", []float64{10, 10, 10}, "BAC"},
+		{"three ties", []float64{10, 10, 10}, "BCA"},
 		{"A smallest", []float64{5, 10, 20}, "ABC"},
-		{"two bees, tie", []float64{20, 20}, "AB"},
+		{"two bees, tie", []float64{20, 20}, "BA"},
 		{"two bees", []float64{30, 20}, "BA"},
 		{"one bee", []float64{30}, "A"},
 	} {
@@ -87,8 +64,8 @@ func TestActiveBeesWorkedExamples(t *testing.T) {
 	}
 }
 
-func TestActiveBeesEqualsNetLogo(t *testing.T) {
-	// Random days of the activity loop with many ties: the queue and NetLogo's list give the same order after every
+func TestActiveBeesEqualsSortedList(t *testing.T) {
+	// Random days of the activity loop with many ties: the queue and a sorted list give the same order after every
 	// step. Steps: the first bee acts (her time grows by 0 to 4, or becomes the time of the last bee) and goes back
 	// (Next), or a random bee dies (Remove).
 	for seed := uint64(1); seed <= 200; seed++ {
@@ -131,13 +108,13 @@ func TestActiveBeesEqualsNetLogo(t *testing.T) {
 				default:
 					time[head] += float64(rng.IntN(5))
 				}
-				a, b := netLogoNext(ref, time), q.Next(get)
+				a, b := sortedNext(ref, time), q.Next(get)
 				if a != b {
-					t.Fatalf("seed %d, step %d: next bee %v, NetLogo %v", seed, step, b, a)
+					t.Fatalf("seed %d, step %d: next bee %v, sorted list %v", seed, step, b, a)
 				}
 			}
 			if got := q.Entities(); !slices.Equal(got, ref) {
-				t.Fatalf("seed %d, step %d: queue %v, NetLogo %v", seed, step, got, ref)
+				t.Fatalf("seed %d, step %d: queue %v, sorted list %v", seed, step, got, ref)
 			}
 		}
 	}

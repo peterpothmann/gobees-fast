@@ -36,6 +36,9 @@ type forager struct {
 	colonyMap     *ecs.Map4[comp.Position, comp.Colony, comp.ColonyStores, comp.ColonyRange]
 	foodsourceMap *ecs.Map4[comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer]
 	speciesMap    *speciesTable
+
+	survivalPerSecond float64 // survival of one second of a trip, NaN until the first trip
+	logSurvival       float64 // ln survivalPerSecond
 }
 
 func newForager(w *ecs.World, rng *rand.Rand) forager {
@@ -52,6 +55,8 @@ func newForager(w *ecs.World, rng *rand.Rand) forager {
 		colonyMap:     ecs.NewMap4[comp.Position, comp.Colony, comp.ColonyStores, comp.ColonyRange](w),
 		foodsourceMap: ecs.NewMap4[comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](w),
 		speciesMap:    newSpeciesTable(w),
+
+		survivalPerSecond: math.NaN(),
 	}
 }
 
@@ -438,14 +443,18 @@ func (f *forager) tripCosts(w *ecs.World, e ecs.Entity) bool {
 	}
 	colPos, colony, stores, _ := f.colonyMap.Get(b.Colony)
 	spColony := f.speciesMap.Get(colony.Species)
-	// survival of one second, NetLogo: (1 - MortalityForager_per_s * ForagingMortalityFactor)
-	survivalPerSecond := 1 - float64(f.derived.ForagerMortality*f.parameters.ForagingMortalityFactor)
+	// survival of one second, NetLogo: (1 - MortalityForager_per_s * ForagingMortalityFactor). A trip of t seconds
+	// survives with survivalPerSecond^t = exp(t ln survivalPerSecond), the logarithm is computed again only when the
+	// parameters change (tests). NetLogo computes the power: other last bits, the same distribution (docs/changes.md).
+	if s := 1 - float64(f.derived.ForagerMortality*f.parameters.ForagingMortalityFactor); s != f.survivalPerSecond {
+		f.survivalPerSecond, f.logSurvival = s, math.Log(s)
+	}
 
 	if b.Activity == activity.ReturningEmpty {
 		stores.Energy = stores.Energy - float64(spColony.SearchLength*saveFlightCosts*saveNumber*saveWeight)
 		tripDuration := spColony.SearchLength / spColony.FlightVelocity // [s]
 		b.PersonalTime = b.PersonalTime + tripDuration
-		survivalChance := math.Pow(survivalPerSecond, tripDuration)
+		survivalChance := math.Exp(tripDuration * f.logSurvival)
 		mortalityRisk := 1 - survivalChance
 		if f.rng.Float64() < mortalityRisk {
 			f.died.Emit(e) // output only, not in NetLogo
@@ -475,7 +484,7 @@ func (f *forager) tripCosts(w *ecs.World, e ecs.Entity) bool {
 				saveFlightCosts*saveWeight*saveNumber)
 		tripDuration := (2 * distance / scaling / spColony.FlightVelocity) + handlingTime // [s]
 		b.PersonalTime = b.PersonalTime + tripDuration
-		survivalChance := math.Pow(survivalPerSecond, tripDuration)
+		survivalChance := math.Exp(tripDuration * f.logSurvival)
 		mortalityRisk := 1 - survivalChance
 		if f.rng.Float64() < mortalityRisk {
 			f.died.Emit(e) // output only, not in NetLogo

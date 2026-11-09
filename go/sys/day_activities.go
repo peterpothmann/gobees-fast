@@ -133,8 +133,8 @@ func (s *activities) colonies() int {
 	return n
 }
 
-// nextActiveBee puts the first bee of the queue back with her personal time now and returns the new first bee, in
-// NetLogo's order (globals.ActiveBees.Next). NetLogo: NextActiveBeeREP.
+// nextActiveBee puts the first bee of the queue back with her personal time now and returns the new first bee
+// (globals.ActiveBees.Next). NetLogo: NextActiveBeeREP.
 func (s *activities) nextActiveBee() ecs.Entity {
 	return s.active.Next(s.personalTime)
 }
