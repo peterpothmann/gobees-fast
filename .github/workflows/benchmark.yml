@@ -3,7 +3,9 @@
 # the label.
 #
 # NetLogo 5.3.1, gobees-fast and gobees (the base commit of go/compare/commits.env) run one after the other on the
-# same runner, with the same seeds, days and number of runs at the same time. The workflow commits the report
+# same runner, with the same seeds, days and number of runs at the same time. Then gobees-fast runs alternately with
+# the program of the branch below the pull request (its base branch, e.g. main or the previous step of a stack), one
+# run at a time, BENCHMARK_ROUNDS times per seed (go/benchmark/README.md). The workflow commits the report
 # go/benchmark/benchmark-report.md to the branch of the pull request, so that a squash merge brings it to main, and
 # adds it to the summary of the run.
 name: Benchmark
@@ -21,6 +23,8 @@ env:
   NETLOGO_SHA256: 07a626e486606f3d92fd39f7986641fb3f6bb8a00828f583b3b1804446a1c87c
   # runs at the same time, in both models (a runner of a private repository has 2 cores)
   BENCHMARK_THREADS: 2
+  # runs per seed and program in the comparison with the branch below, the fastest counts
+  BENCHMARK_ROUNDS: 10
 
 jobs:
   benchmark:
@@ -66,13 +70,22 @@ jobs:
           tar xzf "$RUNNER_TEMP/netlogo.tgz" -C ~/netlogo
 
       # Compiled before NetLogo runs, so that nothing else runs on the runner while NetLogo is timed. gobees is the
-      # command line program of the base commit, gobees-fast the one of the current code.
-      - name: Build gobees-fast and gobees
+      # command line program of the base commit, gobees-fast the one of the current code, below the one of the
+      # newest commit of the base branch of the pull request.
+      - name: Build gobees-fast, gobees and the branch below
+        env:
+          BELOW_SHA: ${{ github.event.pull_request.base.sha }}
+          BELOW_BRANCH: ${{ github.event.pull_request.base.ref }}
         run: |
           source go/compare/commits.env
           git worktree add --detach --quiet "$RUNNER_TEMP/base" "$BASE_COMMIT"
           go -C "$RUNNER_TEMP/base/go" build -o "$RUNNER_TEMP/gobees" .
           git worktree remove --force "$RUNNER_TEMP/base"
+          git worktree add --detach --quiet "$RUNNER_TEMP/below" "$BELOW_SHA"
+          go -C "$RUNNER_TEMP/below/go" build -o "$RUNNER_TEMP/below-bin" .
+          git worktree remove --force "$RUNNER_TEMP/below"
+          echo "BENCHMARK_BELOW_COMMIT=$(git rev-parse --short "$BELOW_SHA^{commit}")" >> "$GITHUB_ENV"
+          echo "BENCHMARK_BELOW_BRANCH=$BELOW_BRANCH" >> "$GITHUB_ENV"
           go -C go build -o "$RUNNER_TEMP/gobees-fast" .
           go -C go test -c -o "$RUNNER_TEMP/benchmark.test" ./benchmark
           echo "BENCHMARK_BASE_COMMIT=$(git rev-parse --short "$BASE_COMMIT^{commit}")" >> "$GITHUB_ENV"
@@ -90,6 +103,7 @@ jobs:
           BENCHMARK_NETLOGO_CONSOLE: ${{ runner.temp }}/netlogo_console.txt
           BENCHMARK_BASE_BIN: ${{ runner.temp }}/gobees
           BENCHMARK_CURRENT_BIN: ${{ runner.temp }}/gobees-fast
+          BENCHMARK_BELOW_BIN: ${{ runner.temp }}/below-bin
           BENCHMARK_REPORT: ${{ github.workspace }}/go/benchmark/benchmark-report.md
         run: |
           export BENCHMARK_JAVA="$(java -version 2>&1 | head -n 1)"

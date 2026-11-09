@@ -28,6 +28,19 @@ type Report struct {
 	Current    []Run
 	Threads    int // runs at the same time, in all models
 	Machine    Machine
+
+	// Below is the comparison with the branch below the pull request (its base branch), from RunAlternating with
+	// the same seeds and days. Left out of the report if Below.Runs is empty.
+	Below Below
+}
+
+// Below is the comparison of gobees-fast with the base branch of its pull request (RunAlternating).
+type Below struct {
+	Branch  string // name of the base branch, e.g. main or step-S4
+	Commit  string // its commit
+	Rounds  int    // runs per seed and program, the fastest counts
+	Runs    []Run  // the program of the base branch
+	Current []Run  // the program of the current code
 }
 
 // WriteReport writes the report as Markdown to path.
@@ -65,6 +78,10 @@ func (r Report) Markdown() string {
 			nl.ColoniesFounded, format(base.Whole()), base.ColoniesFounded, format(cur.Whole()), cur.ColoniesFounded)
 	}
 
+	if below := r.Below; len(below.Runs) > 0 {
+		writeBelow(&b, below, n.Days)
+	}
+
 	b.WriteString("\n## Machine\n\n")
 	m := r.Machine
 	for _, line := range []struct{ name, value string }{
@@ -80,6 +97,33 @@ func (r Report) Markdown() string {
 		}
 	}
 	return b.String()
+}
+
+// writeBelow writes the section of the comparison with the base branch of the pull request.
+func writeBelow(b *strings.Builder, below Below, days int) {
+	whole := func(run Run) time.Duration { return run.Whole() }
+	old, cur := durations(below.Runs, whole), durations(below.Current, whole)
+	fmt.Fprintf(b, "\n## Against the branch below\n\n"+
+		"gobees-fast against the base branch of the pull request, %s (commit %s): the same %d seeds, %d days "+
+		"each. Both programs run one run at a time and alternately, each seed %d times per program, the order "+
+		"switches every round. The time of a seed is its fastest run. Change: median of gobees-fast against the "+
+		"median of %s, negative is faster.\n\n", below.Branch, below.Commit, len(below.Runs), days, below.Rounds,
+		below.Branch)
+	fmt.Fprintf(b, "| | %s median (min-max) | gobees-fast median (min-max) | Change |\n| --- | ---: | ---: | ---: |\n",
+		below.Branch)
+	fmt.Fprintf(b, "| Whole run | %s | %s | %s |\n", spread(old), spread(cur), change(median(old), median(cur)))
+	fmt.Fprintf(b, "\n| Seed | %s | %s colonies founded | gobees-fast | gobees-fast colonies founded | Change |\n"+
+		"| ---: | ---: | ---: | ---: | ---: | ---: |\n", below.Branch, below.Branch)
+	for i, o := range below.Runs {
+		c := below.Current[i]
+		fmt.Fprintf(b, "| %g | %s | %g | %s | %g | %s |\n", o.Seed, format(o.Whole()), o.ColoniesFounded,
+			format(c.Whole()), c.ColoniesFounded, change(o.Whole(), c.Whole()))
+	}
+}
+
+// change shows the relative change from old to cur in percent, with sign.
+func change(old, cur time.Duration) string {
+	return fmt.Sprintf("%+.1f %%", 100*(float64(cur)-float64(old))/float64(old))
 }
 
 // spread shows the median and the range of sorted durations.

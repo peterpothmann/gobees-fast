@@ -23,9 +23,19 @@ All models run the example farm with the seeds 1 to 6, 365 days each, 2 runs at 
 
 The first NetLogo run per thread includes the warm-up of Java (longer `Setup`). However, after testing: the median over the runs is barely affected.
 
+## Against the branch below
+
+The section "Against the branch below" of the report compares `gobees-fast` with the program of the base branch of the pull request (the newest commit of that branch): `main`, or the previous step if the pull request is part of a stack. It shows what a step gains, also if the gain is a few per cent.
+
+- The same seeds and days as above, the built-in example farm in both programs (so the base branch must read run files, as every commit of gobees-fast after the import of run files).
+- One run at a time, the two programs alternately: in each round every seed runs with the base branch and with `gobees-fast` directly after each other, the order switches from round to round. `BENCHMARK_ROUNDS` rounds (10 in the CI).
+- The time of a seed is its fastest run: noise on a shared runner only makes a run slower.
+- Each program runs once, untimed, before its timed runs (as above).
+- Change: the median of `gobees-fast` against the median of the base branch, negative is faster. The table per seed shows the colonies founded of both, which differ after a statistically equal step.
+
 ## When it runs
 
-The workflow `.github/workflows/benchmark.yml` runs in pull requests with the label `benchmark` (when the label is added and on every push). It builds `gobees` from the base commit in a git worktree. It commits the report to the branch and adds it to the summary of the run. It runs in parallel to the tests.
+The workflow `.github/workflows/benchmark.yml` runs in pull requests with the label `benchmark` (when the label is added and on every push). It builds `gobees` from the base commit and the program of the branch below from the newest commit of the base branch of the pull request, each in a git worktree. It commits the report to the branch and adds it to the summary of the run. It runs in parallel to the tests.
 
 The comparison in [go/compare](../compare/README.md) also times `gobees-fast` against the base commit, in every pull request, but without NetLogo.
 
@@ -41,3 +51,11 @@ BENCHMARK_NETLOGO_TABLE=../../benchmark_netlogo.csv BENCHMARK_NETLOGO_CONSOLE=..
 ```
 
 The report is `go/benchmark/benchmark-report-local.md`, next to the report of the CI. The paths are relative to `go/benchmark`, where the test runs. The runs at the same time (here 2) must match in both commands. Without these variables the test is skipped.
+
+For the section "Against the branch below", build the program of the other commit as well and add to the last command:
+
+```shell
+BENCHMARK_BELOW_BIN=../../below.exe BENCHMARK_BELOW_BRANCH=main BENCHMARK_BELOW_COMMIT=aad5b86 BENCHMARK_ROUNDS=10
+```
+
+Without `BENCHMARK_BELOW_BIN` the report has no such section. With it, the other three are required.
