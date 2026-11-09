@@ -27,9 +27,9 @@ type Table struct {
 // RoundedColumns are rounded to whole numbers when a table is read (ReadTable), in the output of every version, so
 // every comparison sees the rounded values.
 //
-// foraging_period_s: NetLogo and the versions before step F2 compute the foraging period as hours * 3600, which
-// misses whole seconds in the last bit on 15 of the 365 days of the example weather year (e.g. 2.2 * 3600 =
-// 7920.000000000001). From step F2 on, gobees-fast reads whole seconds from the weather file (Weather =
+// foraging_period_s: NetLogo, gobees and older commits of gobees-fast compute the foraging period as
+// hours * 3600, which misses whole seconds in the last bit on 15 of the 365 days of the example weather year
+// (e.g. 2.2 * 3600 = 7920.000000000001). gobees-fast reads whole seconds from the weather file (Weather =
 // "foragingHoursExample", scenario step8_weather). The model gives the same results, only this column differs.
 var RoundedColumns = []string{"foraging_period_s"}
 
@@ -128,7 +128,7 @@ type Run struct {
 type Input string
 
 const (
-	// NetLogoInput: the NetLogo input files, with -d and -p (gobees, and gobees-fast before step F7). The program
+	// NetLogoInput: the NetLogo input files, with -d and -p (gobees, and older commits of gobees-fast). The program
 	// writes the daily output into the file of -f.
 	NetLogoInput Input = "netlogo"
 	// YAMLInput: a run file of the current format, with --config. The program writes its output into a folder of the
@@ -266,7 +266,7 @@ func WriteInputFiles(dir string) error {
 		"Example_Farm_PlotTest_Foodsources.txt": examplefiles.ExampleFarmPlotTestFoodsources,
 		"_SYSTEM_Flowerspecies.csv":             examplefiles.Flowerspecies,
 		"_SYSTEM_BumbleSpecies_UK_01.csv":       examplefiles.BumbleSpecies,
-		// Weather = "foragingHoursExample" of step8_weather (versions from step F2 on; the others ignore it)
+		// Weather = "foragingHoursExample" of step8_weather (read by the commits with a weather file; the others ignore it)
 		"_SYSTEM_Weather_foragingHoursExample.csv": examplefiles.WeatherForagingHoursExample,
 	}
 	for _, s := range Scenarios {

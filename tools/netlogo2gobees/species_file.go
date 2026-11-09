@@ -15,7 +15,7 @@ import (
 // queens [SPEC-02] and derives the other values [SPEC-05], [SPEC-07] when it reads the run file.
 // nestHabitatsList is as in the file, not yet expanded [SPEC-04].
 //
-// Step F13: the column species (compared with the initial queens [SPEC-02]) must equal the column name (stored), so
+// The column species (compared with the initial queens [SPEC-02]) must equal the column name (stored), so
 // that the run file needs only the key name. The key parasitic is set for the species named Psithyrus, which
 // NetLogo recognises by its name [ACT-04], [EMER-04].
 func parseSpeciesFile(r io.Reader) ([]input.Species, error) {

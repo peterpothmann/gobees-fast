@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// TestSetFieldWhole checks that an int field takes a whole number and rejects a fraction (step F8). NetLogo writes
+// TestSetFieldWhole checks that an int field takes a whole number and rejects a fraction. NetLogo writes
 // every number as a float, so 10000 and 10000.0 are both whole.
 func TestSetFieldWhole(t *testing.T) {
 	var n int

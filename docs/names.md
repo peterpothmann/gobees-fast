@@ -10,10 +10,11 @@ Rules:
 - No NetLogo suffixes (`Proc`, `REP`) or prefixes (`Foraging_`, `Development_`), Go spelling.
 - Unexported unless another package uses it.
 - No unit in the name. The unit stands in the doc comment, e.g. `// handling time of one load [s]`.
-- The keys of the run files are the Go names in lowerCamelCase (step F15c), their units are in the F15c tables.
+- The keys of the run files are the Go names in lowerCamelCase, their units are in the tables of the section
+  "Parameters and the keys of the run files".
 - The output columns keep their NetLogo names, so that the comparison with NetLogo can match them.
 
-## Step F15a: parts, functions and methods in `go/sys`
+## Parts, functions and methods in `go/sys`
 
 ### Parts
 
@@ -95,7 +96,7 @@ order. A type and a function cannot share a name in one package, so the parts ar
 | `StimForagingNectarREP` | [STNE] | `nectarStimulus` |
 | `StimForagingPollenREP` | [STPO] | `pollenStimulus` |
 
-## Step F15b: components, globals and enums
+## Components, globals and enums
 
 Fields of the Ark components (`go/comp`) and resources (`go/globals`). The fields stay exported (package `obs`
 reads them). Fields lose a prefix that repeats their type (`Stim`, `Th`, `All`, `Total`, `Cumul`), slices lose the
@@ -103,8 +104,8 @@ suffix `List`. The doc comment of each field gives the unit and the NetLogo vari
 
 Unchanged: `Bee.Number`, `Stage`, `Caste`, `Activity`, `Mated`, `AdultAge`, `BroodAge`, `Genetics.MtDNA`,
 `Forager.CurrentFoodsource`, `PollenForager`, the flags and dates of `Colony`, `ColonyCounts.LarvaWorkerRatio`,
-`Foodsource.PatchType`, `StartDay`, `StopDay`, `Calendar.Day`, `Landscape.FoodsourcesFile` (`File` since
-F15c), `Landscape.Masterpatches`, `Ticks`, `ActiveBees`, `NestSites`.
+`Foodsource.PatchType`, `StartDay`, `StopDay`, `Calendar.Day`, `Landscape.FoodsourcesFile` (`File`, see the
+parameters), `Landscape.Masterpatches`, `Ticks`, `ActiveBees`, `NestSites`.
 
 ### Bee (`go/comp/bee.go`)
 
@@ -216,7 +217,7 @@ Types: `globals.FoodsourcesToday` → `globals.Flowering`, `globals.Totals` → 
 
 The fields of `obs.DailyTotals` keep the names of the output columns.
 
-## Step F15c: parameters and the keys of the run files
+## Parameters and the keys of the run files
 
 All keys of the run file and the landscape file are the Go names in lowerCamelCase, without unit and `?`. The
 Go types `params.Parameters` and `params.SpeciesFile` carry the NetLogo column in the tag `netlogo` where it
@@ -320,7 +321,7 @@ field `Years_s` → `Years`, `Input.Weather` → `Input.ForagingPeriod`).
 
 ### Landscape file (`input.Landscape`, `input.Patch`)
 
-The keys `x` and `y` would need quotes (`y` is a boolean in YAML 1.1), so `xcor` and `ycor` stay. Until step F15b the keys were `metres_per_patch`, `size_sqm` and `flowerSpeciesList`. `params.FlowerPatch` (`Id_Beescout` → `ID`, `Area_sqm` → `Area`, `FlowerSpeciesList` → `Flowers`) and `sys.flowerPatch` (`Radius_m` → `Radius`, `NectarMax_myl` → `NectarMax`, `PollenMax_g` → `PollenMax`) follow.
+The keys `x` and `y` would need quotes (`y` is a boolean in YAML 1.1), so `xcor` and `ycor` stay. Before the renaming the keys were `metres_per_patch`, `size_sqm` and `flowerSpeciesList`. `params.FlowerPatch` (`Id_Beescout` → `ID`, `Area_sqm` → `Area`, `FlowerSpeciesList` → `Flowers`) and `sys.flowerPatch` (`Radius_m` → `Radius`, `NectarMax_myl` → `NectarMax`, `PollenMax_g` → `PollenMax`) follow.
 
 | gobees Go | NetLogo | gobees-fast Go | Key | Unit | Meaning |
 | --- | --- | --- | --- | --- | --- |
@@ -359,10 +360,10 @@ The keys `x` and `y` would need quotes (`y` is a boolean in YAML 1.1), so `xcor`
 | `Species.DevIncubation_Q_EmergingTH_kJ` | `devIncubation_Q_EmergingTH_kJ` | `Species.QueenEmergenceIncubation` | [kJ] |
 | `Species.MinPollenStore_g` | `minPollenStore_g` | `Species.MinPollenStore` | [g] |
 
-### Constants (`params.Constants`, Go only, keys with step F17)
+### Constants (`params.Constants`, Go names)
 
-Step F17 groups the constants and gives them keys (next section). The F15c names below stay the Go names in their
-group, e.g. `Constants.Foraging.MaxForagingRange`.
+The section `constants` of the run file groups the constants and gives them keys (next section). The names below
+stay the Go names in their group, e.g. `Constants.Foraging.MaxForagingRange`.
 
 | gobees Go | NetLogo | gobees-fast Go | Unit |
 | --- | --- | --- | --- |
@@ -381,16 +382,16 @@ group, e.g. `Constants.Foraging.MaxForagingRange`.
 
 Unchanged: `DailySwitchProbability`, `EnergyFactorOnFlower`, `MaxLifespanMales`, `NotSetHigh`, `NotSetLow`.
 Values that the code still converts at run time (`NestSearchTime` in hours, `nectarPerFlower` in ml, the
-constants written as `24 * 3600`) keep their unit until a step of their own. Since F17 `nestSearchTime` is in
-seconds. `nectarPerFlower` stays in ml: in µl, 16 of its 79 values would need 17 digits to stay exact (e.g.
+constants written as `24 * 3600`) keep their unit until a step of their own. The key `nestSearchTime` of the run
+file is in seconds. `nectarPerFlower` stays in ml: in µl, 16 of its 79 values would need 17 digits to stay exact (e.g.
 `0.25999999999999995`), see docs/plan.md.
 
-## Step F17: section `constants` of the run file
+## Section `constants` of the run file
 
 `params.Constants`, key `constants`. Every key is needed. The values are the NetLogo values (`params.DefaultConstants`).
-"Local" means a local value of the NetLogo procedure, until F17 a literal in the Go code.
+"Local" means a local value of the NetLogo procedure, before a literal in the Go code.
 
-| Group | Key | NetLogo | Unit | Before F17 in gobees-fast |
+| Group | Key | NetLogo | Unit | Before in gobees-fast |
 | --- | --- | --- | --- | --- |
 | `activities` | `getUpTime` | `GetUpTime_s` | [s] | `Constants.GetUpTime` |
 | `activities` | `getUpSpread` | local `randomTimeToGetUp_s` | [s] | literal in `wakeUp` |
@@ -450,7 +451,7 @@ seconds. `nectarPerFlower` stays in ml: in µl, 16 of its 79 values would need 1
 `thresholds` holds only the situations in which a task is possible (e.g. `pollenForaging.worker`). In all others the
 threshold is `NotSetHigh` (never), as in NetLogo. The situation `Psith` has the key `psithyrus`.
 
-## Step F15d: local names
+## Local names
 
 The local variables, parameters and constants in `go/sys`, `go/obs` and the converter lose their unit suffix too
 (e.g. `handlingTime_s` → `handlingTime`). The unit stands in a comment at the declaration. The symbols of the

@@ -35,7 +35,7 @@ func TestReadTable(t *testing.T) {
 }
 
 func TestReadTableRounded(t *testing.T) {
-	// day 41 of step8_weather: NetLogo's 2.2 h * 3600 against the whole seconds of the weather file (step F2)
+	// day 41 of step8_weather: NetLogo's 2.2 h * 3600 against the whole seconds of the weather file
 	netlogo := table(t, "ticks\tforaging_period_s\tMeanWorkerWeight_mg\n41\t7920.000000000001\t171.69201312015804\n")
 	fast := table(t, "ticks\tforaging_period_s\tMeanWorkerWeight_mg\n41\t7920\t171.69201312015804\n")
 	if err := Exact(netlogo, fast, []string{"ticks", "foraging_period_s", "MeanWorkerWeight_mg"}); err != nil {

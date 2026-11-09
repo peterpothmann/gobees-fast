@@ -37,7 +37,7 @@ var wantExampleFarmParameters = netLogoParameters{
 	FlowerspeciesFile:                   "_SYSTEM_Flowerspecies.csv", // column name "FlowerspeciesFile " with trailing blank
 	HabitatsFile:                        "_SYSTEM_Habitats.csv",
 	Weather:                             "Constant 8 hrs",
-	KeepDeadColonies:                    true, // output option since step F13
+	KeepDeadColonies:                    true, // output option
 }
 
 // wantSystemParameters holds every value of _SYSTEM_Parameters.csv that the model reads. The file differs from the
@@ -95,7 +95,7 @@ func TestParseParameterFileErrors(t *testing.T) {
 		"boolean expected":                       "StopExtinct?\n1\n",
 		"no value row":                           "Weather\n",
 		"removed parameter with another value":   "COLONIES_IBM\n10\n",
-		"part of the map (step F13)":             "MapAreaIncluded\n\"\"\"top half\"\"\"\n",
+		"part of the map":                        "MapAreaIncluded\n\"\"\"top half\"\"\"\n",
 	}
 	for name, csv := range cases {
 		if _, err := ParseParameterFile(strings.NewReader(csv)); err == nil {
@@ -105,8 +105,8 @@ func TestParseParameterFileErrors(t *testing.T) {
 }
 
 func TestParseParameterFileRemovedParameter(t *testing.T) {
-	// COLONIES_IBM: individual-based colonies are removed (step F1). The NetLogo files keep the column with 0.
-	// MapAreaIncluded: only "complete" (step F13).
+	// COLONIES_IBM: individual-based colonies are removed. The NetLogo files keep the column with 0.
+	// MapAreaIncluded: only "complete".
 	p, err := ParseParameterFile(strings.NewReader("COLONIES_IBM,MapAreaIncluded,N_Badgers\n0,\"\"\"complete\"\"\",2\n"))
 	if err != nil {
 		t.Fatal(err)
@@ -128,7 +128,7 @@ func TestParseParameterFileFirstColumnWins(t *testing.T) {
 }
 
 func TestParseParameterFileIgnoredGUIParameter(t *testing.T) {
-	// Step F6: a GUI column is read, but neither stored nor checked. "Magenta" without quotes would be an error for
+	// A GUI column is read, but neither stored nor checked. "Magenta" without quotes would be an error for
 	// a stored string.
 	p, err := ParseParameterFile(strings.NewReader("SetColour,ShowPlots?,N_Badgers\nMagenta,maybe,2\n"))
 	if err != nil {
