@@ -77,7 +77,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Consequence for gobees:** keep the behaviour. In Go a `float64` also starts at 0, so a `switch` without `default` reproduces it exactly. A warning when reading the parameters (e.g. "unknown ForagingMortalityModel, foraging mortality is 0") would not change the dynamics, helps against typos and should be implemented.
 - **Second Check**: 23-10-2026, PP
 - **Implemented:** `mortalityForager` in `sys/parameters.go`, with the warning. Test: `sys/parameters_test.go` (`"High"`, `"medium"` and `""` give 0).
-- **gobees-fast:** fixed in step F5. An unknown `ForagingMortalityModel` is an error in Setup (`mortalityForager` returns an error), no warning. Test: `TestMortalityForagerUnknownModel` (`"High"`, `"medium"` and `""` give an error).
+- **gobees-fast:** fixed. An unknown `ForagingMortalityModel` is an error in Setup (`mortalityForager` returns an error), no warning. Test: `TestMortalityForagerUnknownModel` (`"High"`, `"medium"` and `""` give an error).
 
 <a id="finding-6"></a>
 
@@ -135,8 +135,8 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Checked from the input file (2026-10-23, PP):** the 73 flower patches of `_SYSTEM_Example_Farm_Foodsources.txt` lie in 73 different patch cells, with every rounding rule for coordinates ending in .5 (finding 24). The case does not occur for the example farm.
 - **Consequence for gobees:** compute the list by patch cell exactly as NetLogo does (rounded coordinates, see the patch cells in `trans/data-model.md`), not by masterpatch. Translate the assertion, so that gobees stops in the same situation.
 - **Second Check**: 23.10.2026, PP
-- **Implemented:** `setLayersInPatchList` in `sys/setup_landscape.go`, grouped by `util.Pcor` (`pcor` in `sys/shared_space.go` since step F16). Test: `TestCreateLayers` (two flower patches in cell (10, 20) share one list). The assertion in `choosePatch` comes with step 6. Step 6: the assertion in `forager.choosePatch` (`sys/day_foraging.go`, `[PCH-03]`) panics. `bestLayer` reads `Layer.PatchLayers` (`LayersInPatchList` until step F15b).
-- **gobees-fast:** fixed in step F5. `setLayersInPatchList` groups by `Layer.Masterpatch` (`MasterpatchID` until step F15b): the list holds the layers of the same flower patch, sorted by `who`. The assertion in [PCH-03] stays as a check of the state. Same lists as before for the example farm and `Example_Farm_PlotTest` (no patch cell with two flower patches). Test: `TestCreateLayersProc` (two flower patches in cell (10, 20) get two lists).
+- **Implemented:** `setLayersInPatchList` in `sys/setup_landscape.go`, grouped by `util.Pcor` (`pcor` in `sys/shared_space.go` in gobees-fast). Test: `TestCreateLayers` (two flower patches in cell (10, 20) share one list). The assertion in `choosePatch` comes with step 6. Step 6: the assertion in `forager.choosePatch` (`sys/day_foraging.go`, `[PCH-03]`) panics. `bestLayer` reads `Layer.PatchLayers` (`LayersInPatchList` in gobees).
+- **gobees-fast:** fixed. `setLayersInPatchList` groups by `Layer.Masterpatch` (`MasterpatchID` in gobees): the list holds the layers of the same flower patch, sorted by `who`. The assertion in [PCH-03] stays as a check of the state. Same lists as before for the example farm and `Example_Farm_PlotTest` (no patch cell with two flower patches). Test: `TestCreateLayersProc` (two flower patches in cell (10, 20) get two lists).
 
 <a id="finding-16"></a>
 
@@ -166,7 +166,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Finding:** A flower patch outside `MapAreaIncluded` and a layer without nectar and pollen are first created and then removed with `die`. Each has already used up a `who` number. NetLogo never reuses `who` numbers within a run.
 - **Consequence for gobees:** the `Who` counter must also count these removed foodsources, otherwise the `who` order differs from NetLogo whenever it matters (finding 16).
 - **Second Check**: 23.10.2026, PP
-- **Implemented:** in gobees `globals.WhoCounter`, which counted every flower patch, also outside `MapAreaIncluded`, and every removed layer (test: gap between layers A and C). gobees-fast keeps no `who` numbers since step F12: `createLayers` keeps the foodsources in the order of creation, which is the `who` order (`globals.Landscape.Masterpatches`, `Layer.PatchLayers`). `MapAreaIncluded` is removed since step F13. Test: `TestCreateLayers` (order of the masterpatches).
+- **Implemented:** in gobees `globals.WhoCounter`, which counted every flower patch, also outside `MapAreaIncluded`, and every removed layer (test: gap between layers A and C). gobees-fast keeps no `who` numbers: `createLayers` keeps the foodsources in the order of creation, which is the `who` order (`globals.Landscape.Masterpatches`, `Layer.PatchLayers`). `MapAreaIncluded` is removed. Test: `TestCreateLayers` (order of the masterpatches).
 
 <a id="finding-19"></a>
 
@@ -223,7 +223,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Side result:** the 6 layers have the `who` numbers 360, 363, 366, 367, 368 and 373. The gaps are layers of the same flower patch that were removed as empty, which confirms finding 18.
 - **Consequence for gobees:** patch cell of a point = `math.Floor(v + 0.5)` (round half up; all coordinates of the world are >= 0). Test with the 13 border coordinates of the example farm, e.g. 121.5 → 122 and 210.5 → 211.
 - **Second Check**: 23.10.2026, PP
-- **Implemented:** `util.Pcor` (`pcor` in `sys/shared_space.go` since step F16). Test: `TestPcor` with the 13 border coordinates of the example farm.
+- **Implemented:** `util.Pcor` (`pcor` in `sys/shared_space.go` in gobees-fast). Test: `TestPcor` with the 13 border coordinates of the example farm.
 
 ## Findings from step 3 (queens and colony foundation)
 
@@ -238,7 +238,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Consequence for gobees:** reproduce the random choice among the patch centres within the circle (strict `<`, distance in patch units). Translate the runtime error as an error. This also corrects finding 24.
 - **Second Check**: 24.10.2026, PP
 - **Implemented:** `searchNestSite` in `sys/morning_queen_emergence.go` with `util.PatchCentresWithin` (strict `<`). No patch centre: panic. Tests: `TestNestSearchFoundsColonies` (colonies at patch centres, the 100 m2 hedge only at (50, 50)), `TestPatchCentresWithin`.
-- **gobees-fast:** edge case fixed in step F5. Without a patch centre in the circle, the colony is placed at the centre of the patch cell of the foodsource (`pcor`), without a random number. Test: `TestNestSearchNoPatchCentre` (the 100 m² hedge at (133.548, 112.5): colony at (134, 113)).
+- **gobees-fast:** edge case fixed. Without a patch centre in the circle, the colony is placed at the centre of the patch cell of the foodsource (`pcor`), without a random number. Test: `TestNestSearchNoPatchCentre` (the 100 m² hedge at (133.548, 112.5): colony at (134, 113)).
 
 <a id="finding-26"></a>
 
@@ -259,7 +259,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Consequence for gobees:** reproduce the loop. Running past the end is an error, as in NetLogo.
 - **Second Check**: 24.10.2026, PP 
 - **Implemented:** `chooseNestSite` in `sys/morning_queen_emergence.go`: running past the end of the list panics.
-- **gobees-fast:** fixed in step F5. When the loop runs past the end, the last site of the (shuffled) list is chosen, without an extra random number. Test: `TestNestSiteChoicePastEnd` (one site with share 0.5, 100 draws).
+- **gobees-fast:** fixed. When the loop runs past the end, the last site of the (shuffled) list is chosen, without an extra random number. Test: `TestNestSiteChoicePastEnd` (one site with share 0.5, 100 draws).
 
 <a id="finding-28"></a>
 
@@ -290,7 +290,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Consequence for gobees:** count only living individual-based colonies.
 - **Second Check**: 24.10.2026, PP
 - **Implemented:** `countIBMColonies` in `sys/morning_create_colonies.go` counts living colonies. Test: `TestColoniesIBM`.
-- **gobees-fast:** removed with the individual-based colonies in step F1. `COLONIES_IBM` must be 0 in the parameter file.
+- **gobees-fast:** removed with the individual-based colonies. `COLONIES_IBM` must be 0 in the parameter file.
 
 <a id="finding-31"></a>
 
@@ -434,7 +434,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Consequence for gobees:** translate as it is. A test with an individual-based colony checks the cost of one egg.
 - **Second Check**: 24.10.2026
 - **Implemented:** `eggLayer.layEggs` in `sys/day_egglaying.go`. Test: `TestEgglayingIndividualBased` (12 cohorts of 1 egg, stores reduced by 0.0015 g and 0.0093 kJ).
-- **gobees-fast:** removed with the individual-based colonies in step F1. Every colony lays one cohort of `batchsize` eggs. Test: `TestEgglayingOneCohort`.
+- **gobees-fast:** removed with the individual-based colonies. Every colony lays one cohort of `batchsize` eggs. Test: `TestEgglayingOneCohort`.
 
 <a id="finding-44"></a>
 
@@ -446,7 +446,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Consequence for gobees:** translate as it is, without a species check. A test checks that a Psithyrus queen in a host colony with workers gets the social-phase thresholds. The effect on egg laying is tested with `ActivityProc` in step 5.
 - **Second Check**: 24.10.2026
 - **Implemented:** `ageAdult` in `sys/evening_development.go`, without species check. Test: `TestDevelopmentSocialPhaseThresholds` (host queen and Psithyrus queen get the social-phase thresholds, a queen without workers keeps hers). The effect on egg laying follows with `act` in step 5. Step 5: `TestActChoice` (a Psithyrus queen with the social-phase thresholds rests while the host brood needs heat, and lays eggs once it is warm).
-- **gobees-fast:** not fixed in step F5, planned with the fixes that change the dynamics. The fix would be one condition in [MORA-02]: a Psithyrus queen keeps her `"Psith"` thresholds and lays eggs at the first opportunity. It changes only `step8_species`, the default run has no Psithyrus. Measured on 2 November 2026 (`step8_species`, 100 runs): Psithyrus bees on day 150, median 501.5 without and 621 with the fix (24 % more), NetLogo 548.5 (5-95 %: 207 to 1048). Both stay within the NetLogo band. The effect runs through finding 11, so it is measured after a fix of 46 and 11.
+- **gobees-fast:** not fixed, planned with the fixes that change the dynamics (docs/plan.md). The fix would be one condition in [MORA-02]: a Psithyrus queen keeps her `"Psith"` thresholds and lays eggs at the first opportunity. It changes only `step8_species`, the default run has no Psithyrus. Measured on 2 November 2026 (`step8_species`, 100 runs): Psithyrus bees on day 150, median 501.5 without and 621 with the fix (24 % more), NetLogo 548.5 (5-95 %: 207 to 1048). Both stay within the NetLogo band. The effect runs through finding 11, so it is measured after a fix of 46 and 11.
 
 ## Findings from step 5 (daily activity queue)
 
@@ -498,7 +498,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Consequence for gobees:** create all badgers at (0, 0) first, then place them one by one in random order, as NetLogo does. A test with 2 badgers and a Scrub patch near the corner checks the exclusion.
 - **Second Check**: 25.10.2026, PP 
 - **Implemented:** `createBadgers` in `sys/setup_badgers.go`: all badgers are created at (0, 0), then placed in random order, the candidates are recomputed with all living badgers. Test: `TestCreateBadgersOriginBlocks` (Scrub patch 140 m from the corner and two far ones, 2 badgers: the near patch is occupied in about 1/3 of 3000 runs, without the blocking it would be 2/3).
-- **gobees-fast:** fixed in step F5. The candidates are recomputed with the badgers placed so far, the badgers still at the origin block nothing. Same placement as before for the example farm (the nearest Scrub patch lies 1495 m from the origin). Test: `TestCreateBadgersNearOrigin` (the near patch is occupied in about 2/3 of 3000 runs).
+- **gobees-fast:** fixed. The candidates are recomputed with the badgers placed so far, the badgers still at the origin block nothing. Same placement as before for the example farm (the nearest Scrub patch lies 1495 m from the origin). Test: `TestCreateBadgersNearOrigin` (the near patch is occupied in about 2/3 of 3000 runs).
 
 ## Findings from the model map and from `Go`
 
@@ -520,7 +520,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Who reads `deadCols`:** checked on 2026-10-23. Only three places: the egg accounting assertion in `CheckNumbersProc` on day 364, `UpdateColoniesProc` (deletes all dead colonies on 1 January unless `KeepDeadColonies?`), and the GUI (white dots if `ShowDeadCols?`). No output, plot or BehaviorSpace experiment reads `deadCols`, and no model procedure iterates over all `turtles`. Nobody reads `speciesNameColony` of a dead colony, so the loss has no effect.
 - **Consequence for gobees:** no effect on the dynamics. gobees deletes the colony entity at death and writes its data into a record of dead colonies, including `speciesNameColony` (decision E in `trans/data-model.md`). The egg accounting check runs at death instead of on day 364.
 - **Second Check**: 23.10.2026, PP
-- **gobees-fast:** colonies have no `speciesNameColony` since step F3 (never read). The record keeps the species as `SpeciesIDcolony` (`Colony.Species` since step F15b).
+- **gobees-fast:** colonies have no `speciesNameColony` (never read). The record keeps the species as `SpeciesIDcolony` (`Colony.Species` in gobees-fast).
 
 <a id="finding-10"></a>
 
@@ -531,7 +531,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Status:** confirmed when annotating `CreateLayersProc` on 2026-10-23. The name has no effect on the dynamics. Only the interpretation of the input data is affected.
 - **Second Check**: 23.10.2026, PP
 - **Implemented:** `createLayers` in `sys/setup_landscape.go` (`RelativeAbundance` stores the value without `AbundanceBoost`). Test: `TestCreateLayers` (100 m2 x 2 x 0.01 g = 2 g pollen).
-- **gobees-fast:** `RelativeAbundance` is removed in step F3 (never read). The value enters only `pollenMax_g` and `nectarMax_myl`.
+- **gobees-fast:** `RelativeAbundance` is removed (never read). The value enters only `pollenMax_g` and `nectarMax_myl`.
 
 <a id="finding-11"></a>
 
@@ -549,7 +549,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 
 - **Code:** `[GO-03]`
 - **Finding:** NetLogo calls `tick` at the start of `Go`. During the first simulated day `ticks` is 1, during `Setup` it is 0. ark-tools increments `resource.Tick` only after each update, so its value is 0 during the first day.
-- **Consequence for gobees:** the system `sys.Tick` (gobees-fast: the part `tick`, step F15a) writes the NetLogo ticks into `globals.Ticks`. All systems read only this resource. The test `sys/morning_tick_test.go` covers this.
+- **Consequence for gobees:** the system `sys.Tick` (gobees-fast: the part `tick`) writes the NetLogo ticks into `globals.Ticks`. All systems read only this resource. The test `sys/morning_tick_test.go` covers this.
 - **Second Check**:
 
 <a id="finding-22"></a>

@@ -73,9 +73,9 @@ The program writes the metrics of the NetLogo experiments as columns under their
 (`obs.NetLogoMetrics`), so all three comparisons read the same output.
 
 **Rounded columns.** The columns in `RoundedColumns` ([compare.go](compare.go)) are rounded to whole numbers in the
-output of every version, before every comparison. At the moment this is only `foraging_period_s`. NetLogo and the
-versions before step F2 compute the foraging period as hours × 3600, so on 15 of the 365 days of the example weather
-year the value misses the whole second in the last bit (e.g. 2.2 × 3600 = 7920.000000000001). From step F2 on,
+output of every version, before every comparison. At the moment this is only `foraging_period_s`. NetLogo, gobees
+and older commits of gobees-fast compute the foraging period as hours × 3600, so on 15 of the 365 days of the
+example weather year the value misses the whole second in the last bit (e.g. 2.2 × 3600 = 7920.000000000001).
 gobees-fast reads whole seconds from the weather file (`step8_weather`). The model gives the same results, only this
 column differs. Without the rounding, `step8_weather` would fail exactly against the previous step and, with a band
 of width 0, against gobees.
@@ -96,8 +96,7 @@ differs from NetLogo in some of them.
 
 [commits.env](commits.env) holds:
 
-- `REFERENCE_COMMIT`: the previous step. It moves at the end of each phase, and in phase 3 after each fix. In phase 1
-  it is the merge commit of step F0d.
+- `REFERENCE_COMMIT`: the previous step. It moves at the end of each phase, and in phase 3 after each fix.
 - `BASE_COMMIT`: gobees. Not the fork point `40dc301`, but `ff06b97`, the later commit of gobees that writes the
   NetLogo metrics (its `obs.DailyOutput`). Between the two, only the output and the validation tests of gobees
   changed, not the model. The commit is not in the history of gobees-fast. It is in this repository as the tag
@@ -105,7 +104,7 @@ differs from NetLogo in some of them.
   `upstream` (gobees): `git fetch upstream` and `git push origin ff06b97:refs/tags/gobees-base`. It stays fixed.
 - `PHASE`: 1 compares exactly with the previous step, 2 and 3 statistically.
 - `REMOVED_COLUMNS`: columns of the other versions that the current code removes on purpose, e.g. `TotalIBMColonies`
-  and `ibm_colonies` with the individual-based colonies in step F1. They are not compared and are listed in the
+  and `ibm_colonies` with the individual-based colonies. They are not compared and are listed in the
   comment. gobees keeps them, so the list only grows.
 
 ## Running the comparisons

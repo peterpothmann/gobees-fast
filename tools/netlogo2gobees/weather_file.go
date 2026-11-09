@@ -34,7 +34,7 @@ var constantForagingPeriods = map[string]float64{
 // NetLogo has the daily foraging hours of one year in the code (Weather = "foragingHoursExample", [FPER-02]).
 // The converter reads them from a file instead: netlogo/_SYSTEM_Weather_foragingHoursExample.csv holds the same
 // values in seconds. The NetLogo name stays valid, so that the parameter files of NetLogo convert unchanged (e.g. the
-// scenario step8_weather of go/compare). gobees-fast from step F2 to F6 read the same file.
+// scenario step8_weather of go/compare).
 var netLogoWeatherFiles = map[string]string{
 	"foragingHoursExample": "_SYSTEM_Weather_foragingHoursExample.csv",
 }

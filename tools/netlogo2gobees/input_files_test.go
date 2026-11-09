@@ -165,7 +165,7 @@ func TestParseSpeciesFileExample(t *testing.T) {
 		if !reflect.DeepEqual(s.NestHabitats, []string{"Grassland*", "Garden", "Hedgerow", "Scrub", "Woodland", "Nestboxes"}) {
 			t.Errorf("nestHabitatsList = %q (not yet expanded)", s.NestHabitats)
 		}
-		// step F13: only the row named Psithyrus is parasitic
+		// only the row named Psithyrus is parasitic
 		for _, s := range species {
 			if s.Parasitic != (s.Name == "Psithyrus") {
 				t.Errorf("%s: parasitic = %v", s.Name, s.Parasitic)

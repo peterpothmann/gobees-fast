@@ -14,7 +14,7 @@ import (
 
 // netLogoParameters are the parameters of a NetLogo parameter file: the model parameters of a run file and the
 // columns with file names and lists, which have their own sections in a run file (convert), and the output option
-// KeepDeadColonies? (section output, step F13).
+// KeepDeadColonies? (section output).
 type netLogoParameters struct {
 	params.Parameters
 	BeeSpeciesInitialQueensListAsString string `netlogo:"BeeSpeciesInitialQueensListAsString"` // Species and initial queens, e.g. "B_terrestris 500" [QINI].
@@ -23,7 +23,7 @@ type netLogoParameters struct {
 	FlowerspeciesFile                   string `netlogo:"FlowerspeciesFile"`                   // Flower species table. The column name in the file has a trailing blank.
 	HabitatsFile                        string `netlogo:"HabitatsFile"`                        // Habitat table, provides the stewardship option names [CSO].
 	Weather                             string `netlogo:"Weather"`                             // Daily foraging period, e.g. "Constant 8 hrs" [FPER].
-	KeepDeadColonies                    bool   `netlogo:"KeepDeadColonies?"`                   // Output option since step F13 (params.Output).
+	KeepDeadColonies                    bool   `netlogo:"KeepDeadColonies?"`                   // Output option (params.Output).
 
 	Skipped []skippedColumn // the columns not taken over, in the order of the file
 }
@@ -53,21 +53,20 @@ var shadowedParameters = map[string]shadowedParameter{
 // the only value it accepts (lower-case names). The NetLogo files keep these columns, so they are read and checked,
 // but not stored.
 var removedParameters = map[string]string{
-	"colonies_ibm":    "0",          // individual-based colonies [CCOL-05], removed in step F1
-	"mapareaincluded": `"complete"`, // a part of the map [FSRC-08], removed in step F13 (a part is its own landscape file)
+	"colonies_ibm":    "0",          // individual-based colonies [CCOL-05]
+	"mapareaincluded": `"complete"`, // a part of the map [FSRC-08] (a part is its own landscape file)
 }
 
 // noEffectParameters are parameters of the NetLogo parameter files that the model never reads (lower-case names). As
-// the GUI columns, they are read, but neither stored nor checked, so that the run file holds only values that act
-// (step F7).
+// the GUI columns, they are read, but neither stored nor checked, so that the run file holds only values that act.
 var noEffectParameters = map[string]string{
-	"cumulvisitsonlylastyear?": "resets visit counters that only the output read, removed in step F3",
+	"cumulvisitsonlylastyear?": "resets visit counters that only the output read",
 	"maxforagingrange_m":       "the model uses the constant ForagingRangeMax_m = 758 m",
 	"myfarmlandpatches":        "sets farmland?, which is never read",
 }
 
 // ignoredParameters are the columns of the NetLogo parameter files that only the NetLogo GUI reads (lower-case
-// names). They are read, but neither stored nor checked (step F6). The run files of gobees-fast do not have them.
+// names). They are read, but neither stored nor checked. The run files of gobees-fast do not have them.
 var ignoredParameters = map[string]bool{
 	"backgroundcolour":       true,
 	"backgroundimage":        true,

@@ -49,7 +49,7 @@ func convert(dir string, file *netLogoParameters, mapName, name string) (Convert
 	days := params.Default().Termination.MaxTicks
 	c := input.Config{Name: name, Run: &input.Run{Seed: 1, Days: &days, Repetitions: 1, Threads: 1},
 		Parameters: file.Parameters}
-	c.Output.KeepDeadColonies = file.KeepDeadColonies // step F13
+	c.Output.KeepDeadColonies = file.KeepDeadColonies
 	// the constants come from the code, as in NetLogo, never from the parameter file
 	c.Constants = params.DefaultConstants()
 	report, notes, err := reportSkipped(file.Skipped, &c.Constants)

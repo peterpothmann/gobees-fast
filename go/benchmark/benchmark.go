@@ -98,8 +98,8 @@ func runAll(seeds []float64, threads int, run func(seed float64) (Run, error)) (
 //
 // The same command line in gobees and gobees-fast makes the two comparable: both are timed the same way, also
 // though the code of the base commit cannot time its setup and days separately. netLogoInput: the program reads the
-// NetLogo input files of the example farm (-d, gobees). Otherwise it runs its built-in example farm (gobees-fast
-// from step F7 on, which reads run files). Both include reading the input in the time.
+// NetLogo input files of the example farm (-d, gobees). Otherwise it runs its built-in example farm (gobees-fast,
+// which reads run files). Both include reading the input in the time.
 //
 // Before the timed runs, the program runs once with the first seed, untimed. Without it, the first runs of a newly
 // built program took up to 1.7 times as long as the others (local run, Windows).
