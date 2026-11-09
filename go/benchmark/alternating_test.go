@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -39,7 +40,11 @@ func fakeProgram(t *testing.T, dir, name string) string {
 		t.Fatal(err)
 	}
 	defer src.Close()
-	path := filepath.Join(dir, name+filepath.Ext(self))
+	// Windows runs only files ending in .exe. Elsewhere no extension: the test binary itself is benchmark.test.
+	if runtime.GOOS == "windows" {
+		name += ".exe"
+	}
+	path := filepath.Join(dir, name)
 	dst, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0o755)
 	if err != nil {
 		t.Fatal(err)
