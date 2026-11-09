@@ -112,8 +112,8 @@ func (r Report) Comment(reportURL, runURL string) string {
 		len(r.NetLogo.Runs), r.NetLogo.Days)
 	r.writeMainTable(&b)
 	if below := r.Below; len(below.Runs) > 0 {
-		fmt.Fprintf(&b, "\nAgainst the branch below, %s (commit %s), alternating runs, the fastest of %d per seed:\n\n",
-			below.Branch, below.Commit, below.Rounds)
+		fmt.Fprintf(&b, "\nAgainst the branch below, %s (commit %s), %d seeds, alternating runs, the fastest of %d "+
+			"per seed:\n\n", below.Branch, below.Commit, len(below.Runs), below.Rounds)
 		writeBelowTable(&b, below)
 	}
 	links := []string{}
@@ -139,23 +139,51 @@ func (r Report) writeMainTable(b *strings.Builder) {
 		float64(median(nl))/float64(median(cur)), float64(median(base))/float64(median(cur)))
 }
 
-// writeBelowTable writes the table of the whole runs of the branch below and gobees-fast.
+// writeBelowTable writes the table of the branch below and gobees-fast: the whole runs, the colonies founded and the
+// time per colony founded.
 func writeBelowTable(b *strings.Builder, below Below) {
 	whole := func(run Run) time.Duration { return run.Whole() }
 	old, cur := durations(below.Runs, whole), durations(below.Current, whole)
-	fmt.Fprintf(b, "| | %s median (min-max) | gobees-fast median (min-max) | Change |\n| --- | ---: | ---: | ---: |\n",
-		below.Branch)
-	fmt.Fprintf(b, "| Whole run | %s | %s | %s |\n", spread(old), spread(cur), change(median(old), median(cur)))
+	oldWork, curWork := work(below.Runs), work(below.Current)
+	fmt.Fprintf(b, "| | %s | gobees-fast | Change |\n| --- | ---: | ---: | ---: |\n", below.Branch)
+	fmt.Fprintf(b, "| Whole run, median (min-max) | %s | %s | %s |\n", spread(old), spread(cur),
+		change(median(old), median(cur)))
+	fmt.Fprintf(b, "| Colonies founded, mean | %.1f | %.1f | %s |\n", oldWork.colonies, curWork.colonies,
+		percent(oldWork.colonies, curWork.colonies))
+	fmt.Fprintf(b, "| Time per colony founded | %.2f ms | %.2f ms | %s |\n", oldWork.perColony, curWork.perColony,
+		percent(oldWork.perColony, curWork.perColony))
+}
+
+// workDone is the mean of the colonies founded of runs and their time per colony founded: the sum of the times over
+// the sum of the colonies [ms].
+type workDone struct{ colonies, perColony float64 }
+
+func work(runs []Run) workDone {
+	var colonies float64
+	var total time.Duration
+	for _, run := range runs {
+		colonies += run.ColoniesFounded
+		total += run.Whole()
+	}
+	w := workDone{colonies: colonies / float64(len(runs))}
+	if colonies > 0 {
+		w.perColony = float64(total) / float64(time.Millisecond) / colonies
+	}
+	return w
 }
 
 // writeBelow writes the section of the comparison with the base branch of the pull request.
 func writeBelow(b *strings.Builder, below Below, days int) {
 	fmt.Fprintf(b, "\n## Against the branch below\n\n"+
-		"gobees-fast against the base branch of the pull request, %s (commit %s): the same %d seeds, %d days "+
+		"gobees-fast against the base branch of the pull request, %s (commit %s): the seeds 1 to %d, %d days "+
 		"each. Both programs run one run at a time and alternately, each seed %d times per program, the order "+
-		"switches every round. The time of a seed is its fastest run. Change: median of gobees-fast against the "+
-		"median of %s, negative is faster.\n\n", below.Branch, below.Commit, len(below.Runs), days, below.Rounds,
-		below.Branch)
+		"switches every round. The time of a seed is its fastest run. Change: gobees-fast against %s, negative "+
+		"is less.\n\n"+
+		"After a statistically equal step, the same seed gives another run with more or less work, so the whole "+
+		"run alone does not show the gain of the step. The time per colony founded (the sum of the times over the "+
+		"sum of the colonies founded) takes the work into account. After an exact step, both programs do the same "+
+		"work and the colonies founded are equal.\n\n", below.Branch, below.Commit, len(below.Runs), days,
+		below.Rounds, below.Branch)
 	writeBelowTable(b, below)
 	fmt.Fprintf(b, "\n| Seed | %s | %s colonies founded | gobees-fast | gobees-fast colonies founded | Change |\n"+
 		"| ---: | ---: | ---: | ---: | ---: | ---: |\n", below.Branch, below.Branch)
@@ -168,7 +196,12 @@ func writeBelow(b *strings.Builder, below Below, days int) {
 
 // change shows the relative change from old to cur in percent, with sign.
 func change(old, cur time.Duration) string {
-	return fmt.Sprintf("%+.1f %%", 100*(float64(cur)-float64(old))/float64(old))
+	return percent(float64(old), float64(cur))
+}
+
+// percent shows the relative change from old to cur in percent, with sign.
+func percent(old, cur float64) string {
+	return fmt.Sprintf("%+.1f %%", 100*(cur-old)/old)
 }
 
 // spread shows the median and the range of sorted durations.

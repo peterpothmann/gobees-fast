@@ -5,7 +5,7 @@
 # NetLogo 5.3.1, gobees-fast and gobees (the base commit of go/compare/commits.env) run one after the other on the
 # same runner, with the same seeds, days and number of runs at the same time. Then gobees-fast runs alternately with
 # the program of the branch below the pull request (its base branch, e.g. main or the previous step of a stack), one
-# run at a time, BENCHMARK_ROUNDS times per seed (go/benchmark/README.md). The workflow commits the report
+# run at a time, BENCHMARK_BELOW_SEEDS seeds BENCHMARK_ROUNDS times each (go/benchmark/README.md). The workflow commits the report
 # go/benchmark/benchmark-report.md to the branch of the pull request, so that a squash merge brings it to main, and
 # adds it to the summary of the run.
 name: Benchmark
@@ -23,8 +23,10 @@ env:
   NETLOGO_SHA256: 07a626e486606f3d92fd39f7986641fb3f6bb8a00828f583b3b1804446a1c87c
   # runs at the same time, in both models (a runner of a private repository has 2 cores)
   BENCHMARK_THREADS: 2
-  # runs per seed and program in the comparison with the branch below, the fastest counts
-  BENCHMARK_ROUNDS: 10
+  # comparison with the branch below: the seeds 1 to BENCHMARK_BELOW_SEEDS, runs per seed and program (the fastest
+  # counts). Many seeds, few rounds: after a statistically equal step the runs of a seed differ in their work.
+  BENCHMARK_BELOW_SEEDS: 40
+  BENCHMARK_ROUNDS: 3
 
 jobs:
   benchmark:

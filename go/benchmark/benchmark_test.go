@@ -22,11 +22,13 @@ const (
 	baseBinEnv    = "BENCHMARK_BASE_BIN"
 	currentBinEnv = "BENCHMARK_CURRENT_BIN"
 	baseCommitEnv = "BENCHMARK_BASE_COMMIT"
-	// optional, all four or none: the command line program of the branch below the pull request (its base
-	// branch), the name of that branch and its commit for the report, and the runs per seed (RunAlternating)
+	// optional, all five or none: the command line program of the branch below the pull request (its base
+	// branch), the name of that branch and its commit for the report, the number of seeds (1 to N) and the runs per
+	// seed (RunAlternating)
 	belowBinEnv    = "BENCHMARK_BELOW_BIN"
 	belowBranchEnv = "BENCHMARK_BELOW_BRANCH"
 	belowCommitEnv = "BENCHMARK_BELOW_COMMIT"
+	belowSeedsEnv  = "BENCHMARK_BELOW_SEEDS"
 	roundsEnv      = "BENCHMARK_ROUNDS"
 	// optional: the path of the comment for the pull request (WriteComment), and the links in it
 	commentEnv   = "BENCHMARK_COMMENT"
@@ -77,7 +79,7 @@ func TestCompareWithNetLogo(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	below, err := runBelow(seeds, netlogo.Days, currentBin)
+	below, err := runBelow(netlogo.Days, currentBin)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,20 +109,26 @@ func TestCompareWithNetLogo(t *testing.T) {
 	t.Log("\n" + r.Markdown())
 }
 
-// runBelow runs the program of the branch below and gobees-fast alternately, if belowBinEnv is set. Without it, the
-// result is empty and the report has no section on the branch below.
-func runBelow(seeds []float64, days int, currentBin string) (Below, error) {
+// runBelow runs the program of the branch below and gobees-fast alternately with the seeds 1 to belowSeedsEnv, if
+// belowBinEnv is set. Without it, the result is empty and the report has no section on the branch below. The seeds
+// are not those of NetLogo: a statistically equal step needs many seeds (go/benchmark/README.md).
+func runBelow(days int, currentBin string) (Below, error) {
 	bin := os.Getenv(belowBinEnv)
 	if bin == "" {
 		return Below{}, nil
 	}
 	below := Below{Branch: os.Getenv(belowBranchEnv), Commit: os.Getenv(belowCommitEnv)}
 	rounds, err := strconv.Atoi(os.Getenv(roundsEnv))
-	if err != nil || rounds < 1 || below.Branch == "" || below.Commit == "" {
-		return Below{}, fmt.Errorf("with %s set, %s and %s must be set and %s must be 1 or more", belowBinEnv,
-			belowBranchEnv, belowCommitEnv, roundsEnv)
+	n, errSeeds := strconv.Atoi(os.Getenv(belowSeedsEnv))
+	if err != nil || errSeeds != nil || rounds < 1 || n < 1 || below.Branch == "" || below.Commit == "" {
+		return Below{}, fmt.Errorf("with %s set, %s and %s must be set and %s and %s must be 1 or more",
+			belowBinEnv, belowBranchEnv, belowCommitEnv, belowSeedsEnv, roundsEnv)
 	}
 	below.Rounds = rounds
+	seeds := make([]float64, n)
+	for i := range seeds {
+		seeds[i] = float64(i + 1)
+	}
 	below.Runs, below.Current, err = RunAlternating(bin, currentBin, seeds, days, rounds)
 	return below, err
 }
@@ -256,10 +264,14 @@ func TestMarkdown(t *testing.T) {
 	}
 	md = r.Markdown()
 	for _, want := range []string{
-		"## Against the branch below\n\ngobees-fast against the base branch of the pull request, step-S4 (commit 45c6b6c)",
+		"## Against the branch below\n\ngobees-fast against the base branch of the pull request, step-S4 " +
+			"(commit 45c6b6c): the seeds 1 to 2, 365 days each.",
 		"each seed 5 times per program",
-		"| | step-S4 median (min-max) | gobees-fast median (min-max) | Change |",
-		"| Whole run | 250 ms (200 ms-300 ms) | 200 ms (100 ms-300 ms) | -20.0 % |",
+		"| | step-S4 | gobees-fast | Change |",
+		"| Whole run, median (min-max) | 250 ms (200 ms-300 ms) | 200 ms (100 ms-300 ms) | -20.0 % |",
+		// colonies (140 + 145) / 2 and (141 + 146) / 2; time per colony 500 / 285 and 400 / 287 ms
+		"| Colonies founded, mean | 142.5 | 143.5 | +0.7 % |",
+		"| Time per colony founded | 1.75 ms | 1.39 ms | -20.6 % |",
 		"| 1 | 200 ms | 140 | 100 ms | 141 | -50.0 % |",
 		"| 2 | 300 ms | 145 | 300 ms | 146 | +0.0 % |",
 	} {
@@ -276,8 +288,9 @@ func TestMarkdown(t *testing.T) {
 	for _, want := range []string{
 		CommentMarker + "\n## Benchmark\n\nThe example farm, 2 seeds, 365 days each.\n\n",
 		"| Whole run | 25.8 s (21.2 s-30.4 s) | 400 ms (300 ms-500 ms) | 100 ms (100 ms-100 ms) | 258 | 4.00 |",
-		"Against the branch below, step-S4 (commit 45c6b6c), alternating runs, the fastest of 5 per seed:",
-		"| Whole run | 250 ms (200 ms-300 ms) | 200 ms (100 ms-300 ms) | -20.0 % |",
+		"Against the branch below, step-S4 (commit 45c6b6c), 2 seeds, alternating runs, the fastest of 5 per seed:",
+		"| Whole run, median (min-max) | 250 ms (200 ms-300 ms) | 200 ms (100 ms-300 ms) | -20.0 % |",
+		"| Time per colony founded | 1.75 ms | 1.39 ms | -20.6 % |",
 		"[whole report](https://example.org/report) · [run](https://example.org/run)",
 	} {
 		if !strings.Contains(c, want) {
