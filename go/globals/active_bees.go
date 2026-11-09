@@ -145,20 +145,22 @@ func (q *ActiveBees) indexOf(e ecs.Entity) int {
 func (q *ActiveBees) down(i int) {
 	h := q.Queue
 	n := len(h)
+	b := h[i] // the bee moves down, the smaller child moves up into the hole
 	for {
-		first := i
-		if l := 2*i + 1; l < n && h[l].before(h[first]) {
-			first = l
+		c := 2*i + 1
+		if c >= n {
+			break
 		}
-		if r := 2*i + 2; r < n && h[r].before(h[first]) {
-			first = r
+		if r := c + 1; r < n && h[r].before(h[c]) {
+			c = r
 		}
-		if first == i {
-			return
+		if !h[c].before(b) {
+			break
 		}
-		h[i], h[first] = h[first], h[i]
-		i = first
+		h[i] = h[c]
+		i = c
 	}
+	h[i] = b
 }
 
 // up moves the bee at i up the heap to its place.
