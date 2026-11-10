@@ -147,6 +147,7 @@ func (l *eggLayer) initEggs(e ecs.Entity, beesInCohort int, diploid bool) {
 	f.ExpectedPollenTrip = 0
 	f.GlossaLength = 0
 	f.IngestionFactor = 0
+	f.IngestionSource = ecs.Entity{}
 	f.CarriedNectar = 0
 	b.PersonalTime = 0
 	f.PollenForager = false
