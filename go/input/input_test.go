@@ -54,7 +54,7 @@ func TestExampleFarm(t *testing.T) {
 	first := fs.Patches[0]
 	if first.ID != 0 || first.PatchType != "Hedgerow" || first.X != 130 || first.Y != 175 || first.Area != 200 ||
 		len(first.Flowers) != 33 ||
-		first.Flowers[0] != (params.FlowerEntry{Name: "Average_Willow", Value: 1.275, HasValue: true}) {
+		first.Flowers[0] != (params.FlowerEntry{Name: "Average_Willow", Value: 1.275}) {
 		t.Errorf("first flower patch = %+v", first)
 	}
 	if !p.Parameters.StopExtinct || p.Parameters.ForagingMortalityModel != "high" || p.Parameters.FoodsourceLimit != 25 {
@@ -293,28 +293,6 @@ func TestConstantsComments(t *testing.T) {
 		}
 	}
 	check(reflect.TypeFor[params.Constants](), "Constants")
-}
-
-func TestFlowerEntryYAML(t *testing.T) {
-	// A flower entry is written [name value] or [name] (Margin and Plot have no value).
-	l := Landscape{MetresPerPatch: 10, Patches: []Patch{{ID: 3, PatchType: "Scrub", X: 1.5, Y: 2, Area: 300,
-		Flowers: []FlowerEntry{{Name: "Bramble", Value: 0.331, HasValue: true}, {Name: "Margin"}}}}}
-	var b bytes.Buffer
-	if err := WriteLandscape(&b, l); err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(b.String(), "flowers: [[Bramble, 0.331], [Margin]]") {
-		t.Errorf("written:\n%s", b.String())
-	}
-	got, err := ReadLandscape(&b)
-	if err != nil || !reflect.DeepEqual(got, l) {
-		t.Errorf("read back %+v, %v, want %+v", got, err, l)
-	}
-	for _, text := range []string{"[]", "[a, 1, 2]", "a"} {
-		if _, err := ReadLandscape(strings.NewReader("patches:\n  - flowers: [" + text + "]\n")); err == nil {
-			t.Errorf("flower entry %s: want an error", text)
-		}
-	}
 }
 
 func TestConfigRoundTrip(t *testing.T) {

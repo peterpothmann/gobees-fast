@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -24,9 +26,17 @@ func TestParseFoodsourcesFileExampleFarmPlotTest(t *testing.T) {
 	// Line 4: 73 "Crop_Cereals" 75 97.97 91.255 36500 [["Crop_Cereals" 1]] 940  "no info "
 	p := patches[0]
 	got := []any{p.Id_Beescout, p.PatchType, p.PatchColour, p.X, p.Y, p.Area_sqm, p.FlowerSpeciesList, p.Perimeter_m, p.PatchInfo}
-	want := []any{73.0, "Crop_Cereals", 75.0, 97.97, 91.255, 36500.0, []params.FlowerEntry{{Name: "Crop_Cereals", Value: 1, HasValue: true}}, 940.0, `  "no info " `}
+	want := []any{73.0, "Crop_Cereals", 75.0, 97.97, 91.255, 36500.0, []params.FlowerEntry{{Name: "Crop_Cereals", Value: 1}}, 940.0, `  "no info " `}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("patch 0:\n got  %#v\n want %#v", got, want)
+	}
+	// Line 20: 804 "Crop_Cereals" 75 96 124 85700 [["Crop_Cereals" 0.942] ["Plot"] ["Birdsfoot_trefoil"  0.331] ...]:
+	// the item without a value is a stewardship option, the flower species keep their order without it
+	p = patches[16]
+	if p.Id_Beescout != 804 || !reflect.DeepEqual(p.Options, []string{"Plot"}) ||
+		p.FlowerSpeciesList[0] != (params.FlowerEntry{Name: "Crop_Cereals", Value: 0.942}) ||
+		p.FlowerSpeciesList[1] != (params.FlowerEntry{Name: "Birdsfoot_trefoil", Value: 0.331}) {
+		t.Errorf("patch 804: options %q, flowers %v", p.Options, p.FlowerSpeciesList[:2])
 	}
 	// Last line: 1767 "Hedgerow" 105 135 59.684 3400 [...] 190  "no info "
 	p = patches[35]
@@ -58,10 +68,10 @@ func TestParseFoodsourcesFileExampleFarm(t *testing.T) {
 		t.Errorf("patch 0:\n got  %#v\n want %#v", got, want)
 	}
 	wantEntries := map[int]params.FlowerEntry{
-		0:  {Name: "Average_Willow", Value: 1.275, HasValue: true},
-		1:  {Name: "Birdsfoot_trefoil", Value: 0.037, HasValue: true},
-		2:  {Name: "Blackthorn", Value: 0.139, HasValue: true},
-		32: {Name: "Wild_teasel", Value: 0.023, HasValue: true},
+		0:  {Name: "Average_Willow", Value: 1.275},
+		1:  {Name: "Birdsfoot_trefoil", Value: 0.037},
+		2:  {Name: "Blackthorn", Value: 0.139},
+		32: {Name: "Wild_teasel", Value: 0.023},
 	}
 	for i, e := range wantEntries {
 		if p.FlowerSpeciesList[i] != e {
@@ -72,7 +82,7 @@ func TestParseFoodsourcesFileExampleFarm(t *testing.T) {
 	// Line 5: 1 "Crop_Cereals" 75 125.948 141.856 105900 [["Crop_Cereals" 1]] 2080  "no info"
 	p = patches[1]
 	got = []any{p.Id_Beescout, p.PatchType, p.PatchColour, p.X, p.Y, p.Area_sqm, p.FlowerSpeciesList, p.Perimeter_m, p.PatchInfo}
-	want = []any{1.0, "Crop_Cereals", 75.0, 125.948, 141.856, 105900.0, []params.FlowerEntry{{Name: "Crop_Cereals", Value: 1, HasValue: true}}, 2080.0, `  "no info" `}
+	want = []any{1.0, "Crop_Cereals", 75.0, 125.948, 141.856, 105900.0, []params.FlowerEntry{{Name: "Crop_Cereals", Value: 1}}, 2080.0, `  "no info" `}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("patch 1:\n got  %#v\n want %#v", got, want)
 	}
@@ -103,6 +113,36 @@ func TestParseFoodsourcesFileHeaderFormats(t *testing.T) {
 		if metres != 15 || len(patches) != 1 || patches[0].PatchType != "Scrub" || patches[0].PatchInfo != `  "no info" ` {
 			t.Errorf("%s: got %v m, %+v", name, metres, patches)
 		}
+	}
+}
+
+func TestReadFoodsourcesFileOptions(t *testing.T) {
+	// the stewardship option of patch 1 is dropped, patch 2 has only options and is left out (NetLogo removes it),
+	// an item without a value that is no option is an error (NetLogo: a runtime error)
+	header := "15\nid patchType patchColour xcor ycor size_sqm flowerSpeciesList perimeter_m info\n"
+	lines := `1 "Crop_Cereals" 75 1 2 300 [["Crop_Cereals" 0.9] ["Plot"] ["Bramble" 0.5]] 10  "5000" ` + "\n" +
+		`2 "Crop_Cereals" 75 3 4 300 [["Margin"]] 10  "no info" ` + "\n"
+	options := []string{"Margin", "Plot"}
+	path := filepath.Join(t.TempDir(), "f.txt")
+	if err := os.WriteFile(path, []byte(header+lines), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	l, left, err := readFoodsourcesFile(path, options)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []params.FlowerEntry{{Name: "Crop_Cereals", Value: 0.9}, {Name: "Bramble", Value: 0.5}}
+	if len(l.Patches) != 1 || l.Patches[0].ID != 1 || !reflect.DeepEqual(l.Patches[0].Flowers, want) ||
+		!reflect.DeepEqual(left, []float64{2}) {
+		t.Errorf("patches %+v, left out %v", l.Patches, left)
+	}
+
+	bad := `3 "Scrub" 55 1 2 300 [["Bramble" 0.5] ["Plott"]] 10  "no info" ` + "\n"
+	if err := os.WriteFile(path, []byte(header+bad), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := readFoodsourcesFile(path, options); err == nil || !strings.Contains(err.Error(), `["Plott"]`) {
+		t.Errorf("error %v, want one for [\"Plott\"]", err)
 	}
 }
 

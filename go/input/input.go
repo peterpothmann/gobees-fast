@@ -25,8 +25,9 @@ const ExampleFarmFile = "run.yaml"
 // Files is a run file and its landscape files as read, before Build.
 type Files struct {
 	Config     Config
-	Landscapes map[string]Landscape // the landscape files by their name in Config
-	Raw        map[string][]byte    // the bytes of each landscape file, by its name in Config
+	Landscapes map[string]Landscape        // the landscape files by their name in Config
+	Tables     map[string][]LandscapeTable // the tables of each landscape file, by its name in Config
+	Raw        map[string][]byte           // the bytes of each landscape file (by its name in Config) and table (by LandscapeTable.Name)
 
 	source []byte                                   // the run file as read
 	open   func(name string) (io.ReadCloser, error) // opens a file relative to the folder of the run file
@@ -131,13 +132,15 @@ func (f *Files) readLandscape(name string) error {
 	if _, ok := f.Landscapes[name]; ok {
 		return nil
 	}
-	var l Landscape
-	raw, err := readFile(name, f.open, func(r io.Reader) (err error) { l, err = ReadLandscape(r); return })
+	l, tables, raw, err := ReadLandscape(name, f.open)
 	if err != nil {
 		return landscapeError{err}
 	}
 	f.Landscapes[name] = l
-	f.Raw[name] = raw
+	f.Tables[name] = tables
+	for n, b := range raw {
+		f.Raw[n] = b
+	}
 	return nil
 }
 

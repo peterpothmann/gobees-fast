@@ -233,7 +233,7 @@ func createLayers(w *ecs.World, patches []*flowerPatch, flowers *params.FlowerSp
 		// the layers of this flower patch, in order of creation (= who order)
 		layers := []comp.Layer{}
 		// ORDER: irrelevant, foreach over a list. A stewardship option is no flower species and gets no
-		// layer.
+		// layer, also with a value.
 		for _, e := range p.Flowers {
 			if slices.Contains(cssOptions, e.Name) {
 				continue
@@ -242,9 +242,6 @@ func createLayers(w *ecs.World, patches []*flowerPatch, flowers *params.FlowerSp
 			data, err := flowers.Get(e.Name)
 			if err != nil {
 				return nil, err
-			}
-			if !e.HasValue {
-				return nil, fmt.Errorf("flower patch %v: %s has no value", p.ID, e.Name)
 			}
 			relAbundance := file.AbundanceBoost * e.Value
 			l := comp.Layer{

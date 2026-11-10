@@ -81,59 +81,6 @@ func (y Year) MarshalYAML() (any, error) {
 // Species are the values of one bee species in a run file: params.SpeciesFile, which params.Species embeds.
 type Species = params.SpeciesFile
 
-// Landscape is the content of a landscape file (YAML) (NetLogo: foodsources file).
-type Landscape struct {
-	MetresPerPatch float64 `yaml:"metresPerPatch"` // metres per NetLogo patch
-	Patches        []Patch `yaml:"patches"`        // flower patches, in this order
-}
-
-// Patch is one flower patch of a landscape file. The keys are the columns of the NetLogo foodsources file, except
-// area (size_sqm) and flowers (flowerSpeciesList). The keys x and y would need quotes in YAML (y is a boolean in
-// YAML 1.1), so xcor and ycor stay.
-type Patch struct {
-	ID        float64    `yaml:"id"`
-	PatchType string     `yaml:"patchType"`
-	X         float64    `yaml:"xcor"`
-	Y         float64    `yaml:"ycor"`
-	Area      float64    `yaml:"area"` // [m2]
-	Flowers   FlowerList `yaml:"flowers"`
-}
-
-// FlowerList is the flowerSpeciesList of a flower patch. It is written on one line, as in NetLogo.
-type FlowerList []FlowerEntry
-
-// MarshalYAML writes the list as a flow sequence.
-func (l FlowerList) MarshalYAML() (any, error) {
-	return flowNode([]FlowerEntry(l))
-}
-
-// FlowerEntry is one item of a flowerSpeciesList, written as in NetLogo: [Bramble, 0.331] or [Margin].
-type FlowerEntry params.FlowerEntry
-
-// MarshalYAML writes the entry as a flow sequence of its name and, if it has one, its value.
-func (e FlowerEntry) MarshalYAML() (any, error) {
-	if e.HasValue {
-		return flowNode([]any{e.Name, e.Value})
-	}
-	return flowNode([]any{e.Name})
-}
-
-// UnmarshalYAML reads [name] or [name, value].
-func (e *FlowerEntry) UnmarshalYAML(n *yaml.Node) error {
-	if n.Kind != yaml.SequenceNode || len(n.Content) < 1 || len(n.Content) > 2 {
-		return fmt.Errorf("line %d: a flower entry is [name] or [name, value]", n.Line)
-	}
-	*e = FlowerEntry{}
-	if err := n.Content[0].Decode(&e.Name); err != nil {
-		return err
-	}
-	if len(n.Content) == 2 {
-		e.HasValue = true
-		return n.Content[1].Decode(&e.Value)
-	}
-	return nil
-}
-
 // flowNode returns v as a YAML node in flow style, i.e. on one line.
 func flowNode(v any) (*yaml.Node, error) {
 	n := &yaml.Node{}
@@ -151,12 +98,6 @@ func ReadConfig(r io.Reader) (Config, error) {
 		return c, err
 	}
 	return c, checkVariations(c.Variations)
-}
-
-// ReadLandscape reads a landscape file. An unknown key or a second document is an error.
-func ReadLandscape(r io.Reader) (Landscape, error) {
-	l := Landscape{}
-	return l, decodeStrict(r, &l)
 }
 
 // decodeStrict decodes one YAML document into v (a pointer). An unknown key, a second document and a number with a
@@ -302,11 +243,6 @@ func commentKeys(n *yaml.Node, t reflect.Type, path string, notes map[string]str
 		}
 		value.LineComment = comment
 	}
-}
-
-// WriteLandscape writes a landscape file.
-func WriteLandscape(w io.Writer, l Landscape) error {
-	return encode(w, l)
 }
 
 func encode(w io.Writer, v any) error {

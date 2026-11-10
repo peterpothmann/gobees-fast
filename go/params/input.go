@@ -39,14 +39,14 @@ type FlowerPatch struct {
 	PatchType string
 	X, Y      float64
 	Area      float64       // [m2]. NetLogo: size_sqm
-	Flowers   []FlowerEntry // NetLogo: flowerSpeciesList
+	Flowers   []FlowerEntry // the flower species and their relative abundance. NetLogo: flowerSpeciesList
 }
 
-// FlowerEntry is one item of a flowerSpeciesList, e.g. ["Bramble" 0.331] or ["Margin"].
+// FlowerEntry is one flower species of a flower patch and its relative abundance, e.g. ["Bramble" 0.331] of a NetLogo
+// flowerSpeciesList.
 type FlowerEntry struct {
-	Name     string
-	Value    float64
-	HasValue bool
+	Name  string
+	Value float64
 }
 
 // FlowerSpecies is the data per flower of one flower species (NetLogo: one row of the FlowerspeciesFile).

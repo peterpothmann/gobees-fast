@@ -9,6 +9,7 @@ import (
 	"gobees/day"
 	"gobees/globals"
 	"gobees/input"
+	"gobees/params"
 
 	"github.com/mlange-42/ark-tools/app"
 	"github.com/mlange-42/ark/ecs"
@@ -17,10 +18,10 @@ import (
 // smallLandscape is a landscape file made by hand for the crop rotation tests: two flower patches with large areas,
 // so that their layers are not removed as too small.
 var smallLandscape = input.Landscape{MetresPerPatch: 10, Patches: []input.Patch{
-	{ID: 0, PatchType: "Scrub", X: 50, Y: 50, Area: 100000, Flowers: []input.FlowerEntry{
-		{Name: "Bramble", Value: 0.211, HasValue: true}, {Name: "Dandelion", Value: 0.113, HasValue: true}}},
-	{ID: 1, PatchType: "Garden", X: 120, Y: 80, Area: 50000, Flowers: []input.FlowerEntry{
-		{Name: "Dandelion", Value: 0.5, HasValue: true}}},
+	{ID: 0, PatchType: "Scrub", X: 50, Y: 50, Area: 100000, Flowers: []params.FlowerEntry{
+		{Name: "Bramble", Value: 0.211}, {Name: "Dandelion", Value: 0.113}}},
+	{ID: 1, PatchType: "Garden", X: 120, Y: 80, Area: 50000, Flowers: []params.FlowerEntry{
+		{Name: "Dandelion", Value: 0.5}}},
 }}
 
 // Landscape files of the crop rotation tests: the example farm (exampleLandscape, the landscape of the run file

@@ -329,18 +329,22 @@ field `Years_s` → `Years`, `Input.Weather` → `Input.ForagingPeriod`).
 
 ### Landscape file (`input.Landscape`, `input.Patch`)
 
-The keys `x` and `y` would need quotes (`y` is a boolean in YAML 1.1), so `xcor` and `ycor` stay. Before the renaming the keys were `metres_per_patch`, `size_sqm` and `flowerSpeciesList`. `params.FlowerPatch` (`Id_Beescout` → `ID`, `Area_sqm` → `Area`, `FlowerSpeciesList` → `Flowers`) and `sys.flowerPatch` (`Radius_m` → `Radius`, `NectarMax_myl` → `NectarMax`, `PollenMax_g` → `PollenMax`) follow.
+A landscape file (YAML) names its tables (CSV): `patches`, `habitats` (flower list per patch type) and `patchFlowers`
+(own lists). The column names are the keys below. `xcor` and `ycor` stay (NetLogo patches). Before the renaming the
+keys were `metres_per_patch`, `size_sqm` and `flowerSpeciesList`. `params.FlowerPatch` (`Id_Beescout` → `ID`,
+`Area_sqm` → `Area`, `FlowerSpeciesList` → `Flowers` and `Options`) and `sys.flowerPatch` (`Radius_m` → `Radius`)
+follow.
 
-| gobees Go | NetLogo | gobees-fast Go | Key | Unit | Meaning |
+| gobees Go | NetLogo | gobees-fast Go | Key or column | Unit | Meaning |
 | --- | --- | --- | --- | --- | --- |
 | `MetresPerPatch` | `line 1` | `MetresPerPatch` | `metresPerPatch` | [m] | metres per NetLogo patch |
-| `Patches` | `lines 2 to n` | `Patches` | `patches` |  | the flower patches |
+| `Patches` | `lines 2 to n` | `Patches` | `patches` (table) |  | the flower patches |
 | `Id` | `id` | `ID` | `id` |  | column 1 |
 | `PatchType` | `patchType` | `PatchType` | `patchType` |  | habitat type |
 | `X` | `xcor` | `X` | `xcor` | [NetLogo patches] |  |
 | `Y` | `ycor` | `Y` | `ycor` | [NetLogo patches] |  |
 | `Area_sqm` | `size_sqm` | `Area` | `area` | [m2] |  |
-| `FlowerSpeciesList` | `flowerSpeciesList` | `Flowers` | `flowers` |  | flower species and their abundance |
+| `FlowerSpeciesList` (items with a value) | `flowerSpeciesList` | `Flowers` | tables `habitats`, `patchFlowers`: `flower`, `abundance` |  | flower species and their abundance |
 
 ### Derived values (`params.Derived`, `params.Species`, Go only)
 

@@ -172,7 +172,7 @@ func TestParametersRunSection(t *testing.T) {
 	}
 }
 
-// writeRunFile writes the run file c as name and its landscape files into dir.
+// writeRunFile writes the run file c as name and its landscape files with their tables into dir.
 func writeRunFile(t *testing.T, dir, name string, c input.Config, landscapes map[string]input.Landscape) {
 	t.Helper()
 	var b bytes.Buffer
@@ -183,15 +183,18 @@ func writeRunFile(t *testing.T, dir, name string, c input.Config, landscapes map
 		t.Fatal(err)
 	}
 	for n, l := range landscapes {
-		b.Reset()
-		if err := input.WriteLandscape(&b, l); err != nil {
+		files, err := input.WriteLandscape(filepath.Base(n), l)
+		if err != nil {
 			t.Fatal(err)
 		}
-		if err := os.MkdirAll(filepath.Dir(filepath.Join(dir, n)), 0o755); err != nil {
+		folder := filepath.Join(dir, filepath.Dir(n))
+		if err := os.MkdirAll(folder, 0o755); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(filepath.Join(dir, n), b.Bytes(), 0o644); err != nil {
-			t.Fatal(err)
+		for f, content := range files {
+			if err := os.WriteFile(filepath.Join(folder, f), content, 0o644); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 }

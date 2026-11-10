@@ -34,7 +34,7 @@ type Run struct {
 	Config string `yaml:"config,omitempty"`
 	// Output is the daily output file.
 	Output string `yaml:"output,omitempty"`
-	// Landscapes are the copies of the landscape files next to the provenance.
+	// Landscapes are the copies of the landscape files and their tables next to the provenance.
 	Landscapes []LandscapeCopy `yaml:"landscapes,omitempty"`
 }
 
@@ -49,11 +49,12 @@ type Version struct {
 	Go       string `yaml:"go"`                 // Go version of the build
 }
 
-// LandscapeCopy is a landscape file of a run, copied byte for byte next to the provenance.
+// LandscapeCopy is a landscape file or a table of a landscape file of a run, copied next to the provenance: a table
+// byte for byte, a landscape file byte for byte or, if its tables were renamed, with the names of their copies.
 type LandscapeCopy struct {
-	File   string `yaml:"file"`   // name of the copy, in the keys landscape and cropRotation of the provenance
-	Source string `yaml:"source"` // name of the landscape file in the run file of the run
-	SHA256 string `yaml:"sha256"` // SHA-256 of the file, hexadecimal
+	File   string `yaml:"file"`   // name of the copy, in the keys landscape and cropRotation of the provenance or in a landscape copy
+	Source string `yaml:"source"` // name of the landscape file in the run file, of a table relative to the folder of the run file
+	SHA256 string `yaml:"sha256"` // SHA-256 of the source file, hexadecimal
 }
 
 // checkRun checks the section run of a run file: it must be there, with seed, repetitions and threads of 1 or more.

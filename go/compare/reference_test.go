@@ -27,6 +27,7 @@ const (
 	runURLEnv          = "COMPARE_RUN_URL"          // link to the workflow run in the comment, may be empty
 	removedEnv         = "COMPARE_REMOVED_COLUMNS"  // REMOVED_COLUMNS of commits.env, space-separated
 	referenceInputEnv  = "COMPARE_REFERENCE_INPUT"  // REFERENCE_INPUT of commits.env: netlogo (default) or yaml
+	referenceDirEnv    = "COMPARE_REFERENCE_DIR"    // go/compare of the reference worktree: its scenarios (yaml), none if empty
 )
 
 const (
@@ -113,18 +114,24 @@ func TestScenarios(t *testing.T) {
 // runScenario runs the scenario with the programs and compares the current code with the others.
 func runScenario(t *testing.T, s Scenario, dir, cur, ref, base string, phase int) ScenarioResult {
 	t.Helper()
-	run := func(bin string, in Input) []Run {
+	run := func(bin string, in Input, dir string) []Run {
 		runs, err := RunPrograms(bin, in, in.Args(dir, &s), Seeds(seeds), s.Days, threads(t), true)
 		if err != nil {
 			t.Fatal(err)
 		}
 		return runs
 	}
-	// gobees (base) reads the NetLogo files, the current code its run files, the reference its REFERENCE_INPUT.
-	current, reference := run(cur, YAMLInput), run(ref, referenceInput(t))
+	// gobees (base) reads the NetLogo files, the current code its run files, the reference its REFERENCE_INPUT: the
+	// NetLogo files, or the run files of its own commit (COMPARE_REFERENCE_DIR), whose landscape files may have
+	// another format than the current ones.
+	refIn, refDir := referenceInput(t), dir
+	if d := os.Getenv(referenceDirEnv); refIn == YAMLInput && d != "" {
+		refDir = d
+	}
+	current, reference := run(cur, YAMLInput, dir), run(ref, refIn, refDir)
 	baseRuns := reference // run_compare.sh passes the same program for the same commit
 	if base != ref {
-		baseRuns = run(base, NetLogoInput)
+		baseRuns = run(base, NetLogoInput, dir)
 	}
 
 	r := ScenarioResult{Scenario: s, Removed: strings.Fields(os.Getenv(removedEnv))}

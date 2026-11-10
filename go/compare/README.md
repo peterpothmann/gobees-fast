@@ -53,7 +53,8 @@ The experiments of parts of the model (`step3`, `step4a`, `step6`) cannot run as
 Every version runs as a command line program (`go/main.go`) with `-s <seed> --days <days>`, the flag of its daily output (`-f <file>`, the current code `-o <folder>`) and its input:
 gobees (`BASE_COMMIT`) the NetLogo files (`-d <folder> -p <parameter file>`), the current code the run file of the
 scenario (`--config`, converted with `tools/netlogo2gobees` into [scenarios](scenarios)), the reference the format of
-`REFERENCE_INPUT` in `commits.env`. The programs run with seeds 1 to 100, and is compared on its daily output (`obs.DailyOutputExtended`) from day 1 on (the
+`REFERENCE_INPUT` in `commits.env`: with `yaml` the run files of its own commit (`COMPARE_REFERENCE_DIR`, set by
+`run_compare.sh` to `go/compare` of the reference worktree), so the landscape files may change their format. The programs run with seeds 1 to 100, and is compared on its daily output (`obs.DailyOutputExtended`) from day 1 on (the
 programs write no row for the setup). The columns are matched by name. Columns only the current code has are listed
 in the comment and not compared. A column of the other version that the current code no longer has is an error, unless
 it is listed in `REMOVED_COLUMNS`: a column is removed only together with its model branch.

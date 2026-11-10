@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"gobees/examplefiles"
-	"gobees/input"
 	"gobees/params"
 )
 
@@ -87,7 +86,7 @@ func TestConvertExampleFarm(t *testing.T) {
 	// are not converted
 	p := l.Patches[0]
 	if p.ID != 0 || p.PatchType != "Hedgerow" || p.X != 130 || p.Y != 175 || p.Area != 200 ||
-		len(p.Flowers) != 33 || p.Flowers[0] != (input.FlowerEntry{Name: "Average_Willow", Value: 1.275, HasValue: true}) {
+		len(p.Flowers) != 33 || p.Flowers[0] != (params.FlowerEntry{Name: "Average_Willow", Value: 1.275}) {
 		t.Errorf("first flower patch = %+v", p)
 	}
 }

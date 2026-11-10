@@ -225,7 +225,8 @@ func copyNode(n *yaml.Node) *yaml.Node {
 // readFrom reads the run file data and its landscape files with open, relative to the folder of the run file. The
 // landscape files of known, read already, are taken from it.
 func readFrom(data []byte, open func(string) (io.ReadCloser, error), known Files) (Files, error) {
-	f := Files{Landscapes: map[string]Landscape{}, Raw: map[string][]byte{}, source: data, open: open}
+	f := Files{Landscapes: map[string]Landscape{}, Tables: map[string][]LandscapeTable{}, Raw: map[string][]byte{},
+		source: data, open: open}
 	c, err := ReadConfig(bytes.NewReader(data))
 	if err != nil {
 		return f, err
@@ -233,7 +234,10 @@ func readFrom(data []byte, open func(string) (io.ReadCloser, error), known Files
 	f.Config = c
 	for _, n := range landscapeNames(c) {
 		if l, ok := known.Landscapes[n]; ok {
-			f.Landscapes[n], f.Raw[n] = l, known.Raw[n]
+			f.Landscapes[n], f.Raw[n], f.Tables[n] = l, known.Raw[n], known.Tables[n]
+			for _, t := range known.Tables[n] {
+				f.Raw[t.Name] = known.Raw[t.Name]
+			}
 			continue
 		}
 		if err := f.readLandscape(n); err != nil {

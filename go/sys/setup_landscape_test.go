@@ -101,14 +101,14 @@ func TestCreateLayers(t *testing.T) {
 	file := &params.Parameters{AbundanceBoost: 1, FoodsourceLimit: 1, LimitFoodsources: true, RemoveEmptyFoodsources: true}
 	// limits: 180 microlitres nectar, 0.05 g pollen
 	p1 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Grassland", X: 10.2, Y: 20.4,
-		Area: 100, Flowers: []params.FlowerEntry{{Name: "A", Value: 2, HasValue: true}, {Name: "Margin"},
-			{Name: "B", Value: 1, HasValue: true}, {Name: "C", Value: 1, HasValue: true}}}}
+		Area: 100, Flowers: []params.FlowerEntry{{Name: "A", Value: 2}, {Name: "Margin", Value: 1}, {Name: "B", Value: 1},
+			{Name: "C", Value: 1}}}}
 	p2 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Crop_Cereals", X: 10.4, Y: 19.6,
-		Area: 100, Flowers: []params.FlowerEntry{{Name: "B", Value: 1, HasValue: true}}}}
+		Area: 100, Flowers: []params.FlowerEntry{{Name: "B", Value: 1}}}}
 	p3 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Scrub", X: 50, Y: 50, Area: 400}}
 	// every layer of the woodland is removed: no flower patch (NetLogo: no masterpatch)
 	p4 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Woodland", X: 70, Y: 70,
-		Area: 100, Flowers: []params.FlowerEntry{{Name: "B", Value: 1, HasValue: true}}}}
+		Area: 100, Flowers: []params.FlowerEntry{{Name: "B", Value: 1}}}}
 
 	patches, err := createLayers(w, []*flowerPatch{p1, p2, p3, p4}, flowers, file, &defaults.Landscape,
 		[]string{"Margin", "Plot"}, rand.New(rand.NewPCG(1, 1)))
@@ -127,7 +127,7 @@ func TestCreateLayers(t *testing.T) {
 	fpMap := ecs.NewMap1[comp.FlowerPatch](w)
 	grass, crop, scrub := fpMap.Get(byType["Grassland"]), fpMap.Get(byType["Crop_Cereals"]), fpMap.Get(byType["Scrub"])
 
-	// the stewardship option "Margin" gets no layer, B on the grassland is removed (both below the limits). A and C
+	// the stewardship option "Margin" gets no layer, also with a value, B on the grassland is removed (both below the limits). A and C
 	// stay in the order of the flower list (NetLogo: who order).
 	if got := testFlowers(grass); !slices.Equal(got, []string{"A", "C"}) {
 		t.Fatalf("grassland layers %v, want [A C]", got)

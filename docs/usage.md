@@ -64,7 +64,27 @@ A run file has the sections below. All keys are in lowerCamelCase, values are in
 | `landscape`          | landscape file of the start                                                                                                                                                                                                                                                      | foodsources file of`MyMap`                                                      |
 | `cropRotation`       | landscape files of the crop rotation (fewer than 2: none)                                                                                                                                                                                                                        | `CropRotationListAsString`                                                      |
 
-A landscape file holds `metresPerPatch` and the flower patches (`id`, `patchType`, `xcor`, `ycor`, `area`, `flowers`), the columns of the NetLogo foodsources file without the GUI columns. All files are read at the start (package `input`), also the landscapes of a crop rotation. An unknown key is an error. A missing key keeps its zero value, except in `constants`. Unlike NetLogo, a missing file is an error at the start, also a landscape of the crop rotation (NetLogo: on its day 365).
+A landscape file (YAML) holds `metresPerPatch` and the names of its tables (CSV), relative to the folder of the landscape file. All files are read at the start (package `input`), also the landscapes of a crop rotation. An unknown key or column is an error. A missing key keeps its zero value, except in `constants`. Unlike NetLogo, a missing file is an error at the start, also a landscape of the crop rotation (NetLogo: on its day 365).
+
+| Key            | Table                                                       | Columns                                    |
+| -------------- | ----------------------------------------------------------- | ------------------------------------------ |
+| `patches`      | the flower patches (needed)                                 | `id,patchType,xcor,ycor,area`              |
+| `habitats`     | the flower list of each patch type                          | `patchType,flower,abundance`               |
+| `patchFlowers` | own flower lists of single patches (optional)               | `id,flower,abundance`                      |
+
+- `patches`: one row per flower patch, the columns of the NetLogo foodsources file without `flowerSpeciesList` and the GUI columns. `xcor`, `ycor` in NetLogo patches, `area` in m².
+- `habitats`: the flower list of a patch type are its rows, in their order (`abundance`: the relative abundance of `flowerSpeciesList`). One habitat table can serve many landscapes, e.g. `habitats: ../habitats.csv`.
+- `patchFlowers`: if the table has rows of a patch (`id` of `patches`, unique), these rows are its flower list instead of the list of its patch type.
+- Each table starts with a header of all its columns, in any order. From R: `write.csv(patches, "patches.csv", row.names = FALSE)`, without `row.names = FALSE` the extra first column is an error. Numbers with `.` as decimal point.
+
+```yaml
+# _SYSTEM_Example_Farm_Foodsources.yaml
+metresPerPatch: 10
+patches: _SYSTEM_Example_Farm_Foodsources_patches.csv
+habitats: _SYSTEM_Example_Farm_Foodsources_habitats.csv
+```
+
+The converter writes the habitat list of a patch type as the most frequent list of its patches and every other list into `patchFlowers`. It leaves out the stewardship options of `flowerSpeciesList` (items without a value, e.g. `["Plot"]`). In NetLogo they mark the flower species after them as growing in the option, which only the GUI reads (map symbols, areas of the options). An option must be in the `stewardshipOptions` of the HabitatsFile, as in NetLogo. A flower patch with only options is left out, as NetLogo removes it at the setup, and the converter reports it.
 
 The section `constants` holds the values that NetLogo sets in its code and that NetLogo's parameter files cannot change: the values of `ParametersProc` and the local values of the procedures (e.g. the pause of a bee, the probabilities of the badgers and the cuckoo bumblebees, the task thresholds). It is grouped by part of the model (`activities`, `stimuli`, `foraging`, `colony`, `bees`, `psithyrus`, `badgers`, `landscape`, `initialQueens`, `thresholds`) and must hold every key. A run file without a key of `constants` is an error, so that no value of a run comes from the code unseen. The converter writes the NetLogo values (`params.DefaultConstants`) with unit and source as a comment at each key. The coefficients of fitted equations (handling time, competition point, winter survival) stay in the code.
 
@@ -85,7 +105,7 @@ The flags of the converter (`tools/netlogo2gobees`, `go run . <command>`):
 | `convert`  | `--parameters PATH` | `-p`  | (required)                 | NetLogo parameter file (`MyParametersFile`).                                                                                           |
 | `convert`  | `--dir PATH`        | `-d`  | `../../netlogo`            | folder of the NetLogo input files (the folder of the`.nlogo`). The file names in the parameter file are relative to it.                |
 | `convert`  | `--map NAME`        | `-m`  | `_SYSTEM_Example_Farm.png` | map (`MyMap`). The foodsources are read from `<NAME without .png>_Foodsources.txt` in `--dir`.                                         |
-| `convert`  | `--out PATH`        | `-o`  | (required)                 | folder of the run file and its landscape files, created if missing.                                                                    |
+| `convert`  | `--out PATH`        | `-o`  | (required)                 | folder of the run file and its landscape files with their tables, created if missing.                                                  |
 | `convert`  | `--name NAME`       | `-n`  | (required)                 | key`name` of the run file, the folder of its output in gobees-fast. Letters, digits, `-` and `_`.                                      |
 | `convert`  | `--run NAME`        |       | `run.yaml`                 | name of the run file in`--out`.                                                                                                        |
 | `generate` | `--root PATH`       |       | `../..`                    | folder of the gobees-fast repository, where`generate` writes its files. The default fits when you call it from `tools/netlogo2gobees`. |
@@ -94,7 +114,7 @@ The flags of the converter (`tools/netlogo2gobees`, `go run . <command>`):
 cd tools/netlogo2gobees
 # example farm: parameter file and output folder are required, the map is the example farm by default
 go run . convert -p ../../netlogo/_SYSTEM_Example_Farm_Parameters.csv -o farm -n farm
-# other map: writes sussex/run.yaml and the landscape file next to it
+# other map: writes sussex/run.yaml and the landscape file with its tables next to it
 go run . convert -p ../../netlogo/_SYSTEM_Sussex1_Parameters.csv -m _SYSTEM_Sussex1.png -o sussex -n sussex
 # own NetLogo files in another folder, writes mine/my_run.yaml
 go run . convert -d path/to/netlogo -p path/to/netlogo/my_Parameters.csv -m my_map.png -o mine -n mine --run my_run.yaml
@@ -181,7 +201,7 @@ With `-o DIR`, gobees-fast writes the output of each run file into the folder `D
 | ------------------ | ----------------------------------------------------------------------------------------------------------- |
 | `daily.csv`        | the [daily output](#daily-output): all runs of the run file, one row per run and day                        |
 | `provenance.yaml`  | the [provenance](#provenance): the run file as run, it repeats the run                                      |
-| landscape files    | byte-for-byte copies of the landscape files of the run, with their names (see [Provenance](#provenance))    |
+| landscape files    | copies of the landscape files of the run and their tables, with their names (see [Provenance](#provenance)) |
 
 The folder holds everything needed to repeat the run and can be moved or archived as a whole.
 
@@ -202,6 +222,6 @@ With an output (`-o DIR`), gobees-fast writes the provenance `provenance.yaml` i
 | `version`                | module, version, VCS revision, its time and`modified` (changes against the revision), Go version. The VCS keys are only known in a binary built with `go build` inside the repository, not with `go run`. |
 | `config`                 | the run file given with`-c`, or `built-in example farm`                                                                                                                                                   |
 | `output`                 | the daily output file. Its columns are the key`columns` of the section `output` of the provenance, always written in full                                                                                 |
-| `landscapes`             | per landscape file: the copy (`file`), the name in the run file (`source`) and the SHA-256                                                                                                                |
+| `landscapes`             | per landscape file and table: the copy (`file`), the name in the run file or, for a table, relative to the folder of the run file (`source`) and the SHA-256 of the source                               |
 
-The landscape files are copied byte for byte into the output folder and keep their names (`_SYSTEM_Example_Farm_Foodsources.yaml`). A second landscape file of the same name from another folder gets `_2` in front of the extension, as does a landscape file named `daily.csv` or `provenance.yaml`. The keys `landscape` and `cropRotation` of the provenance name the copies. Only `seed`, `days`, `repetitions` and `threads` of the section `run` are read, the other keys are a record.
+The landscape files and their tables are copied into the output folder and keep their names (`_SYSTEM_Example_Farm_Foodsources.yaml`). A second file of the same name from another folder gets `_2` in front of the extension, as does a file named `daily.csv` or `provenance.yaml`. A table of several landscape files is copied once. The tables are copied byte for byte. A landscape file is copied byte for byte if its tables keep their names, else it is written again with the names of the copies (its SHA-256 is the one of the source). The keys `landscape` and `cropRotation` of the provenance name the copies. Only `seed`, `days`, `repetitions` and `threads` of the section `run` are read, the other keys are a record.
