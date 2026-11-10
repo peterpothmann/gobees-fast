@@ -2,12 +2,10 @@ package sys
 
 import (
 	"fmt"
-	"math/rand/v2"
 
 	"gobees/comp"
 	"gobees/globals"
 
-	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
 )
 
@@ -17,7 +15,6 @@ import (
 //
 // NetLogo: UpdateFoodsourcesProc.
 type flowerRefill struct {
-	rng      *rand.Rand
 	calendar *globals.Calendar
 	today    globals.Flowering
 
@@ -26,7 +23,6 @@ type flowerRefill struct {
 }
 
 func (s *flowerRefill) Initialize(w *ecs.World) {
-	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.calendar = ecs.GetResource[globals.Calendar](w)
 	ecs.AddResource(w, &s.today)
 	s.filter = ecs.NewFilter2[comp.Foodsource, comp.FoodsourceState](w)
@@ -38,13 +34,12 @@ func (s *flowerRefill) Update(w *ecs.World) {
 	day := s.calendar.Day
 	s.today.Changed = false
 
-	// ORDER: irrelevant, each foodsource only changes itself.
+	// ORDER: irrelevant, each foodsource only changes itself. Not shuffled (NetLogo: random order).
 	foodsources := []ecs.Entity{}
 	query := s.filter.Query()
 	for query.Next() {
 		foodsources = append(foodsources, query.Entity())
 	}
-	shuffle(s.rng, foodsources)
 
 	for _, e := range foodsources {
 		fs, state := s.fsMap.Get(e)

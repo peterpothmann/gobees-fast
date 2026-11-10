@@ -3,13 +3,11 @@ package sys
 import (
 	"log"
 	"math"
-	"math/rand/v2"
 
 	"gobees/comp"
 	"gobees/globals"
 	"gobees/params"
 
-	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
 )
 
@@ -20,7 +18,6 @@ import (
 //
 // NetLogo: the call in UpdateMorning_Proc and CropRotationProc.
 type cropRotation struct {
-	rng       *rand.Rand
 	ticks     *globals.Ticks
 	calendar  *globals.Calendar
 	derived   *params.Derived
@@ -34,11 +31,10 @@ type cropRotation struct {
 	rangeMap     *ecs.Map1[comp.ColonyRange]
 	speciesMap   *speciesTable
 
-	bees []ecs.Entity // buffer of askAllBees
+	bees []ecs.Entity // buffer of allBees
 }
 
 func (s *cropRotation) Initialize(w *ecs.World) {
-	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.ticks = ecs.GetResource[globals.Ticks](w)
 	s.calendar = ecs.GetResource[globals.Calendar](w)
 	s.derived = ecs.GetResource[params.Derived](w)
@@ -77,9 +73,9 @@ func (s *cropRotation) rotate(w *ecs.World) {
 	for _, e := range dead {
 		w.RemoveEntity(e)
 	}
-	// every bee forgets her foodsources. ORDER: irrelevant, each bee only changes herself. Shuffled, as NetLogo asks
-	// the bees in random order.
-	s.bees = askAllBees(s.bees, s.beeFilter, s.rng)
+	// every bee forgets her foodsources. ORDER: irrelevant, each bee only changes herself. Not shuffled (NetLogo:
+	// random order).
+	s.bees = allBees(s.bees, s.beeFilter)
 	for _, e := range s.bees {
 		f := s.foragerMap.Get(e)
 		f.KnownNectarPatches = []ecs.Entity{}
@@ -93,8 +89,8 @@ func (s *cropRotation) rotate(w *ecs.World) {
 	// Layers on the next flowering change and panics there (Ark: "can't get components of a dead
 	// entity", NetLogo: runtime error on a dead turtle). Needs a colony alive on Day 365, which the species of
 	// netlogo/_SYSTEM_BumbleSpecies_UK_01.csv cannot have (seasonStop 305).
-	// ORDER: irrelevant, each colony only changes itself. Shuffled, as NetLogo asks the colonies in random order.
-	for _, e := range askColonies(s.colonyFilter, s.rng) {
+	// ORDER: irrelevant, each colony only changes itself. Not shuffled (NetLogo: random order).
+	for _, e := range allColonies(s.colonyFilter) {
 		r := s.rangeMap.Get(e)
 		r.NectarPatches = []ecs.Entity{}
 		r.PollenPatches = []ecs.Entity{}
@@ -106,9 +102,8 @@ func (s *cropRotation) rotate(w *ecs.World) {
 	// per species the nest sites and their area as in nestSitesSetup.
 	// nestHabitatsList is NOT expanded again: it keeps the habitat types of the first landscape.
 	// minPollenStore_g is not computed again: the formula reads only species values, which do not change.
-	// ORDER: irrelevant, each species only changes itself. Shuffled, as NetLogo asks the species in random order.
+	// ORDER: irrelevant, each species only changes itself. Not shuffled (NetLogo: random order).
 	species := s.speciesMap.all()
-	shuffle(s.rng, species)
 	masterpatches := collectMasterpatches(w)
 	for _, i := range species {
 		ns := &s.nestSites.BySpecies[i]

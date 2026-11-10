@@ -34,7 +34,7 @@ type development struct {
 	colonyMap  *ecs.Map2[comp.Colony, comp.ColonyCounts]
 	speciesMap *speciesTable
 
-	bees []ecs.Entity // buffer of askAllBees
+	bees []ecs.Entity // buffer of allBees
 }
 
 func (s *development) Initialize(w *ecs.World) {
@@ -51,9 +51,10 @@ func (s *development) Initialize(w *ecs.World) {
 }
 
 func (s *development) Update(w *ecs.World) {
-	// ALL bees. ORDER: irrelevant for the state. Shuffled, as NetLogo asks the bees in random order.
+	// ALL bees. ORDER: irrelevant, each bee changes only itself with its own random draws, and the colony values it
+	// reads (AdultWorkers, QueenProduction) do not change here. Not shuffled (NetLogo: random order).
 	// A bee dies only in its own turn, so every bee of the list is alive when its turn comes.
-	s.bees = askAllBees(s.bees, s.beeFilter, s.rng)
+	s.bees = allBees(s.bees, s.beeFilter)
 	for _, e := range s.bees {
 		_, bee, _, _, _, _ := s.beeMap.Get(e)
 		whoCol := bee.Colony

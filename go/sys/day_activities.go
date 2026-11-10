@@ -234,10 +234,8 @@ func (s *activities) incubateBrood(w *ecs.World, e ecs.Entity) {
 	if counts.Eggs+counts.Larvae+counts.Pupae > 0 {
 		heatPerBrood = heatProvided / float64(counts.Eggs+counts.Larvae+counts.Pupae)
 	}
-	// ORDER: irrelevant, each brood agent only changes itself. Shuffled, as NetLogo asks the agents in random order.
-	brood := s.broodOf[b.Colony]
-	shuffle(s.rng, brood)
-	for _, x := range brood {
+	// ORDER: irrelevant, each brood agent gets the same heat, no random number. Not shuffled (NetLogo: random order).
+	for _, x := range s.broodOf[b.Colony] {
 		if !w.Alive(x) {
 			continue
 		}

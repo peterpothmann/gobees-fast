@@ -127,12 +127,17 @@ func (f *forager) search(e ecs.Entity) {
 		} else {
 			myMasterpatchesWithFoodList = colRange.NectarPatches
 		}
-		// one draw per candidate in random order, the last detected one is chosen
-		candidates := slices.Clone(myMasterpatchesWithFoodList)
-		shuffle(f.rng, candidates)
-		for _, p := range candidates {
+		// ORDER: MATTERS. NetLogo draws once per candidate in random order and takes the last detected one, that is one
+		// of the detected candidates, each with the same probability. Here: one draw per candidate in list order, and
+		// the k-th detected candidate replaces the choice with probability 1/k (reservoir sampling), the same
+		// distribution without a shuffle. Without either, the later candidates of the list would win.
+		detected := 0
+		for _, p := range myMasterpatchesWithFoodList {
 			if f.rng.Float64() < f.detectionProb(p, xcol, ycol) {
-				chosenMasterpatch = p
+				detected++
+				if detected == 1 || f.rng.IntN(detected) == 0 {
+					chosenMasterpatch = p
+				}
 			}
 		}
 		if !chosenMasterpatch.IsZero() {

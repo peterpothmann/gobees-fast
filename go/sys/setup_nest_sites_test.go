@@ -1,7 +1,6 @@
 package sys
 
 import (
-	"math/rand/v2"
 	"slices"
 	"testing"
 
@@ -16,19 +15,18 @@ func TestExpandNestHabitats(t *testing.T) {
 		{patchType: "Grassland"}, {patchType: "Grass_improved"}, {patchType: "Improved_Grassland"},
 		{patchType: "Hedgerow"}, {patchType: "Grassland"},
 	}
-	got, err := expandNestHabitats([]string{"Grassland*", "Garden", "Hedgerow"}, masterpatches, rand.New(rand.NewPCG(1, 1)))
+	got, err := expandNestHabitats([]string{"Grassland*", "Garden", "Hedgerow"}, masterpatches)
 	if err != nil {
 		t.Fatal(err)
 	}
-	// "Grassland*" matches every habitat type that contains "Grassland", each habitat once.
-	// Entries without "*" are copied, also if they do not exist on the map ("Garden").
-	slices.Sort(got)
-	want := []string{"Garden", "Grassland", "Hedgerow", "Improved_Grassland"}
+	// "Grassland*" matches every habitat type that contains "Grassland", each habitat once, in the order of the
+	// masterpatches. Entries without "*" are copied, also if they do not exist on the map ("Garden").
+	want := []string{"Grassland", "Improved_Grassland", "Garden", "Hedgerow"}
 	if !slices.Equal(got, want) {
-		t.Errorf("got %q, want %q (in any order)", got, want)
+		t.Errorf("got %q, want %q", got, want)
 	}
 	// "*" not at the end gives an assertion
-	if _, err := expandNestHabitats([]string{"Gr*ss"}, masterpatches, rand.New(rand.NewPCG(1, 1))); err == nil {
+	if _, err := expandNestHabitats([]string{"Gr*ss"}, masterpatches); err == nil {
 		t.Error("expected an error for a '*' that is not at the end")
 	}
 }

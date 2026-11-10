@@ -96,7 +96,7 @@ Details: [go/ui/README.md](go/ui/README.md).
 | **[gobees](https://github.com/peterpothmann/gobees)** | users who know BEE-STEWARD in NetLogo and need to trace every result back to the NetLogo code. Same quirks, names and structure as NetLogo. |
 | **gobees-fast** (this repository) | users who learn BEE-STEWARD from scratch or need speed. Dead code removed, data model simplified, names cleaned up. Quirks of the NetLogo code ([trans/netlogo-findings.md](trans/netlogo-findings.md)) will be fixed. |
 
-Once a quirk that is active in the default run is fixed, gobees-fast gives different results than NetLogo. From then on, gobees-fast is a modified model, not BEE-STEWARD in Go. `git diff upstream/main` shows every change against gobees (remote `upstream` = [gobees](https://github.com/peterpothmann/gobees)).
+Once a quirk that is active in the default run is fixed, gobees-fast gives different results than NetLogo. From then on, gobees-fast is a modified model, not BEE-STEWARD in Go. [docs/changes.md](docs/changes.md) lists every difference to NetLogo and its effect. `git diff upstream/main` shows every change against gobees (remote `upstream` = [gobees](https://github.com/peterpothmann/gobees)).
 
 ## Tests and checks
 

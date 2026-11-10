@@ -48,7 +48,7 @@ func (s *colonyUpdate) Initialize(w *ecs.World) {
 	s.parameters = ecs.GetResource[params.Parameters](w)
 	s.constants = ecs.GetResource[params.Constants](w)
 	s.beeDeath = newBeeDeath(w)
-	s.colonies = newColonyFounder(w, s.rng)
+	s.colonies = newColonyFounder(w)
 
 	s.colonyFilter = ecs.NewFilter1[comp.Colony](w)
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
@@ -59,13 +59,13 @@ func (s *colonyUpdate) Initialize(w *ecs.World) {
 }
 
 func (s *colonyUpdate) Update(w *ecs.World) {
-	// ORDER of the colonies: irrelevant for the state. Shuffled, as NetLogo asks the colonies in random order.
+	// ORDER of the colonies: irrelevant, each colony changes only itself and its bees, with one draw of its own. Not
+	// shuffled (NetLogo: random order).
 	colonies := []ecs.Entity{}
 	query := s.colonyFilter.Query()
 	for query.Next() {
 		colonies = append(colonies, query.Entity())
 	}
-	shuffle(s.rng, colonies)
 
 	// The bees are grouped by colony once, which makes updateColony run faster. This is possible as no bee is created
 	// and no bee changes its colony here. Bees that die on the way are skipped with w.Alive.
@@ -78,7 +78,8 @@ func (s *colonyUpdate) Update(w *ecs.World) {
 
 func (s *colonyUpdate) Finalize(w *ecs.World) {}
 
-// updateColony updates one colony. ORDER within the colony: MATTERS.
+// updateColony updates one colony. ORDER of the steps within the colony: MATTERS. ORDER of the bees: irrelevant, in
+// each of the three cases all selected bees die, without a random number. Not shuffled (NetLogo: random order).
 func (s *colonyUpdate) updateColony(w *ecs.World, col ecs.Entity, members []ecs.Entity) {
 	ticks := s.ticks.Ticks
 	// alive returns the living members for which keep is true.
@@ -89,12 +90,6 @@ func (s *colonyUpdate) updateColony(w *ecs.World, col ecs.Entity, members []ecs.
 				result = append(result, e)
 			}
 		}
-		return result
-	}
-	// ask is alive in random order, as NetLogo asks the bees in random order.
-	ask := func(keep func(b *comp.Bee) bool) []ecs.Entity {
-		result := alive(keep)
-		shuffle(s.rng, result)
 		return result
 	}
 	all := func(b *comp.Bee) bool { return true }
@@ -111,14 +106,14 @@ func (s *colonyUpdate) updateColony(w *ecs.World, col ecs.Entity, members []ecs.
 	// one day later than with today's numbers, as in NetLogo.
 	// ORDER: irrelevant, each bee dies independently.
 	if colony.CompetitionPointDate.Before(ticks) && counts.Eggs+counts.Larvae+counts.Pupae == 0 {
-		for _, e := range ask(func(b *comp.Bee) bool {
+		for _, e := range alive(func(b *comp.Bee) bool {
 			return b.AdultAge > s.constants.Colony.DeathAge && (b.Caste == caste.Worker || b.Caste == caste.Queen)
 		}) {
 			s.beeDeath.die(w, e, "Colony death after CP!")
 		}
 	}
 	if stores.Energy <= 0 {
-		for _, e := range ask(all) {
+		for _, e := range alive(all) {
 			s.beeDeath.die(w, e, "Colony's energy store depleted!")
 		}
 	}
@@ -128,7 +123,7 @@ func (s *colonyUpdate) updateColony(w *ecs.World, col ecs.Entity, members []ecs.
 		adults += s.beeMap.Get(e).Number
 	}
 	if adults == 0 {
-		for _, e := range ask(all) {
+		for _, e := range alive(all) {
 			s.beeDeath.die(w, e, "No adult bees left!")
 		}
 	}

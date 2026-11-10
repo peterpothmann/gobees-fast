@@ -2,14 +2,12 @@ package sys
 
 import (
 	"fmt"
-	"math/rand/v2"
 
 	"gobees/comp"
 	"gobees/enum/stage"
 	"gobees/globals"
 	"gobees/params"
 
-	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
 )
 
@@ -19,7 +17,6 @@ import (
 //
 // NetLogo: FeedLarvaeProc.
 type larvaeFeeding struct {
-	rng       *rand.Rand
 	ticks     *globals.Ticks
 	constants *params.Constants
 
@@ -33,7 +30,6 @@ type larvaeFeeding struct {
 }
 
 func (s *larvaeFeeding) Initialize(w *ecs.World) {
-	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.ticks = ecs.GetResource[globals.Ticks](w)
 	s.constants = ecs.GetResource[params.Constants](w)
 
@@ -45,11 +41,10 @@ func (s *larvaeFeeding) Initialize(w *ecs.World) {
 }
 
 func (s *larvaeFeeding) Update(w *ecs.World) {
-	// ORDER of the colonies: irrelevant, each colony only feeds its own larvae from its own stores. Shuffled,
-	// as NetLogo asks the colonies in random order. The larvae are grouped by colony once: nothing changes stage or
-	// colony here.
+	// ORDER of the colonies: irrelevant, each colony only feeds its own larvae from its own stores. Not shuffled
+	// (NetLogo: random order). The larvae are grouped by colony once: nothing changes stage or colony here.
 	s.larvae = beesByColony(s.larvae, s.beeFilter, func(b *comp.Bee) bool { return b.Stage == stage.Larva })
-	for _, col := range askColonies(s.colonyFilter, s.rng) {
+	for _, col := range allColonies(s.colonyFilter) {
 		s.feedColony(col, s.larvae[col])
 	}
 }
@@ -74,10 +69,10 @@ func (s *larvaeFeeding) feedColony(col ecs.Entity, myLarvae []ecs.Entity) {
 		growthLimitingFactor = relativeEnergyToBeFed
 	}
 
-	// ORDER: irrelevant, the store does not change within the loop, each larva changes only itself.
+	// ORDER: irrelevant, the store does not change within the loop, each larva changes only itself, the total is a
+	// sum. Not shuffled (NetLogo: random order).
 	// The cap compares the pollen of ONE larva with the whole store, as in NetLogo, so the store can become negative.
 	totalPollenFedToday := 0.0 // [g]
-	shuffle(s.rng, myLarvae)
 	for _, e := range myLarvae {
 		b := s.beeMap.Get(e)
 		sp := s.speciesMap.Get(b.Species)

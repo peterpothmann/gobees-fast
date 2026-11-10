@@ -33,7 +33,7 @@ type seasonalEvents struct {
 	speciesMap *speciesTable
 	beeMap     *ecs.Map1[comp.Bee]
 
-	bees []ecs.Entity // buffer of askBees, for one call after the other
+	bees []ecs.Entity // buffer of beesWhere, for one call after the other
 }
 
 func (s *seasonalEvents) Initialize(w *ecs.World) {
@@ -53,14 +53,14 @@ func (s *seasonalEvents) Update(w *ecs.World) {
 	// foodsources are updated, and no bee changes.
 	totalQueens, totalHibernatingQueens, totalMales := s.dailyTotals()
 
-	// ORDER: irrelevant, each bee dies independently, the colony counters are sums.
+	// ORDER: irrelevant, each bee dies independently, the colony counters are sums. Not shuffled (NetLogo: species
+	// and bees in random order).
 	species := s.speciesMap.all()
-	shuffle(s.rng, species)
 	for _, sp := range species {
 		if s.calendar.Day != s.speciesMap.Get(sp).SeasonStop {
 			continue
 		}
-		s.bees = askBees(s.bees, s.beeFilter, s.rng, func(b *comp.Bee) bool {
+		s.bees = beesWhere(s.bees, s.beeFilter, func(b *comp.Bee) bool {
 			return b.Species == sp && b.Activity != activity.Hibernate
 		})
 		for _, e := range s.bees {
@@ -73,7 +73,7 @@ func (s *seasonalEvents) Update(w *ecs.World) {
 	totals := s.totals.Get()
 	if totalHibernatingQueens == totalQueens && totals.Eggs+totals.Larvae+totals.Pupae == 0 &&
 		totalMales > 0 {
-		s.bees = askBees(s.bees, s.beeFilter, s.rng, func(b *comp.Bee) bool { return b.Caste == caste.Male })
+		s.bees = beesWhere(s.bees, s.beeFilter, func(b *comp.Bee) bool { return b.Caste == caste.Male })
 		for _, e := range s.bees {
 			s.death.die(w, e, "Males: all queens in hibernation!")
 		}
@@ -82,12 +82,12 @@ func (s *seasonalEvents) Update(w *ecs.World) {
 	if s.calendar.Day == 1 {
 		// the limit of hibernating queens, with TotalHibernatingQueens of the previous evening
 		queensToKill := totalHibernatingQueens - s.parameters.MaxHibernatingQueens
-		// ORDER: the random choice of the queens matters only through the random numbers.
+		// ORDER: irrelevant, the queens are drawn uniformly from the list, in any order of the list. Not shuffled.
 		// NetLogo picks one-of the hibernating queens per round. Removing the chosen one from the list gives the same
 		// distribution. A cohort can remove more queens than needed.
 		hibernating := []ecs.Entity{}
 		if queensToKill > 0 {
-			s.bees = askBees(s.bees, s.beeFilter, s.rng, func(b *comp.Bee) bool {
+			s.bees = beesWhere(s.bees, s.beeFilter, func(b *comp.Bee) bool {
 				return b.Caste == caste.Queen && b.Activity == activity.Hibernate
 			})
 			hibernating = s.bees

@@ -3,7 +3,6 @@ package sys
 import (
 	"fmt"
 	"log"
-	"math/rand/v2"
 	"slices"
 	"strings"
 
@@ -11,7 +10,6 @@ import (
 	"gobees/globals"
 	"gobees/params"
 
-	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
 )
 
@@ -25,7 +23,6 @@ type nestSitesSetup struct {
 
 func (s *nestSitesSetup) Initialize(w *ecs.World) {
 	in := ecs.GetResource[params.Input](w)
-	rng := rand.New(ecs.GetResource[resource.Rand](w))
 
 	// one species per species of the run file, in FILE order. Package input has read the rows into
 	// params.Input.Species and set the derived values. Bees and colonies hold the index of their species.
@@ -36,7 +33,7 @@ func (s *nestSitesSetup) Initialize(w *ecs.World) {
 	for i := range in.Species {
 		sp := &in.Species[i]
 		ns := &s.nestSites.BySpecies[i]
-		expanded, err := expandNestHabitats(sp.NestHabitats, masterpatches, rng)
+		expanded, err := expandNestHabitats(sp.NestHabitats, masterpatches)
 		if err != nil {
 			panic(err)
 		}
@@ -100,13 +97,11 @@ func collectMasterpatches(w *ecs.World) []masterpatch {
 
 // expandNestHabitats expands entries ending with "*" to all habitat types of the masterpatches that contain
 // the text before the "*".
-func expandNestHabitats(list []string, masterpatches []masterpatch, rng *rand.Rand) ([]string, error) {
-	// ORDER: irrelevant, the nest habitats list is only used with member?. Shuffled anyway, as NetLogo collects the
-	// habitat types of the masterpatches in random order.
-	order := slices.Clone(masterpatches)
-	rng.Shuffle(len(order), func(i, j int) { order[i], order[j] = order[j], order[i] })
+func expandNestHabitats(list []string, masterpatches []masterpatch) ([]string, error) {
+	// ORDER: irrelevant, the nest habitats list is only used with member?. Not shuffled (NetLogo collects the habitat
+	// types of the masterpatches in random order).
 	allHabitats := []string{}
-	for _, m := range order {
+	for _, m := range masterpatches {
 		if !slices.Contains(allHabitats, m.patchType) {
 			allHabitats = append(allHabitats, m.patchType)
 		}

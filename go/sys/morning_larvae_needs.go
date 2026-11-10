@@ -1,14 +1,11 @@
 package sys
 
 import (
-	"math/rand/v2"
-
 	"gobees/comp"
 	"gobees/enum/caste"
 	"gobees/enum/stage"
 	"gobees/params"
 
-	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
 )
 
@@ -18,7 +15,6 @@ import (
 //
 // NetLogo: NeedNectarPollenLarvaeTodayProc.
 type larvaeNeeds struct {
-	rng       *rand.Rand
 	constants *params.Constants
 
 	colonyFilter *ecs.Filter1[comp.Colony]
@@ -31,7 +27,6 @@ type larvaeNeeds struct {
 }
 
 func (s *larvaeNeeds) Initialize(w *ecs.World) {
-	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.constants = ecs.GetResource[params.Constants](w)
 
 	s.colonyFilter = ecs.NewFilter1[comp.Colony](w)
@@ -42,13 +37,12 @@ func (s *larvaeNeeds) Initialize(w *ecs.World) {
 }
 
 func (s *larvaeNeeds) Update(w *ecs.World) {
-	// ORDER: irrelevant, sums. Shuffled, as NetLogo asks the colonies and the larvae in random order.
+	// ORDER: irrelevant, sums. Not shuffled (NetLogo: colonies and larvae in random order).
 	// The larvae are grouped by colony once: nothing changes stage or colony here.
 	s.larvae = beesByColony(s.larvae, s.beeFilter, func(b *comp.Bee) bool { return b.Stage == stage.Larva })
-	for _, col := range askColonies(s.colonyFilter, s.rng) {
+	for _, col := range allColonies(s.colonyFilter) {
 		pollenNeedMyColony := 0.0 // [g]
 		myLarvae := s.larvae[col]
-		shuffle(s.rng, myLarvae)
 		for _, e := range myLarvae {
 			b := s.beeMap.Get(e)
 			sp := s.speciesMap.Get(b.Species)

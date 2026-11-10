@@ -2,7 +2,6 @@ package sys
 
 import (
 	"maps"
-	"math/rand/v2"
 	"slices"
 	"testing"
 
@@ -12,7 +11,6 @@ import (
 	"gobees/input"
 
 	"github.com/mlange-42/ark-tools/app"
-	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
 )
 
@@ -133,7 +131,7 @@ func TestCropRotation(t *testing.T) {
 		t.Errorf("allPatchesInRangeList must keep the dead foodsource")
 	}
 	// reads the dead foodsources: a panic, as NetLogo stops with a runtime error
-	founder := newColonyFounder(w, rand.New(ecs.GetResource[resource.Rand](w)))
+	founder := newColonyFounder(w)
 	expectPanic(t, "flowersInRange after a crop rotation", func() { founder.flowersInRange(col) })
 
 	// nest sites for B_terrestris: Scrub and Garden are nest habitats

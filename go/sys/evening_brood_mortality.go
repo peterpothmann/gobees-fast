@@ -1,14 +1,11 @@
 package sys
 
 import (
-	"math/rand/v2"
-
 	"gobees/comp"
 	"gobees/enum/caste"
 	"gobees/enum/stage"
 	"gobees/globals"
 
-	"github.com/mlange-42/ark-tools/resource"
 	"github.com/mlange-42/ark/ecs"
 )
 
@@ -17,7 +14,6 @@ import (
 //
 // NetLogo: MortalityBroodProc.
 type broodMortality struct {
-	rng   *rand.Rand
 	ticks *globals.Ticks
 	death beeDeath
 
@@ -26,11 +22,10 @@ type broodMortality struct {
 	colonyMap  *ecs.Map1[comp.Colony]
 	speciesMap *speciesTable
 
-	bees []ecs.Entity // buffer of askAllBees
+	bees []ecs.Entity // buffer of allBees
 }
 
 func (s *broodMortality) Initialize(w *ecs.World) {
-	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
 	s.ticks = ecs.GetResource[globals.Ticks](w)
 	s.death = newBeeDeath(w)
 
@@ -42,10 +37,10 @@ func (s *broodMortality) Initialize(w *ecs.World) {
 
 func (s *broodMortality) Update(w *ecs.World) {
 	ticks := s.ticks.Ticks
-	// in this order for each bee. ORDER of the bees: irrelevant, each bee changes only itself. Shuffled, as NetLogo
-	// asks the bees in random order.
+	// in this order for each bee. ORDER of the bees: irrelevant, each bee changes only itself and draws no random
+	// number. Not shuffled (NetLogo: random order).
 	// die ends the bee's turn: continue after it.
-	s.bees = askAllBees(s.bees, s.beeFilter, s.rng)
+	s.bees = allBees(s.bees, s.beeFilter)
 	for _, e := range s.bees {
 		b, dev := s.beeMap.Get(e)
 		sp := s.speciesMap.Get(b.Species)
