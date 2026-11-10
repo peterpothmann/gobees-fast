@@ -2,6 +2,7 @@ package sys
 
 import (
 	"math"
+	"math/rand/v2"
 	"testing"
 
 	"gobees/comp"
@@ -125,6 +126,23 @@ func TestHandlingTime(t *testing.T) {
 		if got := f.handlingTime(bee, p, tc.pollen); math.Abs(got-tc.want) > 1e-6 {
 			t.Errorf("%s: %v s, want %v", tc.name, got, tc.want)
 		}
+	}
+}
+
+func TestPowMinus04(t *testing.T) {
+	// bit for bit equal to math.Pow: the base of handlingTime lies in [0.001, 1.41], checked far beyond that
+	rng := rand.New(rand.NewPCG(1, 2))
+	check := func(x float64) {
+		if got, want := powMinus04(x), math.Pow(x, -0.4); math.Float64bits(got) != math.Float64bits(want) {
+			t.Fatalf("powMinus04(%v) = %v, math.Pow = %v", x, got, want)
+		}
+	}
+	for _, x := range []float64{0.001, 0.5, 1, 1.41, math.SmallestNonzeroFloat64, math.MaxFloat64} {
+		check(x)
+	}
+	for range 1_000_000 {
+		check(0.001 + 1.409*rng.Float64())
+		check(math.Exp(1400 * (rng.Float64() - 0.5))) // about 1e-304 to 1e304
 	}
 }
 

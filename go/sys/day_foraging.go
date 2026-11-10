@@ -253,7 +253,7 @@ func (f *forager) handlingTime(e ecs.Entity, myPatch ecs.Entity, pollenPatch boo
 		if base < 0.001 {
 			base = 0.001
 		}
-		den := math.Pow(base, -0.4) - float64(0.3*accessTime)
+		den := powMinus04(base) - float64(0.3*accessTime)
 		denominator := log10(num/den + 1)
 		ingestionTime := numerator / denominator // Ti [s]
 
@@ -288,7 +288,17 @@ func (f *forager) handlingTime(e ecs.Entity, myPatch ecs.Entity, pollenPatch boo
 
 // log10 is NetLogo's "log x 10": ln x / ln 10 (math.Log10 can differ in the last digits).
 func log10(x float64) float64 {
-	return math.Log(x) / math.Log(10)
+	return math.Log(x) / ln10
+}
+
+// ln10 is math.Log(10), computed once: the compiler does not fold math.Log of a constant.
+var ln10 = math.Log(10)
+
+// powMinus04 is math.Pow(x, -0.4) bit for bit for 0 < x < +Inf, without the special cases and the integer part
+// of math.Pow. For a power y with 0 < |y| <= 0.5, math.Pow computes Exp(|y|·Log x) and takes 1/· for y < 0.
+// TestPowMinus04 checks the equality, also for a new Go version.
+func powMinus04(x float64) float64 {
+	return 1 / math.Exp(0.4*math.Log(x))
 }
 
 // bestLayer returns the best layer for the bee e among the layers of the flower patch of
