@@ -272,11 +272,11 @@ func TestDieRemovesFromActiveBees(t *testing.T) {
 	ew := newEmergenceWorld(t, 6)
 	a := ew.addQueen(0, 5, 700)
 	b := ew.addQueen(0, 1, 700)
-	ew.active.List = []ecs.Entity{a, b}
+	ew.active.Set([]ecs.Entity{a, b}, func(ecs.Entity) float64 { return 0 })
 	ew.sys.death.die(ew.w, a, "test")
 	// TotalBeesEverDied + number, removed from the activity queue and from the world
-	if ew.tally.beesDied != 5 || len(ew.active.List) != 1 || ew.active.List[0] != b || ew.w.Alive(a) {
-		t.Errorf("%v bees died, queue %v, alive %v", ew.tally.beesDied, ew.active.List, ew.w.Alive(a))
+	if ew.tally.beesDied != 5 || ew.active.Len() != 1 || ew.active.Entities()[0] != b || ew.w.Alive(a) {
+		t.Errorf("%v bees died, queue %v, alive %v", ew.tally.beesDied, ew.active.Entities(), ew.w.Alive(a))
 	}
 }
 

@@ -149,7 +149,7 @@ func (o *DailyOutput) update() {
 			}
 		}
 	}
-	d.TotalActiveBees = float64(len(o.active.List))
+	d.TotalActiveBees = float64(o.active.Len())
 	d.MeanWorkerWeight_mg, d.MeanQueenWeight_mg, d.MeanAdultWeight_mg = 0, 0, 0
 	if workers > 0 {
 		d.MeanWorkerWeight_mg = workerWeight / float64(workers)

@@ -109,7 +109,7 @@ func (s *activities) Finalize(w *ecs.World) {}
 
 // activeAdults returns the number of active adult workers and queens.
 func (s *activities) activeAdults() int {
-	n := len(s.active.List)
+	n := s.active.Len()
 	if s.CheckActiveCount {
 		count := 0
 		query := s.beeFilter.Query()
@@ -133,46 +133,15 @@ func (s *activities) colonies() int {
 	return n
 }
 
-// nextActiveBee puts the first bee of the queue back at its sorted position and returns the new first bee.
-// The binary search follows NetLogo line by line, including the tie rule, so bees with equal times keep
-// NetLogo's order.
+// nextActiveBee puts the first bee of the queue back with her personal time now and returns the new first bee, in
+// NetLogo's order (globals.ActiveBees.Next). NetLogo: NextActiveBeeREP.
 func (s *activities) nextActiveBee() ecs.Entity {
-	time := func(e ecs.Entity) float64 {
-		return s.beeMap.Get(e).PersonalTime
-	}
-	list := s.active.List
-	activeBee := list[0]
-	activeBeeTime := time(activeBee) // [s]
-	minPosition := 0.0
-	maxPosition := float64(len(list) - 1)
-	currentPosition := round(maxPosition / 2)
-	for maxPosition-minPosition > 1 {
-		if time(list[int(currentPosition)]) > activeBeeTime {
-			maxPosition = currentPosition
-			currentPosition = round((currentPosition + minPosition) / 2)
-		} else {
-			minPosition = currentPosition
-			currentPosition = round((maxPosition + currentPosition) / 2)
-		}
-	}
-	beginningList := list[:int(currentPosition)]
-	endList := list[int(currentPosition):]
-	if len(list) > 1 {
-		beginningList = beginningList[1:]
-	} else {
-		endList = endList[1:]
-	}
-	// in place, without a new list: beginningList moves one position to the front into the place
-	// of activeBee, endList stays where it is. Same order as NetLogo's sentence.
-	// SIMPLIFY: a priority queue.
-	if len(endList) == 1 && activeBeeTime > time(endList[0]) {
-		copy(list, list[1:])
-		list[len(list)-1] = activeBee
-	} else {
-		copy(list, beginningList)
-		list[len(beginningList)] = activeBee
-	}
-	return list[0]
+	return s.active.Next(s.personalTime)
+}
+
+// personalTime returns the personal time of the bee e [s].
+func (s *activities) personalTime(e ecs.Entity) float64 {
+	return s.beeMap.Get(e).PersonalTime
 }
 
 // act lets the bee e choose one task and do it.

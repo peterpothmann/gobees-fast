@@ -66,7 +66,7 @@ func (s *wakeUp) Update(w *ecs.World) {
 		}
 		return 0
 	})
-	s.active.List = list
+	s.active.Set(list, func(e ecs.Entity) float64 { return s.beeMap.Get(e).PersonalTime })
 }
 
 func (s *wakeUp) Finalize(w *ecs.World) {}

@@ -67,7 +67,7 @@ func TestDailyOutputTotals(t *testing.T) {
 	} {
 		addBee(w, b)
 	}
-	ecs.GetResource[globals.ActiveBees](w).List = make([]ecs.Entity, 3)
+	ecs.GetResource[globals.ActiveBees](w).Set(make([]ecs.Entity, 3), func(ecs.Entity) float64 { return 0 })
 
 	o := &DailyOutput{}
 	o.Initialize(w)
