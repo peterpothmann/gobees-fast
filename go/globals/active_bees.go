@@ -11,14 +11,13 @@ import (
 // NetLogo: ActiveBeesSortedList, a list sorted by personal time, and NextActiveBeeREP.
 //
 // The queue is a binary heap ordered by (Time, Seq). Seq numbers the insertions: bees with the same time stay in the
-// order in which they came into the queue, as in NetLogo's list. Next keeps the one exception of NetLogo (a tie with
-// the last bee of the list). The order of the queue is therefore exactly the order of NetLogo's list.
+// order in which they came into the queue. NetLogo's list has one exception (a tie with the last bee of the list,
+// see Next), which the queue leaves out (docs/changes.md).
 type ActiveBees struct {
 	// Queue is the binary heap: Queue[0] is the first bee, the rest is not sorted. Entities gives the sorted order.
 	Queue []QueuedBee
 
-	seq  uint64    // the next sequence number
-	last QueuedBee // the last bee of NetLogo's list: the largest (Time, Seq). Valid while Queue is not empty.
+	seq uint64 // the last sequence number given
 }
 
 // QueuedBee is a bee in the activity queue with the personal time it had when it was put in.
@@ -42,9 +41,6 @@ func (q *ActiveBees) Set(list []ecs.Entity, time func(ecs.Entity) float64) {
 		q.Queue = append(q.Queue, QueuedBee{e, time(e), q.next()})
 	}
 	// a sorted list is a valid heap
-	if len(q.Queue) > 0 {
-		q.last = q.Queue[len(q.Queue)-1]
-	}
 }
 
 // Len returns the number of bees in the queue.
@@ -55,32 +51,11 @@ func (q *ActiveBees) Len() int {
 // Next puts the first bee back into the queue with its personal time now (time) and returns the new first bee. The
 // queue must not be empty.
 //
-// NetLogo's binary search puts the bee behind all bees with a time up to hers, with one exception: if her time
-// equals the time of the last bee of the list, she goes before that bee. Next does the same. NetLogo:
-// NextActiveBeeREP.
+// The bee goes behind all bees with a time up to hers. NetLogo's binary search does the same, with one exception: if
+// her time equals the time of the last bee of the list, she goes before that bee. NetLogo: NextActiveBeeREP.
 func (q *ActiveBees) Next(time func(ecs.Entity) float64) ecs.Entity {
 	head := &q.Queue[0]
-	t := time(head.Bee)
-	if len(q.Queue) == 1 {
-		head.Time = t
-		q.last = *head
-		return head.Bee
-	}
-	// with two bees or more the first one is not the last one: the keys differ
-	switch {
-	case t == q.last.Time:
-		// before the last bee: she takes its sequence number, the last bee gets a new one and stays last
-		i := q.indexOf(q.last.Bee)
-		head.Time, head.Seq = t, q.last.Seq
-		q.Queue[i].Seq = q.next()
-		q.last = q.Queue[i]
-		q.down(i) // the key of the last bee grew
-	case t > q.last.Time:
-		head.Time, head.Seq = t, q.next()
-		q.last = *head
-	default:
-		head.Time, head.Seq = t, q.next()
-	}
+	head.Time, head.Seq = time(head.Bee), q.next()
 	q.down(0)
 	return q.Queue[0].Bee
 }
@@ -97,14 +72,6 @@ func (q *ActiveBees) Remove(e ecs.Entity) {
 	if i < n {
 		q.down(i)
 		q.up(i)
-	}
-	if e == q.last.Bee && n > 0 {
-		q.last = q.Queue[0]
-		for _, b := range q.Queue[1:] {
-			if q.last.before(b) {
-				q.last = b
-			}
-		}
 	}
 }
 

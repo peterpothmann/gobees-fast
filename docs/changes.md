@@ -52,6 +52,26 @@ Kept, because the order matters:
 
 Replaced by an equal draw: the search of a forager. NetLogo draws once per flower patch in random order and takes the last one detected, that is one of the detected patches, each with the same probability. gobees-fast draws once per patch in list order and lets the k-th detected patch replace the choice with probability 1/k (reservoir sampling).
 
+### Order of the activity queue
+
+Changed in [#PR](https://github.com/peterpothmann/gobees-fast/pull/PR).
+
+During the day the bees act in the order of their personal time. After her action a bee goes back into the queue with her new time (NetLogo: `NextActiveBeeREP`). NetLogo puts her behind all bees with a time up to hers, with one exception that comes from the rounding of its binary search: if her time equals the time of the last bee of the queue, she goes before that bee. gobees-fast puts her behind all bees with the same time in every case.
+
+Why: the exception has no meaning in the model. Keeping it needed the last bee of the queue at all times, a search for it on every tie, and a new search after the last bee died.
+
+Effect: the order changes only among bees with the same time at the end of the queue. In the example farm (3 seeds × 10 runs × 730 days) the exception occurs in 22,395 of 16,359,703 re-insertions (0.14 %), about 750 times per run. The bee that acts first can, for example, empty a foodsource first, so single trips change. The statistical comparison of the pull request checks that the distribution of the results stays the same.
+
+### Survival of a foraging trip
+
+Changed in [#PR](https://github.com/peterpothmann/gobees-fast/pull/PR).
+
+A forager survives a trip of t seconds with the probability s^t, with s = 1 − `MortalityForager_per_s` · `ForagingMortalityFactor` (NetLogo: `Foraging_costs&choiceProc`). gobees-fast computes exp(t · ln s), with ln s computed once per run, instead of the power.
+
+Why: the power took about 3 % of the run time (profile of the example farm). The exponential with the stored logarithm skips the splitting into integer and fraction and the repeated squaring of the power.
+
+Effect: both values agree up to the last bits. A trip ends with death if a uniform random number is below 1 − s^t, so a different last bit changes the outcome only if the random number falls between the two values. Counted on the example farm and three scenarios (5,887,293 trips): the last bits differ in 99.97 % of the trips, the outcome in none. The output of the 5 scenarios (example farm, step7_crop, step8_species, step7_badgers, step8_genetics, seed 3, 3 runs, 730 days) is byte for byte the same as with the power. The change is listed here because the equality is not guaranteed for every input.
+
 ## Fixes
 
 Fixes of edge cases that change no result of the scenarios, e.g. an unknown `ForagingMortalityModel` is an error instead of a warning: the lines "gobees-fast" in [trans/netlogo-findings.md](../trans/netlogo-findings.md). Fixes that change the results follow in phase 3, each with its measured effect here.
