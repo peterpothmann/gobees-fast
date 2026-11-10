@@ -72,6 +72,16 @@ Why: the power took about 3 % of the run time (profile of the example farm). The
 
 Effect: both values agree up to the last bits. A trip ends with death if a uniform random number is below 1 − s^t, so a different last bit changes the outcome only if the random number falls between the two values. Counted on the example farm and three scenarios (5,887,293 trips): the last bits differ in 99.97 % of the trips, the outcome in none. The output of the 5 scenarios (example farm, step7_crop, step8_species, step7_badgers, step8_genetics, seed 3, 3 runs, 730 days) is byte for byte the same as with the power. The change is listed here because the equality is not guaranteed for every input.
 
+### Incubation per colony
+
+Changed in [#PR](https://github.com/peterpothmann/gobees-fast/pull/PR).
+
+A nurse heats the brood of her colony for 48 minutes. Every egg, larva and pupa of the colony gets the same share of her heat, the heat divided by the brood of the morning counts (NetLogo: `BroodIncubationProc`). NetLogo adds the share to each brood agent at every incubation. gobees-fast adds the shares of the day to one sum per colony and adds that sum to each brood agent once, at the end of the day. An egg laid during the day gets only the shares of the incubations after its laying.
+
+Why: the loop over all brood agents at every incubation took about 6 % of the run time (profile of the example farm). The received heat is read only in the evening, by the brood mortality and the development.
+
+Effect: one sum per day rounds differently from one addition per incubation. Counted on the example farm and two scenarios (10 runs × 730 days each, 758,523 brood agents and days): the received heat differs in the last bits in 81 % to 83 % of the cases, by at most 7.7 · 10⁻¹⁵ of its value. The brood dies or develops when the received heat passes a threshold, so a different last bit changes the outcome only if the heat lies within that distance of a threshold. The output of the 5 scenarios (example farm, step7_crop, step8_species, step7_badgers, step8_genetics, seed 3, 3 runs, 730 days) and of 40 runs of the example farm (seed 1, 730 days) is byte for byte the same as before. The change is listed here because the equality is not guaranteed for every input.
+
 ## Fixes
 
 Fixes of edge cases that change no result of the scenarios, e.g. an unknown `ForagingMortalityModel` is an error instead of a warning: the lines "gobees-fast" in [trans/netlogo-findings.md](../trans/netlogo-findings.md). Fixes that change the results follow in phase 3, each with its measured effect here.

@@ -305,7 +305,8 @@ func TestIncubateBrood(t *testing.T) {
 	queen := aw.adult(col, caste.Queen, 1, 800, sitQueenSocialPhase)
 	aw.loop.broodOf = beesByColony(aw.loop.broodOf, aw.loop.beeFilter, func(b *comp.Bee) bool { return b.Stage != stage.Adult })
 
-	aw.loop.incubateBrood(aw.w, queen)
+	aw.loop.incubateBrood(queen)
+	aw.loop.giveHeat(aw.w)
 
 	if _, _, _, _, d := aw.bee(eggs); !almostEqual(d.IncubationReceived, 0.1+heat/12) {
 		t.Errorf("egg incubation %v kJ, want %v", d.IncubationReceived, 0.1+heat/12)
@@ -322,6 +323,43 @@ func TestIncubateBrood(t *testing.T) {
 	}
 	if b, _, _, _, _ := aw.bee(queen); b.PersonalTime != 2880 {
 		t.Errorf("PersonalTime %v, want 2880", b.PersonalTime)
+	}
+}
+
+func TestIncubationAfterLaying(t *testing.T) {
+	// worked example: two incubations by a queen of 800 mg with 12 eggs in the morning counts, a batch of eggs is
+	// laid between them. The old eggs get both, the new eggs only the second: 2 * heat / 12 and heat / 12.
+	heat := 2880 * 0.000000217013888 * 800.0
+	aw := newActivityWorld(t, 1)
+	col := aw.addColony(func(c *comp.Colony, s *comp.ColonyStores, n *comp.ColonyCounts) {
+		s.Pollen, s.Energy = 1000, 1000
+		n.Eggs = 12
+	})
+	old := aw.addBrood(col, stage.Egg, caste.Undefined, 12, 2, 1.5, 0.1)
+	queen := aw.adult(col, caste.Queen, 1, 800, sitQueenSocialPhase)
+	_, g, _, _, _ := aw.bee(queen)
+	g.Alleles, g.Spermatheca = []float64{10, 20}, []float64{30}
+	aw.loop.broodOf = beesByColony(aw.loop.broodOf, aw.loop.beeFilter, func(b *comp.Bee) bool { return b.Stage != stage.Adult })
+	clear(aw.loop.heatOf)
+
+	aw.loop.incubateBrood(queen)
+	aw.loop.layEggs(queen)
+	aw.loop.incubateBrood(queen)
+	aw.loop.giveHeat(aw.w)
+
+	eggs := aw.eggsOf(col)
+	if len(eggs) != 2 {
+		t.Fatalf("%d egg cohorts, want 2 (the old one and one new batch)", len(eggs))
+	}
+	for _, e := range eggs {
+		_, _, _, _, d := aw.bee(e)
+		want := heat / 12
+		if e == old {
+			want = 0.1 + 2*heat/12
+		}
+		if !almostEqual(d.IncubationReceived, want) {
+			t.Errorf("eggs %v: %v kJ, want %v", e, d.IncubationReceived, want)
+		}
 	}
 }
 
