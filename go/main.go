@@ -145,7 +145,8 @@ func (c *cli) run(w io.Writer) error {
 			continue
 		}
 		// before the runs, so that a run that fails can be repeated
-		prov := newProvenance(e.files, e.config, &e.first, e.repetitions, threads, e.output, e.columns, started)
+		prov := newProvenance(e.files, e.config, &e.first, e.repetitions, threads, e.output, e.columns, started,
+			e.sums)
 		if err := prov.write(e.dir); err != nil {
 			return err
 		}

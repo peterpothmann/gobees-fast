@@ -36,6 +36,9 @@ type Run struct {
 	Output string `yaml:"output,omitempty"`
 	// Landscapes are the copies of the landscape files and their tables next to the provenance.
 	Landscapes []LandscapeCopy `yaml:"landscapes,omitempty"`
+	// Sites are the sites of the variation sites with the SHA-256 of their landscape files. The provenance does not
+	// copy them: its key sites lists the site files, relative to its folder.
+	Sites []SiteRecord `yaml:"sites,omitempty"`
 }
 
 // Version is the build of gobees, from runtime/debug.ReadBuildInfo. The keys of the version control system are
@@ -55,6 +58,19 @@ type LandscapeCopy struct {
 	File   string `yaml:"file"`   // name of the copy, in the keys landscape and cropRotation of the provenance or in a landscape copy
 	Source string `yaml:"source"` // name of the landscape file in the run file, of a table relative to the folder of the run file
 	SHA256 string `yaml:"sha256"` // SHA-256 of the source file, hexadecimal
+}
+
+// SiteRecord is a site of a run with the SHA-256 of its landscape files.
+type SiteRecord struct {
+	Site       string         `yaml:"site"`       // name of the site, the value of the column site
+	File       string         `yaml:"file"`       // the site file, as in the key sites of the provenance
+	Landscapes []LandscapeSum `yaml:"landscapes"` // the landscape files of the site: the start, then the crop rotation
+}
+
+// LandscapeSum is a landscape file of a run that the provenance does not copy, with its SHA-256.
+type LandscapeSum struct {
+	Source string `yaml:"source"` // name of the landscape file in the run file of the run (relative to its folder)
+	SHA256 string `yaml:"sha256"` // SHA-256 of the file at the start of the run, hexadecimal
 }
 
 // checkRun checks the section run of a run file: it must be there, with seed, repetitions and threads of 1 or more.

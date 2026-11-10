@@ -52,7 +52,7 @@ A run file has the sections below. All keys are in lowerCamelCase, values are in
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | `name`               | name of the run file, the folder of its [output](#output). Needed, only letters, digits, `-` and `_`. The converter writes the name of its flag `--name`. | |
 | `run`                | `seed`, `days`, `repetitions` and `threads` (the flags `-s`, `--days`, `--repetitions` and `--threads` override them). Needed: `seed`, `repetitions` and `threads`, each 1 or more. The converter writes seed 1, 365 days, 1 repetition and 1 thread. In a [provenance](#provenance) also the record of the run. | `RAND_SEED`                                                                     |
-| `variations`         | optional: keys and their values, every combination runs (an[experiment](#experiments))                                                                                                                                                                                           |                                                                                 |
+| `variations`         | optional: keys and their values, or the [sites](#sites), every combination runs (an [experiment](#experiments))                                                                                                                                                                  |                                                                                 |
 | `parameters`         | the model parameters                                                                                                                                                                                                                                                             | the columns of the parameter file                                               |
 | `output`             | output options (`keepDeadColonies`, `columns`), change no model value                                                                                                                                                                                                            | `KeepDeadColonies?`                                                             |
 | `constants`          | the values that NetLogo hard-codes, every key needed (see below)                                                                                                                                                                                                                 | `ParametersProc` and local values of the procedures                             |
@@ -63,6 +63,17 @@ A run file has the sections below. All keys are in lowerCamelCase, values are in
 | `flowers`            | flower species, without the key no flower values                                                                                                                                                                                                                                 | rows of the`FlowerspeciesFile` (without `proteinPollenProp`)                    |
 | `landscape`          | landscape file of the start                                                                                                                                                                                                                                                      | foodsources file of`MyMap`                                                      |
 | `cropRotation`       | landscape files of the crop rotation (fewer than 2: none)                                                                                                                                                                                                                        | `CropRotationListAsString`                                                      |
+
+The crop rotation changes the landscape in the morning of day 365 of each year (as NetLogo, [finding 50](../trans/netlogo-findings.md#finding-50)): on day 365 of year 1 to the second file of `cropRotation`, on day 365 of year 2 to the third, and so on. The first file comes again only after one full cycle. The first year runs on `landscape`. So the cycle is right only if `landscape` is the first file of `cropRotation`:
+
+| `landscape: a`, `cropRotation: [a, b, c]` | landscape |
+| --- | --- |
+| year 1, days 1 to 364 | `a` |
+| from day 365 of year 1 | `b` |
+| from day 365 of year 2 | `c` |
+| from day 365 of year 3 | `a`, then again `b`, `c`, ... |
+
+With `landscape: x` and the same list, the run has `x, b, c, a, b, c, ...`: `x` never comes back. gobees-fast does not check this.
 
 A landscape file (YAML) holds the names of its tables (CSV), relative to the folder of the landscape file. All files are read at the start (package `input`), also the landscapes of a crop rotation. An unknown key or column is an error. A missing key keeps its zero value, except in `constants`. Unlike NetLogo, a missing file is an error at the start, also a landscape of the crop rotation (NetLogo: on its day 365).
 
@@ -187,8 +198,49 @@ This gives 3 × 3 combinations × 10 repetitions = 90 runs. Rules:
 - `values` lists every value. There are no ranges, so every value of an experiment is written out.
 - Every combination is the run file with these values, read and checked like a run file: an unknown key, a fraction in a whole number and so on are errors at the start, naming the combination. After the check, gobees-fast keeps only the values of each combination. A combination is read again when its first run starts, and dropped when its last run ends. So the memory depends on `--threads`, not on the number of combinations.
 - Every combination runs with the same seeds (`seed` to `seed + repetitions - 1`), so combinations differ only in the varied values, not in the random numbers.
-- `name`, the section `run` (seed, days, repetitions, threads), `output.columns`, `landscape` and `cropRotation` cannot vary. Other landscapes are other run files (see below).
+- `name`, the section `run` (seed, days, repetitions, threads) and `output.columns` cannot vary. `landscape` and `cropRotation` cannot vary as keys: a landscape and its crop rotation vary together, as [sites](#sites).
 - The daily output is one file: the columns `run`, `seed`, then one column per varied key (named by the key, holding the value), then `t` and the columns. `run` counts from 1 over all combinations, so each run has its own number: in the example above runs 1 to 10 are the first combination, 11 to 20 the second. The first variation changes slowest. The provenance holds the variations, so it repeats the whole experiment.
+
+### Sites
+
+To run the same parameters on many landscapes, each with its own crop rotation, give each landscape a folder, a site, and list the sites in the run file. The run file then stays as short as with one landscape.
+
+```
+experiment.yaml
+sites/
+  L0001/
+    site.yaml
+    start.yaml
+    year2.yaml
+  L0002/
+    site.yaml
+    start.yaml
+```
+
+```yaml
+# sites/L0001/site.yaml, paths relative to the folder of the site file
+landscape: start.yaml
+cropRotation: [start.yaml, year2.yaml]
+```
+
+```yaml
+# experiment.yaml
+name: many_landscapes
+variations:
+  - sites: sites/*/site.yaml
+  - key: parameters.badgers
+    values: [0, 2]
+parameters:
+  ...
+```
+
+- A site file sets `landscape` (needed) and `cropRotation` (optional, fewer than 2 files: no crop rotation), as the keys of a run file, relative to its own folder. Any other key is an error. The files of `cropRotation` run in the order of the list, and `landscape` should be its first file (see the rule of the [crop rotation](#run-files)).
+- `sites` is a pattern (`*` matches any part of a name, `?` one character, as [path/filepath.Match](https://pkg.go.dev/path/filepath#Match)) or a list of patterns and files, relative to the folder of the run file. The sites run in the order of the list, the files of one pattern sorted by name. A pattern without a file and a file matched twice are errors.
+- The name of a site is the name of its folder (`L0001`): letters, digits, `-` and `_`, each name once. The daily output holds it in the column `site`.
+- The run file has no `landscape` and no `cropRotation` of its own. One `sites` per run file. It combines with the other variations like a key: the example above gives 2 sites × 2 values = 4 combinations, each run `run.repetitions` times.
+- All site files are read at the start, and every combination is checked with the landscape files of its site, so an error in a site stops the call before the first run. A combination reads its landscape files again when its first run starts. A landscape file that changed in between is an error.
+
+How the landscapes and crop rotations of the sites are made is up to you (a script, a GIS, the [converter](#netlogo-input-files) per map): gobees-fast reads only the site files and the landscape files.
 
 Several run files run together with `-c a.yaml -c b.yaml`: their runs share one pool of `--threads` threads (the run files must ask for the same `threads`, or the flag sets it). Each run file writes its own [output](#output) into the folder of its key `name`: with the names `farm` and `sussex`, `-o out` gives `out/farm/` and `out/sussex/`. Two run files with the same name are an error, also when only the case differs. The flags `-s`, `--days`, `--repetitions` and `--columns` apply to all run files.
 
@@ -200,7 +252,7 @@ With `-o DIR`, gobees-fast writes the output of each run file into the folder `D
 | ------------------ | ----------------------------------------------------------------------------------------------------------- |
 | `daily.csv`        | the [daily output](#daily-output): all runs of the run file, one row per run and day                        |
 | `provenance.yaml`  | the [provenance](#provenance): the run file as run, it repeats the run                                      |
-| landscape files    | copies of the landscape files of the run and their tables, with their names (see [Provenance](#provenance)) |
+| landscape files    | copies of the landscape files of the run and their tables, with their names (see [Provenance](#provenance)). Not for [sites](#sites). |
 
 The folder holds everything needed to repeat the run and can be moved or archived as a whole.
 
@@ -222,5 +274,10 @@ With an output (`-o DIR`), gobees-fast writes the provenance `provenance.yaml` i
 | `config`                 | the run file given with`-c`, or `built-in example farm`                                                                                                                                                   |
 | `output`                 | the daily output file. Its columns are the key`columns` of the section `output` of the provenance, always written in full                                                                                 |
 | `landscapes`             | per landscape file and table: the copy (`file`), the name in the run file or, for a table, relative to the folder of the run file (`source`) and the SHA-256 of the source                               |
+| `sites`                  | with [sites](#sites): per site its name (`site`), its site file (`file`) and per landscape file the name in the run file (`source`) and the SHA-256 at the start                                          |
 
-The landscape files and their tables are copied into the output folder and keep their names (`_SYSTEM_Example_Farm_Foodsources.yaml`). A second file of the same name from another folder gets `_2` in front of the extension, as does a file named `daily.csv` or `provenance.yaml`. A table of several landscape files is copied once. The tables are copied byte for byte. A landscape file is copied byte for byte if its tables keep their names, else it is written again with the names of the copies (its SHA-256 is the one of the source). The keys `landscape` and `cropRotation` of the provenance name the copies. Only `seed`, `days`, `repetitions` and `threads` of the section `run` are read, the other keys are a record.
+The landscape files and their tables are copied into the output folder and keep their names (`_SYSTEM_Example_Farm_Foodsources.yaml`). A second file of the same name from another folder gets `_2` in front of the extension, as does a file named `daily.csv` or `provenance.yaml`. A table of several landscape files is copied once. The tables are copied byte for byte. A landscape file is copied byte for byte if its tables keep their names, else it is written again with the names of the copies (its SHA-256 is the one of the source). The keys `landscape` and `cropRotation` of the provenance name the copies.
+
+With sites, the provenance copies no landscape files: 1000 sites would copy 1000 landscapes into every output. Its key `sites` lists the site files that ran, relative to the output folder, instead of the pattern of the run file. So it repeats the same sites, also when the folder of the sites gets more files later, as long as the sites stay in their place. The SHA-256 in `run.sites` shows whether a landscape file changed since the run.
+
+Only `seed`, `days`, `repetitions` and `threads` of the section `run` are read, the other keys are a record.

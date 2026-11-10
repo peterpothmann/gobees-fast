@@ -242,7 +242,7 @@ field `Years_s` → `Years`, `Input.Weather` → `Input.ForagingPeriod`).
 | --- | --- | --- | --- | --- | --- |
 |  |  | `Name` | `name` |  | needed: name of the run file, the folder of its output (`-o DIR`: `DIR/<name>`), letters, digits, `-` and `_`, written by the converter (flag `--name`) |
 | `Seed` (flag `-s`) | `RAND_SEED` | `Run` (`input.Run`) | `run` |  | needed: `seed` (of the first repetition), `repetitions` (runs of each combination), `threads`, each 1 or more, optional `days` [d], written by the converter (1, 365, 1, 1), in a provenance also the record of the run (docs/usage.md, "Provenance") |
-|  | BehaviorSpace: the varied values of an experiment | `Variations` (`input.Variation`) | `variations` |  | optional: `key` (path, parts separated by dots, a number selects a list item) and `values`, every combination runs (README, "Experiments") |
+|  | BehaviorSpace: the varied values of an experiment | `Variations` (`input.Variation`) | `variations` |  | optional: `key` (path, parts separated by dots, a number selects a list item) and `values`, or `sites` (site files that set `landscape` and `cropRotation`), every combination runs (docs/usage.md, "Experiments") |
 | `Parameters` | the columns of the parameter file | `Parameters` | `parameters` |  | the model parameters |
 | `Output` | `KeepDeadColonies?` | `Output` | `output` |  | output options: `keepDeadColonies` and `columns` (names of the columns of the daily output, `obs.AllColumns`, no NetLogo counterpart) |
 | `InitialQueens` | `BeeSpeciesInitialQueensListAsString` | `InitialQueens` | `initialQueens` |  | species (`species`) and number of initial queens (`queens`) |

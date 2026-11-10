@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -28,6 +29,7 @@ type Files struct {
 	Landscapes map[string]Landscape        // the landscape files by their name in Config
 	Tables     map[string][]LandscapeTable // the tables of each landscape file, by its name in Config
 	Raw        map[string][]byte           // the bytes of each landscape file (by its name in Config) and table (by LandscapeTable.Name)
+	Sites      []Site                      // the sites of the variation sites, in the order of its patterns
 
 	source []byte                                   // the run file as read
 	open   func(name string) (io.ReadCloser, error) // opens a file relative to the folder of the run file
@@ -51,12 +53,26 @@ func Read(path string) (Files, error) {
 		return Files{}, err
 	}
 	dir := filepath.Dir(path)
-	return readAll(path, func(name string) (io.ReadCloser, error) {
+	open := func(name string) (io.ReadCloser, error) {
 		if !filepath.IsAbs(name) {
 			name = filepath.Join(dir, name)
 		}
 		return os.Open(name)
-	})
+	}
+	// the matches of a relative pattern are relative to the folder of the run file, as the paths in the run file
+	glob := func(pattern string) ([]string, error) {
+		if filepath.IsAbs(pattern) {
+			return filepath.Glob(pattern)
+		}
+		matches, err := filepath.Glob(filepath.Join(dir, pattern))
+		for i, m := range matches {
+			if matches[i], err = filepath.Rel(dir, m); err != nil {
+				return nil, err
+			}
+		}
+		return matches, err
+	}
+	return readAll(path, open, glob)
 }
 
 // ExampleFarm returns the parameters of the example farm, the run without a run file.
@@ -71,7 +87,7 @@ func ExampleFarm() params.Params {
 
 // ExampleFarmFiles returns the run file and the landscape file of the example farm, as read.
 func ExampleFarmFiles() Files {
-	f, err := readAll(ExampleFarmFile, openExampleFarm)
+	f, err := readAll(ExampleFarmFile, openExampleFarm, globExampleFarm)
 	if err != nil {
 		panic(err) // the embedded files are checked by the tests
 	}
@@ -89,9 +105,19 @@ func openExampleFarm(name string) (io.ReadCloser, error) {
 	return exampleFarm.Open(path.Join("examplefarm", name))
 }
 
+func globExampleFarm(pattern string) ([]string, error) {
+	sub, err := fs.Sub(exampleFarm, "examplefarm")
+	if err != nil {
+		return nil, err
+	}
+	return fs.Glob(sub, pattern)
+}
+
 // readAll reads the run file name and the landscape files it names (the start and, with a crop rotation, every file
-// of the crop rotation, each once).
-func readAll(name string, open func(string) (io.ReadCloser, error)) (Files, error) {
+// of the crop rotation, each once) or, with sites, the site files that the patterns match (glob). The landscape files
+// of the sites are read by each combination.
+func readAll(name string, open func(string) (io.ReadCloser, error), glob func(string) ([]string, error)) (Files,
+	error) {
 	r, err := open(name)
 	if err != nil {
 		return Files{}, err
@@ -107,6 +133,9 @@ func readAll(name string, open func(string) (io.ReadCloser, error)) (Files, erro
 		if errors.As(err, &landscape) {
 			return f, err // names its file
 		}
+		return f, fmt.Errorf("%s: %w", name, err)
+	}
+	if f.Sites, err = resolveSites(f.Config.Variations, glob, open); err != nil {
 		return f, fmt.Errorf("%s: %w", name, err)
 	}
 	return f, nil

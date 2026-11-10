@@ -19,14 +19,15 @@ type experiment struct {
 	config      string // the run file of -c, "" for the built-in example farm
 	name        string // the key name of the run file, the folder of its output
 	files       input.Files
-	values      [][]string    // the values of the variations in each combination (input.Combination.Values)
-	first       params.Params // the parameters of the first combination, with the flags applied
-	repetitions int           // runs per combination
-	threads     int           // run.threads of the run file
-	columns     []string      // the columns of the daily output
-	dir         string        // the output folder, "" without output
-	output      string        // the daily output file in dir, "" without
-	results     []runResult   // the results of its runs, in the order of its jobs
+	values      [][]string        // the values of the variations in each combination (input.Combination.Values)
+	first       params.Params     // the parameters of the first combination, with the flags applied
+	sums        map[string]string // the SHA-256 of each landscape file at the start, by its name in the run file
+	repetitions int               // runs per combination
+	threads     int               // run.threads of the run file
+	columns     []string          // the columns of the daily output
+	dir         string            // the output folder, "" without output
+	output      string            // the daily output file in dir, "" without
+	results     []runResult       // the results of its runs, in the order of its jobs
 
 	cli *cli // the flags, which paramsOf applies to each combination
 }
@@ -35,7 +36,7 @@ type experiment struct {
 // flags applied, so that an error in any combination stops the call before the first run. It keeps the parameters of
 // the first combination only.
 func (c *cli) newExperiment(config string) (*experiment, error) {
-	e := &experiment{config: config, cli: c}
+	e := &experiment{config: config, cli: c, sums: map[string]string{}}
 	var err error
 	if config == "" {
 		e.files = input.ExampleFarmFiles()
@@ -55,6 +56,13 @@ func (c *cli) newExperiment(config string) (*experiment, error) {
 			e.first = p
 		}
 		e.values = append(e.values, combination.Values)
+		for name, raw := range combination.Files.Raw {
+			sum := sha256Hex(raw)
+			if old, ok := e.sums[name]; ok && old != sum {
+				return nil, fmt.Errorf("landscape file %s changed while gobees-fast read the combinations", name)
+			}
+			e.sums[name] = sum
+		}
 	}
 	// the name and the section run are checked by input.Build in paramsOf, and the variations cannot change them
 	e.name = e.files.Config.Name
@@ -74,7 +82,8 @@ func (c *cli) newExperiment(config string) (*experiment, error) {
 // combinations returns the number of combinations of the experiment.
 func (e *experiment) combinations() int { return len(e.values) }
 
-// params returns the parameters of the combination k with the flags applied. newExperiment has checked them.
+// params returns the parameters of the combination k with the flags applied. newExperiment has checked them. A
+// landscape file that changed since the start is an error: the run would not be the one of the provenance.
 func (e *experiment) params(k int) (params.Params, error) {
 	if k == 0 {
 		return e.first, nil
@@ -82,6 +91,12 @@ func (e *experiment) params(k int) (params.Params, error) {
 	combination, err := e.files.Combination(k)
 	if err != nil {
 		return params.Params{}, err
+	}
+	for name, raw := range combination.Files.Raw {
+		if sha256Hex(raw) != e.sums[name] {
+			return params.Params{}, fmt.Errorf("landscape file %s changed after the start: the provenance holds its "+
+				"SHA-256 at the start", name)
+		}
 	}
 	return e.cli.paramsOf(combination.Files)
 }
@@ -250,11 +265,11 @@ func (e *experiment) jobs(index int, several bool) []job {
 }
 
 // header returns the columns of the daily output of the experiment: run (from 1 over all combinations), seed, the keys
-// of the variations, t and the columns.
+// of the variations (site for the sites), t and the columns.
 func (e *experiment) header() []string {
 	h := []string{"run", "seed"}
 	for _, v := range e.files.Config.Variations {
-		h = append(h, v.Key)
+		h = append(h, v.Column())
 	}
 	h = append(h, "t")
 	return append(h, e.columns...)

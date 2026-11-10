@@ -71,6 +71,8 @@ variations:
     values: [0, 2, 4]
 ```
 
+To run the same parameters on many landscapes, each with its own crop rotation, give each landscape a folder with a site file and list the sites as a variation: `- sites: sites/*/site.yaml` ([docs/usage.md](docs/usage.md#sites)).
+
 Details on run files, the converter, experiments, the daily output and the provenance: [docs/usage.md](docs/usage.md). All keys with unit and NetLogo name: [docs/names.md](docs/names.md).
 
 ## Watching a run

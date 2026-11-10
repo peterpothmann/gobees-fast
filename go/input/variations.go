@@ -13,15 +13,26 @@ import (
 // variationsKey is the key of the section variations in a run file.
 const variationsKey = "variations"
 
-// Variation is one key of a run file and the values it takes in an experiment (section variations). The run file
-// with its variations is an experiment: every combination of the values (full factorial) runs run.repetitions times,
-// with the seeds of the section run (each combination the same seeds).
+// Variation is one key of a run file and the values it takes in an experiment (section variations), or a list of
+// sites. The run file with its variations is an experiment: every combination of the values (full factorial) runs
+// run.repetitions times, with the seeds of the section run (each combination the same seeds).
 type Variation struct {
 	// Key is the path of the key in the run file, its parts separated by dots, e.g. parameters.badgers or
 	// constants.foraging.maxForagingRange. A number selects an item of a list, e.g. initialQueens.0.queens.
-	Key string `yaml:"key"`
+	Key string `yaml:"key,omitempty"`
 	// Values are the values of the key, each written as in the run file (a number, a text, a list, ...).
-	Values []yaml.Node `yaml:"values,flow"`
+	Values []yaml.Node `yaml:"values,omitempty,flow"`
+	// Sites are the site files, instead of Key and Values: each site file sets the keys landscape and cropRotation
+	// (Site), so that a landscape and its crop rotation vary together. Files.Sites holds the files they match.
+	Sites Patterns `yaml:"sites,omitempty"`
+}
+
+// Column returns the column of the variation in the daily output: its key, or site for the sites.
+func (v Variation) Column() string {
+	if len(v.Sites) > 0 {
+		return siteColumn
+	}
+	return v.Key
 }
 
 // Combination is one combination of the values of the variations of a run file: the run file with these values and
@@ -34,11 +45,23 @@ type Combination struct {
 
 // checkVariations checks the section variations: each key once, with at least one value, not name (the folder of the
 // one output of all combinations), not in the sections run and variations, not output.columns (all combinations of an
-// experiment write the same columns into one file) and not landscape or cropRotation (the provenance copies the
-// landscape files of the run file only).
+// experiment write the same columns into one file) and not landscape or cropRotation (a landscape and its crop rotation
+// vary together, as sites). The sites at most once, without key and values.
 func checkVariations(vs []Variation) error {
 	seen := map[string]bool{}
+	sites := false
 	for i, v := range vs {
+		if len(v.Sites) > 0 {
+			if v.Key != "" || len(v.Values) > 0 {
+				return fmt.Errorf("%s[%d]: sites has no key and no values: each site file sets landscape and "+
+					"cropRotation", variationsKey, i)
+			}
+			if sites {
+				return fmt.Errorf("%s[%d]: sites is listed twice: list all site files in one sites", variationsKey, i)
+			}
+			sites = true
+			continue
+		}
 		if v.Key == "" {
 			return fmt.Errorf("%s[%d]: key is missing", variationsKey, i)
 		}
@@ -51,8 +74,8 @@ func checkVariations(vs []Variation) error {
 			return fmt.Errorf("%s: %s cannot vary: seed, days, repetitions and threads are the same for all "+
 				"combinations, and so are the columns of the output", variationsKey, v.Key)
 		case first == "landscape" || first == "cropRotation":
-			return fmt.Errorf("%s: %s cannot vary: other landscapes are other run files, run them together with "+
-				"-c a.yaml -c b.yaml", variationsKey, v.Key)
+			return fmt.Errorf("%s: %s cannot vary as a key: a landscape and its crop rotation vary together, list "+
+				"them as sites (sites: sites/*/site.yaml)", variationsKey, v.Key)
 		}
 		if seen[v.Key] {
 			return fmt.Errorf("%s: %s is listed twice", variationsKey, v.Key)
@@ -66,13 +89,21 @@ func checkVariations(vs []Variation) error {
 }
 
 // CombinationCount returns the number of combinations of the variations of the run file f: the product of the numbers
-// of their values, 1 without variations.
+// of their values (of the sites: of the site files), 1 without variations.
 func (f Files) CombinationCount() int {
 	n := 1
 	for _, v := range f.Config.Variations {
-		n *= len(v.Values)
+		n *= f.valueCount(v)
 	}
 	return n
+}
+
+// valueCount returns the number of values of the variation v of f: its values, or the site files of the sites.
+func (f Files) valueCount(v Variation) int {
+	if len(v.Sites) > 0 {
+		return len(f.Sites)
+	}
+	return len(v.Values)
 }
 
 // Combination returns the combination number k (from 0) of the values of the variations of the run file f, in the
@@ -99,11 +130,19 @@ func (f Files) Combination(k int) (Combination, error) {
 	// the index of the value of each variation: the digits of k, the last variation is the lowest digit
 	index := make([]int, len(vs))
 	for i := len(vs) - 1; i >= 0; i-- {
-		index[i] = k % len(vs[i].Values)
-		k /= len(vs[i].Values)
+		index[i] = k % f.valueCount(vs[i])
+		k /= f.valueCount(vs[i])
 	}
 	values := make([]string, len(vs))
 	for i, v := range vs {
+		if len(v.Sites) > 0 {
+			s := f.Sites[index[i]]
+			if err := setSite(root.Content[0], s); err != nil {
+				return Combination{}, fmt.Errorf("%s: sites: %s: %w", variationsKey, s.File, err)
+			}
+			values[i] = s.Name
+			continue
+		}
 		value := &v.Values[index[i]]
 		if err := setPath(root.Content[0], v.Key, value); err != nil {
 			return Combination{}, fmt.Errorf("%s: %w", variationsKey, err)
@@ -144,7 +183,7 @@ func (f Files) Combinations() ([]Combination, error) {
 func describe(vs []Variation, values []string) string {
 	parts := make([]string, len(vs))
 	for i, v := range vs {
-		parts[i] = v.Key + "=" + values[i]
+		parts[i] = v.Column() + "=" + values[i]
 	}
 	return strings.Join(parts, ", ")
 }
@@ -241,7 +280,8 @@ func copyNode(n *yaml.Node) *yaml.Node {
 }
 
 // readFrom reads the run file data and its landscape files with open, relative to the folder of the run file. The
-// landscape files of known, read already, are taken from it.
+// landscape files of known, read already, are taken from it. A run file with sites has no landscape files of its
+// own: each combination reads those of its site.
 func readFrom(data []byte, open func(string) (io.ReadCloser, error), known Files) (Files, error) {
 	f := Files{Landscapes: map[string]Landscape{}, Tables: map[string][]LandscapeTable{}, Raw: map[string][]byte{},
 		source: data, open: open}
@@ -250,6 +290,9 @@ func readFrom(data []byte, open func(string) (io.ReadCloser, error), known Files
 		return f, err
 	}
 	f.Config = c
+	if hasSites(c.Variations) {
+		return f, nil
+	}
 	for _, n := range landscapeNames(c) {
 		if l, ok := known.Landscapes[n]; ok {
 			f.Landscapes[n], f.Raw[n], f.Tables[n] = l, known.Raw[n], known.Tables[n]
