@@ -62,11 +62,12 @@ type runResult struct {
 
 // job is one run of the model.
 type job struct {
-	p       params.Params // the parameters, with the seed of the run
-	columns []string      // the columns of the daily output, nil: no output
-	prefix  string        // in front of each row: run, seed and the values of the variations, each with a tab after it
-	label   string        // the run in messages, e.g. "run 2 (seed 6, parameters.badgers=2)"
-	exp     int           // the index of its experiment
+	input   *combinationInput // the parameters of its combination, shared with the other runs of the combination
+	seed    int64             // the seed of the run
+	columns []string          // the columns of the daily output, nil: no output
+	prefix  string            // in front of each row: run, seed and the values of the variations, each with a tab after it
+	label   string            // the run in messages, e.g. "run 2 (seed 6, parameters.badgers=2)"
+	exp     int               // the index of its experiment
 }
 
 // runSet is a list of runs, of one or more experiments.
@@ -86,12 +87,18 @@ var errSkipped = errors.New("not run")
 // one runs the job i and returns its result. A panic of the model is returned as an error with its stack.
 func (rs runSet) one(i int) (res runResult) {
 	j := rs.jobs[i]
-	p := j.p // the input is shared by all runs, the model does not change it
+	defer j.input.done() // also after a panic, so that the last run of the combination drops its parameters
 	defer func() {
 		if r := recover(); r != nil {
 			res.err = fmt.Errorf("%s: panic: %v\n%s", j.label, r, debug.Stack())
 		}
 	}()
+	p, err := j.input.get() // shared by the runs of the combination, the model does not change it
+	if err != nil {
+		res.err = fmt.Errorf("%s: %w", j.label, err)
+		return res
+	}
+	p.Seed = j.seed
 
 	a := schedule.Default(p, nil)
 	// after all model systems: colonies founded and bees died for the summary (the benchmark reads it)

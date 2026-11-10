@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"gobees/input"
+	"gobees/params"
 
 	"go.yaml.in/yaml/v3"
 )
@@ -175,5 +176,61 @@ func TestSeveralRunFiles(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(dir, "same")); err == nil {
 		t.Error("output written although two run files have the same name")
+	}
+}
+
+func TestExperimentChecksEveryCombination(t *testing.T) {
+	// the start checks every combination, so that an error in a later one stops the call before the first run
+	dir := t.TempDir()
+	days := 5
+	experiment := writeExampleFarm(t, dir, "experiment.yaml", "wrong",
+		input.Run{Seed: 1, Days: &days, Repetitions: 1, Threads: 1},
+		[]input.Variation{{Key: "constants.foraging.maxForagingRange", Values: values(t, "[500, 758, abc]")}})
+	c := parse(t, "-c", experiment, "-o", filepath.Join(dir, "out"))
+	err := c.run(&bytes.Buffer{})
+	if err == nil || !strings.Contains(err.Error(), "constants.foraging.maxForagingRange=abc") {
+		t.Errorf("error = %v, want the third combination", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "out")); err == nil {
+		t.Error("output written although a combination is wrong")
+	}
+}
+
+func TestCombinationInput(t *testing.T) {
+	// the first run builds the parameters, the others share them, the last run drops them
+	builds := 0
+	in := newCombinationInput(3, func() (params.Params, error) {
+		builds++
+		p := params.Default()
+		p.Seed = 7
+		return p, nil
+	})
+	for run := range 3 {
+		p, err := in.get()
+		if err != nil || p.Seed != 7 {
+			t.Fatalf("run %d: seed %d, error %v", run, p.Seed, err)
+		}
+		if run < 2 {
+			in.done()
+			if in.p == nil {
+				t.Fatalf("parameters dropped after run %d of 3", run+1)
+			}
+		}
+	}
+	in.done()
+	if builds != 1 || in.p != nil {
+		t.Errorf("builds %d, want 1; parameters kept after the last run: %v", builds, in.p != nil)
+	}
+
+	// an error of the build goes to every run, built once
+	builds = 0
+	in = newCombinationInput(2, func() (params.Params, error) { builds++; return params.Params{}, errSkipped })
+	for range 2 {
+		if _, err := in.get(); err != errSkipped {
+			t.Errorf("error %v, want %v", err, errSkipped)
+		}
+	}
+	if builds != 1 {
+		t.Errorf("builds %d, want 1", builds)
 	}
 }

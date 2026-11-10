@@ -100,6 +100,44 @@ func TestCombinationsWithoutVariations(t *testing.T) {
 	}
 }
 
+func TestCombinationNumber(t *testing.T) {
+	// Combination(k) builds the combination k alone, the same as item k of Combinations. A number outside the
+	// combinations is an error.
+	f, err := exampleFarmWith(t, `variations:
+  - key: parameters.badgers
+    values: [0, 2, 4]
+  - key: parameters.sexLocus
+    values: [false, true]
+`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := f.CombinationCount(); n != 6 {
+		t.Fatalf("CombinationCount = %d, want 6", n)
+	}
+	all, err := f.Combinations()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, k := range []int{5, 0, 3} {
+		c, err := f.Combination(k)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !slices.Equal(c.Values, all[k].Values) || c.Files.Config.Parameters != all[k].Files.Config.Parameters {
+			t.Errorf("combination %d: values %q, want %q", k, c.Values, all[k].Values)
+		}
+	}
+	for _, k := range []int{-1, 6} {
+		if _, err := f.Combination(k); err == nil || !strings.Contains(err.Error(), "want 0 to 5") {
+			t.Errorf("combination %d: error %v, want 0 to 5", k, err)
+		}
+	}
+	if n := ExampleFarmFiles().CombinationCount(); n != 1 {
+		t.Errorf("CombinationCount without variations = %d, want 1", n)
+	}
+}
+
 func TestCombinationsListValue(t *testing.T) {
 	// a value can be a list, its text in the output is one line
 	f, err := exampleFarmWith(t, `variations:

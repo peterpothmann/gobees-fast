@@ -5,47 +5,56 @@ import (
 	"math"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"gobees/input"
 	"gobees/obs"
 	"gobees/params"
 )
 
-// experiment is one run file of a call (flag -c) with its variations: its combinations, their parameters and its
-// output. Without variations it has one combination, the run file itself.
+// experiment is one run file of a call (flag -c) with its variations: its combinations and its output. Without
+// variations it has one combination, the run file itself. It keeps only the values of each combination: the runs
+// build the parameters of their combination when they start (combinationInput).
 type experiment struct {
-	config       string // the run file of -c, "" for the built-in example farm
-	name         string // the key name of the run file, the folder of its output
-	files        input.Files
-	combinations []input.Combination
-	params       []params.Params // the parameters of each combination, with the flags applied
-	repetitions  int             // runs per combination
-	threads      int             // run.threads of the run file
-	columns      []string        // the columns of the daily output
-	dir          string          // the output folder, "" without output
-	output       string          // the daily output file in dir, "" without
-	results      []runResult     // the results of its runs, in the order of its jobs
+	config      string // the run file of -c, "" for the built-in example farm
+	name        string // the key name of the run file, the folder of its output
+	files       input.Files
+	values      [][]string    // the values of the variations in each combination (input.Combination.Values)
+	first       params.Params // the parameters of the first combination, with the flags applied
+	repetitions int           // runs per combination
+	threads     int           // run.threads of the run file
+	columns     []string      // the columns of the daily output
+	dir         string        // the output folder, "" without output
+	output      string        // the daily output file in dir, "" without
+	results     []runResult   // the results of its runs, in the order of its jobs
+
+	cli *cli // the flags, which paramsOf applies to each combination
 }
 
-// newExperiment reads the run file config ("" for the example farm), its combinations and their parameters with the
-// flags applied.
+// newExperiment reads the run file config ("" for the example farm) and checks each of its combinations with the
+// flags applied, so that an error in any combination stops the call before the first run. It keeps the parameters of
+// the first combination only.
 func (c *cli) newExperiment(config string) (*experiment, error) {
-	e := &experiment{config: config}
+	e := &experiment{config: config, cli: c}
 	var err error
 	if config == "" {
 		e.files = input.ExampleFarmFiles()
 	} else if e.files, err = input.Read(config); err != nil {
 		return nil, err
 	}
-	if e.combinations, err = e.files.Combinations(); err != nil {
-		return nil, err
-	}
-	for _, combination := range e.combinations {
+	for k := range e.files.CombinationCount() {
+		combination, err := e.files.Combination(k)
+		if err != nil {
+			return nil, err
+		}
 		p, err := c.paramsOf(combination.Files)
 		if err != nil {
 			return nil, err
 		}
-		e.params = append(e.params, p)
+		if k == 0 {
+			e.first = p
+		}
+		e.values = append(e.values, combination.Values)
 	}
 	// the name and the section run are checked by input.Build in paramsOf, and the variations cannot change them
 	e.name = e.files.Config.Name
@@ -54,12 +63,72 @@ func (c *cli) newExperiment(config string) (*experiment, error) {
 	if e.repetitions, err = c.repetitionCount(run.Repetitions); err != nil {
 		return nil, err
 	}
-	if seed := e.params[0].Seed; seed > math.MaxInt64-int64(e.repetitions)+1 {
+	if seed := e.first.Seed; seed > math.MaxInt64-int64(e.repetitions)+1 {
 		return nil, fmt.Errorf("seed %d: the seed of the last of %d repetitions is larger than %d", seed,
 			e.repetitions, int64(math.MaxInt64))
 	}
-	e.columns, _ = obs.SelectColumns(e.params[0].Output.Columns) // checked in paramsOf
+	e.columns, _ = obs.SelectColumns(e.first.Output.Columns) // checked in paramsOf
 	return e, nil
+}
+
+// combinations returns the number of combinations of the experiment.
+func (e *experiment) combinations() int { return len(e.values) }
+
+// params returns the parameters of the combination k with the flags applied. newExperiment has checked them.
+func (e *experiment) params(k int) (params.Params, error) {
+	if k == 0 {
+		return e.first, nil
+	}
+	combination, err := e.files.Combination(k)
+	if err != nil {
+		return params.Params{}, err
+	}
+	return e.cli.paramsOf(combination.Files)
+}
+
+// combinationInput holds the parameters of one combination for its runs (its repetitions). The first run that starts
+// builds them, the last run that ends drops them. So an experiment holds the parameters of the combinations of the
+// runs at the same time, not of all its combinations. Runs of several threads share it.
+type combinationInput struct {
+	build func() (params.Params, error)
+
+	mu   sync.Mutex
+	p    *params.Params // nil before the first run and after the last
+	err  error          // the error of build, returned to every run of the combination
+	left int            // runs that have not ended
+}
+
+// newCombinationInput returns the input of a combination of runs runs that build builds.
+func newCombinationInput(runs int, build func() (params.Params, error)) *combinationInput {
+	return &combinationInput{build: build, left: runs}
+}
+
+// get returns the parameters, built by the first call. The runs share them, the model does not change them.
+func (ci *combinationInput) get() (params.Params, error) {
+	ci.mu.Lock()
+	defer ci.mu.Unlock()
+	if ci.p == nil && ci.err == nil {
+		p, err := ci.build()
+		if err != nil {
+			ci.err = err
+		} else {
+			ci.p = &p
+		}
+	}
+	if ci.err != nil {
+		return params.Params{}, ci.err
+	}
+	return *ci.p, nil
+}
+
+// done is called once by every run of the combination when it ends. The last one drops the parameters.
+func (ci *combinationInput) done() {
+	ci.mu.Lock()
+	defer ci.mu.Unlock()
+	ci.left--
+	if ci.left == 0 {
+		ci.p = nil
+	}
 }
 
 // paramsOf returns the parameters of the run file f with the flags -s, --days and --columns applied.
@@ -149,27 +218,28 @@ func (e *experiment) source() string {
 
 // jobs returns the runs of the experiment number index: each combination run e.repetitions times, the repetition r
 // (from 0) with the seed of the run file + r. All combinations get the same seeds. The runs are numbered from 1 over
-// all combinations, so that the column run tells each run of the daily output apart.
+// all combinations, so that the column run tells each run of the daily output apart. The runs of a combination share
+// its input (combinationInput).
 func (e *experiment) jobs(index int, several bool) []job {
 	var jobs []job
-	for k, combination := range e.combinations {
+	for k, values := range e.values {
 		describe := ""
-		if len(combination.Values) > 0 {
-			describe = ", " + e.files.Describe(combination)
+		if len(values) > 0 {
+			describe = ", " + e.files.Describe(input.Combination{Values: values})
 		}
+		in := newCombinationInput(e.repetitions, func() (params.Params, error) { return e.params(k) })
 		for r := range e.repetitions {
-			p := e.params[k] // the input is shared by all runs, the model does not change it
-			p.Seed += int64(r)
+			seed := e.first.Seed + int64(r) // the variations cannot change the seed
 			number := k*e.repetitions + r + 1
-			j := job{p: p, exp: index}
-			j.label = fmt.Sprintf("run %d (seed %d%s)", number, p.Seed, describe)
+			j := job{input: in, seed: seed, exp: index}
+			j.label = fmt.Sprintf("run %d (seed %d%s)", number, seed, describe)
 			if several {
 				j.label = e.name + ": " + j.label
 			}
 			if e.output != "" {
 				j.columns = e.columns
-				j.prefix = fmt.Sprintf("%d\t%d\t", number, p.Seed)
-				for _, v := range combination.Values {
+				j.prefix = fmt.Sprintf("%d\t%d\t", number, seed)
+				for _, v := range values {
 					j.prefix += v + "\t"
 				}
 			}

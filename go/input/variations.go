@@ -65,59 +65,77 @@ func checkVariations(vs []Variation) error {
 	return nil
 }
 
-// Combinations returns the combinations of the values of the variations of the run file f, in the order of a nested
-// loop: the first variation changes slowest. Each combination is the run file with these values, read and checked as
-// a run file (unknown keys, whole numbers, constants), and its landscape files. A run file without variations gives
+// CombinationCount returns the number of combinations of the variations of the run file f: the product of the numbers
+// of their values, 1 without variations.
+func (f Files) CombinationCount() int {
+	n := 1
+	for _, v := range f.Config.Variations {
+		n *= len(v.Values)
+	}
+	return n
+}
+
+// Combination returns the combination number k (from 0) of the values of the variations of the run file f, in the
+// order of a nested loop: the first variation changes slowest. It is the run file with these values, read and checked
+// as a run file (unknown keys, whole numbers, constants), and its landscape files. A run file without variations has
 // one combination, the run file itself.
-func (f Files) Combinations() ([]Combination, error) {
+//
+// Each call builds the combination anew, so that an experiment holds only the combinations of the runs at the same
+// time, not all of them. Combination only reads f, so several runs may call it at the same time.
+func (f Files) Combination(k int) (Combination, error) {
 	vs := f.Config.Variations
+	if n := f.CombinationCount(); k < 0 || k >= n {
+		return Combination{}, fmt.Errorf("combination %d, want 0 to %d", k, n-1)
+	}
 	if len(vs) == 0 {
-		return []Combination{{Files: f}}, nil
+		return Combination{Files: f}, nil
 	}
 	var root yaml.Node
 	if err := yaml.Unmarshal(f.source, &root); err != nil {
-		return nil, err
+		return Combination{}, err
 	}
+	deleteKey(root.Content[0], variationsKey)
 
-	n := 1
-	for _, v := range vs {
-		n *= len(v.Values)
+	// the index of the value of each variation: the digits of k, the last variation is the lowest digit
+	index := make([]int, len(vs))
+	for i := len(vs) - 1; i >= 0; i-- {
+		index[i] = k % len(vs[i].Values)
+		k /= len(vs[i].Values)
 	}
-	combinations := make([]Combination, 0, n)
-	index := make([]int, len(vs)) // the index of the value of each variation
-	for range n {
-		doc := copyNode(&root)
-		deleteKey(doc.Content[0], variationsKey)
-		values := make([]string, len(vs))
-		for i, v := range vs {
-			value := &v.Values[index[i]]
-			if err := setPath(doc.Content[0], v.Key, value); err != nil {
-				return nil, fmt.Errorf("%s: %w", variationsKey, err)
-			}
-			text, err := valueText(value)
-			if err != nil {
-				return nil, fmt.Errorf("%s: %s: %w", variationsKey, v.Key, err)
-			}
-			values[i] = text
+	values := make([]string, len(vs))
+	for i, v := range vs {
+		value := &v.Values[index[i]]
+		if err := setPath(root.Content[0], v.Key, value); err != nil {
+			return Combination{}, fmt.Errorf("%s: %w", variationsKey, err)
 		}
-		data, err := yaml.Marshal(doc)
+		text, err := valueText(value)
+		if err != nil {
+			return Combination{}, fmt.Errorf("%s: %s: %w", variationsKey, v.Key, err)
+		}
+		values[i] = text
+	}
+	data, err := yaml.Marshal(&root)
+	if err != nil {
+		return Combination{}, err
+	}
+	files, err := readFrom(data, f.open, f)
+	if err != nil {
+		return Combination{}, fmt.Errorf("%s (%s): %w", variationsKey, describe(vs, values), err)
+	}
+	return Combination{Values: values, Files: files}, nil
+}
+
+// Combinations returns all combinations of the variations of the run file f at once, in the order of Combination.
+// The model builds them one by one with Combination.
+func (f Files) Combinations() ([]Combination, error) {
+	n := f.CombinationCount()
+	combinations := make([]Combination, 0, n)
+	for k := range n {
+		c, err := f.Combination(k)
 		if err != nil {
 			return nil, err
 		}
-		files, err := readFrom(data, f.open, f)
-		if err != nil {
-			return nil, fmt.Errorf("%s (%s): %w", variationsKey, describe(vs, values), err)
-		}
-		combinations = append(combinations, Combination{Values: values, Files: files})
-
-		// next combination: the last variation changes fastest
-		for i := len(vs) - 1; i >= 0; i-- {
-			index[i]++
-			if index[i] < len(vs[i].Values) {
-				break
-			}
-			index[i] = 0
-		}
+		combinations = append(combinations, c)
 	}
 	return combinations, nil
 }

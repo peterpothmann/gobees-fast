@@ -28,7 +28,7 @@ func (c *cli) parameters() (params.Params, input.Files, error) {
 	if err != nil {
 		return params.Params{}, input.Files{}, err
 	}
-	return e.params[0], e.files, nil
+	return e.first, e.files, nil
 }
 
 // parse parses the command-line flags args.

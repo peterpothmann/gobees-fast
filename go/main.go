@@ -145,7 +145,7 @@ func (c *cli) run(w io.Writer) error {
 			continue
 		}
 		// before the runs, so that a run that fails can be repeated
-		prov := newProvenance(e.files, e.config, &e.params[0], e.repetitions, threads, e.output, e.columns, started)
+		prov := newProvenance(e.files, e.config, &e.first, e.repetitions, threads, e.output, e.columns, started)
 		if err := prov.write(e.dir); err != nil {
 			return err
 		}
@@ -187,9 +187,9 @@ func (c *cli) run(w io.Writer) error {
 // checkWatch reports an error unless the experiments are one run: the window (--ui) shows one run.
 func checkWatch(experiments []*experiment) error {
 	e := experiments[0]
-	if len(experiments) > 1 || len(e.combinations) > 1 || e.repetitions > 1 {
+	if len(experiments) > 1 || e.combinations() > 1 || e.repetitions > 1 {
 		return fmt.Errorf("--ui shows one run: one run file (-c), repetitions 1 (--repetitions 1), no variations; "+
-			"here %d run files, %d combinations, %d repetitions", len(experiments), len(e.combinations),
+			"here %d run files, %d combinations, %d repetitions", len(experiments), e.combinations(),
 			e.repetitions)
 	}
 	return nil
@@ -201,7 +201,7 @@ func (e *experiment) summary(w io.Writer, several bool, threads int) {
 		fmt.Fprintf(w, "%s:\n", e.name)
 	}
 	fmt.Fprintf(w, "species: %v\n", e.results[0].species)
-	seed := e.params[0].Seed
+	seed := e.first.Seed
 	if len(e.results) == 1 {
 		r := e.results[0]
 		fmt.Fprintf(w, "seed: %d\n", seed)
@@ -210,8 +210,8 @@ func (e *experiment) summary(w io.Writer, several bool, threads int) {
 	} else {
 		fmt.Fprintf(w, "runs: %d, seeds: %d to %d, threads: %d", len(e.results), seed,
 			seed+int64(e.repetitions)-1, threads)
-		if len(e.combinations) > 1 {
-			fmt.Fprintf(w, ", combinations: %d, repetitions: %d", len(e.combinations), e.repetitions)
+		if e.combinations() > 1 {
+			fmt.Fprintf(w, ", combinations: %d, repetitions: %d", e.combinations(), e.repetitions)
 		}
 		fmt.Fprintln(w)
 		for _, r := range e.results {
