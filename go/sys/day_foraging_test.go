@@ -123,7 +123,7 @@ func TestHandlingTime(t *testing.T) {
 		s := aw.state(p)
 		s.Nectar *= tc.fill
 		s.Pollen *= tc.fill
-		if got := f.handlingTime(bee, p, tc.pollen); math.Abs(got-tc.want) > 1e-6 {
+		if got := f.handlingTime(f.tripOf(bee), p, tc.pollen); math.Abs(got-tc.want) > 1e-6 {
 			t.Errorf("%s: %v s, want %v", tc.name, got, tc.want)
 		}
 	}
@@ -143,8 +143,8 @@ func TestHandlingTimeIngestionCache(t *testing.T) {
 		fill float64
 	}{{willow, 1}, {willow, 0.5}, {deep, 1}, {willow, 0.5}, {willow, 0.25}, {deep, 0.5}} {
 		aw.state(v.p).Nectar = fsMap.Get(v.p).NectarMax * v.fill
-		got := f.handlingTime(bee, v.p, false)
-		if want := f.handlingTime(aw.worker(col, 1), v.p, false); got != want {
+		got := f.handlingTime(f.tripOf(bee), v.p, false)
+		if want := f.handlingTime(f.tripOf(aw.worker(col, 1)), v.p, false); got != want {
 			t.Errorf("visit %d: %v s, want %v (new bee)", i+1, got, want)
 		}
 	}
@@ -179,21 +179,21 @@ func TestBestLayer(t *testing.T) {
 	slow.InterFlowerTime = 2
 	layers := aw.flowerPatch(30, 0, 50, slow, willowherb(), alsike())
 	fo.PollenForager = true
-	if got := f.bestLayer(bee, layers[0]); got != layers[1] {
+	if got := f.bestLayer(f.tripOf(bee), layers[0]); got != layers[1] {
 		t.Errorf("pollen: best layer %v, want the willowherb with 0.6 s (%v); ties go to the first", got, layers[1])
 	}
 	fo.PollenForager = false
-	if got := f.bestLayer(bee, layers[2]); got != layers[1] {
+	if got := f.bestLayer(f.tripOf(bee), layers[2]); got != layers[1] {
 		t.Errorf("nectar: best layer %v, want the faster willowherb (%v)", got, layers[1])
 	}
 	aw.state(layers[1]).Nectar = 0
-	if got := f.bestLayer(bee, layers[0]); got != layers[0] {
+	if got := f.bestLayer(f.tripOf(bee), layers[0]); got != layers[0] {
 		t.Errorf("nectar without the emptied layer: %v, want the slow willowherb (%v)", got, layers[0])
 	}
 	for _, l := range layers {
 		aw.state(l).Nectar = 0
 	}
-	if got := f.bestLayer(bee, layers[0]); !got.IsZero() {
+	if got := f.bestLayer(f.tripOf(bee), layers[0]); !got.IsZero() {
 		t.Errorf("no nectar left: %v, want none", got)
 	}
 }
@@ -206,7 +206,7 @@ func TestSortKnownPatches(t *testing.T) {
 	near := aw.flowerPatch(0, 10, 10, willowherb())[0]
 	sameA := aw.flowerPatch(30, 0, 10, willowherb())[0]
 	sameB := aw.flowerPatch(0, -30, 10, willowherb())[0]
-	got := f.sortKnownPatches(bee, []ecs.Entity{sameB, far, near, sameA, far, sameB})
+	got := f.sortKnownPatches(f.tripOf(bee), []ecs.Entity{sameB, far, near, sameA, far, sameB})
 	want := []ecs.Entity{near, sameB, sameA, far}
 	if len(got) != len(want) {
 		t.Fatalf("%v, want %v", got, want)
@@ -367,7 +367,7 @@ func TestChoosePatch(t *testing.T) {
 	fo.CurrentFoodsource = p
 	fo.ExpectedNectarTrip = 300
 	b.Activity = activity.ReturningHappyNectar
-	f.choosePatch(bee, 400)
+	f.choosePatch(f.tripOf(bee), 400)
 	if fo.ExpectedNectarTrip != 350 {
 		t.Errorf("expectation %v, want 350", fo.ExpectedNectarTrip)
 	}
@@ -376,7 +376,7 @@ func TestChoosePatch(t *testing.T) {
 	n := 4000
 	for range n {
 		b.Activity = activity.ReturningEmpty
-		f.choosePatch(bee, 500)
+		f.choosePatch(f.tripOf(bee), 500)
 		if fo.NectarSource == p {
 			closest++
 		}
