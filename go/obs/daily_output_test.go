@@ -38,10 +38,10 @@ func addBee(w *ecs.World, b comp.Bee) ecs.Entity {
 	return ecs.NewMap2[comp.Bee, comp.Genetics](w).NewEntity(&b, &comp.Genetics{})
 }
 
-// addFoodsourceAt adds a foodsource with the given radius at (x, y).
+// addFoodsourceAt adds a flower patch with the given radius at (x, y).
 // radius is in [m].
 func addFoodsourceAt(w *ecs.World, x, y, radius float64) ecs.Entity {
-	return ecs.NewMap2[comp.Position, comp.Foodsource](w).NewEntity(&comp.Position{X: x, Y: y}, &comp.Foodsource{Radius: radius})
+	return ecs.NewMap2[comp.Position, comp.FlowerPatch](w).NewEntity(&comp.Position{X: x, Y: y}, &comp.FlowerPatch{Radius: radius})
 }
 
 func almostEqual(a, b float64) bool {

@@ -40,19 +40,17 @@ func cropWorld(t *testing.T, list []string) (*app.App, *cropRotation) {
 	return a, cr
 }
 
-// foodsourceSummary returns the number of foodsources and the masterpatches by patch type.
+// foodsourceSummary returns the number of layers and the flower patches by patch type.
 func foodsourceSummary(w *ecs.World) (int, map[string]int) {
 	n := 0
-	masters := map[string]int{}
-	q := ecs.NewFilter2[comp.Foodsource, comp.Layer](w).Query()
+	patches := map[string]int{}
+	q := ecs.NewFilter1[comp.FlowerPatch](w).Query()
 	for q.Next() {
-		fs, layer := q.Get()
-		n++
-		if layer.IsMasterpatch {
-			masters[fs.PatchType]++
-		}
+		fp := q.Get()
+		n += len(fp.Layers)
+		patches[fp.PatchType]++
 	}
-	return n, masters
+	return n, patches
 }
 
 // setDay sets ticks and Day.
@@ -67,9 +65,9 @@ func TestCropRotation(t *testing.T) {
 	landscape := ecs.GetResource[globals.Landscape](w)
 	nBefore, _ := foodsourceSummary(w)
 
-	// a bee that knows a foodsource, and a colony with range lists
+	// a bee that knows a flower patch, and a colony with range lists
 	var anyFs ecs.Entity
-	fsq := ecs.NewFilter1[comp.Foodsource](w).Query()
+	fsq := ecs.NewFilter1[comp.FlowerPatch](w).Query()
 	for fsq.Next() {
 		anyFs = fsq.Entity()
 	}
@@ -81,10 +79,11 @@ func TestCropRotation(t *testing.T) {
 	f := ecs.NewMap1[comp.Forager](w).Get(bee)
 	f.KnownNectarPatches = []ecs.Entity{anyFs}
 	f.KnownPollenPatches = []ecs.Entity{anyFs}
-	f.NectarSource, f.PollenSource, f.CurrentFoodsource = anyFs, anyFs, anyFs
+	src := comp.Source{Patch: anyFs}
+	f.NectarSource, f.PollenSource, f.CurrentFoodsource = src, src, src
 	inRange := []ecs.Entity{anyFs}
 	col := ecs.NewMap6[comp.Position, comp.Colony, comp.ColonyStores, comp.ColonyStimuli, comp.ColonyCounts, comp.ColonyRange](w).NewEntity(&comp.Position{}, &comp.Colony{}, &comp.ColonyStores{}, &comp.ColonyStimuli{}, &comp.ColonyCounts{},
-		&comp.ColonyRange{Layers: inRange,
+		&comp.ColonyRange{Patches: inRange,
 			PollenPatches: inRange, NectarPatches: inRange})
 
 	// only on Day 365
@@ -100,21 +99,21 @@ func TestCropRotation(t *testing.T) {
 	if landscape.File != smallLandscapeFile {
 		t.Errorf("File %q, want %s", landscape.File, smallLandscapeFile)
 	}
-	// only the foodsources of the new file
+	// only the flower patches of the new file
 	n, masters := foodsourceSummary(w)
 	if !maps.Equal(masters, map[string]int{"Scrub": 1, "Garden": 1}) || n != 3 {
-		t.Errorf("%d foodsources, masterpatches %v; want 3 layers, one Scrub and one Garden masterpatch", n, masters)
+		t.Errorf("%d layers, flower patches %v; want 3 layers, one Scrub and one Garden flower patch", n, masters)
 	}
-	// the landscape holds the new masterpatches only
-	newMasters := ecs.GetResource[globals.Landscape](w).Masterpatches
+	// the landscape holds the new flower patches only
+	newMasters := ecs.GetResource[globals.Landscape](w).Patches
 	if len(newMasters) != 2 || !w.Alive(newMasters[0]) || !w.Alive(newMasters[1]) {
-		t.Errorf("landscape masterpatches %v, want the 2 new ones", newMasters)
+		t.Errorf("landscape flower patches %v, want the 2 new ones", newMasters)
 	}
-	foodsources := ecs.NewFilter1[comp.Foodsource](w).Query()
-	if got := foodsources.Count(); got != 3 {
-		t.Errorf("%d foodsources, want 3", got)
+	patches := ecs.NewFilter1[comp.FlowerPatch](w).Query()
+	if got := patches.Count(); got != 2 {
+		t.Errorf("%d flower patches, want 2", got)
 	}
-	foodsources.Close()
+	patches.Close()
 
 	// the bee forgets her foodsources
 	f = ecs.NewMap1[comp.Forager](w).Get(bee)
@@ -127,10 +126,10 @@ func TestCropRotation(t *testing.T) {
 	if len(r.PollenPatches)+len(r.NectarPatches) != 0 {
 		t.Errorf("in-flower lists not empty: %+v", *r)
 	}
-	if !slices.Equal(r.Layers, inRange) || w.Alive(anyFs) {
-		t.Errorf("allPatchesInRangeList must keep the dead foodsource")
+	if !slices.Equal(r.Patches, inRange) || w.Alive(anyFs) {
+		t.Errorf("allPatchesInRangeList must keep the dead flower patch")
 	}
-	// reads the dead foodsources: a panic, as NetLogo stops with a runtime error
+	// reads the dead flower patches: a panic, as NetLogo stops with a runtime error
 	founder := newColonyFounder(w)
 	expectPanic(t, "flowersInRange after a crop rotation", func() { founder.flowersInRange(col) })
 
@@ -145,7 +144,7 @@ func TestCropRotation(t *testing.T) {
 	setDay(w, 730)
 	cr.Update(w)
 	if n, _ := foodsourceSummary(w); landscape.File != exampleLandscape || n != nBefore {
-		t.Errorf("year 2: File %q with %d foodsources, want the example farm with %d", landscape.File, n, nBefore)
+		t.Errorf("year 2: File %q with %d layers, want the example farm with %d", landscape.File, n, nBefore)
 	}
 }
 
@@ -154,11 +153,11 @@ func TestCropRotationDefaultList(t *testing.T) {
 	a, cr := cropWorld(t, nil)
 	w := a.World
 	nBefore, _ := foodsourceSummary(w)
-	mastersBefore := slices.Clone(ecs.GetResource[globals.Landscape](w).Masterpatches)
+	mastersBefore := slices.Clone(ecs.GetResource[globals.Landscape](w).Patches)
 	setDay(w, 365)
 	cr.Update(w)
 	// the same foodsources, not new ones
-	if n, _ := foodsourceSummary(w); n != nBefore || !slices.Equal(ecs.GetResource[globals.Landscape](w).Masterpatches, mastersBefore) {
+	if n, _ := foodsourceSummary(w); n != nBefore || !slices.Equal(ecs.GetResource[globals.Landscape](w).Patches, mastersBefore) {
 		t.Errorf("foodsources changed without crop rotation")
 	}
 }

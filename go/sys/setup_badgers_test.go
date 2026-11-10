@@ -9,10 +9,10 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// addScrub adds a Scrub masterpatch at (x, y).
+// addScrub adds a Scrub flower patch at (x, y).
 func addScrub(w *ecs.World, x, y float64) ecs.Entity {
-	return ecs.NewMap3[comp.Position, comp.Foodsource, comp.Layer](w).NewEntity(
-		&comp.Position{X: x, Y: y}, &comp.Foodsource{PatchType: "Scrub"}, &comp.Layer{IsMasterpatch: true})
+	return ecs.NewMap2[comp.Position, comp.FlowerPatch](w).NewEntity(
+		&comp.Position{X: x, Y: y}, &comp.FlowerPatch{PatchType: "Scrub"})
 }
 
 // badgerPositions returns the positions of all badgers.

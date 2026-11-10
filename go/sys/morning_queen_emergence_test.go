@@ -54,13 +54,11 @@ func newEmergenceWorld(t *testing.T, seed uint64) *emergenceWorld {
 	ew.active = &globals.ActiveBees{}
 	ecs.AddResource(w, ew.active)
 
-	fsMap := ecs.NewMap4[comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](w)
-	ew.bigSite = fsMap.NewEntity(&comp.Position{X: 100, Y: 100},
-		&comp.Foodsource{PatchType: "Grassland", Area: 10000, Radius: math.Sqrt(10000 / math.Pi)},
-		&comp.FoodsourceState{}, &comp.Layer{IsMasterpatch: true})
-	ew.smallSite = fsMap.NewEntity(&comp.Position{X: 50.3, Y: 50.2},
-		&comp.Foodsource{PatchType: "Hedgerow", Area: 100, Radius: math.Sqrt(100 / math.Pi)},
-		&comp.FoodsourceState{}, &comp.Layer{IsMasterpatch: true})
+	fpMap := ecs.NewMap2[comp.Position, comp.FlowerPatch](w)
+	ew.bigSite = fpMap.NewEntity(&comp.Position{X: 100, Y: 100},
+		&comp.FlowerPatch{PatchType: "Grassland", Area: 10000, Radius: math.Sqrt(10000 / math.Pi)})
+	ew.smallSite = fpMap.NewEntity(&comp.Position{X: 50.3, Y: 50.2},
+		&comp.FlowerPatch{PatchType: "Hedgerow", Area: 100, Radius: math.Sqrt(100 / math.Pi)})
 
 	in := &params.Input{Species: []params.Species{*terrestris(t)}}
 	ecs.AddResource(w, in)
@@ -235,9 +233,8 @@ func TestNestSearchNoPatchCentre(t *testing.T) {
 	// 0.564 patches). NetLogo stops with a runtime error. Here the colony is placed at the centre of the patch cell of
 	// the foodsource. y = 112.5 lies on the border between two cells, NetLogo rounds .5 up: (134, 113).
 	ew := newEmergenceWorld(t, 6)
-	hedge := ecs.NewMap4[comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](ew.w).NewEntity(&comp.Position{X: 133.548, Y: 112.5},
-		&comp.Foodsource{PatchType: "Hedgerow", Area: 100, Radius: math.Sqrt(100 / math.Pi)},
-		&comp.FoodsourceState{}, &comp.Layer{IsMasterpatch: true})
+	hedge := ecs.NewMap2[comp.Position, comp.FlowerPatch](ew.w).NewEntity(&comp.Position{X: 133.548, Y: 112.5},
+		&comp.FlowerPatch{PatchType: "Hedgerow", Area: 100, Radius: math.Sqrt(100 / math.Pi)})
 	ew.ns.Sites = []ecs.Entity{hedge}
 	ew.ns.Area = 100
 	ew.sp.DailyNestSiteChance = 1
@@ -283,22 +280,21 @@ func TestDieRemovesFromActiveBees(t *testing.T) {
 func TestPatchesInRangeAndFlowerLists(t *testing.T) {
 	ew := newEmergenceWorld(t, 8)
 	w := ew.w
-	fsMap := ecs.NewMap4[comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](w)
-	// colony at (0, 0), range 758 m * 0.1 = 75.8 patches
-	newFs := func(x, pollen, nectar float64, master ecs.Entity) ecs.Entity {
-		e := fsMap.NewEntity(&comp.Position{X: x, Y: 0}, &comp.Foodsource{},
-			&comp.FoodsourceState{Pollen: pollen, Nectar: nectar}, &comp.Layer{Masterpatch: master})
-		if master.IsZero() {
-			_, _, _, l := fsMap.Get(e)
-			l.Masterpatch = e
+	fpMap := ecs.NewMap2[comp.Position, comp.FlowerPatch](w)
+	// colony at (0, 0), range 758 m * 0.1 = 75.8 patches. The flags as flowerRefill sets them from the layers.
+	newFs := func(x float64, layers ...comp.Layer) ecs.Entity {
+		fp := comp.FlowerPatch{Layers: layers}
+		for _, l := range layers {
+			fp.PollenInFlower = fp.PollenInFlower || l.Pollen > 0
+			fp.NectarInFlower = fp.NectarInFlower || l.Nectar > 0
 		}
-		return e
+		return fpMap.NewEntity(&comp.Position{X: x, Y: 0}, &fp)
 	}
-	a := newFs(70, 1, 0, ecs.Entity{}) // pollen only
-	b := newFs(75.8, 0, 1, a)          // exactly at the range limit (<=), nectar only, layer of a
-	c := newFs(80, 1, 1, ecs.Entity{}) // out of range
-	d := newFs(10, 1, 1, ecs.Entity{}) // pollen and nectar
-	e := newFs(20, 0, 0, ecs.Entity{}) // in range, not in flower
+	a := newFs(70, comp.Layer{Pollen: 1}, comp.Layer{Nectar: 1}) // one pollen and one nectar layer
+	b := newFs(75.8, comp.Layer{Nectar: 1})                      // exactly at the range limit (<=), nectar only
+	c := newFs(80, comp.Layer{Pollen: 1, Nectar: 1})             // out of range
+	d := newFs(10, comp.Layer{Pollen: 1, Nectar: 1})             // pollen and nectar
+	e := newFs(20, comp.Layer{})                                 // in range, not in flower
 	_ = c
 
 	colony := ew.sys.colonies.colonyMap.NewEntity(&comp.Position{X: 0, Y: 0}, &comp.Colony{},
@@ -324,12 +320,12 @@ func TestPatchesInRangeAndFlowerLists(t *testing.T) {
 	}
 	// also the small hedge of newEmergenceWorld at (50.3, 50.2), distance 71.1 (not in flower).
 	// The grassland at (100, 100) is at distance 141.4.
-	if !sameSet(r.Layers, []ecs.Entity{a, b, d, e, ew.smallSite}) {
-		t.Errorf("in range: %v", r.Layers)
+	if !sameSet(r.Patches, []ecs.Entity{a, b, d, e, ew.smallSite}) {
+		t.Errorf("in range: %v", r.Patches)
 	}
 	checks := map[string][2][]ecs.Entity{
-		"pollen masters": {r.PollenPatches, {a, d}},
-		"nectar masters": {r.NectarPatches, {a, d}}, // b is a layer of a
+		"pollen patches": {r.PollenPatches, {a, d}},
+		"nectar patches": {r.NectarPatches, {a, b, d}},
 	}
 	for name, c := range checks {
 		if !sameSet(c[0], c[1]) {

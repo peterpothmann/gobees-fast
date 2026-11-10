@@ -11,22 +11,22 @@ import (
 )
 
 func TestExpandNestHabitats(t *testing.T) {
-	masterpatches := []masterpatch{
+	patches := []patchSite{
 		{patchType: "Grassland"}, {patchType: "Grass_improved"}, {patchType: "Improved_Grassland"},
 		{patchType: "Hedgerow"}, {patchType: "Grassland"},
 	}
-	got, err := expandNestHabitats([]string{"Grassland*", "Garden", "Hedgerow"}, masterpatches)
+	got, err := expandNestHabitats([]string{"Grassland*", "Garden", "Hedgerow"}, patches)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// "Grassland*" matches every habitat type that contains "Grassland", each habitat once, in the order of the
-	// masterpatches. Entries without "*" are copied, also if they do not exist on the map ("Garden").
+	// flower patches. Entries without "*" are copied, also if they do not exist on the map ("Garden").
 	want := []string{"Grassland", "Improved_Grassland", "Garden", "Hedgerow"}
 	if !slices.Equal(got, want) {
 		t.Errorf("got %q, want %q", got, want)
 	}
 	// "*" not at the end gives an assertion
-	if _, err := expandNestHabitats([]string{"Gr*ss"}, masterpatches); err == nil {
+	if _, err := expandNestHabitats([]string{"Gr*ss"}, patches); err == nil {
 		t.Error("expected an error for a '*' that is not at the end")
 	}
 }
@@ -34,11 +34,11 @@ func TestExpandNestHabitats(t *testing.T) {
 func TestNestSites(t *testing.T) {
 	w := ecs.NewWorld()
 	e1, e2, e3 := w.NewEntity(), w.NewEntity(), w.NewEntity()
-	masterpatches := []masterpatch{
+	patches := []patchSite{
 		{e1, "Scrub", 100}, {e2, "Grassland", 200}, {e3, "Improved_Grassland", 400},
 	}
 	// exact match only: "Grassland" does not select "Improved_Grassland"
-	sites, area := nestSites([]string{"Grassland", "Scrub"}, masterpatches)
+	sites, area := nestSites([]string{"Grassland", "Scrub"}, patches)
 	if !slices.Equal(sites, []ecs.Entity{e1, e2}) || area != 300 {
 		t.Errorf("sites %v, area %v; want [e1 e2], 300", sites, area)
 	}
@@ -68,10 +68,10 @@ func TestNestSitesSetupExampleFarm(t *testing.T) {
 		t.Errorf("nestHabitatsList = %q, want %q", gotHabitats, wantHabitats)
 	}
 
-	// nest sites: all masterpatches with one of these habitat types, in NetLogo's who order, and their area
+	// nest sites: all flower patches with one of these habitat types, in NetLogo's who order, and their area
 	wantSites := []ecs.Entity{}
 	wantArea := 0.0
-	for _, m := range collectMasterpatches(w) {
+	for _, m := range collectPatches(w) {
 		if slices.Contains(wantHabitats, m.patchType) {
 			wantSites = append(wantSites, m.entity)
 			wantArea += m.area

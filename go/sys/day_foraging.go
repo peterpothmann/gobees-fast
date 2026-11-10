@@ -32,10 +32,10 @@ type forager struct {
 	trip       ecs.Event // event.ForagingTrip
 	died       ecs.Event // event.DiedForaging
 
-	beeMap        *ecs.Map2[comp.Bee, comp.Forager]
-	colonyMap     *ecs.Map4[comp.Position, comp.Colony, comp.ColonyStores, comp.ColonyRange]
-	foodsourceMap *ecs.Map4[comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer]
-	speciesMap    *speciesTable
+	beeMap     *ecs.Map2[comp.Bee, comp.Forager]
+	colonyMap  *ecs.Map4[comp.Position, comp.Colony, comp.ColonyStores, comp.ColonyRange]
+	patchMap   *ecs.Map2[comp.Position, comp.FlowerPatch]
+	speciesMap *speciesTable
 
 	survivalPerSecond float64 // survival of one second of a trip, NaN until the first trip
 	logSurvival       float64 // ln survivalPerSecond
@@ -43,18 +43,18 @@ type forager struct {
 
 func newForager(w *ecs.World, rng *rand.Rand) forager {
 	return forager{
-		rng:           rng,
-		parameters:    ecs.GetResource[params.Parameters](w),
-		constants:     ecs.GetResource[params.Constants](w),
-		derived:       ecs.GetResource[params.Derived](w),
-		landscape:     ecs.GetResource[globals.Landscape](w),
-		death:         newBeeDeath(w),
-		trip:          w.Event(event.ForagingTrip).For(ecs.C[comp.Bee]()),
-		died:          w.Event(event.DiedForaging).For(ecs.C[comp.Bee]()),
-		beeMap:        ecs.NewMap2[comp.Bee, comp.Forager](w),
-		colonyMap:     ecs.NewMap4[comp.Position, comp.Colony, comp.ColonyStores, comp.ColonyRange](w),
-		foodsourceMap: ecs.NewMap4[comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](w),
-		speciesMap:    newSpeciesTable(w),
+		rng:        rng,
+		parameters: ecs.GetResource[params.Parameters](w),
+		constants:  ecs.GetResource[params.Constants](w),
+		derived:    ecs.GetResource[params.Derived](w),
+		landscape:  ecs.GetResource[globals.Landscape](w),
+		death:      newBeeDeath(w),
+		trip:       w.Event(event.ForagingTrip).For(ecs.C[comp.Bee]()),
+		died:       w.Event(event.DiedForaging).For(ecs.C[comp.Bee]()),
+		beeMap:     ecs.NewMap2[comp.Bee, comp.Forager](w),
+		colonyMap:  ecs.NewMap4[comp.Position, comp.Colony, comp.ColonyStores, comp.ColonyRange](w),
+		patchMap:   ecs.NewMap2[comp.Position, comp.FlowerPatch](w),
+		speciesMap: newSpeciesTable(w),
 
 		survivalPerSecond: math.NaN(),
 	}
@@ -111,7 +111,7 @@ func (f *forager) forage(w *ecs.World, e ecs.Entity) {
 	}
 }
 
-// sortKnownPatches returns the known masterpatches of the bee e without duplicates, sorted by
+// sortKnownPatches returns the known flower patches of the bee e without duplicates, sorted by
 // distance to her colony.
 func (f *forager) sortKnownPatches(t *tripBee, knownPatchesList []ecs.Entity) []ecs.Entity {
 	// remove-duplicates keeps the first occurrence, sort-by is stable
@@ -123,7 +123,7 @@ func (f *forager) sortKnownPatches(t *tripBee, knownPatchesList []ecs.Entity) []
 	}
 	colPos, _, _, _ := f.colonyMap.Get(t.col)
 	distance := func(p ecs.Entity) float64 {
-		pos, _, _, _ := f.foodsourceMap.Get(p)
+		pos, _ := f.patchMap.Get(p)
 		return distanceBetween(colPos.X, colPos.Y, pos.X, pos.Y)
 	}
 	slices.SortStableFunc(newList, func(p1, p2 ecs.Entity) int {
@@ -192,9 +192,7 @@ func (f *forager) search(t *tripBee) {
 	}
 }
 
-// detectionProb returns the probability that a bee of the colony at (xcol, ycol) detects the masterpatch
-// patchWho on a search flight.
-// detections returns the detection probability of each masterpatch of patches from a colony at (xcol, ycol), from
+// detections returns the detection probability of each flower patch of patches from a colony at (xcol, ycol), from
 // cache if it holds one per patch, else computed and stored in cache. The caller resets cache to nil when it changes
 // the list (comp.ColonyRange).
 func (f *forager) detections(cache *[]float64, patches []ecs.Entity, xcol, ycol float64) []float64 {
@@ -208,16 +206,18 @@ func (f *forager) detections(cache *[]float64, patches []ecs.Entity, xcol, ycol 
 	return *cache
 }
 
-func (f *forager) detectionProb(patchWho ecs.Entity, xcol, ycol float64) float64 {
-	pos, fs, _, _ := f.foodsourceMap.Get(patchWho)
+// detectionProb returns the probability that a bee of the colony at (xcol, ycol) detects the flower patch
+// patch on a search flight.
+func (f *forager) detectionProb(patch ecs.Entity, xcol, ycol float64) float64 {
+	pos, fp := f.patchMap.Get(patch)
 	dist := distanceBetween(pos.X, pos.Y, xcol, ycol) / f.landscape.Scale // [m]
-	patchRadius := fs.Radius                                              // [m]
+	patchRadius := fp.Radius                                              // [m]
 	relevantDistance := dist - patchRadius                                // [m]
 	if relevantDistance < 0 {
 		relevantDistance = 0
 	}
 	detProb := math.Pow(math.E, f.parameters.DetectionLambda*relevantDistance) // NetLogo: e ^ x
-	// no cut-off at ForagingRangeMax_m as in NetLogo: the colony's lists hold only masterpatches in range
+	// no cut-off at ForagingRangeMax_m as in NetLogo: the colony's lists hold only flower patches in range
 	return precision(detProb, 10)
 }
 
@@ -225,46 +225,51 @@ func (f *forager) detectionProb(patchWho ecs.Entity, xcol, ycol float64) float64
 func (f *forager) collect(t *tripBee) {
 	b, fo := t.b, t.fo
 	if b.Activity == activity.CollectPollen {
-		_, _, state, _ := f.foodsourceMap.Get(fo.CurrentFoodsource)
-		if state.Pollen > 0 {
-			fo.CarriedPollen = min(fo.PollenPellets*float64(b.Number), state.Pollen)
+		l := f.layer(fo.CurrentFoodsource)
+		if l.Pollen > 0 {
+			fo.CarriedPollen = min(fo.PollenPellets*float64(b.Number), l.Pollen)
 			b.Activity = activity.BringingPollen
 			memoPollenLoad := fo.CarriedPollen
-			state.Pollen = state.Pollen - memoPollenLoad
+			l.Pollen = l.Pollen - memoPollenLoad
 		} else {
 			b.Activity = activity.ReturningEmpty
 		}
 	}
 	if b.Activity == activity.CollectNectar {
-		_, fs, state, _ := f.foodsourceMap.Get(fo.CurrentFoodsource)
-		if state.Nectar > 0 {
-			nectarRemoved := min(fo.CropVolume*float64(b.Number), state.Nectar)
-			fo.CarriedNectar = nectarRemoved * f.constants.Foraging.SucroseEnergy * fs.NectarConcentration
+		l := f.layer(fo.CurrentFoodsource)
+		if l.Nectar > 0 {
+			nectarRemoved := min(fo.CropVolume*float64(b.Number), l.Nectar)
+			fo.CarriedNectar = nectarRemoved * f.constants.Foraging.SucroseEnergy * l.NectarConcentration
 			b.Activity = activity.BringingNectar
-			state.Nectar = state.Nectar - nectarRemoved
+			l.Nectar = l.Nectar - nectarRemoved
 		} else {
 			b.Activity = activity.ReturningEmpty
 		}
 	}
 }
 
-// handlingTime returns the time [s] the bee e needs to collect one full load at the foodsource myPatch.
+// layer returns the layer src.
+func (f *forager) layer(src comp.Source) *comp.Layer {
+	_, fp := f.patchMap.Get(src.Patch)
+	return &fp.Layers[src.Layer]
+}
+
+// handlingTime returns the time [s] the bee e needs to collect one full load at the layer myPatch, which is l.
 // pollenPatch selects pollen or nectar.
-func (f *forager) handlingTime(t *tripBee, myPatch ecs.Entity, pollenPatch bool) float64 {
+func (f *forager) handlingTime(t *tripBee, myPatch comp.Source, l *comp.Layer, pollenPatch bool) float64 {
 	b, fo := t.b, t.fo
-	_, fs, state, _ := f.foodsourceMap.Get(myPatch)
 	maxHandlingTime := f.constants.Foraging.MaxHandlingTime // [s]
 	handlingTime := -999.0                                  // [s]
 	fillingLevel := 0.0
 
 	if !pollenPatch {
-		if fs.NectarMax > 0 {
-			fillingLevel = state.Nectar / fs.NectarMax
+		if l.NectarMax > 0 {
+			fillingLevel = l.Nectar / l.NectarMax
 		}
-		beeWeight := b.Weight / 1000       // W [g]
-		glossaLength := fo.GlossaLength    // G [mm]
-		corollaDepth := fs.CorollaDepth    // C [mm]
-		nectarVolume := fs.NectarPerFlower // V [µl]
+		beeWeight := b.Weight / 1000      // W [g]
+		glossaLength := fo.GlossaLength   // G [mm]
+		corollaDepth := l.CorollaDepth    // C [mm]
+		nectarVolume := l.NectarPerFlower // V [µl]
 		// The coefficients of the fitted equations stay in the code.
 		// float64(...): no fused multiply-add, so the result equals NetLogo (Java)
 		accessTime := 0.3 + float64(0.04*corollaDepth) // Ta [s]
@@ -289,7 +294,7 @@ func (f *forager) handlingTime(t *tripBee, myPatch ecs.Entity, pollenPatch bool)
 
 		handlingTimePerFlower := maxHandlingTime // [s]
 		if fillingLevel > 0 {
-			handlingTimePerFlower = (fs.InterFlowerTime+accessTime)/fillingLevel + ingestionTime
+			handlingTimePerFlower = (l.InterFlowerTime+accessTime)/fillingLevel + ingestionTime
 		}
 		flowersVisited := 1.0
 		if nectarVolume < fo.CropVolume {
@@ -299,13 +304,13 @@ func (f *forager) handlingTime(t *tripBee, myPatch ecs.Entity, pollenPatch bool)
 	} else {
 		timeInFlowers := f.constants.Foraging.PollenLoadTime // [s]
 		flowersNeededForPollenLoad := f.constants.Foraging.FlowersPerPollenLoad
-		if fs.PollenMax > 0 {
-			fillingLevel = state.Pollen / fs.PollenMax
+		if l.PollenMax > 0 {
+			fillingLevel = l.Pollen / l.PollenMax
 		} else {
 			fillingLevel = 0
 		}
 		if fillingLevel > 0 {
-			handlingTime = fs.InterFlowerTime*flowersNeededForPollenLoad/fillingLevel + timeInFlowers
+			handlingTime = l.InterFlowerTime*flowersNeededForPollenLoad/fillingLevel + timeInFlowers
 		} else {
 			handlingTime = maxHandlingTime
 		}
@@ -331,22 +336,23 @@ func powMinus04(x float64) float64 {
 	return 1 / math.Exp(0.4*math.Log(x))
 }
 
-// bestLayer returns the best layer for the bee e among the layers of the flower patch of
-// myCurrentFoodsource, or the zero entity if none has the bee's forage.
-func (f *forager) bestLayer(t *tripBee, myCurrentFoodsource ecs.Entity) ecs.Entity {
+// bestLayer returns the best layer for the bee e among the layers of the flower patch patch, or the zero Source if
+// none has the bee's forage.
+func (f *forager) bestLayer(t *tripBee, patch ecs.Entity) comp.Source {
 	b, fo := t.b, t.fo
 	memoBestHandlingtime := params.NotSetHigh
 	memoBestEEF := params.NotSetLow
-	memoBestPatch := ecs.Entity{}
+	memoBestPatch := comp.Source{}
 	colPos, _, _, _ := f.colonyMap.Get(t.col)
-	fsPos, _, _, layer := f.foodsourceMap.Get(myCurrentFoodsource)
+	fsPos, fp := f.patchMap.Get(patch)
 	patchDistance := distanceBetween(colPos.X, colPos.Y, fsPos.X, fsPos.Y) / f.landscape.Scale // [m]
 	sp := f.speciesMap.Get(b.Species)
 
-	for _, currentLayer := range layer.PatchLayers {
-		_, fs, state, _ := f.foodsourceMap.Get(currentLayer)
-		if fo.PollenForager && state.Pollen > 0 {
-			handlingTime := f.handlingTime(t, currentLayer, fo.PollenForager) // [s]
+	for i := range fp.Layers {
+		l := &fp.Layers[i]
+		currentLayer := comp.Source{Patch: patch, Layer: i}
+		if fo.PollenForager && l.Pollen > 0 {
+			handlingTime := f.handlingTime(t, currentLayer, l, fo.PollenForager) // [s]
 			if handlingTime < memoBestHandlingtime {
 				memoBestPatch = currentLayer
 				memoBestHandlingtime = handlingTime
@@ -354,12 +360,12 @@ func (f *forager) bestLayer(t *tripBee, myCurrentFoodsource ecs.Entity) ecs.Enti
 		}
 		// cost for the cohort, gain for one bee. No effect on the choice: eef + 1 = gain / cost, and the number
 		// divides all candidates alike. SIMPLIFY: cost for one bee (may change ties at the last bit).
-		if !fo.PollenForager && state.Nectar > 0 {
-			handlingTime := f.handlingTime(t, currentLayer, fo.PollenForager) // [s]
+		if !fo.PollenForager && l.Nectar > 0 {
+			handlingTime := f.handlingTime(t, currentLayer, l, fo.PollenForager) // [s]
 			energyCosts := (float64(2*patchDistance) +
 				float64(handlingTime*sp.FlightVelocity*f.constants.Foraging.EnergyFactorOnFlower)) *
 				sp.FlightCosts * b.Weight * float64(b.Number) // [kJ]
-			energyGain := fo.CropVolume * f.constants.Foraging.SucroseEnergy * fs.NectarConcentration // [kJ]
+			energyGain := fo.CropVolume * f.constants.Foraging.SucroseEnergy * l.NectarConcentration // [kJ]
 			eef := (energyGain - energyCosts) / energyCosts
 			if eef > memoBestEEF {
 				memoBestPatch = currentLayer
@@ -377,7 +383,7 @@ func (f *forager) choosePatch(t *tripBee, tripDuration float64) {
 	preferenceClosePatchesProb := f.constants.Foraging.PreferCloseProb
 	happy := true
 	gotoNewLayergroup := false
-	bestLayer := ecs.Entity{}
+	bestLayer := comp.Source{}
 	myExpectation := fo.ExpectedNectarTrip // [s]
 	myKnownMasterpatchesList := fo.KnownNectarPatches
 	searchProbBase := f.constants.Foraging.SearchProb
@@ -390,10 +396,9 @@ func (f *forager) choosePatch(t *tripBee, tripDuration float64) {
 	if b.Activity == activity.ReturningEmpty {
 		gotoNewLayergroup = true
 	} else {
-		// the best layer always belongs to the known flower patch, so the masterpatch is always found.
+		// the best layer always belongs to the known flower patch, so the flower patch is always found.
 		// NetLogo fails here if two flower patches lie in the same patch cell.
-		_, _, _, layer := f.foodsourceMap.Get(fo.CurrentFoodsource)
-		myMasterpatchID := layer.Masterpatch
+		myMasterpatchID := fo.CurrentFoodsource.Patch
 		position := slices.Index(myKnownMasterpatchesList, myMasterpatchID)
 		if position < 0 {
 			panic("No number for myMasterpatchID (choosePatch): the current foodsource belongs to no known flower patch")
@@ -420,7 +425,7 @@ func (f *forager) choosePatch(t *tripBee, tripDuration float64) {
 		} else {
 			b.Activity = activity.ReturningUnhappyNectar
 		}
-		bestLayer = f.bestLayer(t, fo.CurrentFoodsource)
+		bestLayer = f.bestLayer(t, fo.CurrentFoodsource.Patch)
 		if bestLayer == fo.CurrentFoodsource {
 			gotoNewLayergroup = true
 		} else {
@@ -437,7 +442,7 @@ func (f *forager) choosePatch(t *tripBee, tripDuration float64) {
 			newPatchPosition = myCurrentPatchPosition + 1
 		}
 		if newPatchPosition < 0 || newPatchPosition >= float64(len(myKnownMasterpatchesList)) {
-			fo.CurrentFoodsource = ecs.Entity{}
+			fo.CurrentFoodsource = comp.Source{}
 		} else {
 			fo.CurrentFoodsource = f.bestLayer(t, myKnownMasterpatchesList[int(newPatchPosition)])
 		}
@@ -493,14 +498,14 @@ func (f *forager) tripCosts(w *ecs.World, t *tripBee) bool {
 	handlingTime := 0.0 // [s]
 	if b.Activity == activity.BringingNectar || b.Activity == activity.BringingPollen {
 		if b.Activity == activity.BringingNectar {
-			handlingTime = f.handlingTime(t, fo.CurrentFoodsource, fo.PollenForager)
+			handlingTime = f.handlingTime(t, fo.CurrentFoodsource, f.layer(fo.CurrentFoodsource), fo.PollenForager)
 			b.Activity = activity.ReturningHappyNectar
 		}
 		if b.Activity == activity.BringingPollen {
-			handlingTime = f.handlingTime(t, fo.CurrentFoodsource, fo.PollenForager)
+			handlingTime = f.handlingTime(t, fo.CurrentFoodsource, f.layer(fo.CurrentFoodsource), fo.PollenForager)
 			b.Activity = activity.ReturningHappyPollen
 		}
-		fsPos, _, _, _ := f.foodsourceMap.Get(fo.CurrentFoodsource)
+		fsPos, _ := f.patchMap.Get(fo.CurrentFoodsource.Patch)
 		distance := distanceBetween(colPos.X, colPos.Y, fsPos.X, fsPos.Y)
 		scaling := f.landscape.Scale
 		stores.Energy = stores.Energy - float64(

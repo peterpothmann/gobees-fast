@@ -40,12 +40,13 @@ func createBadgers(w *ecs.World, n int, scale, distanceLimit float64, rng *rand.
 		e   ecs.Entity
 		pos comp.Position
 	}
-	// the Scrub masterpatches, in storage order (NetLogo: an agentset, one-of picks at random)
+	// the Scrub flower patches, in storage order (NetLogo: the Scrub masterpatches, an agentset, one-of picks at
+	// random)
 	sites := []burrow{}
-	query := ecs.NewFilter3[comp.Position, comp.Foodsource, comp.Layer](w).Query()
+	query := ecs.NewFilter2[comp.Position, comp.FlowerPatch](w).Query()
 	for query.Next() {
-		pos, fs, layer := query.Get()
-		if layer.IsMasterpatch && slices.Contains(burrowHabitatsList, fs.PatchType) {
+		pos, fp := query.Get()
+		if slices.Contains(burrowHabitatsList, fp.PatchType) {
 			sites = append(sites, burrow{query.Entity(), *pos})
 		}
 	}
@@ -59,7 +60,7 @@ func createBadgers(w *ecs.World, n int, scale, distanceLimit float64, rng *rand.
 	}
 	placed := []ecs.Entity{}
 
-	// burrowFsSet before the badgers were created: every Scrub masterpatch
+	// burrowFsSet before the badgers were created: every Scrub flower patch
 	burrowFsSet := slices.Clone(sites)
 	for _, b := range badgers {
 		if len(burrowFsSet) == 0 {

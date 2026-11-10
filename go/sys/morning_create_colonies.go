@@ -26,28 +26,28 @@ type colonyFounder struct {
 	constants  *params.Constants
 	landscape  *globals.Landscape
 
-	beeFilter        *ecs.Filter1[comp.Bee]
-	foodsourceFilter *ecs.Filter2[comp.Position, comp.Foodsource]
-	beeMap           *ecs.Map2[comp.Position, comp.Bee]
-	colonyMap        *colonyMapper
-	positionMap      *ecs.Map1[comp.Position]
-	rangeMap         *ecs.Map1[comp.ColonyRange]
-	foodsourceMap    *ecs.Map2[comp.FoodsourceState, comp.Layer]
+	beeFilter   *ecs.Filter1[comp.Bee]
+	patchFilter *ecs.Filter2[comp.Position, comp.FlowerPatch]
+	beeMap      *ecs.Map2[comp.Position, comp.Bee]
+	colonyMap   *colonyMapper
+	positionMap *ecs.Map1[comp.Position]
+	rangeMap    *ecs.Map1[comp.ColonyRange]
+	patchMap    *ecs.Map1[comp.FlowerPatch]
 }
 
 func newColonyFounder(w *ecs.World) colonyFounder {
 	return colonyFounder{
-		ticks:            ecs.GetResource[globals.Ticks](w),
-		parameters:       ecs.GetResource[params.Parameters](w),
-		constants:        ecs.GetResource[params.Constants](w),
-		landscape:        ecs.GetResource[globals.Landscape](w),
-		beeFilter:        ecs.NewFilter1[comp.Bee](w),
-		foodsourceFilter: ecs.NewFilter2[comp.Position, comp.Foodsource](w),
-		beeMap:           ecs.NewMap2[comp.Position, comp.Bee](w),
-		colonyMap:        ecs.NewMap6[comp.Position, comp.Colony, comp.ColonyStores, comp.ColonyStimuli, comp.ColonyCounts, comp.ColonyRange](w),
-		positionMap:      ecs.NewMap1[comp.Position](w),
-		rangeMap:         ecs.NewMap1[comp.ColonyRange](w),
-		foodsourceMap:    ecs.NewMap2[comp.FoodsourceState, comp.Layer](w),
+		ticks:       ecs.GetResource[globals.Ticks](w),
+		parameters:  ecs.GetResource[params.Parameters](w),
+		constants:   ecs.GetResource[params.Constants](w),
+		landscape:   ecs.GetResource[globals.Landscape](w),
+		beeFilter:   ecs.NewFilter1[comp.Bee](w),
+		patchFilter: ecs.NewFilter2[comp.Position, comp.FlowerPatch](w),
+		beeMap:      ecs.NewMap2[comp.Position, comp.Bee](w),
+		colonyMap:   ecs.NewMap6[comp.Position, comp.Colony, comp.ColonyStores, comp.ColonyStimuli, comp.ColonyCounts, comp.ColonyRange](w),
+		positionMap: ecs.NewMap1[comp.Position](w),
+		rangeMap:    ecs.NewMap1[comp.ColonyRange](w),
+		patchMap:    ecs.NewMap1[comp.FlowerPatch](w),
 	}
 }
 
@@ -91,7 +91,9 @@ func (c *colonyFounder) found(w *ecs.World) {
 	}
 }
 
-// patchesInRange sets allPatchesInRangeList of a colony: all foodsources (every layer) within Constants.MaxForagingRange.
+// patchesInRange sets allPatchesInRangeList of a colony: all flower patches within Constants.MaxForagingRange.
+// NetLogo: all foodsources (every layer) in range. The layers of a flower patch share its position, so a flower
+// patch is in range exactly if its layers are.
 func (c *colonyFounder) patchesInRange(colony ecs.Entity) {
 	pos := *c.positionMap.Get(colony)
 	maxDist := c.constants.Foraging.MaxForagingRange * c.landscape.Scale
@@ -100,30 +102,33 @@ func (c *colonyFounder) patchesInRange(colony ecs.Entity) {
 	// of a forager reads, and the search chooses at random among the detected patches in any order
 	// (forager.search). Storage order (NetLogo: fput in random ask order).
 	list := []ecs.Entity{}
-	query := c.foodsourceFilter.Query()
+	query := c.patchFilter.Query()
 	for query.Next() {
 		if p, _ := query.Get(); distanceBetween(pos.X, pos.Y, p.X, p.Y) <= maxDist {
 			list = append(list, query.Entity())
 		}
 	}
-	c.rangeMap.Get(colony).Layers = list
+	c.rangeMap.Get(colony).Patches = list
 }
 
-// flowersInRange sets the lists of masterpatches in range that offer pollen or nectar now.
+// flowersInRange sets the lists of flower patches in range that offer pollen or nectar now. It runs in the morning
+// after flowerRefill, before any bee forages, so the flags of the flower patches hold.
+// NetLogo: the masterpatches of the layers in range with food, without duplicates. The layers of a flower patch
+// are stored together, so the flower patches keep the order of their first layer.
 func (c *colonyFounder) flowersInRange(colony ecs.Entity) {
 	r := c.rangeMap.Get(colony)
 	polM, necM := []ecs.Entity{}, []ecs.Entity{}
 	// ORDER: irrelevant, foreach over a list.
-	for _, fs := range r.Layers {
-		state, layer := c.foodsourceMap.Get(fs)
-		if state.Pollen > 0 {
-			polM = append(polM, layer.Masterpatch)
+	for _, e := range r.Patches {
+		fp := c.patchMap.Get(e)
+		if fp.PollenInFlower {
+			polM = append(polM, e)
 		}
-		if state.Nectar > 0 {
-			necM = append(necM, layer.Masterpatch)
+		if fp.NectarInFlower {
+			necM = append(necM, e)
 		}
 	}
-	r.PollenPatches = removeDuplicates(polM)
-	r.NectarPatches = removeDuplicates(necM)
+	r.PollenPatches = polM
+	r.NectarPatches = necM
 	r.PollenDetection, r.NectarDetection = nil, nil // new lists: the search computes them again
 }

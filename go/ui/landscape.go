@@ -18,9 +18,9 @@ import (
 // daysPerYear is the length of the model year (package day).
 const daysPerYear = 365
 
-// flowerPatch is one flower patch of the map: a masterpatch with all its foodsource layers.
+// flowerPatch is one flower patch of the map with all its layers.
 type flowerPatch struct {
-	Entity    ecs.Entity // the masterpatch
+	Entity    ecs.Entity // the flower patch
 	X, Y      float64    // NetLogo patch coordinates
 	Radius    float64    // NetLogo patches
 	PatchType string
@@ -29,9 +29,9 @@ type flowerPatch struct {
 	Layers    []flowerLayer
 }
 
-// flowerLayer is one foodsource layer: one flower species on one flower patch.
+// flowerLayer is one layer: one flower species on one flower patch.
 type flowerLayer struct {
-	Entity            ecs.Entity
+	Source            comp.Source
 	Index             int    // position in snapshot.Layers
 	FlowerSpecies     string // name of the flower species, "" for a flower patch without flower species
 	StartDay, StopDay float64
@@ -49,8 +49,8 @@ type habitat struct {
 // landscape is a snapshot of the static model data, taken after setup and after each crop rotation.
 type landscape struct {
 	Patches  []flowerPatch
-	index    map[ecs.Entity]int // masterpatch -> index in Patches
-	layers   map[ecs.Entity]int // foodsource layer -> flowerLayer.Index
+	index    map[ecs.Entity]int  // flower patch -> index in Patches
+	layers   map[comp.Source]int // layer -> flowerLayer.Index
 	Habitats []habitat
 	Scale    float64 // NetLogo patches per metre (globals.Landscape.Scale)
 
@@ -72,48 +72,43 @@ func newLandscape(w *ecs.World) *landscape {
 		flowerNames = f.Names
 	}
 
-	byMaster := map[ecs.Entity]*flowerPatch{}
-	masters := []ecs.Entity{}
-
-	query := ecs.NewFilter3[comp.Position, comp.Foodsource, comp.Layer](w).Query()
+	query := ecs.NewFilter2[comp.Position, comp.FlowerPatch](w).Query()
 	for query.Next() {
-		pos, fs, layer := query.Get()
-		p, ok := byMaster[layer.Masterpatch]
-		if !ok {
-			p = &flowerPatch{}
-			byMaster[layer.Masterpatch] = p
-			masters = append(masters, layer.Masterpatch)
+		pos, fp := query.Get()
+		p := flowerPatch{
+			Entity:    query.Entity(),
+			X:         pos.X,
+			Y:         pos.Y,
+			Radius:    fp.Radius * l.Scale,
+			PatchType: fp.PatchType,
+			Area:      fp.Area,
 		}
-		if layer.IsMasterpatch {
-			p.Entity = query.Entity()
-			p.X, p.Y = pos.X, pos.Y
-			p.Radius = fs.Radius * l.Scale
-			p.PatchType = fs.PatchType
-			p.Area = fs.Area
+		for i := range fp.Layers {
+			ly := &fp.Layers[i]
+			name := ""
+			if ly.Flower >= 0 && ly.Flower < len(flowerNames) {
+				name = flowerNames[ly.Flower]
+			}
+			p.Layers = append(p.Layers, flowerLayer{
+				Source:        comp.Source{Patch: query.Entity(), Layer: i},
+				FlowerSpecies: name,
+				StartDay:      float64(ly.StartDay),
+				StopDay:       float64(ly.StopDay),
+				NectarMax:     ly.NectarMax,
+				PollenMax:     ly.PollenMax,
+			})
 		}
-		name := ""
-		if fs.Flower >= 0 && fs.Flower < len(flowerNames) {
-			name = flowerNames[fs.Flower]
-		}
-		p.Layers = append(p.Layers, flowerLayer{
-			Entity:        query.Entity(),
-			FlowerSpecies: name,
-			StartDay:      float64(fs.StartDay),
-			StopDay:       float64(fs.StopDay),
-			NectarMax:     fs.NectarMax,
-			PollenMax:     fs.PollenMax,
-		})
+		l.Patches = append(l.Patches, p)
 	}
 	counts := map[string]int{}
-	for _, m := range masters {
-		p := byMaster[m]
+	for i := range l.Patches {
+		p := &l.Patches[i]
 		c := habitatColour(p.PatchType)
 		p.Colour = c
 		if counts[p.PatchType] == 0 {
 			l.Habitats = append(l.Habitats, habitat{Name: p.PatchType, Colour: c})
 		}
 		counts[p.PatchType]++
-		l.Patches = append(l.Patches, *p)
 	}
 	for i := range l.Habitats {
 		l.Habitats[i].Patches = counts[l.Habitats[i].Name]
@@ -121,7 +116,7 @@ func newLandscape(w *ecs.World) *landscape {
 	slices.SortFunc(l.Habitats, func(a, b habitat) int { return cmp.Compare(b.Patches, a.Patches) })
 	// Draw large patches first, so small ones stay visible and clickable on top.
 	slices.SortFunc(l.Patches, func(a, b flowerPatch) int { return cmp.Compare(b.Radius, a.Radius) })
-	l.index, l.layers = map[ecs.Entity]int{}, map[ecs.Entity]int{}
+	l.index, l.layers = map[ecs.Entity]int{}, map[comp.Source]int{}
 	for i := range l.Patches {
 		l.index[l.Patches[i].Entity] = i
 		slices.SortFunc(l.Patches[i].Layers, func(a, b flowerLayer) int {
@@ -130,16 +125,16 @@ func newLandscape(w *ecs.World) *landscape {
 		for j := range l.Patches[i].Layers {
 			ly := &l.Patches[i].Layers[j]
 			ly.Index = len(l.layers)
-			l.layers[ly.Entity] = ly.Index
+			l.layers[ly.Source] = ly.Index
 		}
 	}
 
 	return l
 }
 
-// patch returns the flower patch of a masterpatch, or nil.
-func (l *landscape) patch(masterpatch ecs.Entity) *flowerPatch {
-	i, ok := l.index[masterpatch]
+// patch returns the flower patch of the entity patch, or nil.
+func (l *landscape) patch(patch ecs.Entity) *flowerPatch {
+	i, ok := l.index[patch]
 	if !ok {
 		return nil
 	}

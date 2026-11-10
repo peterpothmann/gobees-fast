@@ -55,13 +55,15 @@ func TestMorningExampleFarm(t *testing.T) {
 	w := a.World
 	tally := newTally(w) // Setup kills no colony
 	cal := ecs.GetResource[globals.Calendar](w)
-	// the nectar of all foodsources. Without foraging the value of the morning stays until the evening.
-	states := ecs.NewFilter1[comp.FoodsourceState](w)
+	// the nectar of all layers. Without foraging the value of the morning stays until the evening.
+	patches := ecs.NewFilter1[comp.FlowerPatch](w)
 	nectar := func() float64 {
 		sum := 0.0
-		q := states.Query()
+		q := patches.Query()
 		for q.Next() {
-			sum += q.Get().Nectar
+			for _, l := range q.Get().Layers {
+				sum += l.Nectar
+			}
 		}
 		return sum
 	}

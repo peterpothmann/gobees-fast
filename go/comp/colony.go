@@ -52,12 +52,12 @@ type ColonyCounts struct {
 
 // ColonyRange holds the foodsources within the foraging range of a colony.
 type ColonyRange struct {
-	Layers        []ecs.Entity // all foodsources (layers) in range, in storage order. NetLogo: allPatchesInRangeList (random order)
-	PollenPatches []ecs.Entity // masterpatches in range with a pollen layer in flower. NetLogo: masterpatchesWithPollenlayersInFlowerAndRangeList
-	NectarPatches []ecs.Entity // masterpatches in range with a nectar layer in flower. NetLogo: masterpatchesWithNectarlayersInFlowerAndRangeList
+	Patches       []ecs.Entity // all flower patches in range, in storage order. NetLogo: allPatchesInRangeList (all layers, random order)
+	PollenPatches []ecs.Entity // flower patches in range with a pollen layer in flower. NetLogo: masterpatchesWithPollenlayersInFlowerAndRangeList
+	NectarPatches []ecs.Entity // flower patches in range with a nectar layer in flower. NetLogo: masterpatchesWithNectarlayersInFlowerAndRangeList
 
-	// The detection probability of each masterpatch of PollenPatches and NectarPatches, in the same order. Colony,
-	// masterpatches and their radius do not move, so the search computes it once per list (forager.detections).
+	// The detection probability of each flower patch of PollenPatches and NectarPatches, in the same order. Colony,
+	// flower patches and their radius do not move, so the search computes it once per list (forager.detections).
 	// nil: not computed yet. Whoever sets PollenPatches or NectarPatches sets the matching list to nil.
 	PollenDetection []float64
 	NectarDetection []float64

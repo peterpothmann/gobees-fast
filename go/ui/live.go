@@ -23,7 +23,7 @@ type modelState struct {
 	counters *obs.Counters    // foraging trips of the day
 	bees     *ecs.Filter2[comp.Bee, comp.Forager]
 	colonies *ecs.Filter5[comp.Position, comp.Colony, comp.ColonyStores, comp.ColonyCounts, comp.ColonyRange]
-	layers   *ecs.Filter1[comp.FoodsourceState]
+	patches  *ecs.Filter1[comp.FlowerPatch]
 	badgers  *ecs.Filter2[comp.Position, comp.Badger]
 
 	// known holds the number and the day of foundation of every colony the UI has seen, by its entity. The model
@@ -47,7 +47,7 @@ func newModel(w *ecs.World, counters *obs.Counters) *modelState {
 		bees:     ecs.NewFilter2[comp.Bee, comp.Forager](w),
 		colonies: ecs.NewFilter5[comp.Position, comp.Colony, comp.ColonyStores, comp.ColonyCounts, comp.ColonyRange](w),
 		badgers:  ecs.NewFilter2[comp.Position, comp.Badger](w),
-		layers:   ecs.NewFilter1[comp.FoodsourceState](w),
+		patches:  ecs.NewFilter1[comp.FlowerPatch](w),
 		known:    map[ecs.Entity]colonyID{},
 		nextWho:  1,
 	}
@@ -83,7 +83,7 @@ type colonyView struct {
 	Colony  comp.Colony
 	Stores  comp.ColonyStores
 	Counts  beeCounts
-	InRange int                 // foodsource layers within the foraging range
+	InRange int                 // flower patches within the foraging range
 	Flowers map[ecs.Entity]bool // masterpatches with layers in flower within the foraging range
 	// Known holds the masterpatches the colony's bees know for nectar and pollen (comp.Forager.KnownNectarPatches,
 	// KnownPollenPatches), with the number of bees that know them.
@@ -128,13 +128,16 @@ type layerDay struct {
 func (m *modelState) read(tick int64, land *landscape) snapshot {
 	s := snapshot{Tick: tick, index: map[ecs.Entity]int{}, Layers: make([]layerDay, len(land.layers)),
 		ForagerTrips: m.counters.TotalForagingTripsToday}
-	lq := m.layers.Query()
-	for lq.Next() {
-		st := lq.Get()
-		s.NectarLeft += st.Nectar
-		s.PollenLeft += st.Pollen
-		if i, ok := land.layers[lq.Entity()]; ok {
-			s.Layers[i] = layerDay{Nectar: float32(st.Nectar), Pollen: float32(st.Pollen)}
+	pq := m.patches.Query()
+	for pq.Next() {
+		fp := pq.Get()
+		for j := range fp.Layers {
+			st := &fp.Layers[j]
+			s.NectarLeft += st.Nectar
+			s.PollenLeft += st.Pollen
+			if i, ok := land.layers[comp.Source{Patch: pq.Entity(), Layer: j}]; ok {
+				s.Layers[i] = layerDay{Nectar: float32(st.Nectar), Pollen: float32(st.Pollen)}
+			}
 		}
 	}
 	q := m.colonies.Query()
@@ -148,7 +151,7 @@ func (m *modelState) read(tick int64, land *landscape) snapshot {
 		}
 		v := colonyView{
 			Who: id.Who, X: pos.X, Y: pos.Y, Founded: id.Founded, Species: m.species[c.Species].Name,
-			Colony: *c, Stores: *st, InRange: len(rng.Layers), Flowers: map[ecs.Entity]bool{},
+			Colony: *c, Stores: *st, InRange: len(rng.Patches), Flowers: map[ecs.Entity]bool{},
 			KnownNectar: map[ecs.Entity]float64{}, KnownPollen: map[ecs.Entity]float64{},
 		}
 		for _, e := range rng.NectarPatches {

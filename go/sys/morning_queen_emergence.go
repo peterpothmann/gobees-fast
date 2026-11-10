@@ -36,11 +36,11 @@ type queenEmergence struct {
 	death      beeDeath
 	colonies   colonyFounder
 
-	beeFilter     *ecs.Filter1[comp.Bee]
-	colonyFilter  *ecs.Filter2[comp.Position, comp.Colony]
-	beeMap        *beeMapper
-	speciesMap    *speciesTable
-	foodsourceMap *ecs.Map2[comp.Position, comp.Foodsource]
+	beeFilter    *ecs.Filter1[comp.Bee]
+	colonyFilter *ecs.Filter2[comp.Position, comp.Colony]
+	beeMap       *beeMapper
+	speciesMap   *speciesTable
+	patchMap     *ecs.Map2[comp.Position, comp.FlowerPatch]
 }
 
 func (s *queenEmergence) Initialize(w *ecs.World) {
@@ -59,7 +59,7 @@ func (s *queenEmergence) Initialize(w *ecs.World) {
 	s.colonyFilter = ecs.NewFilter2[comp.Position, comp.Colony](w)
 	s.beeMap = newBeeMapper(w)
 	s.speciesMap = newSpeciesTable(w)
-	s.foodsourceMap = ecs.NewMap2[comp.Position, comp.Foodsource](w)
+	s.patchMap = ecs.NewMap2[comp.Position, comp.FlowerPatch](w)
 }
 
 func (s *queenEmergence) Update(w *ecs.World) {
@@ -168,7 +168,7 @@ func (s *queenEmergence) copyBee(e ecs.Entity, n int) {
 func (s *queenEmergence) searchNestSite(w *ecs.World, e ecs.Entity, sp *params.Species, ns *globals.SpeciesNestSites) {
 	if s.rng.Float64() <= sp.DailyNestSiteChance {
 		fsE := s.chooseNestSite(ns)
-		fsPos, fs := s.foodsourceMap.Get(fsE)
+		fsPos, fs := s.patchMap.Get(fsE)
 		// a random patch centre within the circle
 		candidates := patchCentresWithin(fsPos.X, fsPos.Y, fs.Radius*s.landscape.Scale,
 			int(s.world.MinPxcor), int(s.world.MaxPxcor), int(s.world.MinPycor), int(s.world.MaxPycor))
@@ -195,13 +195,13 @@ func (s *queenEmergence) searchMortality() float64 {
 
 // chooseNestSite chooses a nest site, weighted by area.
 func (s *queenEmergence) chooseNestSite(ns *globals.SpeciesNestSites) ecs.Entity {
-	// Sites is in the order of globals.Landscape.Masterpatches. ORDER: irrelevant, with one uniform number p each
+	// Sites is in the order of globals.Landscape.Patches. ORDER: irrelevant, with one uniform number p each
 	// site is chosen with the probability area / total area in any order. Not shuffled (NetLogo: shuffle).
 	list := ns.Sites
 	p := s.rng.Float64()
 	probsSummedUp := 0.0
 	for _, e := range list {
-		_, fs := s.foodsourceMap.Get(e)
+		_, fs := s.patchMap.Get(e)
 		probsSummedUp += fs.Area / ns.Area
 		if probsSummedUp > p {
 			return e

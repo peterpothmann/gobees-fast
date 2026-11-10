@@ -24,7 +24,7 @@ type cropRotation struct {
 	landscape *globals.Landscape
 	nestSites *globals.NestSites
 
-	fsFilter     *ecs.Filter1[comp.Foodsource]
+	patchFilter  *ecs.Filter1[comp.FlowerPatch]
 	beeFilter    *ecs.Filter1[comp.Bee]
 	colonyFilter *ecs.Filter1[comp.Colony]
 	foragerMap   *ecs.Map1[comp.Forager]
@@ -40,7 +40,7 @@ func (s *cropRotation) Initialize(w *ecs.World) {
 	s.derived = ecs.GetResource[params.Derived](w)
 	s.landscape = ecs.GetResource[globals.Landscape](w)
 	s.nestSites = ecs.GetResource[globals.NestSites](w)
-	s.fsFilter = ecs.NewFilter1[comp.Foodsource](w)
+	s.patchFilter = ecs.NewFilter1[comp.FlowerPatch](w)
 	s.beeFilter = ecs.NewFilter1[comp.Bee](w)
 	s.colonyFilter = ecs.NewFilter1[comp.Colony](w)
 	s.foragerMap = ecs.NewMap1[comp.Forager](w)
@@ -56,7 +56,7 @@ func (s *cropRotation) Update(w *ecs.World) {
 
 func (s *cropRotation) Finalize(w *ecs.World) {}
 
-// rotate replaces all foodsources by the ones of the next file of the rotation.
+// rotate replaces all flower patches by the ones of the next file of the rotation.
 func (s *cropRotation) rotate(w *ecs.World) {
 	// Worked example (list chosen by hand): 2 files, ticks 365: year 1, item 1. Ticks 730: item 0.
 	year := math.Ceil(float64(s.ticks.Ticks) / 365)
@@ -64,9 +64,9 @@ func (s *cropRotation) rotate(w *ecs.World) {
 	mapToUse := int(year) % nMaps // remainder: ticks > 0, so no negative values
 	s.landscape.File = s.derived.CropRotation[mapToUse]
 
-	// all foodsources die
+	// all flower patches die (NetLogo: all foodsources)
 	dead := []ecs.Entity{}
-	fsQuery := s.fsFilter.Query()
+	fsQuery := s.patchFilter.Query()
 	for fsQuery.Next() {
 		dead = append(dead, fsQuery.Entity())
 	}
@@ -80,13 +80,13 @@ func (s *cropRotation) rotate(w *ecs.World) {
 		f := s.foragerMap.Get(e)
 		f.KnownNectarPatches = []ecs.Entity{}
 		f.KnownPollenPatches = []ecs.Entity{}
-		f.NectarSource = ecs.Entity{}
-		f.PollenSource = ecs.Entity{}
-		f.CurrentFoodsource = ecs.Entity{}
+		f.NectarSource = comp.Source{}
+		f.PollenSource = comp.Source{}
+		f.CurrentFoodsource = comp.Source{}
 	}
-	// every colony empties its in-flower lists of masterpatches, but NOT ColonyRange.Layers: it keeps the
-	// dead foodsources. colonyFounder.flowersInRange reads
-	// Layers on the next flowering change and panics there (Ark: "can't get components of a dead
+	// every colony empties its in-flower lists of flower patches, but NOT ColonyRange.Patches: it keeps the
+	// dead flower patches. colonyFounder.flowersInRange reads
+	// Patches on the next flowering change and panics there (Ark: "can't get components of a dead
 	// entity", NetLogo: runtime error on a dead turtle). Needs a colony alive on Day 365, which the species of
 	// netlogo/_SYSTEM_BumbleSpecies_UK_01.csv cannot have (seasonStop 305).
 	// ORDER: irrelevant, each colony only changes itself. Not shuffled (NetLogo: random order).
@@ -105,10 +105,10 @@ func (s *cropRotation) rotate(w *ecs.World) {
 	// minPollenStore_g is not computed again: the formula reads only species values, which do not change.
 	// ORDER: irrelevant, each species only changes itself. Not shuffled (NetLogo: random order).
 	species := s.speciesMap.all()
-	masterpatches := collectMasterpatches(w)
+	patches := collectPatches(w)
 	for _, i := range species {
 		ns := &s.nestSites.BySpecies[i]
-		ns.Sites, ns.Area = nestSites(ns.Habitats, masterpatches)
+		ns.Sites, ns.Area = nestSites(ns.Habitats, patches)
 		if sp := s.speciesMap.Get(i); len(ns.Sites) == 0 && !sp.Parasitic {
 			log.Printf("%s has no suitable nesting habitat", sp.Name)
 		}

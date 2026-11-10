@@ -56,7 +56,7 @@ the same.
   (`constants.foraging.maxForagingRange`). Lines run to the edge of each reachable patch in flower: the stronger
   the line, the more likely a searching bee finds it (`exp(detectionLambda × distance to the edge)`). The window
   computes this itself, the test nest is not part of the model.
-* **Patch info:** its flower species (`comp.Foodsource.Flower`) with their flowering periods, nectar and pollen
+* **Patch info:** its flower species (`comp.Layer.Flower`) with their flowering periods, nectar and pollen
   left at the end of the day, and the colonies whose bees know the patch. The model counts no visits per patch.
 * **Debug tab:** steps through a day and shows the model where it stopped.
   * `Next turn` (`T`) runs to the end of the next bee turn of the activity loop, `Next part` (`P`) to the end of the

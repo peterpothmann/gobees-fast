@@ -46,7 +46,7 @@ type beeView struct {
 	hasStimuli           bool // the bee has a colony, so the stimuli are those of her colony
 	energy, pollen       float64
 	carriedN, carriedP   float64    // load of the bee or cohort: nectar [kJ], pollen [g]
-	nectarSrc, pollenSrc ecs.Entity // masterpatches of the next nectar and pollen trip, zero for none
+	nectarSrc, pollenSrc ecs.Entity // flower patches of the next nectar and pollen trip, zero for none
 }
 
 // debugReader reads the world for the debug tab.
@@ -55,7 +55,6 @@ type debugReader struct {
 	daytime  *globals.Daytime
 	bees     *ecs.Map3[comp.Bee, comp.Thresholds, comp.Forager]
 	colonies *ecs.Map3[comp.Position, comp.ColonyStimuli, comp.ColonyStores]
-	layers   *ecs.Map1[comp.Layer]
 	globals  []any // pointers to the resources of package globals
 }
 
@@ -65,7 +64,6 @@ func newDebugReader(w *ecs.World) *debugReader {
 		daytime:  ecs.GetResource[globals.Daytime](w),
 		bees:     ecs.NewMap3[comp.Bee, comp.Thresholds, comp.Forager](w),
 		colonies: ecs.NewMap3[comp.Position, comp.ColonyStimuli, comp.ColonyStores](w),
-		layers:   ecs.NewMap1[comp.Layer](w),
 		globals: []any{
 			ecs.GetResource[globals.Ticks](w), ecs.GetResource[globals.Calendar](w),
 			ecs.GetResource[globals.Daytime](w), ecs.GetResource[globals.ActiveBees](w),
@@ -144,11 +142,11 @@ func (r *debugReader) readBee(e ecs.Entity, known map[ecs.Entity]colonyID) *beeV
 	v.caste, v.stage, v.task = b.Caste.String(), b.Stage.String(), b.Activity.String()
 	v.thresholds = *th
 	v.carriedN, v.carriedP = fo.CarriedNectar, fo.CarriedPollen
-	if !fo.NectarSource.IsZero() && r.world.Alive(fo.NectarSource) {
-		v.nectarSrc = r.layers.Get(fo.NectarSource).Masterpatch
+	if !fo.NectarSource.IsZero() && r.world.Alive(fo.NectarSource.Patch) {
+		v.nectarSrc = fo.NectarSource.Patch
 	}
-	if !fo.PollenSource.IsZero() && r.world.Alive(fo.PollenSource) {
-		v.pollenSrc = r.layers.Get(fo.PollenSource).Masterpatch
+	if !fo.PollenSource.IsZero() && r.world.Alive(fo.PollenSource.Patch) {
+		v.pollenSrc = fo.PollenSource.Patch
 	}
 	if !b.Colony.IsZero() && r.world.Alive(b.Colony) {
 		pos, stim, stores := r.colonies.Get(b.Colony)

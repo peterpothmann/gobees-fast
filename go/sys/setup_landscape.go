@@ -28,9 +28,9 @@ func (s *landscapeSetup) Initialize(w *ecs.World) {
 	createFoodsources(w, derived.StartLandscape, &s.landscape)
 	ecs.AddResource(w, &s.landscape)
 
-	// assertion: every foodsource must have a habitat type. Part of the setup, not of createFoodsources,
+	// assertion: every flower patch must have a habitat type. Part of the setup, not of createFoodsources,
 	// so it does not run after a crop rotation.
-	query := ecs.NewFilter1[comp.Foodsource](w).Query()
+	query := ecs.NewFilter1[comp.FlowerPatch](w).Query()
 	undefined := false
 	for query.Next() {
 		if query.Get().PatchType == "undefined" {
@@ -85,22 +85,20 @@ func createFoodsources(w *ecs.World, foodsourcesFile string, landscape *globals.
 	}
 
 	// in.Flowers is nil if FlowerspeciesFile is "No Input File".
-	masterpatches, err := createLayers(w, kept, in.Flowers, file, &constants.Landscape, derived.StewardshipOptions, rng)
+	patchList, err := createLayers(w, kept, in.Flowers, file, &constants.Landscape, derived.StewardshipOptions, rng)
 	if err != nil {
 		panic(err)
 	}
-	landscape.Masterpatches = masterpatches
+	landscape.Patches = patchList
 }
 
-// flowerPatch is a flower patch of a foodsources file during the setup. It is a plain struct. Entities are
-// created only for the layers (and for flower patches with an empty list).
+// flowerPatch is a flower patch of a foodsources file during the setup. It is a plain struct. The flower patch entity
+// is created by createLayers.
 //
 // NetLogo: the foodsource turtle of a flower patch, which dies in CreateLayersProc.
 type flowerPatch struct {
 	params.FlowerPatch         // the line of the file
 	Radius             float64 // [m]
-	NectarMax          float64 // always 0, the food of a flower patch is in its layers
-	PollenMax          float64 // always 0, the food of a flower patch is in its layers
 }
 
 // precision rounds x to the given number of decimals. NetLogo: precision.
@@ -194,26 +192,35 @@ func removeDuplicates[T comparable](list []T) []T {
 	return out
 }
 
-// createLayers splits every flower patch into one foodsource per flower species. It returns the
-// masterpatches in NetLogo's who order: first the flower patches that are not split, in the order of
-// patches (in NetLogo they get their who numbers before all layers), then the masterpatches of the split flower
-// patches, in the order of their creation.
+// createLayers creates one flower patch entity per flower patch with one layer per flower species. It returns the
+// flower patches in NetLogo's who order of their masterpatches: first the flower patches that are not split, in the
+// order of patches (in NetLogo they get their who numbers before all layers), then the split flower patches, in the
+// order of their creation. A split flower patch without a surviving layer gets no entity (NetLogo: no masterpatch).
+//
+// The entities are created in NetLogo's who order of the layers: first the split flower patches, then the others.
+// The storage order of the flower patches therefore is the order in which NetLogo's layers were stored, and the
+// colony lists (colonyFounder.patchesInRange) keep the order they had with one entity per layer.
 func createLayers(w *ecs.World, patches []*flowerPatch, flowers *params.FlowerSpeciesTable, file *params.Parameters,
 	c *params.LandscapeConstants, cssOptions []string, rng *rand.Rand) ([]ecs.Entity, error) {
 
-	mapper := ecs.NewMap4[comp.Position, comp.Foodsource, comp.FoodsourceState, comp.Layer](w)
+	mapper := ecs.NewMap2[comp.Position, comp.FlowerPatch](w)
 
 	minNectar := file.FoodsourceLimit * c.TripNectar // [µl]
 	minPollen := file.FoodsourceLimit * c.TripPollen // [g]
 
-	newFoodsource := func(p *flowerPatch, fs comp.Foodsource) ecs.Entity {
-		return mapper.NewEntity(&comp.Position{X: p.X, Y: p.Y}, &fs, &comp.FoodsourceState{}, &comp.Layer{})
+	newPatch := func(p *flowerPatch, layers []comp.Layer) ecs.Entity {
+		return mapper.NewEntity(&comp.Position{X: p.X, Y: p.Y}, &comp.FlowerPatch{
+			ID:        p.ID,
+			PatchType: p.PatchType,
+			Area:      p.Area,
+			Radius:    p.Radius,
+			Layers:    layers,
+		})
 	}
-	layerMapper := ecs.NewMap1[comp.Layer](w)
-	splitMasterpatches := []ecs.Entity{}
+	splitPatches := []ecs.Entity{}
 
 	// ORDER: MATTERS. The flower patches are split in random order, as NetLogo asks them in random order.
-	// The order of creation of the layers is NetLogo's who order.
+	// The order of creation is NetLogo's who order of the layers.
 	toSplit := []*flowerPatch{}
 	for _, p := range patches {
 		if flowers != nil && len(p.Flowers) > 0 {
@@ -223,16 +230,15 @@ func createLayers(w *ecs.World, patches []*flowerPatch, flowers *params.FlowerSp
 	rng.Shuffle(len(toSplit), func(i, j int) { toSplit[i], toSplit[j] = toSplit[j], toSplit[i] })
 
 	for _, p := range toSplit {
-		var master ecs.Entity
 		// the layers of this flower patch, in order of creation (= who order)
-		layers := []ecs.Entity{}
+		layers := []comp.Layer{}
 		// ORDER: irrelevant, foreach over a list. A stewardship option is no flower species and gets no
 		// layer.
 		for _, e := range p.Flowers {
 			if slices.Contains(cssOptions, e.Name) {
 				continue
 			}
-			// a new layer: all values of the flower patch, then the flower data.
+			// a new layer: the flower data, scaled by the area of the flower patch.
 			data, err := flowers.Get(e.Name)
 			if err != nil {
 				return nil, err
@@ -241,12 +247,8 @@ func createLayers(w *ecs.World, patches []*flowerPatch, flowers *params.FlowerSp
 				return nil, fmt.Errorf("flower patch %v: %s has no value", p.ID, e.Name)
 			}
 			relAbundance := file.AbundanceBoost * e.Value
-			fs := comp.Foodsource{
-				ID:                  p.ID,
+			l := comp.Layer{
 				Flower:              slices.Index(flowers.Names, e.Name), // the row of flowers.Get
-				PatchType:           p.PatchType,
-				Area:                p.Area,
-				Radius:              p.Radius,
 				PollenMax:           p.Area * relAbundance * data.PollenPerFlower,
 				NectarPerFlower:     data.NectarPerFlower * 1000,
 				NectarConcentration: data.Concentration,
@@ -255,64 +257,39 @@ func createLayers(w *ecs.World, patches []*flowerPatch, flowers *params.FlowerSp
 				CorollaDepth:        data.CorollaDepth,
 				InterFlowerTime:     data.InterFlowerTime,
 			}
-			fs.NectarMax = p.Area * relAbundance * fs.NectarPerFlower
+			l.NectarMax = p.Area * relAbundance * l.NectarPerFlower
 
-			if file.LimitFoodsources && fs.NectarMax < minNectar {
-				fs.NectarMax = 0
+			if file.LimitFoodsources && l.NectarMax < minNectar {
+				l.NectarMax = 0
 			}
-			if file.LimitFoodsources && fs.PollenMax < minPollen {
-				fs.PollenMax = 0
+			if file.LimitFoodsources && l.PollenMax < minPollen {
+				l.PollenMax = 0
 			}
-			if fs.NectarMax == 0 && fs.PollenMax == 0 && file.RemoveEmptyFoodsources &&
+			if l.NectarMax == 0 && l.PollenMax == 0 && file.RemoveEmptyFoodsources &&
 				!strings.Contains(p.PatchType, "Crop_") {
 				continue
 			}
-
-			// the first surviving layer is the masterpatch
-			layer := newFoodsource(p, fs)
-			l := layerMapper.Get(layer)
-			if master.IsZero() {
-				master = layer
-				l.IsMasterpatch = true
-				splitMasterpatches = append(splitMasterpatches, layer)
-			}
-			l.Masterpatch = master
-			layers = append(layers, layer)
+			layers = append(layers, l)
 		}
-		// every layer of the flower patch gets the same list
-		for _, layer := range layers {
-			layerMapper.Get(layer).PatchLayers = layers
+		// NetLogo: the first surviving layer is the masterpatch, without one the flower patch is gone
+		if len(layers) > 0 {
+			splitPatches = append(splitPatches, newPatch(p, layers))
 		}
-		// the flower patch itself is removed
 	}
 
-	// a flower patch with an empty flower species list is not split: it stays a masterpatch
-	// without food (NectarMax = PollenMax = 0, StartDay = StopDay = 0).
+	// a flower patch with an empty flower species list is not split: it stays a flower patch without layers
+	// (NetLogo: a masterpatch without food, NectarMax = PollenMax = 0, StartDay = StopDay = 0).
 	// Without a FlowerspeciesFile, no flower patch is split.
-	masterpatches := []ecs.Entity{}
+	unsplit := []ecs.Entity{}
 	for _, p := range patches {
 		if flowers != nil && len(p.Flowers) > 0 {
 			continue
 		}
-		e := newFoodsource(p, comp.Foodsource{
-			ID:        p.ID,
-			Flower:    -1,
-			PatchType: p.PatchType,
-			Area:      p.Area,
-			Radius:    p.Radius,
-			NectarMax: p.NectarMax,
-			PollenMax: p.PollenMax,
-		})
-		l := layerMapper.Get(e)
-		l.IsMasterpatch = true
-		l.Masterpatch = e
-		l.PatchLayers = []ecs.Entity{e}
-		masterpatches = append(masterpatches, e)
+		unsplit = append(unsplit, newPatch(p, nil))
 	}
 
-	// PatchLayers of EVERY foodsource holds all layers of its flower patch (the same Masterpatch), in the order of
-	// creation (NetLogo's who order). Set above while the layers are created. NetLogo takes all foodsources on the
-	// same NetLogo patch cell, also the layers of another flower patch in this cell. The lists equal NetLogo's if no
-	// patch cell holds two flower patches, as in the example farm.
-	return append(masterpatches, splitMasterpatches...), nil
+	// The layers of a flower patch are the layers of the same masterpatch, in the order of creation (NetLogo's who
+	// order). NetLogo takes all foodsources on the same NetLogo patch cell, also the layers of another flower patch
+	// in this cell. The lists equal NetLogo's if no patch cell holds two flower patches, as in the example farm.
+	return append(unsplit, splitPatches...), nil
 }

@@ -49,7 +49,7 @@ type DailyOutput struct {
 
 	beeFilter    *ecs.Filter1[comp.Bee]
 	colonyFilter *ecs.Filter1[comp.Colony]
-	fsFilter     *ecs.Filter2[comp.Position, comp.Foodsource]
+	fsFilter     *ecs.Filter2[comp.Position, comp.FlowerPatch]
 	values       []float64
 }
 
@@ -60,7 +60,7 @@ func (o *DailyOutput) Initialize(w *ecs.World) {
 	o.active = ecs.GetResource[globals.ActiveBees](w)
 	o.beeFilter = ecs.NewFilter1[comp.Bee](w)
 	o.colonyFilter = ecs.NewFilter1[comp.Colony](w)
-	o.fsFilter = ecs.NewFilter2[comp.Position, comp.Foodsource](w)
+	o.fsFilter = ecs.NewFilter2[comp.Position, comp.FlowerPatch](w)
 	o.values = make([]float64, 14)
 	o.mapArea()
 }
@@ -168,7 +168,7 @@ func (o *DailyOutput) update() {
 	}
 }
 
-// mapArea sets the map area the first time that there are foodsources.
+// mapArea sets the map area the first time that there are flower patches.
 func (o *DailyOutput) mapArea() {
 	if o.Totals.TotalMapArea_km2 != 0 {
 		return
@@ -181,18 +181,18 @@ func (o *DailyOutput) mapArea() {
 	}
 }
 
-// totalMapArea returns the area [km2] of the box around all foodsources (centre +- radius), limited to the
-// world.
+// totalMapArea returns the area [km2] of the box around all flower patches (centre +- radius), limited to the
+// world. NetLogo: around all foodsources (layers), which share the centre and the radius of their flower patch.
 func (o *DailyOutput) totalMapArea() float64 {
-	// Among tied foodsources the first one in storage order counts (NetLogo: one at random). Tied foodsources share
-	// the coordinate, but their radius can differ, so the area can differ from NetLogo's in that case.
+	// Among tied flower patches the first one in storage order counts (NetLogo: one at random). Tied flower patches
+	// share the coordinate, but their radius can differ, so the area can differ from NetLogo's in that case.
 	type source struct{ x, y, r float64 }
 	var top, bottom, right, left source
 	first := true
 	query := o.fsFilter.Query()
 	for query.Next() {
-		pos, fs := query.Get()
-		src := source{pos.X, pos.Y, fs.Radius}
+		pos, fp := query.Get()
+		src := source{pos.X, pos.Y, fp.Radius}
 		if first {
 			top, bottom, right, left = src, src, src, src
 			first = false

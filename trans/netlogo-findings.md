@@ -136,7 +136,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Consequence for gobees:** compute the list by patch cell exactly as NetLogo does (rounded coordinates, see the patch cells in `trans/data-model.md`), not by masterpatch. Translate the assertion, so that gobees stops in the same situation.
 - **Second Check**: 23.10.2026, PP
 - **Implemented:** `setLayersInPatchList` in `sys/setup_landscape.go`, grouped by `util.Pcor` (`pcor` in `sys/shared_space.go` in gobees-fast). Test: `TestCreateLayers` (two flower patches in cell (10, 20) share one list). The assertion in `choosePatch` comes with step 6. Step 6: the assertion in `forager.choosePatch` (`sys/day_foraging.go`, `[PCH-03]`) panics. `bestLayer` reads `Layer.PatchLayers` (`LayersInPatchList` in gobees).
-- **gobees-fast:** fixed. `setLayersInPatchList` groups by `Layer.Masterpatch` (`MasterpatchID` in gobees): the list holds the layers of the same flower patch, sorted by `who`. The assertion in [PCH-03] stays as a check of the state. Same lists as before for the example farm and `Example_Farm_PlotTest` (no patch cell with two flower patches). Test: `TestCreateLayersProc` (two flower patches in cell (10, 20) get two lists).
+- **gobees-fast:** fixed. One entity per flower patch (`comp.FlowerPatch`), its layers are `FlowerPatch.Layers` in the order of creation (`who` order), so `bestLayer` sees only the layers of the same flower patch. The assertion in [PCH-03] stays as a check of the state. Same lists as before for the example farm and `Example_Farm_PlotTest` (no patch cell with two flower patches). Test: `TestCreateLayers` (two flower patches in cell (10, 20) keep their own layers).
 
 <a id="finding-16"></a>
 
@@ -156,7 +156,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Finding:** `CreateFoodsourcesProc` and `CreateLayersProc` set `farmland?` by comparing the `who` number with the parameter `MyFarmlandPatches`. No procedure reads `farmland?`. In `CreateLayersProc` the comparison even uses the layer's random `who` number (finding 16). Both have no effect.
 - **Consequence for gobees:** do not translate `farmland?`. `MyFarmlandPatches` is read from the parameter file but not used (like `MaxForagingRange_m`, finding 8).
 - **Second Check**: 23.10.2026, PP
-- **Implemented:** `farmland?` and `MyFarmlandPatches` are not translated (`comp.Foodsource` has no such field).
+- **Implemented:** `farmland?` and `MyFarmlandPatches` are not translated (`comp.Foodsource` has no such field, in gobees-fast `comp.FlowerPatch`).
 
 <a id="finding-18"></a>
 
@@ -166,7 +166,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Finding:** A flower patch outside `MapAreaIncluded` and a layer without nectar and pollen are first created and then removed with `die`. Each has already used up a `who` number. NetLogo never reuses `who` numbers within a run.
 - **Consequence for gobees:** the `Who` counter must also count these removed foodsources, otherwise the `who` order differs from NetLogo whenever it matters (finding 16).
 - **Second Check**: 23.10.2026, PP
-- **Implemented:** in gobees `globals.WhoCounter`, which counted every flower patch, also outside `MapAreaIncluded`, and every removed layer (test: gap between layers A and C). gobees-fast keeps no `who` numbers: `createLayers` keeps the foodsources in the order of creation, which is the `who` order (`globals.Landscape.Masterpatches`, `Layer.PatchLayers`). `MapAreaIncluded` is removed. Test: `TestCreateLayers` (order of the masterpatches).
+- **Implemented:** in gobees `globals.WhoCounter`, which counted every flower patch, also outside `MapAreaIncluded`, and every removed layer (test: gap between layers A and C). gobees-fast keeps no `who` numbers: `createLayers` keeps the flower patches and their layers in the order of creation, which is the `who` order (`globals.Landscape.Patches`, `FlowerPatch.Layers`). `MapAreaIncluded` is removed. Test: `TestCreateLayers` (order of the masterpatches).
 
 <a id="finding-19"></a>
 
