@@ -27,6 +27,7 @@ type cli struct {
 	ListColumns bool     `help:"Print the columns of the daily output with a description and exit."`
 	Repetitions *int     `placeholder:"N" help:"Number of runs of each combination of the variations (of the run file without variations), 1 or more. Repetition i has the seed SEED + i - 1. Default: run.repetitions of the run file."`
 	Threads     *int     `placeholder:"T" help:"Number of runs at the same time, 1 or more (on a cluster: the CPUs of the job). It does not change the output. Default: run.threads of the run files, which must then be equal."`
+	Part        *string  `placeholder:"I/N" help:"Run only the part I of N of the runs, 1 <= I <= N (a job of an array on a cluster, e.g. --part $SLURM_ARRAY_TASK_ID/50): the runs of all combinations are split into N blocks of consecutive runs, each keeps its run number and seed. The output goes into DIR/NAME/part_I (I with leading zeros), the parts appended in order give the daily output of all runs. Default: run.part of the run file, else all runs."`
 	UI          bool     `name:"ui" help:"Show the run in a window while it runs: map, daily plots, colonies, flower patches. The run, its output and provenance are the same as without the window. One run only (one run file, repetitions 1, no variations). Closing the window ends the run on that day. On Linux only in a build with the tag ui: go run -tags ui . --ui"`
 
 	// for the window, not shown in --help
@@ -146,7 +147,7 @@ func (c *cli) run(w io.Writer) error {
 		}
 		// before the runs, so that a run that fails can be repeated
 		prov := newProvenance(e.files, e.config, &e.first, e.repetitions, threads, e.output, e.columns, started,
-			e.sums)
+			e.sums, e.partText())
 		if err := prov.write(e.dir); err != nil {
 			return err
 		}
@@ -202,10 +203,14 @@ func (e *experiment) summary(w io.Writer, several bool, threads int) {
 		fmt.Fprintf(w, "%s:\n", e.name)
 	}
 	fmt.Fprintf(w, "species: %v\n", e.results[0].species)
+	lo, hi := e.runRange()
+	if e.part != nil {
+		fmt.Fprintf(w, "part %s: runs %d to %d of %d\n", e.part, lo+1, hi, e.combinations()*e.repetitions)
+	}
 	seed := e.first.Seed
 	if len(e.results) == 1 {
 		r := e.results[0]
-		fmt.Fprintf(w, "seed: %d\n", seed)
+		fmt.Fprintf(w, "seed: %d\n", seed+int64(lo%e.repetitions))
 		fmt.Fprintf(w, "colonies founded: %v, bees died: %v\n", r.founded, r.died)
 		fmt.Fprintf(w, "finished after %d days\n", r.days)
 	} else {

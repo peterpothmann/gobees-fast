@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -29,8 +30,19 @@ type experiment struct {
 	output      string            // the daily output file in dir, "" without
 	results     []runResult       // the results of its runs, in the order of its jobs
 
-	cli *cli // the flags, which paramsOf applies to each combination
+	part *runPart // the part of the runs that runs (--part, run.part), nil: all runs
+	cli  *cli     // the flags, which paramsOf applies to each combination
 }
+
+// runPart is the part i of n of the runs of an experiment (--part i/n).
+type runPart struct{ i, n int }
+
+// String returns the part as in --part, e.g. 3/50.
+func (p runPart) String() string { return fmt.Sprintf("%d/%d", p.i, p.n) }
+
+// folder returns the output folder of the part in the folder of the run file, e.g. part_03 of 50: the number with
+// as many digits as n, so that the folders sort in the order of the parts.
+func (p runPart) folder() string { return fmt.Sprintf("part_%0*d", len(strconv.Itoa(p.n)), p.i) }
 
 // newExperiment reads the run file config ("" for the example farm) and checks each of its combinations with the
 // flags applied, so that an error in any combination stops the call before the first run. It keeps the parameters of
@@ -71,12 +83,54 @@ func (c *cli) newExperiment(config string) (*experiment, error) {
 	if e.repetitions, err = c.repetitionCount(run.Repetitions); err != nil {
 		return nil, err
 	}
+	if err := e.setPart(c.Part, run.Part); err != nil {
+		return nil, err
+	}
 	if seed := e.first.Seed; seed > math.MaxInt64-int64(e.repetitions)+1 {
 		return nil, fmt.Errorf("seed %d: the seed of the last of %d repetitions is larger than %d", seed,
 			e.repetitions, int64(math.MaxInt64))
 	}
 	e.columns, _ = obs.SelectColumns(e.first.Output.Columns) // checked in paramsOf
 	return e, nil
+}
+
+// setPart sets the part of the runs: the flag --part, else run.part of the run file (checked by input.Build). A part
+// needs at least one run, so n can be at most the number of runs.
+func (e *experiment) setPart(flag *string, fromFile string) error {
+	text := fromFile
+	if flag != nil {
+		text = *flag // also "", which is an error of ParsePart
+	} else if text == "" {
+		return nil
+	}
+	i, n, err := input.ParsePart(text)
+	if err != nil {
+		return fmt.Errorf("--part %w", err)
+	}
+	if runs := e.combinations() * e.repetitions; n > runs {
+		return fmt.Errorf("--part %d/%d: %s has %d runs (%d combinations x %d repetitions), so at most %d parts",
+			i, n, e.source(), runs, e.combinations(), e.repetitions, runs)
+	}
+	e.part = &runPart{i: i, n: n}
+	return nil
+}
+
+// runRange returns the runs of the part, from lo to hi - 1 (numbered from 0 over all combinations): the block i of n
+// blocks of consecutive runs, whose sizes differ by 1 at most. Without a part, all runs.
+func (e *experiment) runRange() (lo, hi int) {
+	runs := e.combinations() * e.repetitions
+	if e.part == nil {
+		return 0, runs
+	}
+	return (e.part.i - 1) * runs / e.part.n, e.part.i * runs / e.part.n
+}
+
+// partText returns the part for the provenance, "" without a part.
+func (e *experiment) partText() string {
+	if e.part == nil {
+		return ""
+	}
+	return e.part.String()
 }
 
 // combinations returns the number of combinations of the experiment.
@@ -205,7 +259,8 @@ func (c *cli) threadCount(experiments []*experiment) (int, error) {
 // outputDirs sets the output folder of each experiment: the folder of its name (the key name of its run file) in the
 // folder output, one or several run files alike (-o out, -c farm.yaml -c sussex.yaml: out/farm, out/sussex). Two run
 // files with the same name are an error, their outputs would overwrite each other. Names that differ only in case are
-// the same name, as for the file system of Windows and macOS.
+// the same name, as for the file system of Windows and macOS. With a part, the output goes into the folder of the
+// part in it (out/farm/part_03), so that all jobs of an array can write into the same folder out.
 func outputDirs(output string, experiments []*experiment) error {
 	if output == "" {
 		return nil
@@ -213,6 +268,9 @@ func outputDirs(output string, experiments []*experiment) error {
 	used := map[string]*experiment{}
 	for _, e := range experiments {
 		e.dir = filepath.Join(output, e.name)
+		if e.part != nil {
+			e.dir = filepath.Join(e.dir, e.part.folder())
+		}
 		e.output = filepath.Join(e.dir, dailyOutputFile)
 		if other, ok := used[strings.ToLower(e.name)]; ok {
 			return fmt.Errorf("the run files %s and %s have the same name %q, their outputs would both go to %s: "+
@@ -233,19 +291,26 @@ func (e *experiment) source() string {
 
 // jobs returns the runs of the experiment number index: each combination run e.repetitions times, the repetition r
 // (from 0) with the seed of the run file + r. All combinations get the same seeds. The runs are numbered from 1 over
-// all combinations, so that the column run tells each run of the daily output apart. The runs of a combination share
-// its input (combinationInput).
+// all combinations, so that the column run tells each run of the daily output apart. With a part, only its runs, with
+// the same numbers and seeds. The runs of a combination share its input (combinationInput).
 func (e *experiment) jobs(index int, several bool) []job {
 	var jobs []job
+	lo, hi := e.runRange()
 	for k, values := range e.values {
+		// the repetitions of the combination k in the part
+		first, last := max(lo, k*e.repetitions), min(hi, (k+1)*e.repetitions)
+		if first >= last {
+			continue
+		}
 		describe := ""
 		if len(values) > 0 {
 			describe = ", " + e.files.Describe(input.Combination{Values: values})
 		}
-		in := newCombinationInput(e.repetitions, func() (params.Params, error) { return e.params(k) })
-		for r := range e.repetitions {
+		in := newCombinationInput(last-first, func() (params.Params, error) { return e.params(k) })
+		for run := first; run < last; run++ {
+			r := run - k*e.repetitions
 			seed := e.first.Seed + int64(r) // the variations cannot change the seed
-			number := k*e.repetitions + r + 1
+			number := run + 1
 			j := job{input: in, seed: seed, exp: index}
 			j.label = fmt.Sprintf("run %d (seed %d%s)", number, seed, describe)
 			if several {

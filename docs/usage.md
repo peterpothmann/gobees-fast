@@ -11,6 +11,7 @@ The short version is in the [README](../README.md#quick-start). This file is the
 | [Daily output](#daily-output)                     | read the result file of a run                               |
 | [Several runs](#several-runs)                     | run the model many times, e.g. for statistics               |
 | [Experiments](#experiments)                       | vary parameters and run every combination                   |
+| [Parts on a cluster](#parts-on-a-cluster)         | split the runs over the jobs of an array                    |
 | [Output](#output)                                 | find the output files of a run                              |
 | [Provenance](#provenance)                         | repeat or document a run exactly                            |
 
@@ -28,6 +29,7 @@ The flags of the model (`go/`, `go run .`). The flags of the converter are in [N
 | `--days N`           |       | `run.days` of the run file, else `365`     | number of days to run.`0`: no limit, the run ends only when the population is extinct and `stopExtinct` is true.                                                                                                                                                                                |
 | `--repetitions N`    |       | `run.repetitions` of the run file          | number of runs of each combination of an [experiment](#experiments) (of the run file without variations), 1 or more, in one process. Repetition i has the seed `SEED + i - 1`. All runs of a run file go into one output file. |
 | `--threads T`        |       | `run.threads` of the run file              | number of runs at the same time, 1 or more. Each run uses one CPU core, so set it to the number of cores you want to use (on a cluster: the CPUs of the job, e.g.`--threads $SLURM_CPUS_PER_TASK`). `1`: all runs one after the other, also across run files. The output does not depend on it. |
+| `--part I/N`         |       | `run.part` of the run file, else all runs  | run only the part I of N of the runs, 1 <= I <= N, e.g. `--part $SLURM_ARRAY_TASK_ID/50` ([parts on a cluster](#parts-on-a-cluster)). The output goes into `DIR/<name>/part_I`. |
 | `--output DIR`       | `-o`  | no output                                  | write the [output](#output) of each run file into the folder `DIR/<name>` (`name`: the key of the run file): the daily output, the [provenance](#provenance) and the copies of the landscape files. Missing folders are created.                                                               |
 | `--columns A,B,C`    |       | `output.columns` of the run file, else all | columns of the daily output, in this order (needs`-o`). An unknown name is an error that lists the columns.                                                                                                                                                                                     |
 | `--list-columns`     |       |                                            | print the columns of the daily output with a description and exit.                                                                                                                                                                                                                              |
@@ -51,7 +53,7 @@ A run file has the sections below. All keys are in lowerCamelCase, values are in
 | Key                  | Content                                                                                                                                                                                                                                                                          | NetLogo                                                                         |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | `name`               | name of the run file, the folder of its [output](#output). Needed, only letters, digits, `-` and `_`. The converter writes the name of its flag `--name`. | |
-| `run`                | `seed`, `days`, `repetitions` and `threads` (the flags `-s`, `--days`, `--repetitions` and `--threads` override them). Needed: `seed`, `repetitions` and `threads`, each 1 or more. The converter writes seed 1, 365 days, 1 repetition and 1 thread. In a [provenance](#provenance) also the record of the run. | `RAND_SEED`                                                                     |
+| `run`                | `seed`, `days`, `repetitions` and `threads` (the flags `-s`, `--days`, `--repetitions` and `--threads` override them). Needed: `seed`, `repetitions` and `threads`, each 1 or more. Optional `part` (`I/N`, the flag `--part` overrides it). The converter writes seed 1, 365 days, 1 repetition and 1 thread. In a [provenance](#provenance) also the record of the run. | `RAND_SEED`                                                                     |
 | `variations`         | optional: keys and their values, or the [sites](#sites), every combination runs (an [experiment](#experiments))                                                                                                                                                                  |                                                                                 |
 | `parameters`         | the model parameters                                                                                                                                                                                                                                                             | the columns of the parameter file                                               |
 | `output`             | output options (`keepDeadColonies`, `columns`), change no model value                                                                                                                                                                                                            | `KeepDeadColonies?`                                                             |
@@ -244,6 +246,35 @@ How the landscapes and crop rotations of the sites are made is up to you (a scri
 
 Several run files run together with `-c a.yaml -c b.yaml`: their runs share one pool of `--threads` threads (the run files must ask for the same `threads`, or the flag sets it). Each run file writes its own [output](#output) into the folder of its key `name`: with the names `farm` and `sussex`, `-o out` gives `out/farm/` and `out/sussex/`. Two run files with the same name are an error, also when only the case differs. The flags `-s`, `--days`, `--repetitions` and `--columns` apply to all run files.
 
+## Parts on a cluster
+
+On a cluster, the runs of a large experiment are split over the jobs of an array: each job runs one part. All jobs start the same call with the same run file, only `--part` differs.
+
+`--part I/N` splits the runs of all combinations (combinations × repetitions, in the order of the [daily output](#daily-output)) into N blocks of consecutive runs and runs only block I. The sizes of the blocks differ by one run at most. Each run keeps its number and seed, so a part is a piece of the call without `--part`:
+
+- 2000 combinations × 10 repetitions = 20000 runs, `--part 3/50`: the runs 801 to 1200.
+- The output goes into `DIR/<name>/part_I`, I with as many digits as N (`part_03` of 50), so that all jobs can write into the same `-o DIR` and the folders sort in the order of the parts.
+- Every part checks all combinations at the start, as without `--part`. With many sites this takes some time per job (less than 30 ms per site with the landscapes of the example farm).
+- The provenance of a part holds `run.part`, so it repeats the part. Without the key, it repeats all runs.
+- N can be at most the number of runs, so that no part is empty.
+
+A SLURM array of 50 jobs with 8 cores each (build the program once with `go build -o gobees .` in `go/`):
+
+```shell
+#!/bin/bash
+#SBATCH --array=1-50
+#SBATCH --cpus-per-task=8
+./gobees -c experiment.yaml -o out --threads $SLURM_CPUS_PER_TASK --part $SLURM_ARRAY_TASK_ID/50
+```
+
+The parts appended in the order of their folders give the daily output of the call without `--part`, byte for byte. Each part has the header, keep it once:
+
+```shell
+cd out/many_landscapes
+head -n 1 part_01/daily.csv > daily.csv
+for f in part_*/daily.csv; do tail -n +2 "$f" >> daily.csv; done
+```
+
 ## Output
 
 With `-o DIR`, gobees-fast writes the output of each run file into the folder `DIR/<name>`, where `name` is the key `name` of the run file (the example farm: `example_farm`). Missing folders are created, files of an earlier run of the same name are overwritten.
@@ -268,6 +299,7 @@ With an output (`-o DIR`), gobees-fast writes the provenance `provenance.yaml` i
 | `seed`                   | the seed of the first repetition                                                                                                                                                                          |
 | `days`                   | the number of days                                                                                                                                                                                        |
 | `repetitions`, `threads` | the numbers of repetitions and threads                                                                                                                                                                    |
+| `part`                   | with [`--part`](#parts-on-a-cluster): the part of the runs, `I/N`                                                                                                                                        |
 | `started`                | start time (RFC 3339)                                                                                                                                                                                     |
 | `command`                | command line                                                                                                                                                                                              |
 | `version`                | module, version, VCS revision, its time and`modified` (changes against the revision), Go version. The VCS keys are only known in a binary built with `go build` inside the repository, not with `go run`. |
@@ -280,4 +312,4 @@ The landscape files and their tables are copied into the output folder and keep 
 
 With sites, the provenance copies no landscape files: 1000 sites would copy 1000 landscapes into every output. Its key `sites` lists the site files that ran, relative to the output folder, instead of the pattern of the run file. So it repeats the same sites, also when the folder of the sites gets more files later, as long as the sites stay in their place. The SHA-256 in `run.sites` shows whether a landscape file changed since the run.
 
-Only `seed`, `days`, `repetitions` and `threads` of the section `run` are read, the other keys are a record.
+Only `seed`, `days`, `repetitions`, `threads` and `part` of the section `run` are read, the other keys are a record.

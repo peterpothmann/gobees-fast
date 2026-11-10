@@ -42,6 +42,7 @@ output:
 | `--days N` | | days to run, 0 = until the population is extinct |
 | `--repetitions N` | | number of runs (of each combination of the variations). Repetition i gets the seed `seed + i - 1`. |
 | `--threads T` | | runs at the same time, each on one CPU core. `1` = one after the other. The output does not depend on it. |
+| `--part I/N` | | run only the part I of N of the runs, for the jobs of an array on a cluster ([docs/usage.md](docs/usage.md#parts-on-a-cluster)) |
 | `--output DIR` | `-o` | write the output into the folder `DIR/<name>` (`name`: key of the run file) |
 | `--columns A,B,C` | | write only these columns |
 | `--list-columns` | | print the columns of the daily output and exit |

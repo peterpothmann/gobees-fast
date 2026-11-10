@@ -39,9 +39,10 @@ type provenance struct {
 // keep their name in the output folder. A second file of the same name gets _2 in front of the extension (a.yaml,
 // a_2.yaml). The tables are copied byte for byte. A landscape file is copied byte for byte if its tables keep their
 // names, else it is written again with the names of the copies. The landscape files of sites are not copied: sums
-// holds their SHA-256 at the start, by their name in the run file.
+// holds their SHA-256 at the start, by their name in the run file. part is the part of the runs (--part), "" for all
+// runs.
 func newProvenance(f input.Files, config string, p *params.Params, repetitions, threads int, output string,
-	columns []string, started time.Time, sums map[string]string) provenance {
+	columns []string, started time.Time, sums map[string]string, part string) provenance {
 	c := f.Config
 	if config == "" {
 		config = exampleFarmConfig
@@ -52,6 +53,7 @@ func newProvenance(f input.Files, config string, p *params.Params, repetitions, 
 		Days:        &days,
 		Repetitions: repetitions,
 		Threads:     threads,
+		Part:        part,
 		Started:     started.Format(time.RFC3339),
 		Command:     slices.Clone(os.Args),
 		Version:     buildVersion(),
