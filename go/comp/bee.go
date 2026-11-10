@@ -47,9 +47,13 @@ type Thresholds struct {
 
 // Forager holds the foraging state and capacities of a bee.
 type Forager struct {
-	CropVolume         float64 // crop capacity [µl]. NetLogo: cropvolume_myl
-	PollenPellets      float64 // pollen load capacity [g]. NetLogo: pollenPellets_g
-	GlossaLength       float64 // [mm]. NetLogo: glossaLength_mm
+	CropVolume    float64 // crop capacity [µl]. NetLogo: cropvolume_myl
+	PollenPellets float64 // pollen load capacity [g]. NetLogo: pollenPellets_g
+	GlossaLength  float64 // [mm]. NetLogo: glossaLength_mm
+	// IngestionFactor is the term 0.3 * W^0.3333 * G of the nectar ingestion time (forager.handlingTime), from the
+	// weight W [g] and GlossaLength G [mm] of the adult bee, which do not change. 0: not computed yet, handlingTime
+	// computes it at its first use. Whoever changes Weight or GlossaLength sets it to 0. Not in NetLogo.
+	IngestionFactor    float64
 	CurrentFoodsource  ecs.Entity
 	NectarSource       ecs.Entity // the nectar layer of the next trip. NetLogo: nectarsourceToGoTo
 	PollenSource       ecs.Entity // the pollen layer of the next trip. NetLogo: pollensourceToGoTo
