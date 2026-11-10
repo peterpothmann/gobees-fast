@@ -28,6 +28,19 @@ type Report struct {
 	Current    []Run
 	Threads    int // runs at the same time, in all models
 	Machine    Machine
+
+	// Below is the comparison with the branch below the pull request (its base branch), from RunAlternating with
+	// the same seeds and days. Left out of the report if Below.Runs is empty.
+	Below Below
+}
+
+// Below is the comparison of gobees-fast with the base branch of its pull request (RunAlternating).
+type Below struct {
+	Branch  string // name of the base branch, e.g. main or step-S4
+	Commit  string // its commit
+	Rounds  int    // runs per seed and program, the fastest counts
+	Runs    []Run  // the program of the base branch
+	Current []Run  // the program of the current code
 }
 
 // WriteReport writes the report as Markdown to path.
@@ -47,12 +60,7 @@ func (r Report) Markdown() string {
 		"the program to its end, including reading the input files. Details: go/benchmark/README.md.\n\n",
 		len(n.Runs), n.Days, r.Threads, r.BaseCommit)
 
-	whole := func(run Run) time.Duration { return run.Whole() }
-	nl, base, cur := durations(n.Runs, whole), durations(r.Base, whole), durations(r.Current, whole)
-	b.WriteString("| | NetLogo median (min-max) | gobees median (min-max) | gobees-fast median (min-max) | " +
-		"NetLogo / gobees-fast | gobees / gobees-fast |\n| --- | ---: | ---: | ---: | ---: | ---: |\n")
-	fmt.Fprintf(&b, "| Whole run | %s | %s | %s | %.0f | %.2f |\n", spread(nl), spread(base), spread(cur),
-		float64(median(nl))/float64(median(cur)), float64(median(base))/float64(median(cur)))
+	r.writeMainTable(&b)
 
 	b.WriteString("\n## Runs\n\nThe runs of NetLogo and of the Go versions with the same seed are not the same " +
 		"run: NetLogo's random numbers cannot be reproduced in Go. The colonies founded show that all did a " +
@@ -63,6 +71,10 @@ func (r Report) Markdown() string {
 		base, cur := r.Base[i], r.Current[i]
 		fmt.Fprintf(&b, "| %d | %g | %s | %g | %s | %g | %s | %g |\n", nl.Number, nl.Seed, format(nl.Whole()),
 			nl.ColoniesFounded, format(base.Whole()), base.ColoniesFounded, format(cur.Whole()), cur.ColoniesFounded)
+	}
+
+	if below := r.Below; len(below.Runs) > 0 {
+		writeBelow(&b, below, n.Days)
 	}
 
 	b.WriteString("\n## Machine\n\n")
@@ -80,6 +92,116 @@ func (r Report) Markdown() string {
 		}
 	}
 	return b.String()
+}
+
+// CommentMarker starts the comment of the benchmark in a pull request. The workflow updates the comment that starts
+// with it instead of adding a new one on every run.
+const CommentMarker = "<!-- benchmark-report -->"
+
+// WriteComment writes the comment for the pull request (Comment) to path.
+func WriteComment(path string, r Report, reportURL, runURL string) error {
+	return os.WriteFile(path, []byte(r.Comment(reportURL, runURL)), 0o644)
+}
+
+// Comment returns the comment for the pull request: the main table of the report and, with the branch below, its
+// table, then links to the whole report (reportURL) and to the run of the workflow (runURL). Empty URLs are left
+// out.
+func (r Report) Comment(reportURL, runURL string) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "%s\n## Benchmark\n\nThe example farm, %d seeds, %d days each.\n\n", CommentMarker,
+		len(r.NetLogo.Runs), r.NetLogo.Days)
+	r.writeMainTable(&b)
+	if below := r.Below; len(below.Runs) > 0 {
+		fmt.Fprintf(&b, "\nAgainst the branch below, %s (commit %s), %d seeds, alternating runs, the fastest of %d "+
+			"per seed:\n\n", below.Branch, below.Commit, len(below.Runs), below.Rounds)
+		writeBelowTable(&b, below)
+	}
+	links := []string{}
+	if reportURL != "" {
+		links = append(links, fmt.Sprintf("[whole report](%s)", reportURL))
+	}
+	if runURL != "" {
+		links = append(links, fmt.Sprintf("[run](%s)", runURL))
+	}
+	if len(links) > 0 {
+		fmt.Fprintf(&b, "\n%s\n", strings.Join(links, " · "))
+	}
+	return b.String()
+}
+
+// writeMainTable writes the table of the whole runs of NetLogo, gobees and gobees-fast.
+func (r Report) writeMainTable(b *strings.Builder) {
+	whole := func(run Run) time.Duration { return run.Whole() }
+	nl, base, cur := durations(r.NetLogo.Runs, whole), durations(r.Base, whole), durations(r.Current, whole)
+	b.WriteString("| | NetLogo median (min-max) | gobees median (min-max) | gobees-fast median (min-max) | " +
+		"NetLogo / gobees-fast | gobees / gobees-fast |\n| --- | ---: | ---: | ---: | ---: | ---: |\n")
+	fmt.Fprintf(b, "| Whole run | %s | %s | %s | %.0f | %.2f |\n", spread(nl), spread(base), spread(cur),
+		float64(median(nl))/float64(median(cur)), float64(median(base))/float64(median(cur)))
+}
+
+// writeBelowTable writes the table of the branch below and gobees-fast: the whole runs, the colonies founded and the
+// time per colony founded.
+func writeBelowTable(b *strings.Builder, below Below) {
+	whole := func(run Run) time.Duration { return run.Whole() }
+	old, cur := durations(below.Runs, whole), durations(below.Current, whole)
+	oldWork, curWork := work(below.Runs), work(below.Current)
+	fmt.Fprintf(b, "| | %s | gobees-fast | Change |\n| --- | ---: | ---: | ---: |\n", below.Branch)
+	fmt.Fprintf(b, "| Whole run, median (min-max) | %s | %s | %s |\n", spread(old), spread(cur),
+		change(median(old), median(cur)))
+	fmt.Fprintf(b, "| Colonies founded, mean | %.1f | %.1f | %s |\n", oldWork.colonies, curWork.colonies,
+		percent(oldWork.colonies, curWork.colonies))
+	fmt.Fprintf(b, "| Time per colony founded | %.2f ms | %.2f ms | %s |\n", oldWork.perColony, curWork.perColony,
+		percent(oldWork.perColony, curWork.perColony))
+}
+
+// workDone is the mean of the colonies founded of runs and their time per colony founded: the sum of the times over
+// the sum of the colonies [ms].
+type workDone struct{ colonies, perColony float64 }
+
+func work(runs []Run) workDone {
+	var colonies float64
+	var total time.Duration
+	for _, run := range runs {
+		colonies += run.ColoniesFounded
+		total += run.Whole()
+	}
+	w := workDone{colonies: colonies / float64(len(runs))}
+	if colonies > 0 {
+		w.perColony = float64(total) / float64(time.Millisecond) / colonies
+	}
+	return w
+}
+
+// writeBelow writes the section of the comparison with the base branch of the pull request.
+func writeBelow(b *strings.Builder, below Below, days int) {
+	fmt.Fprintf(b, "\n## Against the branch below\n\n"+
+		"gobees-fast against the base branch of the pull request, %s (commit %s): the seeds 1 to %d, %d days "+
+		"each. Both programs run one run at a time and alternately, each seed %d times per program, the order "+
+		"switches every round. The time of a seed is its fastest run. Change: gobees-fast against %s, negative "+
+		"is less.\n\n"+
+		"After a statistically equal step, the same seed gives another run with more or less work, so the whole "+
+		"run alone does not show the gain of the step. The time per colony founded (the sum of the times over the "+
+		"sum of the colonies founded) takes the work into account. After an exact step, both programs do the same "+
+		"work and the colonies founded are equal.\n\n", below.Branch, below.Commit, len(below.Runs), days,
+		below.Rounds, below.Branch)
+	writeBelowTable(b, below)
+	fmt.Fprintf(b, "\n| Seed | %s | %s colonies founded | gobees-fast | gobees-fast colonies founded | Change |\n"+
+		"| ---: | ---: | ---: | ---: | ---: | ---: |\n", below.Branch, below.Branch)
+	for i, o := range below.Runs {
+		c := below.Current[i]
+		fmt.Fprintf(b, "| %g | %s | %g | %s | %g | %s |\n", o.Seed, format(o.Whole()), o.ColoniesFounded,
+			format(c.Whole()), c.ColoniesFounded, change(o.Whole(), c.Whole()))
+	}
+}
+
+// change shows the relative change from old to cur in percent, with sign.
+func change(old, cur time.Duration) string {
+	return percent(float64(old), float64(cur))
+}
+
+// percent shows the relative change from old to cur in percent, with sign.
+func percent(old, cur float64) string {
+	return fmt.Sprintf("%+.1f %%", 100*(cur-old)/old)
 }
 
 // spread shows the median and the range of sorted durations.

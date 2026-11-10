@@ -1,4 +1,5 @@
-# Runs on every pull request and every push to main. Two jobs:
+# Runs on every pull request and every push to main, and when the base branch of a pull request changes (e.g.
+# retargeted to main after the step below was merged; then only the job compare, to commit the report). Two jobs:
 #
 #   - test: formatting, go vet and all Go tests of gobees-fast, incl. the comparisons of parts of the model with
 #     NetLogo (go/sys/validation_step*_test.go), and the same for the converter tools/netlogo2gobees, whose tests check
@@ -6,8 +7,11 @@
 #   - compare: at the same time, the check of the step (go/compare/run_compare.sh): every scenario of the full model
 #     against the previous step (reference commit), gobees and NetLogo, and the speed against gobees. It writes one
 #     comment with the results, in the pull request (updated on every run) and in the summary of the run, and the
-#     NetLogo report go/validation/validation-report.md with one plot per scenario. In a pull request it commits
-#     report and plots to the branch if all comparisons passed, so that a squash merge brings them to main.
+#     NetLogo report go/validation/validation-report.md with one plot per scenario, uploaded as artifact
+#     "validation". In a pull request into main it commits report and plots to the branch if all comparisons
+#     passed, so that a squash merge brings them to main. In a pull request higher up in a stack it does not commit:
+#     a commit there moves the tip of the branch, and every branch above would have to be rebased after every run.
+#     When such a pull request is retargeted to main, compare runs again and commits report and plots then.
 #
 # NetLogo itself does not run here: its results are embedded in go/validation, see go/validation/README.md.
 name: Tests
@@ -16,14 +20,19 @@ on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, edited]
 
 # A new push to the same branch cancels the running workflow, so that two runs never push a report at the same time.
+# An edit of title or text ("edited" without a change of the base branch) gets a group of its own, so that it does
+# not cancel a running workflow. Its jobs are skipped.
 concurrency:
-  group: tests-${{ github.head_ref || github.ref }}
+  group: tests-${{ github.head_ref || github.ref }}${{ github.event.action == 'edited' && !github.event.changes.base && '-edited' || '' }}
   cancel-in-progress: true
 
 jobs:
   test:
+    # not on "edited": a new base branch does not change the code
+    if: github.event.action != 'edited'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -87,9 +96,11 @@ jobs:
           paths: test-results.xml
 
   compare:
+    # on "edited" only when the base branch changed: a pull request retargeted to main commits its report
+    if: github.event.action != 'edited' || github.event.changes.base
     runs-on: ubuntu-latest
     permissions:
-      contents: write # to commit the report to the branch of a pull request
+      contents: write # to commit the report to the branch of a pull request into main
       pull-requests: write # to comment in the pull request
     steps:
       # In a pull request, the branch itself (not GitHub's merge commit), so that the report can be committed to it.
@@ -110,7 +121,9 @@ jobs:
         env:
           COMPARE_COMMENT: ${{ github.workspace }}/comment.md
           COMPARE_REPORT_DIR: ${{ github.workspace }}/go/validation
-          COMPARE_REPORT_URL: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.head_ref || github.ref_name }}/go/validation/validation-report.md
+          # the report in the branch where it is there (on main, and committed in a pull request into main), else
+          # the run, whose summary holds the report and whose artifact "validation" holds report and plots
+          COMPARE_REPORT_URL: ${{ (github.event_name == 'push' || github.event.pull_request.base.ref == 'main') && format('{0}/{1}/blob/{2}/go/validation/validation-report.md', github.server_url, github.repository, github.head_ref || github.ref_name) || format('{0}/{1}/actions/runs/{2}', github.server_url, github.repository, github.run_id) }}
           COMPARE_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: bash go/compare/run_compare.sh
 
@@ -143,12 +156,27 @@ jobs:
               await github.rest.issues.createComment({owner, repo, issue_number, body});
             }
 
-      # Only in a pull request from this repository and only if all comparisons passed. A commit pushed with the
-      # GITHUB_TOKEN does not start a new workflow run. The runs use fixed seeds, so the report changes only when the
-      # results change, and only then a commit is made. The Benchmark workflow may push its report to the same branch
-      # at the same time, so the push is retried on top of the newest state of the branch.
+      - name: Upload report and plots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation
+          path: |
+            go/validation/validation-report.md
+            go/validation/plots
+          if-no-files-found: ignore
+
+      # Only in a pull request from this repository into main and only if all comparisons passed. In a stack of pull
+      # requests (base branch is the previous step), a commit here would move the tip of the branch, so that every
+      # branch above would have to be rebased after every run. The report of such a pull request is in the summary
+      # and in the artifact, and it is committed in the run started when the pull request is retargeted to main. A
+      # commit pushed with the GITHUB_TOKEN does not start a new workflow run. The runs use fixed seeds, so the report
+      # changes only when the results change, and only then a commit is made. The Benchmark workflow may push its
+      # report to the same branch at the same time, so the push is retried on top of the newest state of the branch.
+      # The base branch is github.event.pull_request.base.ref: in a stack, github.base_ref was main also in a pull
+      # request into the previous step.
       - name: Commit the report to the pull request
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && steps.compare.outcome == 'success'
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.base.ref == 'main' && steps.compare.outcome == 'success'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

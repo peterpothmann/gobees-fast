@@ -1,6 +1,7 @@
 package benchmark
 
 import (
+	"fmt"
 	"os"
 	"runtime"
 	"strconv"
@@ -21,10 +22,23 @@ const (
 	baseBinEnv    = "BENCHMARK_BASE_BIN"
 	currentBinEnv = "BENCHMARK_CURRENT_BIN"
 	baseCommitEnv = "BENCHMARK_BASE_COMMIT"
+	// optional, all five or none: the command line program of the branch below the pull request (its base
+	// branch), the name of that branch and its commit for the report, the number of seeds (1 to N) and the runs per
+	// seed (RunAlternating)
+	belowBinEnv    = "BENCHMARK_BELOW_BIN"
+	belowBranchEnv = "BENCHMARK_BELOW_BRANCH"
+	belowCommitEnv = "BENCHMARK_BELOW_COMMIT"
+	belowSeedsEnv  = "BENCHMARK_BELOW_SEEDS"
+	roundsEnv      = "BENCHMARK_ROUNDS"
+	// optional: the path of the comment for the pull request (WriteComment), and the links in it
+	commentEnv   = "BENCHMARK_COMMENT"
+	reportURLEnv = "BENCHMARK_REPORT_URL"
+	runURLEnv    = "BENCHMARK_RUN_URL"
 )
 
 // TestCompareWithNetLogo runs gobees and then gobees-fast as programs with the seeds and days of the NetLogo
-// experiment, and writes the report. Skipped unless the CI (or a user) sets the environment above, so that
+// experiment, and writes the report. With the program of the branch below (belowBinEnv), it then runs that program
+// and gobees-fast alternately (RunAlternating) for the section "Against the branch below". Skipped unless the CI (or a user) sets the environment above, so that
 // `go test ./...` does not time anything.
 func TestCompareWithNetLogo(t *testing.T) {
 	tablePath, consolePath, reportPath := os.Getenv(tableEnv), os.Getenv(consoleEnv), os.Getenv(reportEnv)
@@ -65,6 +79,11 @@ func TestCompareWithNetLogo(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	below, err := runBelow(netlogo.Days, currentBin)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	commit := os.Getenv("GITHUB_SHA")
 	if len(commit) > 7 {
 		commit = commit[:7]
@@ -78,11 +97,40 @@ func TestCompareWithNetLogo(t *testing.T) {
 		Commit: commit,
 	}
 	r := Report{NetLogo: netlogo, BaseCommit: os.Getenv(baseCommitEnv), Base: base, Current: current,
-		Threads: threads, Machine: machine}
+		Threads: threads, Machine: machine, Below: below}
 	if err := WriteReport(reportPath, r); err != nil {
 		t.Fatal(err)
 	}
+	if path := os.Getenv(commentEnv); path != "" {
+		if err := WriteComment(path, r, os.Getenv(reportURLEnv), os.Getenv(runURLEnv)); err != nil {
+			t.Fatal(err)
+		}
+	}
 	t.Log("\n" + r.Markdown())
+}
+
+// runBelow runs the program of the branch below and gobees-fast alternately with the seeds 1 to belowSeedsEnv, if
+// belowBinEnv is set. Without it, the result is empty and the report has no section on the branch below. The seeds
+// are not those of NetLogo: a statistically equal step needs many seeds (go/benchmark/README.md).
+func runBelow(days int, currentBin string) (Below, error) {
+	bin := os.Getenv(belowBinEnv)
+	if bin == "" {
+		return Below{}, nil
+	}
+	below := Below{Branch: os.Getenv(belowBranchEnv), Commit: os.Getenv(belowCommitEnv)}
+	rounds, err := strconv.Atoi(os.Getenv(roundsEnv))
+	n, errSeeds := strconv.Atoi(os.Getenv(belowSeedsEnv))
+	if err != nil || errSeeds != nil || rounds < 1 || n < 1 || below.Branch == "" || below.Commit == "" {
+		return Below{}, fmt.Errorf("with %s set, %s and %s must be set and %s and %s must be 1 or more",
+			belowBinEnv, belowBranchEnv, belowCommitEnv, belowSeedsEnv, roundsEnv)
+	}
+	below.Rounds = rounds
+	seeds := make([]float64, n)
+	for i := range seeds {
+		seeds[i] = float64(i + 1)
+	}
+	below.Runs, below.Current, err = RunAlternating(bin, currentBin, seeds, days, rounds)
+	return below, err
 }
 
 // The first lines of the console output and of the table of run_netlogo.sh (netlogo.xml, 2 threads, local run of
@@ -198,5 +246,64 @@ func TestMarkdown(t *testing.T) {
 	}
 	if strings.Contains(md, "- CPU") {
 		t.Errorf("empty CPU must be left out:\n%s", md)
+	}
+	if strings.Contains(md, "## Against the branch below") {
+		t.Errorf("no section on the branch below without its runs:\n%s", md)
+	}
+
+	// with the branch below: step-S4 200 and 300 ms (median 250 ms), gobees-fast 100 and 300 ms (median 200 ms)
+	r.Below = Below{Branch: "step-S4", Commit: "45c6b6c", Rounds: 5,
+		Runs: []Run{
+			{Number: 1, Seed: 1, Program: 200 * time.Millisecond, ColoniesFounded: 140},
+			{Number: 2, Seed: 2, Program: 300 * time.Millisecond, ColoniesFounded: 145},
+		},
+		Current: []Run{
+			{Number: 1, Seed: 1, Program: 100 * time.Millisecond, ColoniesFounded: 141},
+			{Number: 2, Seed: 2, Program: 300 * time.Millisecond, ColoniesFounded: 146},
+		},
+	}
+	md = r.Markdown()
+	for _, want := range []string{
+		"## Against the branch below\n\ngobees-fast against the base branch of the pull request, step-S4 " +
+			"(commit 45c6b6c): the seeds 1 to 2, 365 days each.",
+		"each seed 5 times per program",
+		"| | step-S4 | gobees-fast | Change |",
+		"| Whole run, median (min-max) | 250 ms (200 ms-300 ms) | 200 ms (100 ms-300 ms) | -20.0 % |",
+		// colonies (140 + 145) / 2 and (141 + 146) / 2; time per colony 500 / 285 and 400 / 287 ms
+		"| Colonies founded, mean | 142.5 | 143.5 | +0.7 % |",
+		"| Time per colony founded | 1.75 ms | 1.39 ms | -20.6 % |",
+		"| 1 | 200 ms | 140 | 100 ms | 141 | -50.0 % |",
+		"| 2 | 300 ms | 145 | 300 ms | 146 | +0.0 % |",
+	} {
+		if !strings.Contains(md, want) {
+			t.Errorf("report lacks %q:\n%s", want, md)
+		}
+	}
+	if i, j := strings.Index(md, "## Against the branch below"), strings.Index(md, "## Machine"); i > j {
+		t.Errorf("the section on the branch below must come before the machine:\n%s", md)
+	}
+
+	// the comment: the two main tables and the links
+	c := r.Comment("https://example.org/report", "https://example.org/run")
+	for _, want := range []string{
+		CommentMarker + "\n## Benchmark\n\nThe example farm, 2 seeds, 365 days each.\n\n",
+		"| Whole run | 25.8 s (21.2 s-30.4 s) | 400 ms (300 ms-500 ms) | 100 ms (100 ms-100 ms) | 258 | 4.00 |",
+		"Against the branch below, step-S4 (commit 45c6b6c), 2 seeds, alternating runs, the fastest of 5 per seed:",
+		"| Whole run, median (min-max) | 250 ms (200 ms-300 ms) | 200 ms (100 ms-300 ms) | -20.0 % |",
+		"| Time per colony founded | 1.75 ms | 1.39 ms | -20.6 % |",
+		"[whole report](https://example.org/report) · [run](https://example.org/run)",
+	} {
+		if !strings.Contains(c, want) {
+			t.Errorf("comment lacks %q:\n%s", want, c)
+		}
+	}
+	for _, not := range []string{"| 1 | 200 ms", "## Machine", "## Runs"} {
+		if strings.Contains(c, not) {
+			t.Errorf("comment must not contain %q:\n%s", not, c)
+		}
+	}
+	plain := Report{NetLogo: r.NetLogo, Base: r.Base, Current: r.Current}.Comment("", "")
+	if strings.Contains(plain, "branch below") || strings.Contains(plain, "](") {
+		t.Errorf("comment without branch below and links:\n%s", plain)
 	}
 }

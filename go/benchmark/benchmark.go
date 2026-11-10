@@ -121,6 +121,56 @@ func RunPrograms(bin string, netLogoInput bool, seeds []float64, days, threads i
 	return runAll(seeds, threads, func(seed float64) (Run, error) { return runProgram(bin, input, seed, days) })
 }
 
+// RunAlternating runs the example farm with the command line programs a and b (go/main.go of commits that run the
+// built-in example farm, as RunPrograms with netLogoInput false), one run at a time: in each of the rounds, every
+// seed with a and with b directly after each other. The order of a and b switches from round to round, so that
+// neither always runs first. The time of a seed is the fastest of its rounds: noise on a shared runner only makes a
+// run slower. The result has one run per seed for a and for b, in the order of the seeds.
+//
+// Alternating runs of the same seed make a small difference between two commits visible, e.g. 5 % between two
+// steps, which RunPrograms with one run per seed and one program after the other does not show.
+//
+// Before the timed runs, each program runs once with the first seed, untimed (see RunPrograms).
+func RunAlternating(a, b string, seeds []float64, days, rounds int) (runsA, runsB []Run, err error) {
+	if rounds < 1 {
+		return nil, nil, fmt.Errorf("rounds must be 1 or more, got %d", rounds)
+	}
+	for _, bin := range []string{a, b} {
+		if len(seeds) > 0 {
+			if _, err := runProgram(bin, nil, seeds[0], days); err != nil {
+				return nil, nil, err
+			}
+		}
+	}
+	runsA, runsB = make([]Run, len(seeds)), make([]Run, len(seeds))
+	fastest := func(runs []Run, i int, run Run) {
+		run.Number = i + 1
+		if runs[i].Program == 0 || run.Program < runs[i].Program {
+			runs[i] = run
+		}
+	}
+	for round := range rounds {
+		for i, seed := range seeds {
+			first, second := a, b
+			if round%2 == 1 {
+				first, second = b, a
+			}
+			for _, bin := range []string{first, second} {
+				run, err := runProgram(bin, nil, seed, days)
+				if err != nil {
+					return nil, nil, err
+				}
+				if bin == a {
+					fastest(runsA, i, run)
+				} else {
+					fastest(runsB, i, run)
+				}
+			}
+		}
+	}
+	return runsA, runsB, nil
+}
+
 // Lines of the summary that go/main.go prints at the end of a run.
 var (
 	coloniesLine = regexp.MustCompile(`(?m)^colonies founded: (\S+),`)
