@@ -1,26 +1,30 @@
-# Run time of NetLogo, gobees and gobees-fast on the example farm (go/benchmark/README.md). Runs only in pull
-# requests with the label "benchmark": when the label is added, on every push to the pull request while it has the
-# label, and when its base branch changes (e.g. retargeted to main after the step below was merged).
+# Run time of NetLogo, gobees and gobees-fast on the example farm (go/benchmark/README.md). Runs on every push to
+# main, and in pull requests with the label "benchmark": when the label is added, on every push to the pull request
+# while it has the label, and when its base branch changes (e.g. retargeted to main after the step below was merged).
 #
 # NetLogo 5.3.1, gobees-fast and gobees (the base commit of go/compare/commits.env) run one after the other on the
 # same runner, with the same seeds, days and number of runs at the same time. Then gobees-fast runs alternately with
 # the program of the branch below the pull request (its base branch, e.g. main or the previous step of a stack), one
-# run at a time, BENCHMARK_BELOW_SEEDS seeds BENCHMARK_ROUNDS times each (go/benchmark/README.md). The workflow adds
-# the report go/benchmark/benchmark-report.md to the summary of the run and uploads it as artifact "benchmark". In a
-# pull request into main it also commits the report to the branch of the pull request, so that a squash merge brings
-# it to main. In a pull request higher up in a stack it does not commit: a commit there moves the tip of the branch,
-# and every branch above would have to be rebased after every run. When such a pull request is retargeted to main,
-# the workflow runs again and commits the report then.
+# run at a time, BENCHMARK_BELOW_SEEDS seeds BENCHMARK_ROUNDS times each (go/benchmark/README.md), only in a pull
+# request. The workflow adds the report go/benchmark/benchmark-report.md to the summary of the run and uploads it as
+# artifact "benchmark". In a pull request it comments the main tables. Only on main it commits the report (without
+# the branch below: NetLogo, gobees and gobees-fast of main). It never commits to the branch of a pull request: a
+# commit there moves the tip of the branch, so the author would have to pull or rebase after every run, and every
+# branch above it in a stack too.
 name: Benchmark
 
 on:
+  push:
+    branches: [main]
   pull_request:
     types: [opened, synchronize, reopened, labeled, edited]
 
-# An edit of title or text ("edited" without a change of the base branch) gets a group of its own, so that it does
-# not cancel a running benchmark. Its job is skipped.
+# A new push to the same branch cancels the running benchmark, so that two runs never push a report at the same time
+# (e.g. a stack of pull requests merged at once pushes several commits to main within seconds). An edit of title or
+# text ("edited" without a change of the base branch) gets a group of its own, so that it does not cancel a running
+# benchmark. Its job is skipped.
 concurrency:
-  group: benchmark-${{ github.head_ref }}${{ github.event.action == 'edited' && !github.event.changes.base && '-edited' || '' }}
+  group: benchmark-${{ github.head_ref || github.ref }}${{ github.event.action == 'edited' && !github.event.changes.base && '-edited' || '' }}
   cancel-in-progress: true
 
 env:
@@ -35,21 +39,24 @@ env:
 
 jobs:
   benchmark:
-    # On "labeled" only when the added label is "benchmark", not when another label is added to such a pull request.
-    # On "edited" only when the base branch changed.
+    # Always on main. In a pull request only with the label "benchmark", on "labeled" only when the added label is
+    # "benchmark", not when another label is added to such a pull request, and on "edited" only when the base branch
+    # changed.
     if: >-
+      github.event_name == 'push' || (
       contains(github.event.pull_request.labels.*.name, 'benchmark') &&
       (github.event.action != 'labeled' || github.event.label.name == 'benchmark') &&
-      (github.event.action != 'edited' || github.event.changes.base)
+      (github.event.action != 'edited' || github.event.changes.base))
     runs-on: ubuntu-latest
     permissions:
-      contents: write # to commit the report to the branch of a pull request into main
+      contents: write # to commit the report to main
       pull-requests: write # to comment in the pull request
     steps:
-      # the full history: the base commit is checked out as a worktree
+      # In a pull request the branch, on main its newest state, so that the report is committed on top of it. The
+      # full history: the base commit is checked out as a worktree.
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ github.head_ref || github.ref }}
           fetch-depth: 0
 
       - uses: actions/setup-go@v5
@@ -80,8 +87,9 @@ jobs:
           tar xzf "$RUNNER_TEMP/netlogo.tgz" -C ~/netlogo
 
       # Compiled before NetLogo runs, so that nothing else runs on the runner while NetLogo is timed. gobees is the
-      # command line program of the base commit, gobees-fast the one of the current code, below the one of the
-      # newest commit of the base branch of the pull request.
+      # command line program of the base commit, gobees-fast the one of the current code, below (only in a pull
+      # request) the one of the newest commit of the base branch of the pull request. Without below, the report has
+      # no section on the branch below and no comment is written.
       - name: Build gobees-fast, gobees and the branch below
         env:
           BELOW_SHA: ${{ github.event.pull_request.base.sha }}
@@ -91,11 +99,15 @@ jobs:
           git worktree add --detach --quiet "$RUNNER_TEMP/base" "$BASE_COMMIT"
           go -C "$RUNNER_TEMP/base/go" build -o "$RUNNER_TEMP/gobees" .
           git worktree remove --force "$RUNNER_TEMP/base"
-          git worktree add --detach --quiet "$RUNNER_TEMP/below" "$BELOW_SHA"
-          go -C "$RUNNER_TEMP/below/go" build -o "$RUNNER_TEMP/below-bin" .
-          git worktree remove --force "$RUNNER_TEMP/below"
-          echo "BENCHMARK_BELOW_COMMIT=$(git rev-parse --short "$BELOW_SHA^{commit}")" >> "$GITHUB_ENV"
-          echo "BENCHMARK_BELOW_BRANCH=$BELOW_BRANCH" >> "$GITHUB_ENV"
+          if [ -n "$BELOW_SHA" ]; then
+            git worktree add --detach --quiet "$RUNNER_TEMP/below" "$BELOW_SHA"
+            go -C "$RUNNER_TEMP/below/go" build -o "$RUNNER_TEMP/below-bin" .
+            git worktree remove --force "$RUNNER_TEMP/below"
+            echo "BENCHMARK_BELOW_BIN=$RUNNER_TEMP/below-bin" >> "$GITHUB_ENV"
+            echo "BENCHMARK_BELOW_COMMIT=$(git rev-parse --short "$BELOW_SHA^{commit}")" >> "$GITHUB_ENV"
+            echo "BENCHMARK_BELOW_BRANCH=$BELOW_BRANCH" >> "$GITHUB_ENV"
+            echo "BENCHMARK_COMMENT=$RUNNER_TEMP/benchmark-comment.md" >> "$GITHUB_ENV"
+          fi
           go -C go build -o "$RUNNER_TEMP/gobees-fast" .
           go -C go test -c -o "$RUNNER_TEMP/benchmark.test" ./benchmark
           echo "BENCHMARK_BASE_COMMIT=$(git rev-parse --short "$BASE_COMMIT^{commit}")" >> "$GITHUB_ENV"
@@ -113,11 +125,10 @@ jobs:
           BENCHMARK_NETLOGO_CONSOLE: ${{ runner.temp }}/netlogo_console.txt
           BENCHMARK_BASE_BIN: ${{ runner.temp }}/gobees
           BENCHMARK_CURRENT_BIN: ${{ runner.temp }}/gobees-fast
-          BENCHMARK_BELOW_BIN: ${{ runner.temp }}/below-bin
-          BENCHMARK_COMMENT: ${{ runner.temp }}/benchmark-comment.md
-          # the report in the branch where it is committed (pull request into main, see the last step), else the
-          # summary of this run, which holds the whole report
-          BENCHMARK_REPORT_URL: ${{ github.event.pull_request.base.ref == 'main' && format('{0}/{1}/blob/{2}/go/benchmark/benchmark-report.md', github.server_url, github.repository, github.head_ref) || format('{0}/{1}/actions/runs/{2}', github.server_url, github.repository, github.run_id) }}
+          # BENCHMARK_BELOW_BIN, BENCHMARK_BELOW_COMMIT, BENCHMARK_BELOW_BRANCH and BENCHMARK_COMMENT come from the
+          # build step, only in a pull request. The link of the comment: the summary of this run, which holds the
+          # whole report.
+          BENCHMARK_REPORT_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           BENCHMARK_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           BENCHMARK_REPORT: ${{ github.workspace }}/go/benchmark/benchmark-report.md
         run: |
@@ -137,7 +148,7 @@ jobs:
       # Only in a pull request from this repository: the token of a fork cannot write comments. No comment if the
       # benchmark failed before writing it.
       - name: Comment on the pull request
-        if: always() && github.event.pull_request.head.repo.full_name == github.repository
+        if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/github-script@v7
         env:
           COMMENT_FILE: ${{ runner.temp }}/benchmark-comment.md
@@ -171,16 +182,13 @@ jobs:
             ${{ runner.temp }}/netlogo_console.txt
           if-no-files-found: ignore
 
-      # Only in a pull request from this repository into main. In a stack of pull requests (base branch is the
-      # previous step), a commit here would move the tip of the branch, so that every branch above would have to be
-      # rebased after every run. The report of such a pull request is in the summary and in the artifact, and it is
-      # committed in the run started when the pull request is retargeted to main. A commit pushed with the
-      # GITHUB_TOKEN does not start a new workflow run. The Tests workflow may push its report to the same branch at
-      # the same time, so the push is retried on top of the newest state of the branch.
-      # The base branch is github.event.pull_request.base.ref: in a stack, github.base_ref was main also in a pull
-      # request into the previous step.
-      - name: Commit the report to the pull request
-        if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.base.ref == 'main'
+      # Only on main (after a merge). Never in a pull request: a commit there moves the tip of the branch, the author
+      # has to pull or rebase before the next push, and in a stack every branch above too. The report of a pull
+      # request is in its comment, its summary and the artifact. A commit pushed with the GITHUB_TOKEN does not start
+      # a new workflow run. The Tests workflow may push its report to main at the same time, so the push is retried on
+      # top of the newest state of main.
+      - name: Commit the report to main
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -191,7 +199,7 @@ jobs:
           fi
           git commit -m "Update benchmark report [skip ci]"
           for attempt in 1 2 3; do
-            git pull --rebase origin ${{ github.head_ref }} && git push origin HEAD:${{ github.head_ref }} && exit 0
+            git pull --rebase origin main && git push origin HEAD:main && exit 0
             sleep 10
           done
           exit 1

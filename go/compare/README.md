@@ -149,5 +149,5 @@ gobees-fast in this pull request, compared with:
 
 Below the table, the comment lists the runs and the compared columns and, collapsed, the details of every comparison
 that failed. A scenario without a result (e.g. a program failed) is shown as failed. The CI also writes the NetLogo
-report [go/validation/validation-report.md](../validation/validation-report.md) with one plot per scenario and, in a
-pull request, commits it to the branch if all comparisons passed.
+report [go/validation/validation-report.md](../validation/validation-report.md) with one plot per scenario and, on
+`main` after a merge, commits it if all comparisons passed (never to the branch of a pull request).
