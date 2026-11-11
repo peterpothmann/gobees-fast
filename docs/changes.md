@@ -53,7 +53,7 @@ Replaced by an equal draw: the search of a forager. NetLogo draws once per flowe
 
 ### Order of the activity queue
 
-Changed in [#PR](https://github.com/peterpothmann/gobees-fast/pull/PR).
+Changed in [#55](https://github.com/peterpothmann/gobees-fast/pull/55).
 
 During the day the bees act in the order of their personal time. After her action a bee goes back into the queue with her new time (NetLogo: `NextActiveBeeREP`). NetLogo puts her behind all bees with a time up to hers, with one exception that comes from the rounding of its binary search: if her time equals the time of the last bee of the queue, she goes before that bee. gobees-fast puts her behind all bees with the same time in every case.
 
@@ -63,7 +63,7 @@ Effect: the order changes only among bees with the same time at the end of the q
 
 ### Survival of a foraging trip
 
-Changed in [#PR](https://github.com/peterpothmann/gobees-fast/pull/PR).
+Changed in [#55](https://github.com/peterpothmann/gobees-fast/pull/55).
 
 A forager survives a trip of t seconds with the probability s^t, with s = 1 − `MortalityForager_per_s` · `ForagingMortalityFactor` (NetLogo: `Foraging_costs&choiceProc`). gobees-fast computes exp(t · ln s), with ln s computed once per run, instead of the power.
 
@@ -73,7 +73,7 @@ Effect: both values agree up to the last bits. A trip ends with death if a unifo
 
 ### Incubation per colony
 
-Changed in [#PR](https://github.com/peterpothmann/gobees-fast/pull/PR).
+Changed in [#60](https://github.com/peterpothmann/gobees-fast/pull/60).
 
 A nurse heats the brood of her colony for 48 minutes. Every egg, larva and pupa of the colony gets the same share of her heat, the heat divided by the brood of the morning counts (NetLogo: `BroodIncubationProc`). NetLogo adds the share to each brood agent at every incubation. gobees-fast adds the shares of the day to one sum per colony and adds that sum to each brood agent once, at the end of the day. An egg laid during the day gets only the shares of the incubations after its laying.
 
@@ -83,7 +83,7 @@ Effect: one sum per day rounds differently from one addition per incubation. Cou
 
 ### Landscape in metres
 
-Changed in [#PR](https://github.com/peterpothmann/gobees-fast/pull/PR).
+Changed in [#62](https://github.com/peterpothmann/gobees-fast/pull/62).
 
 NetLogo places the landscape on a grid of patch cells: the coordinates of the foodsources file are in patches, line 1 gives the metres per patch (10 m for the example farm), and the world has a fixed size of 0 to 300 by 0 to 210 patches. gobees-fast has no grid. A landscape file holds the coordinates in metres (columns `x`, `y`), the converter multiplies NetLogo's coordinates by the metres per patch. Three places of the model used the grid:
 
