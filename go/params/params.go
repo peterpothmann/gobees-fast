@@ -7,14 +7,6 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// World is the size of the NetLogo world (interface: graphics window). It does not wrap.
-type World struct {
-	MinPxcor float64
-	MaxPxcor float64
-	MinPycor float64
-	MaxPycor float64
-}
-
 // Termination criteria.
 type Termination struct {
 	MaxTicks int // Maximum number of ticks to run [d]. A value <= 0 means no limit.
@@ -22,10 +14,10 @@ type Termination struct {
 
 // Params contains all parameters of the model.
 //
-// Of the NetLogo interface settings, only RAND_SEED (Seed) and the world size (World) remain.
+// Of the NetLogo interface settings, only RAND_SEED (Seed) remains. The world size of NetLogo is gone: the landscape
+// has no edge.
 type Params struct {
-	Seed        int64 // Random seed, used as it is (the run file needs 1 or more). NetLogo: RAND_SEED
-	World       World
+	Seed        int64      // Random seed, used as it is (the run file needs 1 or more). NetLogo: RAND_SEED
 	Parameters  Parameters // The parameters of the run file, read with input.Load.
 	Output      Output     // The output options of the run file.
 	Input       Input      // The other content of the run file and its landscape files, read with input.Load.
@@ -33,14 +25,13 @@ type Params struct {
 	Termination Termination
 }
 
-// Default returns the default parameters. Seed and World are the values stored in the .nlogo file.
+// Default returns the default parameters. Seed is the value stored in the .nlogo file.
 //
 // Parameters, Output and Input are left empty. input.Load reads them from a run file, input.ExampleFarm returns
 // the example farm.
 func Default() Params {
 	return Params{
 		Seed:      0,
-		World:     World{MinPxcor: 0, MaxPxcor: 300, MinPycor: 0, MaxPycor: 210},
 		Constants: DefaultConstants(),
 		Termination: Termination{
 			MaxTicks: 365,
@@ -54,7 +45,6 @@ func (p *Params) Apply(w *ecs.World) {
 	rng.Source = rand.NewPCG(0, uint64(p.Seed))
 
 	pCopy := *p
-	ecs.AddResource(w, &pCopy.World)
 	ecs.AddResource(w, &pCopy.Parameters)
 	ecs.AddResource(w, &pCopy.Output)
 	ecs.AddResource(w, &pCopy.Input)

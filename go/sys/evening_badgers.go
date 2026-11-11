@@ -4,7 +4,6 @@ import (
 	"math/rand/v2"
 
 	"gobees/comp"
-	"gobees/globals"
 	"gobees/params"
 
 	"github.com/mlange-42/ark-tools/resource"
@@ -18,7 +17,6 @@ import (
 // NetLogo: BadgersOnTheProwlProc.
 type badgers struct {
 	rng       *rand.Rand
-	landscape *globals.Landscape
 	death     beeDeath
 	constants *params.Constants
 
@@ -32,7 +30,6 @@ type badgers struct {
 
 func (s *badgers) Initialize(w *ecs.World) {
 	s.rng = rand.New(ecs.GetResource[resource.Rand](w))
-	s.landscape = ecs.GetResource[globals.Landscape](w)
 	s.constants = ecs.GetResource[params.Constants](w)
 	s.death = newBeeDeath(w)
 	s.badgerFilter = ecs.NewFilter2[comp.Position, comp.Badger](w)
@@ -65,12 +62,12 @@ func (s *badgers) Update(w *ecs.World) {
 	s.beesOf = beesByColony(s.beesOf, s.beeFilter, func(b *comp.Bee) bool { return true })
 
 	for _, b := range badgers {
-		// colonies closer than the range (strict), in patch units, no wrapping, as in NetLogo
+		// colonies closer than the range (strict), no wrapping, as in NetLogo
 		inRange := []ecs.Entity{}
 		cq := s.colonyFilter.Query()
 		for cq.Next() {
 			pos, _ := cq.Get()
-			if distanceBetween(pos.X, pos.Y, b.x, b.y) < s.landscape.Scale*foragingRange {
+			if distanceBetween(pos.X, pos.Y, b.x, b.y) < foragingRange {
 				inRange = append(inRange, cq.Entity())
 			}
 		}

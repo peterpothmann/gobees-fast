@@ -39,7 +39,7 @@ Left out:
 | queen emergence | emerging cohorts, emerged queens, victims of a cuckoo bee, counts |
 | nest site choice | sites: one uniform number, each site with probability area / total area in any order |
 | season end, males, limit of hibernating queens | species and bees: all die, or uniform draws from the list |
-| setup | badgers (identical until placed), habitat types of the nest habitats (only used with `member?`) |
+| setup | badgers (identical until placed), habitat types of the nest habitats (only used with `member?`), flower patches when they are split into layers (file order, see [Landscape in metres](#landscape-in-metres)) |
 
 Kept, because the order matters:
 
@@ -48,7 +48,6 @@ Kept, because the order matters:
 | wake-up | ties of the personal time: the order of the active list decides which bee empties a foodsource first |
 | queen emergence, searching queens | a cuckoo bee can kill another one in the same host |
 | merging of hedges | ties of the area: the first hedge of a field becomes the master |
-| splitting of flower patches into layers | the creation order of the layers reaches several places |
 
 Replaced by an equal draw: the search of a forager. NetLogo draws once per flower patch in random order and takes the last one detected, that is one of the detected patches, each with the same probability. gobees-fast draws once per patch in list order and lets the k-th detected patch replace the choice with probability 1/k (reservoir sampling).
 
@@ -81,6 +80,24 @@ A nurse heats the brood of her colony for 48 minutes. Every egg, larva and pupa 
 Why: the loop over all brood agents at every incubation took about 6 % of the run time (profile of the example farm). The received heat is read only in the evening, by the brood mortality and the development.
 
 Effect: one sum per day rounds differently from one addition per incubation. Counted on the example farm and two scenarios (10 runs × 730 days each, 758,523 brood agents and days): the received heat differs in the last bits in 81 % to 83 % of the cases, by at most 7.7 · 10⁻¹⁵ of its value. The brood dies or develops when the received heat passes a threshold, so a different last bit changes the outcome only if the heat lies within that distance of a threshold. The output of the 5 scenarios (example farm, step7_crop, step8_species, step7_badgers, step8_genetics, seed 3, 3 runs, 730 days) and of 40 runs of the example farm (seed 1, 730 days) is byte for byte the same as before. The change is listed here because the equality is not guaranteed for every input.
+
+### Landscape in metres
+
+Changed in [#PR](https://github.com/peterpothmann/gobees-fast/pull/PR).
+
+NetLogo places the landscape on a grid of patch cells: the coordinates of the foodsources file are in patches, line 1 gives the metres per patch (10 m for the example farm), and the world has a fixed size of 0 to 300 by 0 to 210 patches. gobees-fast has no grid. A landscape file holds the coordinates in metres (columns `x`, `y`), the converter multiplies NetLogo's coordinates by the metres per patch. Three places of the model used the grid:
+
+| Place | NetLogo | gobees-fast |
+| --- | --- | --- |
+| nest of a queen (`NestSitesSearchingProc`) | a random patch centre within the circle of the flower patch, a runtime error if there is none | a uniform random point within the circle |
+| badger (`CreateBadgersProc`) | the centre of the patch cell of a Scrub flower patch, at most one badger per cell | the position of the Scrub flower patch, at most one badger per flower patch |
+| map area of the output (`TotalMapArea_km2`) | the rectangle around all flower patch circles, limited to the world (patch centres 0 to 300 by 0 to 210) | the rectangle around all flower patch circles |
+
+The flower patches are also no longer split in random order: one entity per flower patch holds its layers, and the patches are created in file order. The order reaches only lists that are read in an order-independent way (nest sites, the flower patches in range of a colony).
+
+Why: a landscape made from a raster map (e.g. in R) has its own resolution and extent and no NetLogo world. The grid added a scale factor to every distance (foraging, detection, badgers, range of a colony) and to the user interface.
+
+Effect: a nest lies anywhere in the circle instead of on one of the patch centres in it. For a large flower patch both are close to uniform in the circle. For a small one the patch centres are few (a hedge of 200 m², radius 8 m, has 1 to 4 at 10 m per patch), so a nest moves by up to a few metres. A badger moves by up to 7 m (half the diagonal of a cell of 10 m). The world limit changes the map area only for flower patches whose circle reaches beyond the NetLogo world: none in the example farm and in `Example_Farm_PlotTest`, so the map area stays 1.9978 km². Statistical comparison with the last exact commit on 4 scenarios (example farm, step7_crop, step7_badgers, step8_species, 100 runs each, 730 days; 12 columns at days 183, 366, 548 and 730): no difference with |z| > 3 or a Kolmogorov-Smirnov distance above the critical value at α = 0.01.
 
 ## Fixes
 

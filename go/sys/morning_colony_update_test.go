@@ -49,7 +49,7 @@ func newColonyWorld(t *testing.T, seed uint64) *colonyWorld {
 	ecs.AddResource(w, cw.cal)
 	cw.today = &globals.Flowering{}
 	ecs.AddResource(w, cw.today)
-	ecs.AddResource(w, &globals.Landscape{Scale: 0.1})
+	ecs.AddResource(w, &globals.Landscape{})
 	cw.tally = newTally(w)
 	ecs.AddResource(w, &globals.ActiveBees{})
 	ecs.AddResource(w, &globals.Daytime{})

@@ -6,7 +6,6 @@ import (
 	"gobees/enum/caste"
 	"gobees/enum/stage"
 	"gobees/globals"
-	"gobees/params"
 
 	"github.com/mlange-42/ark/ecs"
 )
@@ -42,10 +41,8 @@ type DailyOutput struct {
 	// Totals holds the totals of the last call of Values.
 	Totals DailyTotals
 
-	ticks     ecs.Resource[globals.Ticks]
-	world     *params.World
-	landscape *globals.Landscape
-	active    *globals.ActiveBees
+	ticks  ecs.Resource[globals.Ticks]
+	active *globals.ActiveBees
 
 	beeFilter    *ecs.Filter1[comp.Bee]
 	colonyFilter *ecs.Filter1[comp.Colony]
@@ -55,8 +52,6 @@ type DailyOutput struct {
 
 func (o *DailyOutput) Initialize(w *ecs.World) {
 	o.ticks = ecs.NewResource[globals.Ticks](w)
-	o.world = ecs.GetResource[params.World](w)
-	o.landscape = ecs.GetResource[globals.Landscape](w)
 	o.active = ecs.GetResource[globals.ActiveBees](w)
 	o.beeFilter = ecs.NewFilter1[comp.Bee](w)
 	o.colonyFilter = ecs.NewFilter1[comp.Colony](w)
@@ -181,8 +176,9 @@ func (o *DailyOutput) mapArea() {
 	}
 }
 
-// totalMapArea returns the area [km2] of the box around all flower patches (centre +- radius), limited to the
-// world. NetLogo: around all foodsources (layers), which share the centre and the radius of their flower patch.
+// totalMapArea returns the area [km2] of the box around all flower patches (centre +- radius). NetLogo: around all
+// foodsources (layers), which share the centre and the radius of their flower patch, limited to the world (patch
+// centres 0-300 x 0-210).
 func (o *DailyOutput) totalMapArea() float64 {
 	// Among tied flower patches the first one in storage order counts (NetLogo: one at random). Tied flower patches
 	// share the coordinate, but their radius can differ, so the area can differ from NetLogo's in that case.
@@ -211,17 +207,11 @@ func (o *DailyOutput) totalMapArea() float64 {
 			left = src
 		}
 	}
-	scaling := o.landscape.Scale
-	topCor := top.y + top.r*scaling
-	bottomCor := bottom.y - bottom.r*scaling
-	rightCor := right.x + right.r*scaling
-	leftCor := left.x - left.r*scaling
+	topCor := top.y + top.r // [m]
+	bottomCor := bottom.y - bottom.r
+	rightCor := right.x + right.r
+	leftCor := left.x - left.r
 
-	topCor = min(topCor, o.world.MaxPycor)
-	bottomCor = max(bottomCor, o.world.MinPycor)
-	rightCor = min(rightCor, o.world.MaxPxcor)
-	leftCor = max(leftCor, o.world.MinPxcor)
-
-	area := ((topCor - bottomCor) * (rightCor - leftCor)) / (scaling * scaling) // [m2]
+	area := (topCor - bottomCor) * (rightCor - leftCor) // [m2]
 	return area / (1000 * 1000)
 }

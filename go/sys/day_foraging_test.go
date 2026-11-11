@@ -13,7 +13,7 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// Foraging tests: the colony is at (0, 0), Landscape.Scale = 0.1 (10 m per NetLogo patch).
+// Foraging tests: the colony is at (0, 0), positions in [m].
 // Flower species values from netlogo/_SYSTEM_Flowerspecies.csv.
 
 // willowherb is American_willowherb: nectar_ml/flower 0.00035, concentration_mol/l 1.34, corollaDepth_mm 3.5,
@@ -31,7 +31,7 @@ func alsike() comp.Layer {
 		NectarMax: 1000, PollenMax: 10}
 }
 
-// flowerPatch adds a flower patch at (x, y) [NetLogo patches] with radius_m and the given layers, filled up to their
+// flowerPatch adds a flower patch at (x, y) [m] with radius_m and the given layers, filled up to their
 // maximum. It returns the layers in the given order (NetLogo: who order).
 func (aw *activityWorld) flowerPatch(x, y, radius float64, layers ...comp.Layer) []comp.Source {
 	fp := comp.FlowerPatch{Radius: radius, Layers: layers}
@@ -83,9 +83,9 @@ func TestDetectionProb(t *testing.T) {
 		x    float64
 		want float64
 	}{
-		{"edge 100 m away", 15, 0.6065306597},
-		{"colony inside the patch", 2, 1},
-		{"edge 750 m away", 80, 0.0235177459},
+		{"edge 100 m away", 150, 0.6065306597},
+		{"colony inside the patch", 20, 1},
+		{"edge 750 m away", 800, 0.0235177459},
 		// NetLogo gives 0 beyond ForagingRangeMax_m (758 m). The colony lists hold only flower patches whose
 		// centre is in range, so their edge is never beyond it.
 	} {
@@ -116,7 +116,7 @@ func TestHandlingTime(t *testing.T) {
 		{"pollen, empty", willowherb(), true, 0, 3600},
 		{"pollen, almost empty", willowherb(), true, 0.001, 3600},
 	} {
-		p := aw.flowerPatch(5, 0, 10, tc.fs)[0]
+		p := aw.flowerPatch(50, 0, 10, tc.fs)[0]
 		s := aw.state(p)
 		s.Nectar *= tc.fill
 		s.Pollen *= tc.fill
@@ -132,8 +132,8 @@ func TestHandlingTime(t *testing.T) {
 func TestHandlingTimeIngestionCache(t *testing.T) {
 	aw, col, f := newForagingWorld(t, 1)
 	bee := aw.worker(col, 1)
-	willow := aw.flowerPatch(5, 0, 10, willowherb())[0]
-	deep := aw.flowerPatch(50, 0, 10, alsike())[0]
+	willow := aw.flowerPatch(50, 0, 10, willowherb())[0]
+	deep := aw.flowerPatch(500, 0, 10, alsike())[0]
 	for i, v := range []struct {
 		p    comp.Source
 		fill float64
@@ -174,7 +174,7 @@ func TestBestLayer(t *testing.T) {
 	_, _, _, fo, _ := aw.bee(bee)
 	slow := willowherb()
 	slow.InterFlowerTime = 2
-	layers := aw.flowerPatch(30, 0, 50, slow, willowherb(), alsike())
+	layers := aw.flowerPatch(300, 0, 50, slow, willowherb(), alsike())
 	fo.PollenForager = true
 	if got := f.bestLayer(f.tripOf(bee), layers[0].Patch); got != layers[1] {
 		t.Errorf("pollen: best layer %v, want the willowherb with 0.6 s (%v); ties go to the first", got, layers[1])
@@ -199,10 +199,10 @@ func TestSortKnownPatches(t *testing.T) {
 	// duplicates removed, sorted by distance, stable for equal distances
 	aw, col, f := newForagingWorld(t, 1)
 	bee := aw.worker(col, 1)
-	far := aw.flowerPatch(50, 0, 10, willowherb())[0].Patch
-	near := aw.flowerPatch(0, 10, 10, willowherb())[0].Patch
-	sameA := aw.flowerPatch(30, 0, 10, willowherb())[0].Patch
-	sameB := aw.flowerPatch(0, -30, 10, willowherb())[0].Patch
+	far := aw.flowerPatch(500, 0, 10, willowherb())[0].Patch
+	near := aw.flowerPatch(0, 100, 10, willowherb())[0].Patch
+	sameA := aw.flowerPatch(300, 0, 10, willowherb())[0].Patch
+	sameB := aw.flowerPatch(0, -300, 10, willowherb())[0].Patch
 	got := f.sortKnownPatches(f.tripOf(bee), []ecs.Entity{sameB, far, near, sameA, far, sameB})
 	want := []ecs.Entity{near, sameB, sameA, far}
 	if len(got) != len(want) {
@@ -223,7 +223,7 @@ func TestForagingTripPollen(t *testing.T) {
 	bee := aw.worker(col, 1)
 	fs := willowherb()
 	fs.PollenMax = 1000 // one load (0.01206 g) hardly changes the filling level
-	p := aw.flowerPatch(30, 0, 10, fs)[0]
+	p := aw.flowerPatch(300, 0, 10, fs)[0]
 	b, _, _, fo, _ := aw.bee(bee)
 	b.Activity = activity.PollenForaging
 	fo.PollenSource = p
@@ -258,7 +258,7 @@ func TestForagingEmptiesFoodsource(t *testing.T) {
 	// the last load empties the foodsource and gives the handling time 3600 s
 	aw, col, f := newForagingWorld(t, 1)
 	bee := aw.worker(col, 3) // a cohort of 3 takes up to 120.6 microlitres
-	p := aw.flowerPatch(30, 0, 10, willowherb())[0]
+	p := aw.flowerPatch(300, 0, 10, willowherb())[0]
 	aw.state(p).Nectar = 100
 	b, _, _, fo, _ := aw.bee(bee)
 	b.Activity = activity.NectarForaging
@@ -286,7 +286,7 @@ func TestForagingSearch(t *testing.T) {
 	// the colony lies inside the flower patch, so it is detected with probability 1.
 	// a novice is always unhappy after her first trip.
 	aw, col, f := newForagingWorld(t, 1)
-	layers := aw.flowerPatch(1, 0, 50, willowherb(), alsike())
+	layers := aw.flowerPatch(10, 0, 50, willowherb(), alsike())
 	_, _, _, _, _, r := aw.colonyMap.Get(col)
 	r.NectarPatches = []ecs.Entity{layers[0].Patch}
 	bee := aw.worker(col, 1)
@@ -357,7 +357,7 @@ func TestChoosePatch(t *testing.T) {
 	// worked example: expectation 300 s, trip 400 s: new expectation 350 s.
 	// after returningEmpty: 10 % go to the closest known patch, 90 % search.
 	aw, col, f := newForagingWorld(t, 5)
-	p := aw.flowerPatch(30, 0, 10, willowherb())[0]
+	p := aw.flowerPatch(300, 0, 10, willowherb())[0]
 	bee := aw.worker(col, 1)
 	b, _, _, fo, _ := aw.bee(bee)
 	fo.KnownNectarPatches = []ecs.Entity{p.Patch}

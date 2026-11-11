@@ -14,36 +14,33 @@ import (
 	"gobees/params"
 )
 
-// Landscape is a landscape as the model reads it: the metres per NetLogo patch and the flower patches, each with its
-// own flower list (NetLogo: foodsources file). On disk it is a landscape file (YAML) with tables (CSV), see
-// ReadLandscape and WriteLandscape.
+// Landscape is a landscape as the model reads it: the flower patches, each with its own flower list (NetLogo:
+// foodsources file). On disk it is a landscape file (YAML) with tables (CSV), see ReadLandscape and WriteLandscape.
 type Landscape struct {
-	MetresPerPatch float64 // metres per NetLogo patch
-	Patches        []Patch // flower patches, in this order
+	Patches []Patch // flower patches, in this order
 }
 
-// Patch is one flower patch of a landscape. The names are the columns of the NetLogo foodsources file, except area
-// (size_sqm) and flowers (flowerSpeciesList).
+// Patch is one flower patch of a landscape. The names are the columns of the NetLogo foodsources file, except x, y
+// (xcor, ycor in NetLogo patches), area (size_sqm) and flowers (flowerSpeciesList).
 type Patch struct {
-	ID        float64
+	ID        int
 	PatchType string
-	X, Y      float64              // NetLogo patches. NetLogo: xcor, ycor
+	X, Y      float64              // centre [m]
 	Area      float64              // [m2]
 	Flowers   []params.FlowerEntry // the flower species with their relative abundance, in this order
 }
 
-// landscapeFile is the content of a landscape file (YAML): the metres per patch and the names of its tables, relative
-// to the folder of the landscape file. One habitat table can serve many landscapes, e.g. ../habitats.csv.
+// landscapeFile is the content of a landscape file (YAML): the names of its tables, relative to the folder of the
+// landscape file. One habitat table can serve many landscapes, e.g. ../habitats.csv.
 type landscapeFile struct {
-	MetresPerPatch float64 `yaml:"metresPerPatch"`         // metres per NetLogo patch
-	Patches        string  `yaml:"patches"`                // table of the flower patches: id, patchType, xcor, ycor, area
-	Habitats       string  `yaml:"habitats,omitempty"`     // table of the flower lists by patch type: patchType, flower, abundance
-	PatchFlowers   string  `yaml:"patchFlowers,omitempty"` // table of own flower lists: id, flower, abundance
+	Patches      string `yaml:"patches"`                // table of the flower patches: id, patchType, x, y, area
+	Habitats     string `yaml:"habitats,omitempty"`     // table of the flower lists by patch type: patchType, flower, abundance
+	PatchFlowers string `yaml:"patchFlowers,omitempty"` // table of own flower lists: id, flower, abundance
 }
 
 // Columns of the tables of a landscape file. Each table needs a header with all its columns, in any order.
 var (
-	patchColumns       = []string{"id", "patchType", "xcor", "ycor", "area"}
+	patchColumns       = []string{"id", "patchType", "x", "y", "area"}
 	habitatColumns     = []string{"patchType", "flower", "abundance"}
 	patchFlowerColumns = []string{"id", "flower", "abundance"}
 )
@@ -58,7 +55,7 @@ type LandscapeTable struct {
 // ReadLandscape reads the landscape file name and its tables with open. The names of the tables are relative to the
 // folder of the landscape file. It returns the landscape, its tables and the bytes of every file read, by its name as
 // opened. An unknown key of the landscape file, an unknown or missing column of a table and a value that is not a
-// number where a number is needed are errors.
+// number (an integer for id) where a number is needed are errors.
 //
 // The flower list of a patch is the list of its patch type in the habitat table (the rows of the patch type, in their
 // order), or, if the table patchFlowers has rows of the patch, these rows.
@@ -102,7 +99,7 @@ func ReadLandscape(name string, open func(string) (io.ReadCloser, error)) (Lands
 		return Landscape{}, nil, nil, err
 	}
 
-	l, err := resolveLandscape(lf.MetresPerPatch, patchRows, habitatRows, ownRows)
+	l, err := resolveLandscape(patchRows, habitatRows, ownRows)
 	if err != nil {
 		return Landscape{}, nil, nil, fmt.Errorf("%s: %w", name, err)
 	}
@@ -119,8 +116,8 @@ func tableName(name, ref string) string {
 }
 
 // resolveLandscape builds the landscape from the rows of its tables.
-func resolveLandscape(metresPerPatch float64, patchRows, habitatRows, ownRows []map[string]string) (Landscape, error) {
-	l := Landscape{MetresPerPatch: metresPerPatch, Patches: make([]Patch, len(patchRows))}
+func resolveLandscape(patchRows, habitatRows, ownRows []map[string]string) (Landscape, error) {
+	l := Landscape{Patches: make([]Patch, len(patchRows))}
 	byType := map[string][]params.FlowerEntry{}
 	for i, r := range habitatRows {
 		e, err := flowerEntry(r)
@@ -129,10 +126,10 @@ func resolveLandscape(metresPerPatch float64, patchRows, habitatRows, ownRows []
 		}
 		byType[r["patchType"]] = append(byType[r["patchType"]], e)
 	}
-	own := map[float64][]params.FlowerEntry{}
-	ownOrder := []float64{}
+	own := map[int][]params.FlowerEntry{}
+	ownOrder := []int{}
 	for i, r := range ownRows {
-		id, err := number(r, "id")
+		id, err := integer(r, "id")
 		if err != nil {
 			return l, fmt.Errorf("patchFlowers, row %d: %w", i+2, err)
 		}
@@ -146,14 +143,17 @@ func resolveLandscape(metresPerPatch float64, patchRows, habitatRows, ownRows []
 		own[id] = append(own[id], e)
 	}
 
-	ids := map[float64]int{}
+	ids := map[int]int{}
 	for i, r := range patchRows {
 		p := Patch{PatchType: r["patchType"]}
 		var err error
+		if p.ID, err = integer(r, "id"); err != nil {
+			return l, fmt.Errorf("patches, row %d: %w", i+2, err)
+		}
 		for _, c := range []struct {
 			key string
 			v   *float64
-		}{{"id", &p.ID}, {"xcor", &p.X}, {"ycor", &p.Y}, {"area", &p.Area}} {
+		}{{"x", &p.X}, {"y", &p.Y}, {"area", &p.Area}} {
 			if *c.v, err = number(r, c.key); err != nil {
 				return l, fmt.Errorf("patches, row %d: %w", i+2, err)
 			}
@@ -168,10 +168,10 @@ func resolveLandscape(metresPerPatch float64, patchRows, habitatRows, ownRows []
 	for _, id := range ownOrder {
 		switch ids[id] {
 		case 0:
-			return l, fmt.Errorf("patchFlowers: id %v is no flower patch of the table patches", fmtNumber(id))
+			return l, fmt.Errorf("patchFlowers: id %d is no flower patch of the table patches", id)
 		case 1:
 		default:
-			return l, fmt.Errorf("patchFlowers: id %v belongs to %d flower patches of the table patches", fmtNumber(id), ids[id])
+			return l, fmt.Errorf("patchFlowers: id %d belongs to %d flower patches of the table patches", id, ids[id])
 		}
 	}
 	return l, nil
@@ -194,6 +194,15 @@ func number(r map[string]string, key string) (float64, error) {
 	v, err := strconv.ParseFloat(strings.TrimSpace(r[key]), 64)
 	if err != nil {
 		return 0, fmt.Errorf("%s: %q is no number", key, r[key])
+	}
+	return v, nil
+}
+
+// integer reads the column key of a row as an integer.
+func integer(r map[string]string, key string) (int, error) {
+	v, err := strconv.Atoi(strings.TrimSpace(r[key]))
+	if err != nil {
+		return 0, fmt.Errorf("%s: %q is no integer", key, r[key])
 	}
 	return v, nil
 }
@@ -251,7 +260,7 @@ type LandscapeFiles map[string][]byte
 // the table patchFlowers, so ReadLandscape gives l again.
 func WriteLandscape(name string, l Landscape) (LandscapeFiles, error) {
 	base := strings.TrimSuffix(name, ".yaml")
-	lf := landscapeFile{MetresPerPatch: l.MetresPerPatch, Patches: base + "_patches.csv"}
+	lf := landscapeFile{Patches: base + "_patches.csv"}
 
 	types := []string{}
 	lists := map[string][][]params.FlowerEntry{}
@@ -269,7 +278,7 @@ func WriteLandscape(name string, l Landscape) (LandscapeFiles, error) {
 	patches := [][]string{patchColumns}
 	habitats := [][]string{habitatColumns}
 	own := [][]string{patchFlowerColumns}
-	ids := map[float64]int{}
+	ids := map[int]int{}
 	for _, p := range l.Patches {
 		ids[p.ID]++
 	}
@@ -279,17 +288,17 @@ func WriteLandscape(name string, l Landscape) (LandscapeFiles, error) {
 		}
 	}
 	for _, p := range l.Patches {
-		patches = append(patches, []string{fmtNumber(p.ID), p.PatchType, fmtNumber(p.X), fmtNumber(p.Y),
+		patches = append(patches, []string{strconv.Itoa(p.ID), p.PatchType, fmtNumber(p.X), fmtNumber(p.Y),
 			fmtNumber(p.Area)})
 		if slices.Equal(p.Flowers, habitat[p.PatchType]) {
 			continue
 		}
 		if ids[p.ID] > 1 {
-			return nil, fmt.Errorf("patch %v: its own flower list needs a unique id, %d patches have it",
-				fmtNumber(p.ID), ids[p.ID])
+			return nil, fmt.Errorf("patch %d: its own flower list needs a unique id, %d patches have it",
+				p.ID, ids[p.ID])
 		}
 		for _, e := range p.Flowers {
-			own = append(own, []string{fmtNumber(p.ID), e.Name, fmtNumber(e.Value)})
+			own = append(own, []string{strconv.Itoa(p.ID), e.Name, fmtNumber(e.Value)})
 		}
 	}
 

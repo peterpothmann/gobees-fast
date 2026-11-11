@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"slices"
@@ -110,7 +111,7 @@ func convert(dir string, file *netLogoParameters, mapName, name string) (Convert
 		}
 		landscapes[landscapeName(n)] = l
 		for _, id := range left {
-			report = append(report, fmt.Sprintf("%s: flower patch %v has only stewardship options and is left out "+
+			report = append(report, fmt.Sprintf("%s: flower patch %d has only stewardship options and is left out "+
 				"(NetLogo removes it at the setup)", n, id))
 		}
 	}
@@ -165,7 +166,10 @@ func landscapeName(foodsourcesFile string) string {
 // in options (stewardshipOptions), as NetLogo stops with a runtime error at any other item without a value
 // [LAYR-04]. A flower patch with only options is left out, as NetLogo splits it into no layer and removes it
 // [LAYR-09]. Returns the ids of the patches left out.
-func readFoodsourcesFile(path string, options []string) (input.Landscape, []float64, error) {
+//
+// The coordinates are converted from NetLogo patches to metres with the metres per patch of line 1, rounded to
+// millimetres. The id must be an integer.
+func readFoodsourcesFile(path string, options []string) (input.Landscape, []int, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return input.Landscape{}, nil, fmt.Errorf("FoodsourcesFile: %w", err)
@@ -175,9 +179,15 @@ func readFoodsourcesFile(path string, options []string) (input.Landscape, []floa
 	if err != nil {
 		return input.Landscape{}, nil, fmt.Errorf("FoodsourcesFile %s: %w", path, err)
 	}
-	l := input.Landscape{MetresPerPatch: m, Patches: make([]input.Patch, 0, len(patches))}
-	var left []float64
+	l := input.Landscape{Patches: make([]input.Patch, 0, len(patches))}
+	var left []int
+	metres := func(v float64) float64 { return math.Round(v*m*1000) / 1000 }
 	for _, p := range patches {
+		id := int(p.Id_Beescout)
+		if float64(id) != p.Id_Beescout {
+			return input.Landscape{}, nil, fmt.Errorf("FoodsourcesFile %s: flower patch %v: the id must be an "+
+				"integer", path, p.Id_Beescout)
+		}
 		for _, o := range p.Options {
 			if !slices.Contains(options, o) {
 				return input.Landscape{}, nil, fmt.Errorf("FoodsourcesFile %s: flower patch %v: [%q] is no "+
@@ -185,10 +195,10 @@ func readFoodsourcesFile(path string, options []string) (input.Landscape, []floa
 			}
 		}
 		if len(p.FlowerSpeciesList) == 0 && len(p.Options) > 0 {
-			left = append(left, p.Id_Beescout)
+			left = append(left, id)
 			continue
 		}
-		l.Patches = append(l.Patches, input.Patch{ID: p.Id_Beescout, PatchType: p.PatchType, X: p.X, Y: p.Y,
+		l.Patches = append(l.Patches, input.Patch{ID: id, PatchType: p.PatchType, X: metres(p.X), Y: metres(p.Y),
 			Area: p.Area_sqm, Flowers: p.FlowerSpeciesList})
 	}
 	return l, left, nil

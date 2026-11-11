@@ -100,18 +100,18 @@ func TestCreateLayers(t *testing.T) {
 	}
 	file := &params.Parameters{AbundanceBoost: 1, FoodsourceLimit: 1, LimitFoodsources: true, RemoveEmptyFoodsources: true}
 	// limits: 180 microlitres nectar, 0.05 g pollen
-	p1 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Grassland", X: 10.2, Y: 20.4,
+	p1 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Grassland", X: 102, Y: 204,
 		Area: 100, Flowers: []params.FlowerEntry{{Name: "A", Value: 2}, {Name: "Margin", Value: 1}, {Name: "B", Value: 1},
 			{Name: "C", Value: 1}}}}
-	p2 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Crop_Cereals", X: 10.4, Y: 19.6,
+	p2 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Crop_Cereals", X: 104, Y: 196,
 		Area: 100, Flowers: []params.FlowerEntry{{Name: "B", Value: 1}}}}
-	p3 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Scrub", X: 50, Y: 50, Area: 400}}
+	p3 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Scrub", X: 500, Y: 500, Area: 400}}
 	// every layer of the woodland is removed: no flower patch (NetLogo: no masterpatch)
-	p4 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Woodland", X: 70, Y: 70,
+	p4 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Woodland", X: 700, Y: 700,
 		Area: 100, Flowers: []params.FlowerEntry{{Name: "B", Value: 1}}}}
 
 	patches, err := createLayers(w, []*flowerPatch{p1, p2, p3, p4}, flowers, file, &defaults.Landscape,
-		[]string{"Margin", "Plot"}, rand.New(rand.NewPCG(1, 1)))
+		[]string{"Margin", "Plot"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,13 +150,12 @@ func TestCreateLayers(t *testing.T) {
 	if len(scrub.Layers) != 0 || scrub.Area != 400 {
 		t.Errorf("scrub = %+v", *scrub)
 	}
-	// A, C and the crop layer lie in the same patch cell (10, 20). The grassland and the crop field keep their own
-	// layers (NetLogo: one list of all three, finding 15).
-	// the flower patches in NetLogo's who order of their masterpatches. The scrub is not split and gets its who
-	// number before all layers, so it comes first. The grassland and the crop field follow in shuffled order.
-	if len(patches) != 3 || patches[0] != byType["Scrub"] ||
-		!slices.Contains(patches[1:], byType["Grassland"]) || !slices.Contains(patches[1:], byType["Crop_Cereals"]) {
-		t.Errorf("patches %v, want scrub first, then grassland and crop field: %v", patches, byType)
+	// A, C and the crop layer would lie in the same NetLogo patch cell (10, 20) at 10 m per patch. The grassland and
+	// the crop field keep their own layers (NetLogo: one list of all three, finding 15).
+	// the flower patches in file order, without the woodland (NetLogo: who order of the masterpatches, the unsplit
+	// scrub first, then the split ones in random order)
+	if !slices.Equal(patches, []ecs.Entity{byType["Grassland"], byType["Crop_Cereals"], byType["Scrub"]}) {
+		t.Errorf("patches %v, want grassland, crop field and scrub in file order: %v", patches, byType)
 	}
 }
 
@@ -224,9 +223,6 @@ func TestCreateFoodsourcesExampleFarm(t *testing.T) {
 		a := newExampleFarmSetup(t, float64(seed))
 		w := a.World
 		landscape := ecs.GetResource[globals.Landscape](w)
-		if landscape.Scale != 0.1 {
-			t.Fatalf("Scaling_NLpatches/m = %v, want 0.1 (1 / 10 m)", landscape.Scale)
-		}
 
 		patches := collectPatches(w)
 		counts[len(patches)]++

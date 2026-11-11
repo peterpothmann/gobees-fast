@@ -118,9 +118,10 @@ func TestParseFoodsourcesFileHeaderFormats(t *testing.T) {
 
 func TestReadFoodsourcesFileOptions(t *testing.T) {
 	// the stewardship option of patch 1 is dropped, patch 2 has only options and is left out (NetLogo removes it),
-	// an item without a value that is no option is an error (NetLogo: a runtime error)
+	// an item without a value that is no option is an error (NetLogo: a runtime error), and so is an id that is no
+	// integer. The coordinates in metres: 15 m per patch, (1.00002, 2) -> (15.0003, 30), rounded to millimetres.
 	header := "15\nid patchType patchColour xcor ycor size_sqm flowerSpeciesList perimeter_m info\n"
-	lines := `1 "Crop_Cereals" 75 1 2 300 [["Crop_Cereals" 0.9] ["Plot"] ["Bramble" 0.5]] 10  "5000" ` + "\n" +
+	lines := `1 "Crop_Cereals" 75 1.00002 2 300 [["Crop_Cereals" 0.9] ["Plot"] ["Bramble" 0.5]] 10  "5000" ` + "\n" +
 		`2 "Crop_Cereals" 75 3 4 300 [["Margin"]] 10  "no info" ` + "\n"
 	options := []string{"Margin", "Plot"}
 	path := filepath.Join(t.TempDir(), "f.txt")
@@ -133,7 +134,7 @@ func TestReadFoodsourcesFileOptions(t *testing.T) {
 	}
 	want := []params.FlowerEntry{{Name: "Crop_Cereals", Value: 0.9}, {Name: "Bramble", Value: 0.5}}
 	if len(l.Patches) != 1 || l.Patches[0].ID != 1 || !reflect.DeepEqual(l.Patches[0].Flowers, want) ||
-		!reflect.DeepEqual(left, []float64{2}) {
+		l.Patches[0].X != 15 || l.Patches[0].Y != 30 || !reflect.DeepEqual(left, []int{2}) {
 		t.Errorf("patches %+v, left out %v", l.Patches, left)
 	}
 
@@ -143,6 +144,13 @@ func TestReadFoodsourcesFileOptions(t *testing.T) {
 	}
 	if _, _, err := readFoodsourcesFile(path, options); err == nil || !strings.Contains(err.Error(), `["Plott"]`) {
 		t.Errorf("error %v, want one for [\"Plott\"]", err)
+	}
+	bad = `3.5 "Scrub" 55 1 2 300 [["Bramble" 0.5]] 10  "no info" ` + "\n"
+	if err := os.WriteFile(path, []byte(header+bad), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := readFoodsourcesFile(path, options); err == nil || !strings.Contains(err.Error(), "integer") {
+		t.Errorf("error %v, want one for the id 3.5", err)
 	}
 }
 

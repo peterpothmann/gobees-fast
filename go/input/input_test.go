@@ -47,12 +47,13 @@ func TestExampleFarm(t *testing.T) {
 		t.Errorf("Flowers: want the 79 flower species of _SYSTEM_Flowerspecies.csv")
 	}
 	fs, ok := in.Foodsources[in.Derived.StartLandscape]
-	if len(in.Foodsources) != 1 || !ok || fs.MetresPerPatch != 10 || len(fs.Patches) != 73 {
-		t.Errorf("Foodsources: want only the example farm with 10 m per patch and 73 flower patches")
+	if len(in.Foodsources) != 1 || !ok || len(fs.Patches) != 73 {
+		t.Errorf("Foodsources: want only the example farm with 73 flower patches")
 	}
-	// first line of _SYSTEM_Example_Farm_Foodsources.txt: 0 "Hedgerow" 105 130 175 200 [["Average_Willow" 1.275] ...] 20
+	// first line of _SYSTEM_Example_Farm_Foodsources.txt: 0 "Hedgerow" 105 130 175 200 [["Average_Willow" 1.275] ...] 20,
+	// 10 m per patch
 	first := fs.Patches[0]
-	if first.ID != 0 || first.PatchType != "Hedgerow" || first.X != 130 || first.Y != 175 || first.Area != 200 ||
+	if first.ID != 0 || first.PatchType != "Hedgerow" || first.X != 1300 || first.Y != 1750 || first.Area != 200 ||
 		len(first.Flowers) != 33 ||
 		first.Flowers[0] != (params.FlowerEntry{Name: "Average_Willow", Value: 1.275}) {
 		t.Errorf("first flower patch = %+v", first)
@@ -315,9 +316,9 @@ func TestBuildCropRotation(t *testing.T) {
 	if _, err := Build(c, landscapes); err == nil {
 		t.Error("want an error for a landscape file of the crop rotation that was not read")
 	}
-	landscapes["other.yaml"] = Landscape{MetresPerPatch: 5}
+	landscapes["other.yaml"] = Landscape{Patches: []Patch{{ID: 5, PatchType: "Scrub"}}}
 	p, err := Build(c, landscapes)
-	if err != nil || len(p.Input.Foodsources) != 2 || p.Input.Foodsources["other.yaml"].MetresPerPatch != 5 {
+	if err != nil || len(p.Input.Foodsources) != 2 || p.Input.Foodsources["other.yaml"].Patches[0].ID != 5 {
 		t.Errorf("want both landscape files, got %d, %v", len(p.Input.Foodsources), err)
 	}
 	// one file: no crop rotation, the file is not needed

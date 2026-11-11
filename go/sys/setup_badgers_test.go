@@ -28,27 +28,27 @@ func badgerPositions(w *ecs.World) []comp.Position {
 
 func TestCreateBadgersNearOrigin(t *testing.T) {
 	// the badgers that have not moved yet sit at the origin, but only the placed badgers exclude Scrub patches.
-	// Scrub A lies 14 patches (140 m) from the origin, so both badgers can choose it:
+	// Scrub A lies 146 m from the origin, so both badgers can choose it:
 	// P(A occupied) = 1/3 + 2/3 * 1/2 = 2/3, sd 0.009. NetLogo: only the first badger can choose it, P = 1/3.
 	const runs = 3000
 	occupiedA := 0
 	for seed := range uint64(runs) {
 		w := ecs.NewWorld()
-		addScrub(w, 10.3, 10.4) // A, patch cell (10, 10)
-		addScrub(w, 100, 100)   // B
-		addScrub(w, 200, 100)   // C
-		createBadgers(w, 2, 0.1, 300, rand.New(rand.NewPCG(seed, 5)))
+		addScrub(w, 103, 104)   // A
+		addScrub(w, 1000, 1000) // B
+		addScrub(w, 2000, 1000) // C
+		createBadgers(w, 2, 300, rand.New(rand.NewPCG(seed, 5)))
 
 		pos := badgerPositions(w)
 		if len(pos) != 2 {
 			t.Fatalf("%d badgers, want 2", len(pos))
 		}
-		// at the centre of the patch cell, at least 300 m apart
-		if distanceBetween(pos[0].X, pos[0].Y, pos[1].X, pos[1].Y) <= 30 {
+		// at the position of the flower patch, more than 300 m apart (NetLogo: at the centre of its patch cell)
+		if distanceBetween(pos[0].X, pos[0].Y, pos[1].X, pos[1].Y) <= 300 {
 			t.Fatalf("badgers at %v and %v are not more than 300 m apart", pos[0], pos[1])
 		}
 		for _, p := range pos {
-			if p == (comp.Position{X: 10, Y: 10}) {
+			if p == (comp.Position{X: 103, Y: 104}) {
 				occupiedA++
 			}
 		}
@@ -61,11 +61,18 @@ func TestCreateBadgersNearOrigin(t *testing.T) {
 func TestCreateBadgersNotEnoughHabitat(t *testing.T) {
 	// no candidate left: the badger dies.
 	w := ecs.NewWorld()
-	addScrub(w, 100, 100)
-	addScrub(w, 200, 100)
-	addScrub(w, 205, 100) // within 300 m of the previous one
-	createBadgers(w, 3, 0.1, 300, rand.New(rand.NewPCG(1, 5)))
+	addScrub(w, 1000, 1000)
+	addScrub(w, 2000, 1000)
+	addScrub(w, 2050, 1000) // within 300 m of the previous one
+	createBadgers(w, 3, 300, rand.New(rand.NewPCG(1, 5)))
 	if n := len(badgerPositions(w)); n != 2 {
 		t.Errorf("%d badgers, want 2", n)
+	}
+	// at most one badger per flower patch, also without a minimum distance
+	w = ecs.NewWorld()
+	addScrub(w, 1000, 1000)
+	createBadgers(w, 2, 0, rand.New(rand.NewPCG(1, 5)))
+	if n := len(badgerPositions(w)); n != 1 {
+		t.Errorf("%d badgers on one Scrub patch, want 1", n)
 	}
 }

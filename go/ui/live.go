@@ -106,7 +106,7 @@ type snapshot struct {
 	Tick         int64
 	Colonies     []colonyView
 	Bees         beeCounts          // all bees, also without colony
-	Badgers      [][2]float64       // NetLogo coordinates
+	Badgers      [][2]float64       // [m]
 	Energy       float64            // energy stores of all colonies [kJ]
 	Pollen       float64            // pollen stores of all colonies [g]
 	NectarLeft   float64            // nectar left in all foodsources at the end of the day [µl]

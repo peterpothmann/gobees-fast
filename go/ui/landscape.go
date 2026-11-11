@@ -9,7 +9,6 @@ import (
 	"slices"
 
 	"gobees/comp"
-	"gobees/globals"
 	"gobees/params"
 
 	"github.com/mlange-42/ark/ecs"
@@ -21,8 +20,8 @@ const daysPerYear = 365
 // flowerPatch is one flower patch of the map with all its layers.
 type flowerPatch struct {
 	Entity    ecs.Entity // the flower patch
-	X, Y      float64    // NetLogo patch coordinates
-	Radius    float64    // NetLogo patches
+	X, Y      float64    // centre [m]
+	Radius    float64    // [m]
 	PatchType string
 	Area      float64    // [m2]
 	Colour    color.RGBA // habitat colour (habitatColour)
@@ -52,7 +51,6 @@ type landscape struct {
 	index    map[ecs.Entity]int  // flower patch -> index in Patches
 	layers   map[comp.Source]int // layer -> flowerLayer.Index
 	Habitats []habitat
-	Scale    float64 // NetLogo patches per metre (globals.Landscape.Scale)
 
 	MaxForagingRange float64 // [m] (constants.foraging.maxForagingRange)
 	DetectionLambda  float64 // [1/m] (parameters.detectionLambda)
@@ -62,7 +60,6 @@ type landscape struct {
 func newLandscape(w *ecs.World) *landscape {
 	constants := ecs.GetResource[params.Constants](w)
 	l := &landscape{
-		Scale:            ecs.GetResource[globals.Landscape](w).Scale,
 		MaxForagingRange: constants.Foraging.MaxForagingRange,
 		DetectionLambda:  ecs.GetResource[params.Parameters](w).DetectionLambda,
 		BadgerRange:      constants.Badgers.Range,
@@ -79,7 +76,7 @@ func newLandscape(w *ecs.World) *landscape {
 			Entity:    query.Entity(),
 			X:         pos.X,
 			Y:         pos.Y,
-			Radius:    fp.Radius * l.Scale,
+			Radius:    fp.Radius,
 			PatchType: fp.PatchType,
 			Area:      fp.Area,
 		}
@@ -152,6 +149,22 @@ func (p *flowerPatch) layersInFlower(s *snapshot) int {
 	return n
 }
 
+// bounds returns the rectangle around all flower patch circles, with a margin of 30 % of its larger side on every
+// side, so that the legend in the upper left corner covers little of the landscape (the example farm then looks
+// as in the NetLogo world of 3000 x 2100 m). Without flower patches: 0-1000 m.
+func (l *landscape) bounds() bounds {
+	if len(l.Patches) == 0 {
+		return bounds{0, 1000, 0, 1000}
+	}
+	b := bounds{math.Inf(1), math.Inf(-1), math.Inf(1), math.Inf(-1)}
+	for _, p := range l.Patches {
+		b.MinX, b.MaxX = min(b.MinX, p.X-p.Radius), max(b.MaxX, p.X+p.Radius)
+		b.MinY, b.MaxY = min(b.MinY, p.Y-p.Radius), max(b.MaxY, p.Y+p.Radius)
+	}
+	m := max(0.3*max(b.MaxX-b.MinX, b.MaxY-b.MinY), 1)
+	return bounds{b.MinX - m, b.MaxX + m, b.MinY - m, b.MaxY + m}
+}
+
 // reach describes how a colony at a nest position reaches a flower patch.
 type reach struct {
 	Centre   float64 // distance nest to patch centre [m]
@@ -160,16 +173,16 @@ type reach struct {
 	FindProb float64 // probability that one search detects the patch
 }
 
-// reachFrom computes the reach of patch p from a nest at (x, y) in NetLogo coordinates.
+// reachFrom computes the reach of patch p from a nest at (x, y) [m].
 //
 // For display only, because the test nest is not part of the model. It mirrors the range condition of the
 // model (patch centre within maxForagingRange) and the detection probability (exp(detectionLambda × distance to
 // the patch edge)).
 func (l *landscape) reachFrom(p *flowerPatch, x, y float64) reach {
 	d := math.Hypot(p.X-x, p.Y-y)
-	r := reach{Centre: d / l.Scale}
-	r.InRange = d <= l.MaxForagingRange*l.Scale
-	r.Edge = max(r.Centre-p.Radius/l.Scale, 0)
+	r := reach{Centre: d}
+	r.InRange = d <= l.MaxForagingRange
+	r.Edge = max(r.Centre-p.Radius, 0)
 	if r.InRange && r.Edge <= l.MaxForagingRange {
 		r.FindProb = math.Exp(l.DetectionLambda * r.Edge)
 	}

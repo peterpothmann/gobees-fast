@@ -30,8 +30,8 @@ type emergenceWorld struct {
 	species    int // index of B_terrestris
 	sp         *params.Species
 	ns         *globals.SpeciesNestSites // nest sites of B_terrestris
-	bigSite    ecs.Entity                // Grassland, 10000 m2 at (100, 100)
-	smallSite  ecs.Entity                // Hedgerow, 100 m2 at (50.3, 50.2), radius 0.564 patches: only the patch centre (50, 50)
+	bigSite    ecs.Entity                // Grassland, 10000 m2 at (1000, 1000) [m]
+	smallSite  ecs.Entity                // Hedgerow, 100 m2 at (503, 502) [m], radius 5.64 m
 }
 
 func newEmergenceWorld(t *testing.T, seed uint64) *emergenceWorld {
@@ -42,22 +42,21 @@ func newEmergenceWorld(t *testing.T, seed uint64) *emergenceWorld {
 	p := params.Default()
 	ew.parameters = &p.Parameters
 	ew.parameters.MergeHedges = false
-	ecs.AddResource(w, &p.World)
 	ecs.AddResource(w, &p.Constants)
 	ecs.AddResource(w, ew.parameters)
 	ew.ticks = &globals.Ticks{Ticks: 10}
 	ecs.AddResource(w, ew.ticks)
 	ew.derived = &params.Derived{ForagerMortality: 0}
 	ecs.AddResource(w, ew.derived)
-	ecs.AddResource(w, &globals.Landscape{Scale: 0.1})
+	ecs.AddResource(w, &globals.Landscape{})
 	ew.tally = newTally(w)
 	ew.active = &globals.ActiveBees{}
 	ecs.AddResource(w, ew.active)
 
 	fpMap := ecs.NewMap2[comp.Position, comp.FlowerPatch](w)
-	ew.bigSite = fpMap.NewEntity(&comp.Position{X: 100, Y: 100},
+	ew.bigSite = fpMap.NewEntity(&comp.Position{X: 1000, Y: 1000},
 		&comp.FlowerPatch{PatchType: "Grassland", Area: 10000, Radius: math.Sqrt(10000 / math.Pi)})
-	ew.smallSite = fpMap.NewEntity(&comp.Position{X: 50.3, Y: 50.2},
+	ew.smallSite = fpMap.NewEntity(&comp.Position{X: 503, Y: 502},
 		&comp.FlowerPatch{PatchType: "Hedgerow", Area: 100, Radius: math.Sqrt(100 / math.Pi)})
 
 	in := &params.Input{Species: []params.Species{*terrestris(t)}}
@@ -172,17 +171,16 @@ func TestNestSearchFoundsColonies(t *testing.T) {
 		colonies[b.Colony] = true
 		qPos, _, _, _, _, _ := beeMap.Get(e)
 		cPos, col, stores := colonyMap.Get(b.Colony)
-		// the colony is at the queen's position, a patch centre
-		if *cPos != *qPos || cPos.X != math.Trunc(cPos.X) || cPos.Y != math.Trunc(cPos.Y) {
+		// the colony is at the queen's position, within the circle of its nest site
+		if *cPos != *qPos {
 			t.Fatalf("colony at %v, queen at %v", *cPos, *qPos)
 		}
-		// the small hedge has only one patch centre in its circle: (50, 50)
-		if cPos.X < 75 {
+		if cPos.X < 750 {
 			atSmall++
-			if *cPos != (comp.Position{X: 50, Y: 50}) {
-				t.Errorf("colony at the small hedge at %v, want (50, 50)", *cPos)
+			if math.Hypot(cPos.X-503, cPos.Y-502) > math.Sqrt(100/math.Pi) {
+				t.Errorf("colony at %v outside the circle of the small hedge", *cPos)
 			}
-		} else if math.Hypot(cPos.X-100, cPos.Y-100) >= math.Sqrt(10000/math.Pi)*0.1 {
+		} else if math.Hypot(cPos.X-1000, cPos.Y-1000) > math.Sqrt(10000/math.Pi) {
 			t.Errorf("colony at %v outside the circle of the grassland", *cPos)
 		}
 		if col.QueenProduction || col.SwitchPointDate.IsSet() ||
@@ -228,30 +226,6 @@ func TestNestSearchWithoutNestSites(t *testing.T) {
 	}
 }
 
-func TestNestSearchNoPatchCentre(t *testing.T) {
-	// the hedge of TestPatchCentresWithin, 100 m2 at (133.548, 112.5), has no patch centre in its circle (radius
-	// 0.564 patches). NetLogo stops with a runtime error. Here the colony is placed at the centre of the patch cell of
-	// the foodsource. y = 112.5 lies on the border between two cells, NetLogo rounds .5 up: (134, 113).
-	ew := newEmergenceWorld(t, 6)
-	hedge := ecs.NewMap2[comp.Position, comp.FlowerPatch](ew.w).NewEntity(&comp.Position{X: 133.548, Y: 112.5},
-		&comp.FlowerPatch{PatchType: "Hedgerow", Area: 100, Radius: math.Sqrt(100 / math.Pi)})
-	ew.ns.Sites = []ecs.Entity{hedge}
-	ew.ns.Area = 100
-	ew.sp.DailyNestSiteChance = 1
-	ew.addQueen(10, 1, 700)
-	ew.sys.Update(ew.w)
-
-	colonyMap := ecs.NewMap1[comp.Position](ew.w)
-	for _, b := range ew.bees() {
-		if b.Colony.IsZero() {
-			t.Fatalf("queen without colony: %+v", b)
-		}
-		if pos := colonyMap.Get(b.Colony); *pos != (comp.Position{X: 134, Y: 113}) {
-			t.Errorf("colony at %v, want (134, 113)", *pos)
-		}
-	}
-}
-
 func TestNestSiteChoicePastEnd(t *testing.T) {
 	// the shares sum to 0.5, so p lies above the sum in about half of the
 	// draws. The loop runs past the end and the last site of the list is chosen (NetLogo: runtime error).
@@ -281,7 +255,7 @@ func TestPatchesInRangeAndFlowerLists(t *testing.T) {
 	ew := newEmergenceWorld(t, 8)
 	w := ew.w
 	fpMap := ecs.NewMap2[comp.Position, comp.FlowerPatch](w)
-	// colony at (0, 0), range 758 m * 0.1 = 75.8 patches. The flags as flowerRefill sets them from the layers.
+	// colony at (0, 0), range 758 m. The flags as flowerRefill sets them from the layers.
 	newFs := func(x float64, layers ...comp.Layer) ecs.Entity {
 		fp := comp.FlowerPatch{Layers: layers}
 		for _, l := range layers {
@@ -290,11 +264,11 @@ func TestPatchesInRangeAndFlowerLists(t *testing.T) {
 		}
 		return fpMap.NewEntity(&comp.Position{X: x, Y: 0}, &fp)
 	}
-	a := newFs(70, comp.Layer{Pollen: 1}, comp.Layer{Nectar: 1}) // one pollen and one nectar layer
-	b := newFs(75.8, comp.Layer{Nectar: 1})                      // exactly at the range limit (<=), nectar only
-	c := newFs(80, comp.Layer{Pollen: 1, Nectar: 1})             // out of range
-	d := newFs(10, comp.Layer{Pollen: 1, Nectar: 1})             // pollen and nectar
-	e := newFs(20, comp.Layer{})                                 // in range, not in flower
+	a := newFs(700, comp.Layer{Pollen: 1}, comp.Layer{Nectar: 1}) // one pollen and one nectar layer
+	b := newFs(758, comp.Layer{Nectar: 1})                        // exactly at the range limit (<=), nectar only
+	c := newFs(800, comp.Layer{Pollen: 1, Nectar: 1})             // out of range
+	d := newFs(100, comp.Layer{Pollen: 1, Nectar: 1})             // pollen and nectar
+	e := newFs(200, comp.Layer{})                                 // in range, not in flower
 	_ = c
 
 	colony := ew.sys.colonies.colonyMap.NewEntity(&comp.Position{X: 0, Y: 0}, &comp.Colony{},

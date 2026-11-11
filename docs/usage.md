@@ -64,27 +64,26 @@ A run file has the sections below. All keys are in lowerCamelCase, values are in
 | `landscape`          | landscape file of the start                                                                                                                                                                                                                                                      | foodsources file of`MyMap`                                                      |
 | `cropRotation`       | landscape files of the crop rotation (fewer than 2: none)                                                                                                                                                                                                                        | `CropRotationListAsString`                                                      |
 
-A landscape file (YAML) holds `metresPerPatch` and the names of its tables (CSV), relative to the folder of the landscape file. All files are read at the start (package `input`), also the landscapes of a crop rotation. An unknown key or column is an error. A missing key keeps its zero value, except in `constants`. Unlike NetLogo, a missing file is an error at the start, also a landscape of the crop rotation (NetLogo: on its day 365).
+A landscape file (YAML) holds the names of its tables (CSV), relative to the folder of the landscape file. All files are read at the start (package `input`), also the landscapes of a crop rotation. An unknown key or column is an error. A missing key keeps its zero value, except in `constants`. Unlike NetLogo, a missing file is an error at the start, also a landscape of the crop rotation (NetLogo: on its day 365).
 
 | Key            | Table                                                       | Columns                                    |
 | -------------- | ----------------------------------------------------------- | ------------------------------------------ |
-| `patches`      | the flower patches (needed)                                 | `id,patchType,xcor,ycor,area`              |
+| `patches`      | the flower patches (needed)                                 | `id,patchType,x,y,area`                    |
 | `habitats`     | the flower list of each patch type                          | `patchType,flower,abundance`               |
 | `patchFlowers` | own flower lists of single patches (optional)               | `id,flower,abundance`                      |
 
-- `patches`: one row per flower patch, the columns of the NetLogo foodsources file without `flowerSpeciesList` and the GUI columns. `xcor`, `ycor` in NetLogo patches, `area` in m².
+- `patches`: one row per flower patch, the columns of the NetLogo foodsources file without `flowerSpeciesList` and the GUI columns. `id` an integer, `x`, `y` the centre in metres, `area` in m². The landscape has no edge: the map area of the output is the rectangle around all flower patch circles.
 - `habitats`: the flower list of a patch type are its rows, in their order (`abundance`: the relative abundance of `flowerSpeciesList`). One habitat table can serve many landscapes, e.g. `habitats: ../habitats.csv`.
 - `patchFlowers`: if the table has rows of a patch (`id` of `patches`, unique), these rows are its flower list instead of the list of its patch type.
 - Each table starts with a header of all its columns, in any order. From R: `write.csv(patches, "patches.csv", row.names = FALSE)`, without `row.names = FALSE` the extra first column is an error. Numbers with `.` as decimal point.
 
 ```yaml
 # _SYSTEM_Example_Farm_Foodsources.yaml
-metresPerPatch: 10
 patches: _SYSTEM_Example_Farm_Foodsources_patches.csv
 habitats: _SYSTEM_Example_Farm_Foodsources_habitats.csv
 ```
 
-The converter writes the habitat list of a patch type as the most frequent list of its patches and every other list into `patchFlowers`. It leaves out the stewardship options of `flowerSpeciesList` (items without a value, e.g. `["Plot"]`). In NetLogo they mark the flower species after them as growing in the option, which only the GUI reads (map symbols, areas of the options). An option must be in the `stewardshipOptions` of the HabitatsFile, as in NetLogo. A flower patch with only options is left out, as NetLogo removes it at the setup, and the converter reports it.
+The converter multiplies `xcor`, `ycor` by the metres per patch of the foodsources file (line 1) and rounds to millimetres. It writes the habitat list of a patch type as the most frequent list of its patches and every other list into `patchFlowers`. It leaves out the stewardship options of `flowerSpeciesList` (items without a value, e.g. `["Plot"]`). In NetLogo they mark the flower species after them as growing in the option, which only the GUI reads (map symbols, areas of the options). An option must be in the `stewardshipOptions` of the HabitatsFile, as in NetLogo. A flower patch with only options is left out, as NetLogo removes it at the setup, and the converter reports it.
 
 The section `constants` holds the values that NetLogo sets in its code and that NetLogo's parameter files cannot change: the values of `ParametersProc` and the local values of the procedures (e.g. the pause of a bee, the probabilities of the badgers and the cuckoo bumblebees, the task thresholds). It is grouped by part of the model (`activities`, `stimuli`, `foraging`, `colony`, `bees`, `psithyrus`, `badgers`, `landscape`, `initialQueens`, `thresholds`) and must hold every key. A run file without a key of `constants` is an error, so that no value of a run comes from the code unseen. The converter writes the NetLogo values (`params.DefaultConstants`) with unit and source as a comment at each key. The coefficients of fitted equations (handling time, competition point, winter survival) stay in the code.
 

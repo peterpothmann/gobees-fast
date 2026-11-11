@@ -6,11 +6,10 @@ import (
 
 // Landscape holds the values of the current landscape.
 type Landscape struct {
-	Scale float64 // NetLogo patches per metre [1/m], 1 / metres per patch of the landscape file, 8 decimals. NetLogo: Scaling_NLpatches/m
 	// File is the landscape file of the current year, changed by the crop rotation (params.Derived.StartLandscape
 	// holds the one of the start). NetLogo: FoodsourcesFile.
 	File string
-	// Patches holds all flower patches in NetLogo's who order of their masterpatches (sys.createLayers), set by the
+	// Patches holds all flower patches in the order of the landscape file (sys.createLayers), set by the
 	// landscape setup and replaced at a crop rotation. The nest sites are sorted in this order.
 	Patches []ecs.Entity
 }

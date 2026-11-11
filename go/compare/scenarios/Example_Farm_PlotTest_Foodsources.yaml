@@ -1,4 +1,3 @@
-metresPerPatch: 10
 patches: Example_Farm_PlotTest_Foodsources_patches.csv
 habitats: Example_Farm_PlotTest_Foodsources_habitats.csv
 patchFlowers: Example_Farm_PlotTest_Foodsources_patchFlowers.csv

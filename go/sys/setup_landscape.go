@@ -62,7 +62,6 @@ func createFoodsources(w *ecs.World, foodsourcesFile string, landscape *globals.
 		panic(fmt.Errorf("landscape file %q was not read by package input", foodsourcesFile))
 	}
 	landscape.File = foodsourcesFile // the landscape of the current year
-	landscape.Scale = precision(1/read.MetresPerPatch, 8)
 	// copies, because the setup changes them (radius, merged hedges), and a crop rotation can use a file twice
 	patches := make([]flowerPatch, len(read.Patches))
 	for i := range read.Patches {
@@ -85,7 +84,7 @@ func createFoodsources(w *ecs.World, foodsourcesFile string, landscape *globals.
 	}
 
 	// in.Flowers is nil if FlowerspeciesFile is "No Input File".
-	patchList, err := createLayers(w, kept, in.Flowers, file, &constants.Landscape, derived.StewardshipOptions, rng)
+	patchList, err := createLayers(w, kept, in.Flowers, file, &constants.Landscape, derived.StewardshipOptions)
 	if err != nil {
 		panic(err)
 	}
@@ -192,16 +191,15 @@ func removeDuplicates[T comparable](list []T) []T {
 	return out
 }
 
-// createLayers creates one flower patch entity per flower patch with one layer per flower species. It returns the
-// flower patches in NetLogo's who order of their masterpatches: first the flower patches that are not split, in the
-// order of patches (in NetLogo they get their who numbers before all layers), then the split flower patches, in the
-// order of their creation. A split flower patch without a surviving layer gets no entity (NetLogo: no masterpatch).
+// createLayers creates one flower patch entity per flower patch with one layer per flower species, in the order of
+// patches (file order), and returns them in this order. A split flower patch without a surviving layer gets no
+// entity (NetLogo: no masterpatch).
 //
-// The entities are created in NetLogo's who order of the layers: first the split flower patches, then the others.
-// The storage order of the flower patches therefore is the order in which NetLogo's layers were stored, and the
-// colony lists (colonyFounder.patchesInRange) keep the order they had with one entity per layer.
+// ORDER: irrelevant. NetLogo splits the flower patches in random order, so its who order and storage order of the
+// masterpatches are random. Here both are the file order. They reach the order of globals.Landscape.Patches, of the
+// nest sites and of the colony lists (colonyFounder.patchesInRange), which are read in an order-independent way.
 func createLayers(w *ecs.World, patches []*flowerPatch, flowers *params.FlowerSpeciesTable, file *params.Parameters,
-	c *params.LandscapeConstants, cssOptions []string, rng *rand.Rand) ([]ecs.Entity, error) {
+	c *params.LandscapeConstants, cssOptions []string) ([]ecs.Entity, error) {
 
 	mapper := ecs.NewMap2[comp.Position, comp.FlowerPatch](w)
 
@@ -217,20 +215,17 @@ func createLayers(w *ecs.World, patches []*flowerPatch, flowers *params.FlowerSp
 			Layers:    layers,
 		})
 	}
-	splitPatches := []ecs.Entity{}
+	result := []ecs.Entity{}
 
-	// ORDER: MATTERS. The flower patches are split in random order, as NetLogo asks them in random order.
-	// The order of creation is NetLogo's who order of the layers.
-	toSplit := []*flowerPatch{}
 	for _, p := range patches {
-		if flowers != nil && len(p.Flowers) > 0 {
-			toSplit = append(toSplit, p)
+		// a flower patch with an empty flower species list is not split: it stays a flower patch without layers
+		// (NetLogo: a masterpatch without food, NectarMax = PollenMax = 0, StartDay = StopDay = 0).
+		// Without a FlowerspeciesFile, no flower patch is split.
+		if flowers == nil || len(p.Flowers) == 0 {
+			result = append(result, newPatch(p, nil))
+			continue
 		}
-	}
-	rng.Shuffle(len(toSplit), func(i, j int) { toSplit[i], toSplit[j] = toSplit[j], toSplit[i] })
-
-	for _, p := range toSplit {
-		// the layers of this flower patch, in order of creation (= who order)
+		// the layers of this flower patch, in the order of its flower list (NetLogo: who order)
 		layers := []comp.Layer{}
 		// ORDER: irrelevant, foreach over a list. A stewardship option is no flower species and gets no
 		// layer, also with a value.
@@ -270,23 +265,12 @@ func createLayers(w *ecs.World, patches []*flowerPatch, flowers *params.FlowerSp
 		}
 		// NetLogo: the first surviving layer is the masterpatch, without one the flower patch is gone
 		if len(layers) > 0 {
-			splitPatches = append(splitPatches, newPatch(p, layers))
+			result = append(result, newPatch(p, layers))
 		}
 	}
 
-	// a flower patch with an empty flower species list is not split: it stays a flower patch without layers
-	// (NetLogo: a masterpatch without food, NectarMax = PollenMax = 0, StartDay = StopDay = 0).
-	// Without a FlowerspeciesFile, no flower patch is split.
-	unsplit := []ecs.Entity{}
-	for _, p := range patches {
-		if flowers != nil && len(p.Flowers) > 0 {
-			continue
-		}
-		unsplit = append(unsplit, newPatch(p, nil))
-	}
-
-	// The layers of a flower patch are the layers of the same masterpatch, in the order of creation (NetLogo's who
-	// order). NetLogo takes all foodsources on the same NetLogo patch cell, also the layers of another flower patch
-	// in this cell. The lists equal NetLogo's if no patch cell holds two flower patches, as in the example farm.
-	return append(unsplit, splitPatches...), nil
+	// The layers of a flower patch are its own layers. NetLogo takes all foodsources on the same NetLogo patch cell,
+	// also the layers of another flower patch in this cell. Both agree if no patch cell holds two flower patches, as
+	// in the example farm.
+	return result, nil
 }

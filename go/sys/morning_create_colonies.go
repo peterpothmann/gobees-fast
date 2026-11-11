@@ -24,7 +24,6 @@ type colonyFounder struct {
 	ticks      *globals.Ticks
 	parameters *params.Parameters
 	constants  *params.Constants
-	landscape  *globals.Landscape
 
 	beeFilter   *ecs.Filter1[comp.Bee]
 	patchFilter *ecs.Filter2[comp.Position, comp.FlowerPatch]
@@ -40,7 +39,6 @@ func newColonyFounder(w *ecs.World) colonyFounder {
 		ticks:       ecs.GetResource[globals.Ticks](w),
 		parameters:  ecs.GetResource[params.Parameters](w),
 		constants:   ecs.GetResource[params.Constants](w),
-		landscape:   ecs.GetResource[globals.Landscape](w),
 		beeFilter:   ecs.NewFilter1[comp.Bee](w),
 		patchFilter: ecs.NewFilter2[comp.Position, comp.FlowerPatch](w),
 		beeMap:      ecs.NewMap2[comp.Position, comp.Bee](w),
@@ -96,7 +94,7 @@ func (c *colonyFounder) found(w *ecs.World) {
 // patch is in range exactly if its layers are.
 func (c *colonyFounder) patchesInRange(colony ecs.Entity) {
 	pos := *c.positionMap.Get(colony)
-	maxDist := c.constants.Foraging.MaxForagingRange * c.landscape.Scale
+	maxDist := c.constants.Foraging.MaxForagingRange // [m]
 
 	// ORDER: irrelevant. flowersInRange keeps the list order in PollenPatches and NectarPatches, which only the search
 	// of a forager reads, and the search chooses at random among the detected patches in any order

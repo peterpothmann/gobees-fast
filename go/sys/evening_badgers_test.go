@@ -10,8 +10,7 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// prowlWorld is a colonyWorld (Scaling 0.1 patches per m: 735 m = 73.5 patches) with badgers at the given
-// positions and the badgers system.
+// prowlWorld is a colonyWorld with badgers at the given positions [m] and the badgers system.
 func prowlWorld(t *testing.T, seed uint64, positions ...comp.Position) (*colonyWorld, *badgers) {
 	t.Helper()
 	cw := newColonyWorld(t, seed)
@@ -35,14 +34,14 @@ func (cw *colonyWorld) addColonyAt(x, y float64, change func(c *comp.Colony, s *
 func TestBadgersDigUpColony(t *testing.T) {
 	// a dug-up colony loses its stores and all its bees. The colony dies the next morning in colonyUpdate.
 	cw, s := prowlWorld(t, 1, comp.Position{X: 0, Y: 0})
-	near := cw.addColonyAt(10, 0, func(c *comp.Colony, st *comp.ColonyStores, n *comp.ColonyCounts) {
+	near := cw.addColonyAt(100, 0, func(c *comp.Colony, st *comp.ColonyStores, n *comp.ColonyCounts) {
 		st.Energy, st.Pollen = 50, 3
 	})
 	cw.addBee(near, stage.Adult, caste.Queen, 1, 30)
 	cw.addBee(near, stage.Adult, caste.Worker, 3, 5)
 	cw.addBee(near, stage.Egg, caste.Undefined, 5, 0)
 	cw.addBee(near, stage.Larva, caste.Worker, 2, 0)
-	far := cw.addColonyAt(80, 0, nil) // 800 m
+	far := cw.addColonyAt(800, 0, nil) // 800 m
 	farQueen := cw.addBee(far, stage.Adult, caste.Queen, 1, 30)
 	hibernating := cw.addHibernatingQueen(1) // colonyID -1 and position (0, 0): safe
 
@@ -81,9 +80,9 @@ func TestBadgersDigUpProbability(t *testing.T) {
 		dist    float64
 		want    float64
 	}{
-		{"one badger", []comp.Position{{X: 0, Y: 0}}, 50, 0.019},
-		{"two badgers", []comp.Position{{X: 0, Y: 0}, {X: 0, Y: 1}}, 50, 1 - 0.981*0.981},
-		{"exactly 735 m", []comp.Position{{X: 0, Y: 0}}, 73.5, 0},
+		{"one badger", []comp.Position{{X: 0, Y: 0}}, 500, 0.019},
+		{"two badgers", []comp.Position{{X: 0, Y: 0}, {X: 0, Y: 10}}, 500, 1 - 0.981*0.981},
+		{"exactly 735 m", []comp.Position{{X: 0, Y: 0}}, 735, 0},
 	}
 	for _, c := range cases {
 		cw, s := prowlWorld(t, 2, c.badgers...)

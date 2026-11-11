@@ -27,7 +27,7 @@ func (s *nestSitesSetup) Initialize(w *ecs.World) {
 	// one species per species of the run file, in FILE order. Package input has read the rows into
 	// params.Input.Species and set the derived values. Bees and colonies hold the index of their species.
 
-	// Collect all flower patches, in NetLogo's who order, to expand the nest habitats list and find the nest sites.
+	// Collect all flower patches, in file order, to expand the nest habitats list and find the nest sites.
 	patches := collectPatches(w)
 	s.nestSites.BySpecies = make([]globals.SpeciesNestSites, len(in.Species))
 	for i := range in.Species {
@@ -82,8 +82,8 @@ type patchSite struct {
 	area      float64 // [m2]
 }
 
-// collectPatches returns all flower patches in NetLogo's who order of their masterpatches, which is the order of
-// globals.Landscape.Patches.
+// collectPatches returns all flower patches in the order of globals.Landscape.Patches (file order). NetLogo: who
+// order of the masterpatches.
 func collectPatches(w *ecs.World) []patchSite {
 	landscape := ecs.GetResource[globals.Landscape](w)
 	fpMap := ecs.NewMap1[comp.FlowerPatch](w)

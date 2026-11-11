@@ -6,7 +6,7 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// Position of an entity in NetLogo patch units. NetLogo: xcor, ycor.
+// Position of an entity [m]. NetLogo: xcor, ycor in NetLogo patches.
 type Position struct {
 	X float64
 	Y float64
@@ -21,7 +21,7 @@ type Badger struct{}
 
 // FlowerPatch holds a flower patch and its layers.
 type FlowerPatch struct {
-	ID        float64 // column 1 of the foodsources file. NetLogo: id_Beescout
+	ID        int     // column id of the landscape file. NetLogo: id_Beescout
 	PatchType string  // habitat type, e.g. "Hedgerow"
 	Area      float64 // [m2]. NetLogo: area_sqm
 	Radius    float64 // radius of a circle with this area [m]. NetLogo: radius_m

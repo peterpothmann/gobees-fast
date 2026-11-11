@@ -193,7 +193,7 @@ plain structs (`Layer`), and a layer is named by `Source` (flower patch entity a
 | Type | gobees | NetLogo | gobees-fast | Unit |
 | --- | --- | --- | --- | --- |
 | `Daytime` | `Daytime_s` | `Daytime_s` | `Time` | [s] |
-| `Landscape` | `Scaling_NLpatches_per_m` | `Scaling_NLpatches/m` | `Scale` | [1/m] |
+| `Landscape` | `Scaling_NLpatches_per_m` | `Scaling_NLpatches/m` | none: coordinates in metres |  |
 | `Landscape` | `Masterpatches` | none | `Patches` (flower patches) |  |
 | `SpeciesNestSites` | `NestHabitatsList` | `nestHabitatsList` | `Habitats` |  |
 | `SpeciesNestSites` | `NestsiteFoodsourceList` | `nestsiteFoodsourceList` | `Sites` |  |
@@ -330,19 +330,19 @@ field `Years_s` → `Years`, `Input.Weather` → `Input.ForagingPeriod`).
 ### Landscape file (`input.Landscape`, `input.Patch`)
 
 A landscape file (YAML) names its tables (CSV): `patches`, `habitats` (flower list per patch type) and `patchFlowers`
-(own lists). The column names are the keys below. `xcor` and `ycor` stay (NetLogo patches). Before the renaming the
-keys were `metres_per_patch`, `size_sqm` and `flowerSpeciesList`. `params.FlowerPatch` (`Id_Beescout` → `ID`,
-`Area_sqm` → `Area`, `FlowerSpeciesList` → `Flowers` and `Options`) and `sys.flowerPatch` (`Radius_m` → `Radius`)
-follow.
+(own lists). The column names are the keys below. The coordinates are in metres (`x`, `y`), NetLogo's metres per
+patch are gone. Before the renaming the keys were `metres_per_patch`, `xcor`, `ycor`, `size_sqm` and
+`flowerSpeciesList`. `params.FlowerPatch` (`Id_Beescout` → `ID`, `Area_sqm` → `Area`, `FlowerSpeciesList` →
+`Flowers`) and `sys.flowerPatch` (`Radius_m` → `Radius`) follow. All positions (`comp.Position`) are in metres.
 
 | gobees Go | NetLogo | gobees-fast Go | Key or column | Unit | Meaning |
 | --- | --- | --- | --- | --- | --- |
-| `MetresPerPatch` | `line 1` | `MetresPerPatch` | `metresPerPatch` | [m] | metres per NetLogo patch |
+| `MetresPerPatch` | `line 1` | none | none | [m] | metres per NetLogo patch, the converter multiplies the coordinates by it |
 | `Patches` | `lines 2 to n` | `Patches` | `patches` (table) |  | the flower patches |
-| `Id` | `id` | `ID` | `id` |  | column 1 |
+| `Id` | `id` | `ID` | `id` |  | column 1, an integer |
 | `PatchType` | `patchType` | `PatchType` | `patchType` |  | habitat type |
-| `X` | `xcor` | `X` | `xcor` | [NetLogo patches] |  |
-| `Y` | `ycor` | `Y` | `ycor` | [NetLogo patches] |  |
+| `X` | `xcor` | `X` | `x` | [m] | NetLogo: [NetLogo patches] |
+| `Y` | `ycor` | `Y` | `y` | [m] | NetLogo: [NetLogo patches] |
 | `Area_sqm` | `size_sqm` | `Area` | `area` | [m2] |  |
 | `FlowerSpeciesList` (items with a value) | `flowerSpeciesList` | `Flowers` | tables `habitats`, `patchFlowers`: `flower`, `abundance` |  | flower species and their abundance |
 

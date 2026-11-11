@@ -10,7 +10,6 @@ import (
 	"gobees/enum/activity"
 	"gobees/enum/caste"
 	"gobees/event"
-	"gobees/globals"
 	"gobees/params"
 
 	"github.com/mlange-42/ark/ecs"
@@ -27,7 +26,6 @@ type forager struct {
 	parameters *params.Parameters
 	constants  *params.Constants
 	derived    *params.Derived
-	landscape  *globals.Landscape
 	death      beeDeath
 	trip       ecs.Event // event.ForagingTrip
 	died       ecs.Event // event.DiedForaging
@@ -47,7 +45,6 @@ func newForager(w *ecs.World, rng *rand.Rand) forager {
 		parameters: ecs.GetResource[params.Parameters](w),
 		constants:  ecs.GetResource[params.Constants](w),
 		derived:    ecs.GetResource[params.Derived](w),
-		landscape:  ecs.GetResource[globals.Landscape](w),
 		death:      newBeeDeath(w),
 		trip:       w.Event(event.ForagingTrip).For(ecs.C[comp.Bee]()),
 		died:       w.Event(event.DiedForaging).For(ecs.C[comp.Bee]()),
@@ -210,9 +207,9 @@ func (f *forager) detections(cache *[]float64, patches []ecs.Entity, xcol, ycol 
 // patch on a search flight.
 func (f *forager) detectionProb(patch ecs.Entity, xcol, ycol float64) float64 {
 	pos, fp := f.patchMap.Get(patch)
-	dist := distanceBetween(pos.X, pos.Y, xcol, ycol) / f.landscape.Scale // [m]
-	patchRadius := fp.Radius                                              // [m]
-	relevantDistance := dist - patchRadius                                // [m]
+	dist := distanceBetween(pos.X, pos.Y, xcol, ycol) // [m]
+	patchRadius := fp.Radius                          // [m]
+	relevantDistance := dist - patchRadius            // [m]
 	if relevantDistance < 0 {
 		relevantDistance = 0
 	}
@@ -345,7 +342,7 @@ func (f *forager) bestLayer(t *tripBee, patch ecs.Entity) comp.Source {
 	memoBestPatch := comp.Source{}
 	colPos, _, _, _ := f.colonyMap.Get(t.col)
 	fsPos, fp := f.patchMap.Get(patch)
-	patchDistance := distanceBetween(colPos.X, colPos.Y, fsPos.X, fsPos.Y) / f.landscape.Scale // [m]
+	patchDistance := distanceBetween(colPos.X, colPos.Y, fsPos.X, fsPos.Y) // [m]
 	sp := f.speciesMap.Get(b.Species)
 
 	for i := range fp.Layers {
@@ -506,13 +503,12 @@ func (f *forager) tripCosts(w *ecs.World, t *tripBee) bool {
 			b.Activity = activity.ReturningHappyPollen
 		}
 		fsPos, _ := f.patchMap.Get(fo.CurrentFoodsource.Patch)
-		distance := distanceBetween(colPos.X, colPos.Y, fsPos.X, fsPos.Y)
-		scaling := f.landscape.Scale
+		distance := distanceBetween(colPos.X, colPos.Y, fsPos.X, fsPos.Y) // [m]
 		stores.Energy = stores.Energy - float64(
-			(float64(2*distance/scaling)+
+			(float64(2*distance)+
 				float64(handlingTime*spColony.FlightVelocity*f.constants.Foraging.EnergyFactorOnFlower))*
 				saveFlightCosts*saveWeight*saveNumber)
-		tripDuration := (2 * distance / scaling / spColony.FlightVelocity) + handlingTime // [s]
+		tripDuration := (2 * distance / spColony.FlightVelocity) + handlingTime // [s]
 		b.PersonalTime = b.PersonalTime + tripDuration
 		survivalChance := math.Exp(tripDuration * f.logSurvival)
 		mortalityRisk := 1 - survivalChance

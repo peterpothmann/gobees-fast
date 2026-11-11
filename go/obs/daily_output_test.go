@@ -17,16 +17,14 @@ import (
 	"github.com/mlange-42/ark/ecs"
 )
 
-// newWorld returns a world with the resources that the observers read: ticks 1, day 1, the default world size
-// (0-300 x 0-210), scaling 0.1 patches per m, an empty parameter file.
+// newWorld returns a world with the resources that the observers read: ticks 1, day 1, an empty landscape, an empty
+// parameter file.
 func newWorld(t *testing.T) *ecs.World {
 	t.Helper()
 	w := ecs.NewWorld()
 	ecs.AddResource(w, &globals.Ticks{Ticks: 1})
 	ecs.AddResource(w, &globals.Calendar{Day: 1})
-	world := params.Default().World
-	ecs.AddResource(w, &world)
-	ecs.AddResource(w, &globals.Landscape{Scale: 0.1})
+	ecs.AddResource(w, &globals.Landscape{})
 	ecs.AddResource(w, &globals.ActiveBees{})
 	ecs.AddResource(w, &params.Parameters{})
 	ecs.AddResource(w, &params.Output{})
@@ -38,8 +36,7 @@ func addBee(w *ecs.World, b comp.Bee) ecs.Entity {
 	return ecs.NewMap2[comp.Bee, comp.Genetics](w).NewEntity(&b, &comp.Genetics{})
 }
 
-// addFoodsourceAt adds a flower patch with the given radius at (x, y).
-// radius is in [m].
+// addFoodsourceAt adds a flower patch with the given radius at (x, y), all in [m].
 func addFoodsourceAt(w *ecs.World, x, y, radius float64) ecs.Entity {
 	return ecs.NewMap2[comp.Position, comp.FlowerPatch](w).NewEntity(&comp.Position{X: x, Y: y}, &comp.FlowerPatch{Radius: radius})
 }
@@ -101,13 +98,13 @@ func TestDailyOutputTotals(t *testing.T) {
 }
 
 func TestTotalMapArea(t *testing.T) {
-	// Worked example (positions chosen by hand), Scale 0.1 patches per m:
-	// A (100, 100), radius 100 m = 10 patches; B (150, 120), radius 50 m = 5 patches.
-	// top: B 120 + 5 = 125, bottom: A 100 - 10 = 90, right: B 150 + 5 = 155, left: A 100 - 10 = 90.
-	// (125 - 90) * (155 - 90) = 2275 patches^2 = 227500 m2 = 0.2275 km2.
+	// Worked example (positions chosen by hand, in m):
+	// A (1000, 1000), radius 100; B (1500, 1200), radius 50.
+	// top: B 1200 + 50 = 1250, bottom: A 1000 - 100 = 900, right: B 1500 + 50 = 1550, left: A 1000 - 100 = 900.
+	// (1250 - 900) * (1550 - 900) = 227500 m2 = 0.2275 km2.
 	w := newWorld(t)
-	addFoodsourceAt(w, 100, 100, 100)
-	addFoodsourceAt(w, 150, 120, 50)
+	addFoodsourceAt(w, 1000, 1000, 100)
+	addFoodsourceAt(w, 1500, 1200, 50)
 	colonies := ecs.NewMap1[comp.Colony](w)
 	colonies.NewEntity(&comp.Colony{})
 	colonies.NewEntity(&comp.Colony{})
@@ -118,22 +115,22 @@ func TestTotalMapArea(t *testing.T) {
 		t.Errorf("area %v km2, density %v; want 0.2275 and %v", d.TotalMapArea_km2, d.ColonyDensity_km2, 2/0.2275)
 	}
 	// computed only once: a new foodsource does not change it
-	addFoodsourceAt(w, 10, 10, 10)
+	addFoodsourceAt(w, 100, 100, 100)
 	o.Values(w)
 	if !almostEqual(o.Totals.TotalMapArea_km2, 0.2275) {
 		t.Errorf("area changed to %v", o.Totals.TotalMapArea_km2)
 	}
 
-	// limited to the world: C (295, 5), radius 100 m: right 305 -> 300, bottom -5 -> 0.
-	// (125 - 0) * (300 - 90) = 26250 patches^2 = 2.625 km2
+	// not limited (NetLogo: limited to its world, 0-3000 m x 0-2100 m at 10 m per patch): C (2950, 50), radius
+	// 1000: right 3950, bottom -950. (1250 + 950) * (3950 - 900) = 6710000 m2 = 6.71 km2
 	w = newWorld(t)
-	addFoodsourceAt(w, 100, 100, 100)
-	addFoodsourceAt(w, 150, 120, 50)
-	addFoodsourceAt(w, 295, 5, 100)
+	addFoodsourceAt(w, 1000, 1000, 100)
+	addFoodsourceAt(w, 1500, 1200, 50)
+	addFoodsourceAt(w, 2950, 50, 1000)
 	o = &DailyOutput{}
 	o.Initialize(w)
-	if got := o.totalMapArea(); !almostEqual(got, 2.625) {
-		t.Errorf("area limited to the world: %v km2, want 2.625", got)
+	if got := o.totalMapArea(); !almostEqual(got, 6.71) {
+		t.Errorf("area beyond the NetLogo world: %v km2, want 6.71", got)
 	}
 
 	// no foodsources: no area, no density
@@ -148,8 +145,7 @@ func TestTotalMapArea(t *testing.T) {
 
 func TestDailyOutputCSV(t *testing.T) {
 	w := newWorld(t)
-	ecs.GetResource[globals.Landscape](w).Scale = 1
-	addFoodsourceAt(w, 100, 100, 100) // 200 x 200 patches = 200 m x 200 m = 0.04 km2
+	addFoodsourceAt(w, 100, 100, 100) // 200 m x 200 m = 0.04 km2
 	queens := addBee(w, comp.Bee{Stage: stage.Adult, Caste: caste.Queen, Number: 500, Mated: true, Activity: activity.Hibernate})
 
 	file := filepath.Join(t.TempDir(), "out", "daily_output.csv")
