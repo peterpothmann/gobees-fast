@@ -2,7 +2,7 @@
 
 This folder holds the NetLogo side of the validation: the experiments, the scripts that run NetLogo, and the NetLogo results of 100 runs per experiment. `gobees-fast` is compared with them in two places:
 
-- The experiments of the full model (`step7`, `step7_badgers`, `step7_crop`, `step8_*`) are scenarios of [go/compare](../compare/README.md), which checks every step against the previous step, gobees and NetLogo. It writes the report [validation-report.md](validation-report.md) in this folder in every pull request, and in a pull request into `main` commits it to the branch, so it reaches `main` with the squash merge (details in [Results](#results)).
+- The experiments of the full model (`step7`, `step7_badgers`, `step7_crop`, `step8_*`) are scenarios of [go/compare](../compare/README.md), which checks every step against the previous step, gobees and NetLogo. It writes the report [validation-report.md](validation-report.md) in this folder in every pull request and on `main`, and commits it only on `main`, after a merge (details in [Results](#results)).
 - The experiments of parts of the model (`step3`, `step4a`, `step6`) are tests in `go/sys`, because they build a part of the model from its systems.
 
 Each experiment measures only quantities that depend on the parts already translated, so a deviation points to the steps that cause it.
@@ -180,12 +180,11 @@ pull request and on every push to `main`, in two jobs:
    It writes one comment with a table, one row per scenario and one column per comparison, to the pull request
    (updated on every run) and to the summary of the run. It writes [validation-report.md](validation-report.md)
    with one plot per scenario (`plots/<scenario>.png`: the NetLogo band and median, the gobees median and the
-   gobees-fast median over the days) and the Kolmogorov-Smirnov tests against NetLogo. It uploads both as artifact `validation`. In a pull request into
-   `main`, the job commits report and plots to the branch if all comparisons passed and something changed ("Update
-   validation report and plots", made by github-actions). Pull the branch before you push to it again. In a pull
-   request higher up in a stack (base branch is the previous step) it does not commit, so that the branches above
-   need no rebase after every run. The link to the report in the comment then points to the run. When the pull
-   request is retargeted to `main`, the job runs again and commits. On `main` it never commits.
+   gobees-fast median over the days) and the Kolmogorov-Smirnov tests against NetLogo. It uploads both as artifact `validation`. Only on `main`, after a
+   merge, the job commits report and plots if all comparisons passed and something changed ("Update validation
+   report and plots", made by github-actions). In a pull request it never commits, so the branch (and every branch
+   above it in a stack) needs no pull or rebase after a run. The link to the report in the comment of a pull
+   request points to the run.
 
 The runs use fixed seeds (1 to 100), so the report changes only when the results change.
 
