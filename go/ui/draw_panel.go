@@ -520,7 +520,7 @@ func (g *Game) drawColonyInfo(screen *ebiten.Image, x, y, w float64, c *colonyVi
 	h := g.colHist[c.Who]
 	vector.StrokeLine(screen, float32(x), float32(y), float32(x+w), float32(y), 1, colBorder, false)
 	y += 10
-	drawHex(screen, x+7, y+10, 7, g.colonyColour(c.Species), colText)
+	drawNest(screen, x+7, y+10, 7, g.colonyColour(c.Species), colText)
 	drawText(screen, fmt.Sprintf("Colony %d · %s · %.0f bees", c.Who, prettyName(c.Species), c.Size()), faceBold, x+22, y, colText)
 	y += 24
 

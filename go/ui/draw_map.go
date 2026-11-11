@@ -79,14 +79,14 @@ func (g *Game) drawMap(full *ebiten.Image) {
 	drawLabels(screen, labels)
 }
 
-// colonyRadius is the radius of the honeycomb cell of a colony on the map [screen pixels]. It grows with the
+// colonyRadius is the radius of the nest symbol of a colony on the map [screen pixels]. It grows with the
 // number of bees, brood included, up to 400 bees.
 func colonyRadius(c *colonyView) float64 {
 	return 3.5 + 6*math.Sqrt(min(c.Size(), 400)/400)
 }
 
-// drawColonies draws every colony as a honeycomb cell at its nest, the larger, the more bees. Colonies
-// founded in the last three days get a ring.
+// drawColonies draws every colony as a clump of three wax pots at its nest, the larger, the more bees.
+// Colonies founded in the last three days get a ring.
 func (g *Game) drawColonies(screen *ebiten.Image) {
 	now := float64(g.shown().Tick)
 	for i := range g.shown().Colonies {
@@ -104,7 +104,7 @@ func (g *Game) drawColonies(screen *ebiten.Image) {
 		if c.CuckooQueen {
 			vector.StrokeCircle(screen, float32(x), float32(y), float32(r+2.5), 2, colCuckoo, true)
 		}
-		drawHex(screen, x, y, r, g.colonyColour(c.Species), edge)
+		drawNest(screen, x, y, r, g.colonyColour(c.Species), edge)
 		if c.CuckooQueen {
 			vector.DrawFilledCircle(screen, float32(x), float32(y), float32(max(2, r*0.4)), colCuckoo, true)
 		}
@@ -400,16 +400,16 @@ func (g *Game) drawLegend(screen *ebiten.Image) {
 	vector.DrawFilledCircle(screen, float32(x+6), float32(y+9), 6, withAlpha(colAccent, 0.75), true)
 	drawText(screen, "in flower today", faceSmall, x+18, y, colText)
 	y += 19
-	drawHex(screen, x+6, y+9, 5, colNest, colBackground)
+	drawNest(screen, x+6, y+9, 5, colNest, colBackground)
 	drawText(screen, fmt.Sprintf("colony (%d), larger with more bees, click to follow it", len(g.shown().Colonies)), faceSmall, x+18, y, colText)
 	y += 19
 	for _, s := range species {
-		drawHex(screen, x+18, y+9, 5, g.colonyColour(s), colBackground)
+		drawNest(screen, x+18, y+9, 5, g.colonyColour(s), colBackground)
 		drawText(screen, prettyName(s), faceSmall, x+30, y, colText)
 		y += 19
 	}
 	if cuckoos {
-		drawHex(screen, x+6, y+9, 5, colNest, colBackground)
+		drawNest(screen, x+6, y+9, 5, colNest, colBackground)
 		vector.DrawFilledCircle(screen, float32(x+6), float32(y+9), 2, colCuckoo, true)
 		vector.StrokeCircle(screen, float32(x+6), float32(y+9), 7, 1.5, colCuckoo, true)
 		drawText(screen, "colony with a cuckoo bee queen", faceSmall, x+18, y, colText)

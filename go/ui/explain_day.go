@@ -547,14 +547,14 @@ func (s *dayScene) draw(screen *ebiten.Image, area image.Rectangle) {
 		drawText(screen, p.name, faceSmall, x-r, y+r+2, colMuted)
 	}
 
-	// Nest with brood comb and stores.
+	// Nest with brood cells and stores.
 	n := s.nest(pt)
 	vector.DrawFilledRect(screen, float32(n.x0), float32(n.y0), float32(n.x1-n.x0), float32(n.y1-n.y0), withAlpha(colNest, 0.12), false)
 	vector.StrokeRect(screen, float32(n.x0), float32(n.y0), float32(n.x1-n.x0), float32(n.y1-n.y0), 1.5, colNest, false)
 	drawText(screen, "nest", faceSmall, n.x0+6, n.y0+4, colNest)
 	for i, c := range s.cells {
 		cx, cy := n.cell(i)
-		drawHex(screen, cx, cy, n.cr, withAlpha(colNest, 0.25), withAlpha(colNest, 0.7))
+		drawCell(screen, cx, cy, n.cr, withAlpha(colNest, 0.25), withAlpha(colNest, 0.7))
 		switch c.stage {
 		case 1:
 			if c.laidAt < 0 || s.clock >= c.laidAt {
@@ -563,7 +563,7 @@ func (s *dayScene) draw(screen *ebiten.Image, area image.Rectangle) {
 		case 2:
 			vector.DrawFilledCircle(screen, float32(cx), float32(cy), float32(n.cr*(0.35+0.05*float64(c.age))), withAlpha(colText, 0.8), true)
 		case 3:
-			drawHex(screen, cx, cy, n.cr*0.8, withAlpha(colNest, 0.95), colNest)
+			drawCell(screen, cx, cy, n.cr*0.8, withAlpha(colNest, 0.95), colNest)
 		}
 	}
 	ly := n.y0 + 36 + 3*n.cr*1.85 + 4
@@ -573,14 +573,14 @@ func (s *dayScene) draw(screen *ebiten.Image, area image.Rectangle) {
 	}{{1, "egg"}, {2, "larva"}, {3, "pupa"}}
 	lx := n.x0 + 16
 	for _, l := range legend {
-		drawHex(screen, lx, ly+8, 7, withAlpha(colNest, 0.25), withAlpha(colNest, 0.7))
+		drawCell(screen, lx, ly+8, 7, withAlpha(colNest, 0.25), withAlpha(colNest, 0.7))
 		switch l.stage {
 		case 1:
 			vector.DrawFilledCircle(screen, float32(lx), float32(ly+8), 2, colText, true)
 		case 2:
 			vector.DrawFilledCircle(screen, float32(lx), float32(ly+8), 4, colText, true)
 		case 3:
-			drawHex(screen, lx, ly+8, 5.5, colNest, colNest)
+			drawCell(screen, lx, ly+8, 5.5, colNest, colNest)
 		}
 		drawText(screen, fmt.Sprintf("%s (%d)", l.label, s.count(l.stage)), faceSmall, lx+11, ly, colMuted)
 		lx += 90
@@ -664,7 +664,7 @@ func (s *dayScene) beePos(b *dayBee, pt func(x, y float64) (float64, float64), n
 		}
 	case "nursing":
 		if s.clock >= b.actStart && s.clock < b.actEnd {
-			return pt(b.hx-0.1, 0.13+(b.hy-0.52)) // above the comb, spread like the resting places
+			return pt(b.hx-0.1, 0.13+(b.hy-0.52)) // above the brood cells, spread like the resting places
 		}
 	}
 	return hx, hy

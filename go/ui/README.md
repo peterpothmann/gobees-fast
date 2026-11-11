@@ -28,7 +28,7 @@ the same.
 
 ## What it shows
 
-* **Colonies:** every colony as a honeycomb cell at its nest, the larger, the more bees (brood included, full
+* **Colonies:** every colony as a clump of three wax pots at its nest, the larger, the more bees (brood included, full
   size from 400 bees). New colonies get a ring. Point at a colony to see its foraging range and the flower patches
   in flower within it (`comp.ColonyRange`), lines to the patches its bees know for nectar (yellow) and pollen
   (blue) (`comp.Forager.KnownNectarPatches`, `KnownPollenPatches`), its brood, adults and stores, and its life so

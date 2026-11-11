@@ -308,26 +308,32 @@ func drawCross(screen *ebiten.Image, x, y, r float64, c color.Color) {
 	vector.StrokeLine(screen, float32(x-r), float32(y+r), float32(x+r), float32(y-r), 2, c, true)
 }
 
-// drawHex draws a filled hexagon, the symbol of a nest.
-func drawHex(screen *ebiten.Image, x, y, r float64, fill, edge color.RGBA) {
+// drawNest draws the symbol of a nest: a clump of three round wax pots, because bumblebees build no
+// hexagonal comb. r is the radius of the clump.
+func drawNest(screen *ebiten.Image, x, y, r float64, fill, edge color.RGBA) {
+	pr := r * 0.55 // radius of one pot
 	var p vector.Path
-	for i := 0; i < 6; i++ {
-		a := float64(i)*1.0471976 + 0.5235988
-		px, py := x+r*math.Cos(a), y+r*math.Sin(a)
-		if i == 0 {
-			p.MoveTo(float32(px), float32(py))
-		} else {
-			p.LineTo(float32(px), float32(py))
-		}
+	for i := range 3 {
+		a := float64(i)*2*math.Pi/3 - math.Pi/2 // 120° apart, the first on top
+		cx, cy := x+0.48*r*math.Cos(a), y+0.48*r*math.Sin(a)
+		p.MoveTo(float32(cx+pr), float32(cy))
+		p.Arc(float32(cx), float32(cy), float32(pr), 0, 2*math.Pi, vector.Clockwise)
+		p.Close()
 	}
-	p.Close()
 	vs, is := p.AppendVerticesAndIndicesForFilling(nil, nil)
 	setColor(vs, fill)
-	screen.DrawTriangles(vs, is, whitePixel, &ebiten.DrawTrianglesOptions{AntiAlias: true})
-	sop := &vector.StrokeOptions{Width: 1.5, LineJoin: vector.LineJoinRound}
+	// Non-zero rule: where the pots overlap, a translucent fill must not get darker.
+	screen.DrawTriangles(vs, is, whitePixel, &ebiten.DrawTrianglesOptions{AntiAlias: true, FillRule: ebiten.FillRuleNonZero})
+	sop := &vector.StrokeOptions{Width: 1.5}
 	vs, is = p.AppendVerticesAndIndicesForStroke(nil, nil, sop)
 	setColor(vs, edge)
 	screen.DrawTriangles(vs, is, whitePixel, &ebiten.DrawTrianglesOptions{AntiAlias: true})
+}
+
+// drawCell draws one round wax cell of the brood.
+func drawCell(screen *ebiten.Image, x, y, r float64, fill, edge color.RGBA) {
+	vector.DrawFilledCircle(screen, float32(x), float32(y), float32(r), fill, true)
+	vector.StrokeCircle(screen, float32(x), float32(y), float32(r), 1.5, edge, true)
 }
 
 var whitePixel = func() *ebiten.Image {

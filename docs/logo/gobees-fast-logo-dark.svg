@@ -10,25 +10,35 @@
   <circle cx="107.58950222761709" cy="266.52188497745266" r="17" fill="#7C50A4"/>
   <circle cx="107.58950222761709" cy="266.52188497745266" r="10.5" fill="#F5B72A" stroke="#F2F2F2" stroke-opacity="0.0"/>
   <circle cx="107.58950222761709" cy="266.52188497745266" r="4.4" fill="#7C50A4"/>
-  <path d="M149.11,190.50 L124.00,205.00 L98.89,190.50 L98.89,161.50 L124.00,147.00 L149.11,161.50 Z" fill="#F5B72A" stroke="#F2F2F2" stroke-width="5" stroke-linejoin="round"/>
-  <path d="M199.31,190.50 L174.20,205.00 L149.09,190.50 L149.09,161.50 L174.20,147.00 L199.31,161.50 Z" fill="#F5B72A" stroke="#F2F2F2" stroke-width="5" stroke-linejoin="round"/>
-  <path d="M174.21,147.00 L149.10,161.50 L123.99,147.00 L123.99,118.00 L149.10,103.50 L174.21,118.00 Z" fill="#F5B72A" stroke="#F2F2F2" stroke-width="5" stroke-linejoin="round"/>
-  <g transform="translate(190,66) rotate(12)">
-    <path d="M-53.2,-15.7 L-106.4,-15.7" stroke="#00ADD8" stroke-width="6.2" stroke-linecap="round"/>
-    <path d="M-47.6,0.0 L-134.4,0.0" stroke="#00ADD8" stroke-width="6.2" stroke-linecap="round"/>
-    <path d="M-53.2,15.7 L-89.6,15.7" stroke="#00ADD8" stroke-width="6.2" stroke-linecap="round"/>
+  <circle cx="110.0" cy="154.0" r="14" fill="#F5B72A" stroke="#F2F2F2" stroke-width="5"/>
+  <circle cx="110.0" cy="154.0" r="7.7" fill="#B87A08"/>
+  <circle cx="126.0" cy="182.0" r="24" fill="#F5B72A" stroke="#F2F2F2" stroke-width="5"/>
+  <circle cx="172.0" cy="188.0" r="21" fill="#F5B72A" stroke="#F2F2F2" stroke-width="5"/>
+  <circle cx="172.0" cy="188.0" r="11.6" fill="#B87A08"/>
+  <circle cx="146.0" cy="146.0" r="22" fill="#F5B72A" stroke="#F2F2F2" stroke-width="5"/>
+  <circle cx="182.0" cy="152.0" r="15" fill="#F5B72A" stroke="#F2F2F2" stroke-width="5"/>
+  <g transform="translate(192,66) rotate(12)">
+    <path d="M-49.4,-14.6 L-98.8,-14.6" stroke="#00ADD8" stroke-width="5.7" stroke-linecap="round"/>
+    <path d="M-44.2,0.0 L-124.8,0.0" stroke="#00ADD8" stroke-width="5.7" stroke-linecap="round"/>
+    <path d="M-49.4,14.6 L-83.2,14.6" stroke="#00ADD8" stroke-width="5.7" stroke-linecap="round"/>
   </g>
-  <g transform="translate(190,66) rotate(12)">
-    <ellipse cx="-8.4" cy="-30.8" rx="23.5" ry="12.3" transform="rotate(-25 -8.4 -30.8)" fill="#F2F2F2" fill-opacity="0.35" stroke="#F2F2F2" stroke-width="2.8"/>
-    <ellipse cx="8.4" cy="-28.0" rx="19.0" ry="10.1" transform="rotate(-50 8.4 -28.0)" fill="#F2F2F2" fill-opacity="0.25" stroke="#F2F2F2" stroke-width="2.8"/>
-    <ellipse cx="0" cy="0" rx="34.7" ry="24.6" fill="#F5B72A" stroke="#F2F2F2" stroke-width="3.4"/>
-    <path d="M-6.7,-24.1 Q-11.2,0 -6.7,24.1 L4.5,24.1 Q0.0,0 4.5,-24.1 Z" fill="#1D1D1D"/>
-    <path d="M-26.9,-15.7 Q-31.4,0 -26.9,15.7 L-20.2,20.7 Q-25.2,0 -20.2,-20.7 Z" fill="#1D1D1D"/>
-    <circle cx="34.7" cy="0" r="14.6" fill="#1D1D1D" stroke="#F2F2F2" stroke-width="3.4"/>
-    <path d="M43.7,-6.7 q10.1,-11.2 16.8,-12.3 M43.7,6.7 q10.1,11.2 16.8,12.3" stroke="#F2F2F2" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+  <g transform="translate(192,66) rotate(12)">
+    <clipPath id="bee-body"><ellipse cx="0" cy="0" rx="32.2" ry="26.0"/></clipPath>
+    <ellipse cx="-2.6" cy="-32.2" rx="20.8" ry="10.4" transform="rotate(-25 -2.6 -32.2)" fill="#F2F2F2" fill-opacity="0.35" stroke="#F2F2F2" stroke-width="2.6"/>
+    <ellipse cx="11.4" cy="-29.1" rx="16.6" ry="8.3" transform="rotate(-50 11.4 -29.1)" fill="#F2F2F2" fill-opacity="0.25" stroke="#F2F2F2" stroke-width="2.6"/>
+    <ellipse cx="0" cy="0" rx="33.8" ry="27.6" fill="none" stroke="#F2F2F2" stroke-width="5.7" stroke-dasharray="0 4.4" stroke-linecap="round"/>
+    <ellipse cx="0" cy="0" rx="32.2" ry="26.0" fill="#F5B72A"/>
+    <g clip-path="url(#bee-body)">
+      <path d="M-37.4,-26.0 Q-42.6,0 -37.4,26.0 L-20.8,26.0 Q-26.0,0 -20.8,-26.0 Z" fill="#F4F1E8"/>
+      <path d="M-20.8,-26.0 Q-26.0,0 -20.8,26.0 L-10.4,26.0 Q-15.6,0 -10.4,-26.0 Z" fill="#1D1D1D"/>
+      <path d="M1.0,-26.0 Q-4.2,0 1.0,26.0 L17.7,26.0 Q12.5,0 17.7,-26.0 Z" fill="#1D1D1D"/>
+    </g>
+    <ellipse cx="0" cy="0" rx="32.2" ry="26.0" fill="none" stroke="#F2F2F2" stroke-width="3.1"/>
+    <circle cx="32.2" cy="0" r="12.5" fill="#1D1D1D" stroke="#F2F2F2" stroke-width="3.1"/>
+    <path d="M40.6,-6.2 q9.4,-10.4 15.6,-11.4 M40.6,6.2 q9.4,10.4 15.6,11.4" stroke="#F2F2F2" stroke-width="2.6" fill="none" stroke-linecap="round"/>
   </g>
   <path transform="translate(330.00,205.00) scale(0.09766,-0.09766)" d="M807 922Q696 941 641 941Q395 941 395 571Q395 231 574 231Q694 231 807 407ZM807 207Q651 0 463 0Q293 0 186.5 148.0Q80 296 80 532Q80 806 218.0 964.5Q356 1123 596 1123Q677 1123 807 1098H1103V260Q1103 9 1073.0 -102.0Q1043 -213 954 -291Q806 -420 538 -420Q345 -420 124 -341V-123Q341 -210 498 -210Q661 -210 734.0 -140.0Q807 -70 807 87Z" fill="#00ADD8"/>
-  <path d="M563.74,180.54 L513.25,209.68 L462.77,180.54 L462.77,122.24 L513.25,93.09 L563.74,122.24 Z M533.74,163.21 L513.25,175.04 L492.77,163.21 L492.77,139.56 L513.25,127.73 L533.74,139.56 Z" fill="#00ADD8" fill-rule="evenodd"/>
+  <path transform="translate(452.17,205.00) scale(0.09766,-0.09766)" d="M619 -25Q373 -25 223.5 132.5Q74 290 74 549Q74 811 224.0 967.0Q374 1123 625 1123Q876 1123 1026.5 967.0Q1177 811 1177 551Q1177 286 1026.5 130.5Q876 -25 619 -25ZM623 160Q735 160 799.0 264.5Q863 369 863 551Q863 728 798.5 833.0Q734 938 625 938Q516 938 452.0 833.0Q388 728 388 549Q388 372 452.0 266.0Q516 160 623 160Z" fill="#00ADD8"/>
   <path transform="translate(574.34,205.00) scale(0.09766,-0.09766)" d="M444 0H148V1579H444V916Q601 1123 789 1123Q961 1123 1066.5 973.5Q1172 824 1172 579Q1172 295 1035.5 135.0Q899 -25 656 -25Q575 -25 444 0ZM444 176Q556 157 611 157Q857 157 857 538Q857 891 678 891Q558 891 444 716Z" fill="#F5B72A"/>
   <path transform="translate(696.50,205.00) scale(0.09766,-0.09766)" d="M1031 245V37Q848 -25 664 -25Q389 -25 231.5 132.5Q74 290 74 564Q74 818 211.5 970.5Q349 1123 577 1123Q813 1123 922.0 971.5Q1031 820 1031 490H386Q417 176 715 176Q856 176 1031 245ZM383 657H740Q740 938 581 938Q413 938 383 657Z" fill="#F5B72A"/>
   <path transform="translate(807.73,205.00) scale(0.09766,-0.09766)" d="M1031 245V37Q848 -25 664 -25Q389 -25 231.5 132.5Q74 290 74 564Q74 818 211.5 970.5Q349 1123 577 1123Q813 1123 922.0 971.5Q1031 820 1031 490H386Q417 176 715 176Q856 176 1031 245ZM383 657H740Q740 938 581 938Q413 938 383 657Z" fill="#F5B72A"/>

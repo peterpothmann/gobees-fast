@@ -141,7 +141,7 @@ The layout follows [beecs](https://github.com/mlange-42/beecs).
 
 ## What the model does
 
-BEE-STEWARD is a research and decision support tool for land management that promotes bumblebee populations. It combines the population model [Bumble-BEEHAVE](https://beehave-model.net/category/bumblebeehave/) ([Becher et al. 2018](#ref-becher2018)) with the landscape module [BEESCOUT](https://beehave-model.net/category/beescout/) ([Becher et al. 2016](#ref-becher2016)). It simulates colonies of six *Bombus* species and the cuckoo bumblebee *Psithyrus* over several years, from queen emergence through foraging and brood rearing to hibernation. The bees forage in a nectar and pollen landscape built from maps. Flower strips and crop rotations can be applied to selected fields.
+BEE-STEWARD is a research and decision support tool for land management that promotes bumblebee populations. It combines the population model [Bumble-BEEHAVE](https://beehave-model.net/category/bumblebeehave/) ([Becher et al. 2018](#ref-becher2018)) with the landscape module [BEESCOUT](https://beehave-model.net/category/beescout/) ([Becher et al. 2016](#ref-becher2016)). It simulates colonies of six *Bombus* species and the cuckoo bumblebee *Psithyrus* over several years, from queen emergence through foraging and brood rearing to hibernation. The bumblebees forage in a nectar and pollen landscape built from maps. Flower strips and crop rotations can be applied to selected fields.
 
 All credit for the scientific model belongs to the authors of BEE-STEWARD and its component models.
 

@@ -427,14 +427,14 @@ func (s *yearScene) draw(screen *ebiten.Image, area image.Rectangle) {
 			age := s.dayAbs() - c.died
 			if age < 8 {
 				a := 1 - age/8
-				drawHex(screen, float64(x), float64(y), 9, withAlpha(colNest, 0.4*a), withAlpha(colDead, a))
+				drawNest(screen, float64(x), float64(y), 9, withAlpha(colNest, 0.4*a), withAlpha(colDead, a))
 				drawText(screen, c.cause, faceSmall, float64(x)+12, float64(y)-8, withAlpha(colDead, a))
 			}
 			continue
 		}
 		s.drawForagers(screen, c, ci, pt, W)
 		size := 8 + math.Sqrt(c.workers)*1.2
-		drawHex(screen, float64(x), float64(y), size, withAlpha(colNest, 0.9), colText)
+		drawNest(screen, float64(x), float64(y), size, withAlpha(colNest, 0.9), colText)
 		for m := range min(int(c.males/15), 6) {
 			a := s.dayAbs()*1.7 + float64(m)
 			vector.DrawFilledCircle(screen, x+float32((size+6)*math.Cos(a)), y+float32((size+6)*math.Sin(a)), 2.5, colMale, true)
@@ -484,7 +484,7 @@ func (s *yearScene) draw(screen *ebiten.Image, area image.Rectangle) {
 		drawText(screen, it.label, faceSmall, lx+16, ly, colText)
 		ly += 18
 	}
-	drawHex(screen, lx+5, ly+9, 6, colNest, colText)
+	drawNest(screen, lx+5, ly+9, 6, colNest, colText)
 	drawText(screen, "colony", faceSmall, lx+16, ly, colText)
 	ly += 18
 	drawCross(screen, lx+5, ly+9, 4, colDead)
