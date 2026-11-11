@@ -111,6 +111,23 @@ func TestBand(t *testing.T) {
 	}
 }
 
+func TestBandWidthZero(t *testing.T) {
+	// a value equal in every run (map area of step8_settings): the reference band has width 0, the current code
+	// differs in the last digit (map area in metres instead of in patches / scale²)
+	ref, last, other := [][]float64{}, [][]float64{}, [][]float64{}
+	for range 20 {
+		ref = append(ref, []float64{2.485726977543862})
+		last = append(last, []float64{2.485726977543863})
+		other = append(other, []float64{2.4857270})
+	}
+	if _, violations := Band(runs(ref...), runs(last...), []string{"A"}); len(violations) != 0 {
+		t.Errorf("last digit differs: got %v", violations)
+	}
+	if _, violations := Band(runs(ref...), runs(other...), []string{"A"}); len(violations) != 1 {
+		t.Errorf("differs in the 8th digit: got %v, want one violation", violations)
+	}
+}
+
 func TestSummaries(t *testing.T) {
 	// 1.5 years: day d has value d
 	v := make([]float64, DaysPerYear+DaysPerYear/2)
@@ -149,5 +166,27 @@ func TestCompareSummaries(t *testing.T) {
 	}
 	if tests := CompareSummaries(runs(ref[:9]...), runs(same[:9]...), []string{"A"}); len(tests) != 0 {
 		t.Errorf("fewer than 10 runs are not tested: got %v", tests)
+	}
+}
+
+func TestCompareSummariesLastDigits(t *testing.T) {
+	// yearly maximum of nectar_left_l (step7_badgers): the full stock of all layers in every run. The previous step
+	// sums the layers in random order (last digits differ by seed), the current code in file order.
+	previous := []float64{1.8638391459999994, 1.8638391459999997, 1.8638391459999988, 1.8638391460000001}
+	ref, cur, other := [][]float64{}, [][]float64{}, [][]float64{}
+	for i := range 20 {
+		ref = append(ref, []float64{previous[i%len(previous)]})
+		cur = append(cur, []float64{1.863839145999999})
+		other = append(other, []float64{1.8638391})
+	}
+	for _, s := range CompareSummaries(runs(ref...), runs(cur...), []string{"A"}) {
+		if s.D != 0 {
+			t.Errorf("last digits differ: %v D = %v, want 0", s.Summary, s.D)
+		}
+	}
+	for _, s := range CompareSummaries(runs(ref...), runs(other...), []string{"A"}) {
+		if s.D != 1 {
+			t.Errorf("differs in the 8th digit: %v D = %v, want 1", s.Summary, s.D)
+		}
 	}
 }

@@ -81,6 +81,16 @@ gobees-fast reads whole seconds from the weather file (`step8_weather`). The mod
 column differs. Without the rounding, `step8_weather` would fail exactly against the previous step and, with a band
 of width 0, against gobees.
 
+**Last digits of float sums.** The statistical comparisons (previous step, gobees and NetLogo) allow a relative
+tolerance of 1e-9 at the band (`tolerance` in [stats.go](stats.go)), and round the yearly summaries to 9 significant
+digits before the Kolmogorov-Smirnov tests (`round9`). A sum of floats depends in its last digits (about 1e-15
+relative) on the order of its terms, and the steps change such orders on purpose. Example: the landscape in metres
+(2026-11-11) gives a map area of 2.485726977543863 km² instead of 2.485726977543862 in every run of
+`step8_settings`, and the yearly maximum of `nectar_left_l` (the full stock of all layers, reached on days without
+foraging) was summed in random order, now in file order. Without the tolerance, the band of width 0 of the map area
+failed on all 730 days, and the Kolmogorov-Smirnov tests of the stocks gave D up to 0.89 in 4 scenarios. A real
+change of the model moves the values by far more than 1e-9 relative.
+
 **Why the Kolmogorov-Smirnov tests are needed.** The daily band alone is a weak check. Tested with the current
 code against itself with a higher foraging mortality (`ForagingMortalityFactor` in the parameter file, 100 seeds,
 3 years, 2026-11-01):
