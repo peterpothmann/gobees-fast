@@ -18,9 +18,9 @@ The steps are grouped into three phases, ordered by how strictly a step can be c
 
 | Phase | What changes | Check against the previous step |
 | --- | --- | --- |
-| 1. Exact | Changes that keep the number and the order of all random draws, e.g. dead code, unused fields, fixes of quirks that are not active in the default run | Same value on every day in every column, for every seed |
+| 1. Exact | Changes that keep the number and the order of all random draws, e.g. dead code, unused fields, fixes of findings in the NetLogo code that are not active in the default run | Same value on every day in every column, for every seed |
 | 2. Statistically equal | Changes that alter the random draws or the order of agents, but should not change the dynamics, e.g. leaving out a shuffle, other Ark tables | Distributions over many seeds |
-| 3. Expected effect | Fixes of quirks that are active in the default run | Effect measured and reported, then decided |
+| 3. Expected effect | Fixes of findings in the NetLogo code that are active in the default run | Effect measured and reported, then decided |
 
 gobees is deterministic for a given seed, so a change of phase 1 must give exactly the output of the reference.
 Some changes without effect on the dynamics still change the random draws: a shuffle that is left out draws no
