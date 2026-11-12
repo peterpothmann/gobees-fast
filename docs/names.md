@@ -104,8 +104,7 @@ suffix `List`. The doc comment of each field gives the unit and the NetLogo vari
 
 Unchanged: `Bee.Number`, `Stage`, `Caste`, `Activity`, `Mated`, `AdultAge`, `BroodAge`, `Genetics.MtDNA`,
 `Forager.CurrentFoodsource`, `PollenForager`, the flags and dates of `Colony`, `ColonyCounts.LarvaWorkerRatio`,
-`Foodsource.PatchType`, `StartDay`, `StopDay`, `Calendar.Day`, `Landscape.FoodsourcesFile` (`File`, see the
-parameters), `Landscape.Masterpatches`, `Ticks`, `ActiveBees`, `NestSites`.
+`Calendar.Day`, `Landscape.FoodsourcesFile` (`File`, see the parameters), `Ticks`, `ActiveBees`, `NestSites`.
 
 ### Bee (`go/comp/bee.go`)
 
@@ -157,36 +156,45 @@ parameters), `Landscape.Masterpatches`, `Ticks`, `ActiveBees`, `NestSites`.
 | `ColonyCounts` | `AllPupae` | `allPupae` | `Pupae` |  |
 | `ColonyCounts` | `AllAdults` | `allAdults` | `Adults` |  |
 | `ColonyCounts` | `AllAdultWorkers` | `allAdultWorkers` | `AdultWorkers` |  |
-| `ColonyRange` | `AllPatchesInRangeList` | `allPatchesInRangeList` | `Layers` |  |
+| `ColonyRange` | `AllPatchesInRangeList` | `allPatchesInRangeList` | `Patches` (flower patches, not layers) |  |
 | `ColonyRange` | `MasterpatchesWithPollenlayersInFlowerAndRangeList` | `masterpatchesWithPollenlayersInFlowerAndRangeList` | `PollenPatches` |  |
 | `ColonyRange` | `MasterpatchesWithNectarlayersInFlowerAndRangeList` | `masterpatchesWithNectarlayersInFlowerAndRangeList` | `NectarPatches` |  |
 
-### Foodsources (`go/comp/comp.go`)
+### Flower patches (`go/comp/comp.go`)
+
+gobees has one entity per layer (component `Foodsource`, `FoodsourceState`, `Layer`), as NetLogo has one foodsource
+turtle per layer. gobees-fast has one entity per flower patch (component `FlowerPatch`), its layers are a slice of
+plain structs (`Layer`), and a layer is named by `Source` (flower patch entity and index in `FlowerPatch.Layers`):
+`Forager.CurrentFoodsource`, `NectarSource`, `PollenSource`.
 
 | Type | gobees | NetLogo | gobees-fast | Unit |
 | --- | --- | --- | --- | --- |
-| `Foodsource` | `Id_Beescout` | `id_Beescout` | `ID` |  |
-| `Foodsource` | `FlowerSpecies` (name) | `flowerSpecies` | `Flower` (index in `params.Input.Flowers`, -1 without flower species, read only by `ui`) |  |
-| `Foodsource` | `Area_sqm` | `area_sqm` | `Area` | [m2] |
-| `Foodsource` | `Radius_m` | `radius_m` | `Radius` | [m] |
-| `Foodsource` | `NectarMax_myl` | `nectarMax_myl` | `NectarMax` | [µl] |
-| `Foodsource` | `PollenMax_g` | `pollenMax_g` | `PollenMax` | [g] |
-| `Foodsource` | `NectarFlowerVolume_myl` | `nectarFlowerVolume_myl` | `NectarPerFlower` | [µl] |
-| `Foodsource` | `NectarConcentration_mol_per_l` | `nectarConcentration_mol/l` | `NectarConcentration` | [mol/l] |
-| `Foodsource` | `CorollaDepth_mm` | `corollaDepth_mm` | `CorollaDepth` | [mm] |
-| `Foodsource` | `InterFlowerTime_s` | `interFlowerTime_s` | `InterFlowerTime` | [s] |
-| `FoodsourceState` | `Nectar_myl` | `nectar_myl` | `Nectar` | [µl] |
-| `FoodsourceState` | `Pollen_g` | `pollen_g` | `Pollen` | [g] |
-| `Layer` | `Masterpatch` | `masterpatch?` | `IsMasterpatch` |  |
-| `Layer` | `MasterpatchID` | `masterpatchID` | `Masterpatch` |  |
-| `Layer` | `LayersInPatchList` | `layersInPatchList` | `PatchLayers` |  |
+| `Foodsource` | `Id_Beescout` | `id_Beescout` | `FlowerPatch.ID` |  |
+| `Foodsource` | `PatchType` | `patchType` | `FlowerPatch.PatchType` |  |
+| `Foodsource` | `Area_sqm` | `area_sqm` | `FlowerPatch.Area` | [m2] |
+| `Foodsource` | `Radius_m` | `radius_m` | `FlowerPatch.Radius` | [m] |
+| `Foodsource` | `FlowerSpecies` (name) | `flowerSpecies` | `Layer.Flower` (index in `params.Input.Flowers`, read only by `ui`) |  |
+| `Foodsource` | `NectarMax_myl` | `nectarMax_myl` | `Layer.NectarMax` | [µl] |
+| `Foodsource` | `PollenMax_g` | `pollenMax_g` | `Layer.PollenMax` | [g] |
+| `Foodsource` | `NectarFlowerVolume_myl` | `nectarFlowerVolume_myl` | `Layer.NectarPerFlower` | [µl] |
+| `Foodsource` | `NectarConcentration_mol_per_l` | `nectarConcentration_mol/l` | `Layer.NectarConcentration` | [mol/l] |
+| `Foodsource` | `CorollaDepth_mm` | `corollaDepth_mm` | `Layer.CorollaDepth` | [mm] |
+| `Foodsource` | `InterFlowerTime_s` | `interFlowerTime_s` | `Layer.InterFlowerTime` | [s] |
+| `Foodsource` | `StartDay`, `StopDay` | `startDay`, `stopDay` | `Layer.StartDay`, `StopDay` |  |
+| `FoodsourceState` | `Nectar_myl` | `nectar_myl` | `Layer.Nectar` | [µl] |
+| `FoodsourceState` | `Pollen_g` | `pollen_g` | `Layer.Pollen` | [g] |
+| `Layer` | `Masterpatch` | `masterpatch?` | none: the flower patch entity |  |
+| `Layer` | `MasterpatchID` | `masterpatchID` | `Source.Patch` |  |
+| `Layer` | `LayersInPatchList` | `layersInPatchList` | `FlowerPatch.Layers` |  |
+| none | none | none | `FlowerPatch.PollenInFlower`, `NectarInFlower` (set by `flowerRefill`) |  |
 
 ### Globals (`go/globals`)
 
 | Type | gobees | NetLogo | gobees-fast | Unit |
 | --- | --- | --- | --- | --- |
 | `Daytime` | `Daytime_s` | `Daytime_s` | `Time` | [s] |
-| `Landscape` | `Scaling_NLpatches_per_m` | `Scaling_NLpatches/m` | `Scale` | [1/m] |
+| `Landscape` | `Scaling_NLpatches_per_m` | `Scaling_NLpatches/m` | none: coordinates in metres |  |
+| `Landscape` | `Masterpatches` | none | `Patches` (flower patches) |  |
 | `SpeciesNestSites` | `NestHabitatsList` | `nestHabitatsList` | `Habitats` |  |
 | `SpeciesNestSites` | `NestsiteFoodsourceList` | `nestsiteFoodsourceList` | `Sites` |  |
 | `SpeciesNestSites` | `NestSiteArea` | `nestSiteArea` | `Area` | [m2] |
@@ -233,8 +241,8 @@ field `Years_s` → `Years`, `Input.Weather` → `Input.ForagingPeriod`).
 | gobees Go | NetLogo | gobees-fast Go (`input.Config`) | Key | Unit | Content |
 | --- | --- | --- | --- | --- | --- |
 |  |  | `Name` | `name` |  | needed: name of the run file, the folder of its output (`-o DIR`: `DIR/<name>`), letters, digits, `-` and `_`, written by the converter (flag `--name`) |
-| `Seed` (flag `-s`) | `RAND_SEED` | `Run` (`input.Run`) | `run` |  | needed: `seed` (of the first repetition), `repetitions` (runs of each combination), `threads`, each 1 or more, optional `days` [d], written by the converter (1, 365, 1, 1), in a provenance also the record of the run (docs/usage.md, "Provenance") |
-|  | BehaviorSpace: the varied values of an experiment | `Variations` (`input.Variation`) | `variations` |  | optional: `key` (path, parts separated by dots, a number selects a list item) and `values`, every combination runs (README, "Experiments") |
+| `Seed` (flag `-s`) | `RAND_SEED` | `Run` (`input.Run`) | `run` |  | needed: `seed` (of the first repetition), `repetitions` (runs of each combination), `threads`, each 1 or more, optional `days` [d] and `part` (`I/N`, flag `--part`), written by the converter (1, 365, 1, 1), in a provenance also the record of the run (docs/usage.md, "Provenance") |
+|  | BehaviorSpace: the varied values of an experiment | `Variations` (`input.Variation`) | `variations` |  | optional: `key` (path, parts separated by dots, a number selects a list item) and `values`, or `sites` (site files that set `landscape` and `cropRotation`), every combination runs (docs/usage.md, "Experiments") |
 | `Parameters` | the columns of the parameter file | `Parameters` | `parameters` |  | the model parameters |
 | `Output` | `KeepDeadColonies?` | `Output` | `output` |  | output options: `keepDeadColonies` and `columns` (names of the columns of the daily output, `obs.AllColumns`, no NetLogo counterpart) |
 | `InitialQueens` | `BeeSpeciesInitialQueensListAsString` | `InitialQueens` | `initialQueens` |  | species (`species`) and number of initial queens (`queens`) |
@@ -321,18 +329,22 @@ field `Years_s` → `Years`, `Input.Weather` → `Input.ForagingPeriod`).
 
 ### Landscape file (`input.Landscape`, `input.Patch`)
 
-The keys `x` and `y` would need quotes (`y` is a boolean in YAML 1.1), so `xcor` and `ycor` stay. Before the renaming the keys were `metres_per_patch`, `size_sqm` and `flowerSpeciesList`. `params.FlowerPatch` (`Id_Beescout` → `ID`, `Area_sqm` → `Area`, `FlowerSpeciesList` → `Flowers`) and `sys.flowerPatch` (`Radius_m` → `Radius`, `NectarMax_myl` → `NectarMax`, `PollenMax_g` → `PollenMax`) follow.
+A landscape file (YAML) names its tables (CSV): `patches`, `habitats` (flower list per patch type) and `patchFlowers`
+(own lists). The column names are the keys below. The coordinates are in metres (`x`, `y`), NetLogo's metres per
+patch are gone. Before the renaming the keys were `metres_per_patch`, `xcor`, `ycor`, `size_sqm` and
+`flowerSpeciesList`. `params.FlowerPatch` (`Id_Beescout` → `ID`, `Area_sqm` → `Area`, `FlowerSpeciesList` →
+`Flowers`) and `sys.flowerPatch` (`Radius_m` → `Radius`) follow. All positions (`comp.Position`) are in metres.
 
-| gobees Go | NetLogo | gobees-fast Go | Key | Unit | Meaning |
+| gobees Go | NetLogo | gobees-fast Go | Key or column | Unit | Meaning |
 | --- | --- | --- | --- | --- | --- |
-| `MetresPerPatch` | `line 1` | `MetresPerPatch` | `metresPerPatch` | [m] | metres per NetLogo patch |
-| `Patches` | `lines 2 to n` | `Patches` | `patches` |  | the flower patches |
-| `Id` | `id` | `ID` | `id` |  | column 1 |
+| `MetresPerPatch` | `line 1` | none | none | [m] | metres per NetLogo patch, the converter multiplies the coordinates by it |
+| `Patches` | `lines 2 to n` | `Patches` | `patches` (table) |  | the flower patches |
+| `Id` | `id` | `ID` | `id` |  | column 1, an integer |
 | `PatchType` | `patchType` | `PatchType` | `patchType` |  | habitat type |
-| `X` | `xcor` | `X` | `xcor` | [NetLogo patches] |  |
-| `Y` | `ycor` | `Y` | `ycor` | [NetLogo patches] |  |
+| `X` | `xcor` | `X` | `x` | [m] | NetLogo: [NetLogo patches] |
+| `Y` | `ycor` | `Y` | `y` | [m] | NetLogo: [NetLogo patches] |
 | `Area_sqm` | `size_sqm` | `Area` | `area` | [m2] |  |
-| `FlowerSpeciesList` | `flowerSpeciesList` | `Flowers` | `flowers` |  | flower species and their abundance |
+| `FlowerSpeciesList` (items with a value) | `flowerSpeciesList` | `Flowers` | tables `habitats`, `patchFlowers`: `flower`, `abundance` |  | flower species and their abundance |
 
 ### Derived values (`params.Derived`, `params.Species`, Go only)
 

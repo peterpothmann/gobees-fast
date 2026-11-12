@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -37,9 +38,29 @@ type BandViolation struct {
 	Ref, Actual int // number of runs that reached this day
 }
 
+// tolerance returns the tolerance of a band check around a band with the median q50: relative 1e-9, at least 1e-9.
+// Float sums whose last digits depend on the order of the terms (an order in file, storage or random order) differ
+// by about 1e-15 relative, which is no difference of the model. A band of width 0 (a value equal in every run)
+// would fail on such a difference without the tolerance.
+func tolerance(q50 float64) float64 {
+	return 1e-9 * math.Max(1, math.Abs(q50))
+}
+
+// round9 returns the values rounded to 9 significant digits, for the Kolmogorov-Smirnov tests: the last digits of
+// float sums depend on the order of the terms (see tolerance). Without the rounding, a summary that is equal in
+// every run but differs in the last digit between the versions (the yearly maximum of the stock of all foodsources,
+// reached on days without foraging) gives D near 1.
+func round9(values []float64) []float64 {
+	r := make([]float64, len(values))
+	for i, x := range values {
+		r[i], _ = strconv.ParseFloat(strconv.FormatFloat(x, 'g', 9, 64), 64)
+	}
+	return r
+}
+
 // Band checks for each column and day that the median over the current runs lies within the 5 to 95 % band
-// of the reference runs. Runs that ended early (extinction with StopExtinct?) count only for the days they
-// reached. It returns the number of checks and the violations.
+// of the reference runs, with the tolerance of tolerance. Runs that ended early (extinction with StopExtinct?)
+// count only for the days they reached. It returns the number of checks and the violations.
 func Band(reference, current []Run, columns []string) (checks int, violations []BandViolation) {
 	days := 0
 	for _, r := range slices.Concat(reference, current) {
@@ -53,7 +74,8 @@ func Band(reference, current []Run, columns []string) (checks int, violations []
 			}
 			checks++
 			median, q05, q95 := Quantile(act, 0.5), Quantile(ref, 0.05), Quantile(ref, 0.95)
-			if median < q05 || median > q95 {
+			tol := tolerance(Quantile(ref, 0.5))
+			if median < q05-tol || median > q95+tol {
 				violations = append(violations, BandViolation{d + 1, c, median, q05, q95, len(ref), len(act)})
 			}
 		}
@@ -112,8 +134,8 @@ type SummaryTest struct {
 }
 
 // CompareSummaries compares the yearly summaries of the reference and the current runs with a two-sample
-// Kolmogorov-Smirnov test each. A summary is tested if at least 10 runs of each version have it. It returns all
-// tests sorted by p, smallest first.
+// Kolmogorov-Smirnov test each, on the values rounded to 9 significant digits (round9). A summary is tested if at
+// least 10 runs of each version have it. It returns all tests sorted by p, smallest first.
 func CompareSummaries(reference, current []Run, columns []string) []SummaryTest {
 	collect := func(runs []Run) map[Summary][]float64 {
 		values := map[Summary][]float64{}
@@ -131,7 +153,7 @@ func CompareSummaries(reference, current []Run, columns []string) []SummaryTest 
 		if len(a) < 10 || len(b) < 10 {
 			continue
 		}
-		d, p := KolmogorovSmirnov(a, b)
+		d, p := KolmogorovSmirnov(round9(a), round9(b))
 		tests = append(tests, SummaryTest{s, d, p, len(a), len(b)})
 	}
 	sortTests(tests)

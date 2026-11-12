@@ -49,7 +49,7 @@ func newColonyWorld(t *testing.T, seed uint64) *colonyWorld {
 	ecs.AddResource(w, cw.cal)
 	cw.today = &globals.Flowering{}
 	ecs.AddResource(w, cw.today)
-	ecs.AddResource(w, &globals.Landscape{Scale: 0.1})
+	ecs.AddResource(w, &globals.Landscape{})
 	cw.tally = newTally(w)
 	ecs.AddResource(w, &globals.ActiveBees{})
 	ecs.AddResource(w, &globals.Daytime{})
@@ -294,17 +294,14 @@ func TestCompetitionPointDate(t *testing.T) {
 func TestColonyUpdateRangeLists(t *testing.T) {
 	// the lists in flower and range are rebuilt only if Flowering.Changed
 	cw := newColonyWorld(t, 1)
-	fsMap := ecs.NewMap3[comp.Foodsource, comp.FoodsourceState, comp.Layer](cw.w)
-	inFlower := fsMap.NewEntity(&comp.Foodsource{}, &comp.FoodsourceState{Pollen: 1, Nectar: 1}, &comp.Layer{IsMasterpatch: true})
-	notInFlower := fsMap.NewEntity(&comp.Foodsource{}, &comp.FoodsourceState{}, &comp.Layer{IsMasterpatch: true})
-	for _, e := range []ecs.Entity{inFlower, notInFlower} {
-		_, _, l := fsMap.Get(e)
-		l.Masterpatch = e
-	}
+	fpMap := ecs.NewMap1[comp.FlowerPatch](cw.w)
+	inFlower := fpMap.NewEntity(&comp.FlowerPatch{Layers: []comp.Layer{{Pollen: 1, Nectar: 1}},
+		PollenInFlower: true, NectarInFlower: true})
+	notInFlower := fpMap.NewEntity(&comp.FlowerPatch{Layers: []comp.Layer{{}}})
 	col := cw.addColony(nil)
 	cw.addBee(col, stage.Adult, caste.Queen, 1, 300)
 	_, _, _, _, _, r := cw.colonyMap.Get(col)
-	r.Layers = []ecs.Entity{inFlower, notInFlower}
+	r.Patches = []ecs.Entity{inFlower, notInFlower}
 
 	cw.nextMorning() // no update
 	if _, _, _, _, _, r := cw.colonyMap.Get(col); len(r.PollenPatches) != 0 {

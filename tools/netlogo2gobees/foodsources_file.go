@@ -16,9 +16,10 @@ type netLogoPatch struct {
 	PatchColour       float64 // GUI only
 	X, Y              float64
 	Area_sqm          float64
-	FlowerSpeciesList []params.FlowerEntry
-	Perimeter_m       float64 // GUI only
-	PatchInfo         string  // GUI only
+	FlowerSpeciesList []params.FlowerEntry // the items with a value
+	Options           []string             // the items without a value of flowerSpeciesList, e.g. ["Plot"], not converted
+	Perimeter_m       float64              // GUI only
+	PatchInfo         string               // GUI only
 }
 
 // parseFoodsourcesFile reads a foodsources file [FSRC-02] to [FSRC-04].
@@ -86,11 +87,11 @@ func parseFlowerPatch(line string) (netLogoPatch, error) {
 			}
 			p.PatchType = s
 		case 6:
-			list, err := toFlowerSpeciesList(v)
+			list, options, err := toFlowerSpeciesList(v)
 			if err != nil {
 				return p, fmt.Errorf("column 7 (flowerSpeciesList): %w", err)
 			}
-			p.FlowerSpeciesList = list
+			p.FlowerSpeciesList, p.Options = list, options
 		default:
 			x, ok := v.(float64)
 			if !ok {
@@ -103,30 +104,34 @@ func parseFlowerPatch(line string) (netLogoPatch, error) {
 	return p, nil
 }
 
-func toFlowerSpeciesList(v any) ([]params.FlowerEntry, error) {
+// toFlowerSpeciesList splits a flowerSpeciesList into the items with a value (flower species) and the names of the
+// items without a value (stewardship options, e.g. ["Plot"]). In NetLogo an option marks the flower species after it
+// as growing in the option (occurrence of the layer), which only the GUI reads [LAYR-11], [LAYR-12].
+func toFlowerSpeciesList(v any) ([]params.FlowerEntry, []string, error) {
 	list, ok := v.([]any)
 	if !ok {
-		return nil, fmt.Errorf("expected a list")
+		return nil, nil, fmt.Errorf("expected a list")
 	}
 	entries := make([]params.FlowerEntry, 0, len(list))
+	var options []string
 	for _, item := range list {
 		sub, ok := item.([]any)
 		if !ok || len(sub) == 0 {
-			return nil, fmt.Errorf("expected [name value] items")
+			return nil, nil, fmt.Errorf("expected [name value] items")
 		}
 		name, ok := sub[0].(string)
 		if !ok {
-			return nil, fmt.Errorf("expected a name as first item")
+			return nil, nil, fmt.Errorf("expected a name as first item")
 		}
-		e := params.FlowerEntry{Name: name}
-		if len(sub) > 1 {
-			x, ok := sub[1].(float64)
-			if !ok {
-				return nil, fmt.Errorf("%s: expected a number as second item", name)
-			}
-			e.Value, e.HasValue = x, true
+		if len(sub) == 1 {
+			options = append(options, name)
+			continue
 		}
-		entries = append(entries, e)
+		x, ok := sub[1].(float64)
+		if !ok {
+			return nil, nil, fmt.Errorf("%s: expected a number as second item", name)
+		}
+		entries = append(entries, params.FlowerEntry{Name: name, Value: x})
 	}
-	return entries, nil
+	return entries, options, nil
 }

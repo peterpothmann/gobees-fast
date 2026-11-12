@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"slices"
@@ -104,11 +105,15 @@ func convert(dir string, file *netLogoParameters, mapName, name string) (Convert
 		if _, ok := landscapes[landscapeName(n)]; ok {
 			continue
 		}
-		l, err := readFoodsourcesFile(filepath.Join(dir, n))
+		l, left, err := readFoodsourcesFile(filepath.Join(dir, n), c.StewardshipOptions)
 		if err != nil {
 			return Converted{}, err
 		}
 		landscapes[landscapeName(n)] = l
+		for _, id := range left {
+			report = append(report, fmt.Sprintf("%s: flower patch %d has only stewardship options and is left out "+
+				"(NetLogo removes it at the setup)", n, id))
+		}
 	}
 	return Converted{Config: c, Landscapes: landscapes, Report: report, Notes: notes}, nil
 }
@@ -155,26 +160,48 @@ func landscapeName(foodsourcesFile string) string {
 
 // readFoodsourcesFile reads a foodsources file [FSRC-02] to [FSRC-04] as a landscape file. NetLogo shows a message
 // and Setup continues without foodsources [FSRC-09]. Here it is an error.
-func readFoodsourcesFile(path string) (input.Landscape, error) {
+//
+// The stewardship options of the flower lists (items without a value, e.g. ["Plot"]) are not converted: they mark
+// which flower species grow in the option, which only the NetLogo GUI reads [LAYR-11], [LAYR-12]. An option must be
+// in options (stewardshipOptions), as NetLogo stops with a runtime error at any other item without a value
+// [LAYR-04]. A flower patch with only options is left out, as NetLogo splits it into no layer and removes it
+// [LAYR-09]. Returns the ids of the patches left out.
+//
+// The coordinates are converted from NetLogo patches to metres with the metres per patch of line 1, rounded to
+// millimetres. The id must be an integer.
+func readFoodsourcesFile(path string, options []string) (input.Landscape, []int, error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return input.Landscape{}, fmt.Errorf("FoodsourcesFile: %w", err)
+		return input.Landscape{}, nil, fmt.Errorf("FoodsourcesFile: %w", err)
 	}
 	defer f.Close()
 	m, patches, err := parseFoodsourcesFile(f)
 	if err != nil {
-		return input.Landscape{}, fmt.Errorf("FoodsourcesFile %s: %w", path, err)
+		return input.Landscape{}, nil, fmt.Errorf("FoodsourcesFile %s: %w", path, err)
 	}
-	l := input.Landscape{MetresPerPatch: m, Patches: make([]input.Patch, len(patches))}
-	for i, p := range patches {
-		list := make([]input.FlowerEntry, len(p.FlowerSpeciesList))
-		for j, e := range p.FlowerSpeciesList {
-			list[j] = input.FlowerEntry(e)
+	l := input.Landscape{Patches: make([]input.Patch, 0, len(patches))}
+	var left []int
+	metres := func(v float64) float64 { return math.Round(v*m*1000) / 1000 }
+	for _, p := range patches {
+		id := int(p.Id_Beescout)
+		if float64(id) != p.Id_Beescout {
+			return input.Landscape{}, nil, fmt.Errorf("FoodsourcesFile %s: flower patch %v: the id must be an "+
+				"integer", path, p.Id_Beescout)
 		}
-		l.Patches[i] = input.Patch{ID: p.Id_Beescout, PatchType: p.PatchType, X: p.X, Y: p.Y, Area: p.Area_sqm,
-			Flowers: list}
+		for _, o := range p.Options {
+			if !slices.Contains(options, o) {
+				return input.Landscape{}, nil, fmt.Errorf("FoodsourcesFile %s: flower patch %v: [%q] is no "+
+					"stewardship option (HabitatsFile) and no flower species with a value", path, p.Id_Beescout, o)
+			}
+		}
+		if len(p.FlowerSpeciesList) == 0 && len(p.Options) > 0 {
+			left = append(left, id)
+			continue
+		}
+		l.Patches = append(l.Patches, input.Patch{ID: id, PatchType: p.PatchType, X: metres(p.X), Y: metres(p.Y),
+			Area: p.Area_sqm, Flowers: p.FlowerSpeciesList})
 	}
-	return l, nil
+	return l, left, nil
 }
 
 // readFlowerspeciesFile reads the FlowerspeciesFile [LAYR-02]. NetLogo shows a message and creates no layers.
@@ -192,7 +219,7 @@ func readFlowerspeciesFile(path string) (params.FlowerSpeciesTable, error) {
 	return t, nil
 }
 
-// Files returns the run file under the name run and the landscape files by their names, as YAML.
+// Files returns the run file under the name run and the landscape files with their tables by their names.
 func (c Converted) Files(run string) (map[string][]byte, error) {
 	files := map[string][]byte{}
 	var b bytes.Buffer
@@ -201,11 +228,16 @@ func (c Converted) Files(run string) (map[string][]byte, error) {
 	}
 	files[run] = slices.Clone(b.Bytes())
 	for name, l := range c.Landscapes {
-		b.Reset()
-		if err := input.WriteLandscape(&b, l); err != nil {
-			return nil, err
+		lf, err := input.WriteLandscape(name, l)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", name, err)
 		}
-		files[name] = slices.Clone(b.Bytes())
+		for n, content := range lf {
+			if _, ok := files[n]; ok {
+				return nil, fmt.Errorf("%s: file %s written twice", name, n)
+			}
+			files[n] = content
+		}
 	}
 	return files, nil
 }

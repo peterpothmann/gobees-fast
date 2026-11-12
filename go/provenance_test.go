@@ -71,18 +71,30 @@ func TestProvenanceRepeatsRun(t *testing.T) {
 				t.Errorf("run = %+v, want the record of the run", run)
 			}
 
-			// one byte-for-byte copy per landscape file with its name, with its SHA-256
-			if len(run.Landscapes) != len(tc.landscapes) {
-				t.Fatalf("landscapes = %+v, want copies of %v", run.Landscapes, tc.landscapes)
-			}
-			for i, l := range run.Landscapes {
-				if l.Source != tc.landscapes[i] || l.File != tc.landscapes[i] {
-					t.Errorf("landscape %d = %+v, want the copy %s", i, l, tc.landscapes[i])
+			// one byte-for-byte copy per landscape file and table with its name, with its SHA-256. Each landscape
+			// file comes before its tables.
+			files := []string{}
+			for _, l := range run.Landscapes {
+				if strings.HasSuffix(l.File, ".yaml") {
+					files = append(files, l.File)
+				}
+				if l.Source != l.File {
+					t.Errorf("copy %+v, want the name of the source", l)
 				}
 				raw := info.Raw[l.File]
 				sum := sha256.Sum256(raw)
 				if hex.EncodeToString(sum[:]) != l.SHA256 {
 					t.Errorf("%s: SHA-256 differs from the copy", l.File)
+				}
+			}
+			if !slices.Equal(files, tc.landscapes) {
+				t.Fatalf("landscapes = %+v, want copies of %v and their tables", run.Landscapes, tc.landscapes)
+			}
+			for _, n := range tc.landscapes {
+				for _, tb := range info.Tables[n] {
+					if _, ok := info.Raw[tb.Name]; !ok || tb.Name != tb.Ref {
+						t.Errorf("%s: table %+v is not a copy next to it", n, tb)
+					}
 				}
 			}
 			if info.Config.Landscape != run.Landscapes[0].File {
@@ -140,10 +152,24 @@ func TestProvenanceLandscapeNames(t *testing.T) {
 	if info.Config.Landscape != want[0] || !slices.Equal(info.Config.CropRotation, want) {
 		t.Errorf("landscape, cropRotation = %q, %q, want %q", info.Config.Landscape, info.Config.CropRotation, want)
 	}
-	for i, l := range info.Config.Run.Landscapes {
+	copies := []input.LandscapeCopy{}
+	for _, l := range info.Config.Run.Landscapes {
+		if slices.Contains(cfg.CropRotation, l.Source) {
+			copies = append(copies, l)
+		}
+	}
+	for i, l := range copies {
 		if l.File != want[i] || l.Source != cfg.CropRotation[i] {
 			t.Errorf("landscape %d = %+v, want the copy %s of %s", i, l, want[i], cfg.CropRotation[i])
 		}
+	}
+	// the tables of b/farm.yaml get _2, the copy farm_2.yaml names them
+	tables := []string{}
+	for _, tb := range info.Tables["farm_2.yaml"] {
+		tables = append(tables, tb.Ref)
+	}
+	if wantTables := []string{"farm_patches_2.csv", "farm_habitats_2.csv"}; !slices.Equal(tables, wantTables) {
+		t.Errorf("tables of farm_2.yaml %q, want %q", tables, wantTables)
 	}
 }
 

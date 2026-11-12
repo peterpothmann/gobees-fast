@@ -50,18 +50,17 @@ type DailyOutputExtended struct {
 	// Initialize. nil: all columns.
 	Columns []string
 
-	daily       DailyOutput
-	counters    Counters
-	calendar    ecs.Resource[globals.Calendar]
-	bees        *ecs.Filter2[comp.Bee, comp.Genetics]
-	colonies    *ecs.Filter2[comp.Colony, comp.ColonyStores]
-	input       ecs.Resource[params.Input] // the species
-	foodsources *ecs.Filter1[comp.Foodsource]
-	stocks      *ecs.Filter1[comp.FoodsourceState]
-	badgers     *ecs.Filter1[comp.Badger]
-	values      []float64 // all columns of the day
-	selected    []int     // index in values of each column written, nil: all
-	out         []float64 // the columns written
+	daily    DailyOutput
+	counters Counters
+	calendar ecs.Resource[globals.Calendar]
+	bees     *ecs.Filter2[comp.Bee, comp.Genetics]
+	colonies *ecs.Filter2[comp.Colony, comp.ColonyStores]
+	input    ecs.Resource[params.Input] // the species
+	patches  *ecs.Filter1[comp.FlowerPatch]
+	badgers  *ecs.Filter1[comp.Badger]
+	values   []float64 // all columns of the day
+	selected []int     // index in values of each column written, nil: all
+	out      []float64 // the columns written
 	// lastForagerDeaths is the counter of foragers that died on a trip at the end of the previous day.
 	lastForagerDeaths float64
 }
@@ -73,8 +72,7 @@ func (o *DailyOutputExtended) Initialize(w *ecs.World) {
 	o.bees = ecs.NewFilter2[comp.Bee, comp.Genetics](w)
 	o.colonies = ecs.NewFilter2[comp.Colony, comp.ColonyStores](w)
 	o.input = ecs.NewResource[params.Input](w)
-	o.foodsources = ecs.NewFilter1[comp.Foodsource](w)
-	o.stocks = ecs.NewFilter1[comp.FoodsourceState](w)
+	o.patches = ecs.NewFilter1[comp.FlowerPatch](w)
 	o.badgers = ecs.NewFilter1[comp.Badger](w)
 	all := AllColumns()
 	o.values = make([]float64, len(all))
@@ -186,16 +184,21 @@ func (o *DailyOutputExtended) allValues(w *ecs.World) []float64 {
 		meanCP = cpSum / cpCount
 	}
 
-	var nectar, pollenLeft float64
-	sq := o.stocks.Query()
-	for sq.Next() {
-		s := sq.Get()
-		nectar += s.Nectar
-		pollenLeft += s.Pollen
+	// foodsources counts NetLogo's foodsource turtles: the layers, and a flower patch without layers as one (NetLogo:
+	// a masterpatch without food).
+	var nectar, pollenLeft, foodsources float64
+	pq := o.patches.Query()
+	for pq.Next() {
+		fp := pq.Get()
+		if len(fp.Layers) == 0 {
+			foodsources++
+		}
+		for i := range fp.Layers {
+			nectar += fp.Layers[i].Nectar
+			pollenLeft += fp.Layers[i].Pollen
+			foodsources++
+		}
 	}
-	fq := o.foodsources.Query()
-	foodsources := float64(fq.Count())
-	fq.Close()
 	badq := o.badgers.Query()
 	badgers := float64(badq.Count())
 	badq.Close()

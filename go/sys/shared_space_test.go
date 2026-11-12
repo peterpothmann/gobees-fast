@@ -1,21 +1,10 @@
 package sys
 
-import "testing"
-
-func TestPcor(t *testing.T) {
-	// the 13 coordinates of the example farm on a patch border, and some others
-	cases := map[float64]int{
-		0: 0, 0.49: 0, 0.5: 1, 132: 132,
-		170.5: 171, 155.5: 156, 121.5: 122, 112.5: 113, 221.5: 222, 105.5: 106, 208.5: 209,
-		88.5: 89, 81.5: 82, 142.5: 143, 153.5: 154, 146.5: 147, 48.5: 49, 210.5: 211,
-		133.548: 134, 37.833: 38, 300: 300,
-	}
-	for v, want := range cases {
-		if got := pcor(v); got != want {
-			t.Errorf("pcor(%v) = %d, want %d", v, got, want)
-		}
-	}
-}
+import (
+	"math"
+	"math/rand/v2"
+	"testing"
+)
 
 func TestDistanceBetween(t *testing.T) {
 	if got := distanceBetween(0, 0, 3, 4); got != 5 {
@@ -23,19 +12,39 @@ func TestDistanceBetween(t *testing.T) {
 	}
 }
 
-func TestPatchCentresWithin(t *testing.T) {
-	// strict "<": an assumed foodsource of 100 m2 (radius 0.564 patches with 10 m per patch) at the
-	// coordinates of flower patch 24 of the example farm (133.548, 112.5). The nearest patch centres (134, 112)
-	// and (134, 113) are at distance 0.674 > 0.564: none.
-	if got := patchCentresWithin(133.548, 112.5, 0.564, 0, 300, 0, 210); len(got) != 0 {
-		t.Errorf("got %v, want no patch centre", got)
+func TestRandomPointInCircle(t *testing.T) {
+	// 100000 points in a circle of radius 10 m around (1000, 2000): all inside, uniform in area. The mean squared
+	// distance from the centre is r^2 / 2 = 50 m2 (sd of the mean 0.09), each quadrant holds a quarter (sd 0.0014).
+	rng := rand.New(rand.NewPCG(1, 2))
+	const n, r = 100000, 10.0
+	sumSq := 0.0
+	quadrant := [4]int{}
+	for range n {
+		x, y := randomPointInCircle(1000, 2000, r, rng)
+		d := distanceBetween(1000, 2000, x, y)
+		if d > r {
+			t.Fatalf("point (%v, %v) at %v m, outside the circle", x, y, d)
+		}
+		sumSq += d * d
+		q := 0
+		if x > 1000 {
+			q++
+		}
+		if y > 2000 {
+			q += 2
+		}
+		quadrant[q]++
 	}
-	// (132, 170.5) with radius 0.564: (132, 170) and (132, 171) at distance 0.5
-	if got := patchCentresWithin(132, 170.5, 0.564, 0, 300, 0, 210); len(got) != 2 {
-		t.Errorf("got %v, want 2 patch centres", got)
+	if mean := sumSq / n; math.Abs(mean-50) > 0.5 {
+		t.Errorf("mean squared distance %v m2, want 50", mean)
 	}
-	// distance exactly r is not inside; world borders cut the circle
-	if got := patchCentresWithin(0, 0, 1, 0, 300, 0, 210); len(got) != 1 || got[0] != [2]int{0, 0} {
-		t.Errorf("got %v, want only (0, 0)", got)
+	for q, k := range quadrant {
+		if share := float64(k) / n; math.Abs(share-0.25) > 0.01 {
+			t.Errorf("quadrant %d holds %v of the points, want 0.25", q, share)
+		}
+	}
+	// radius 0: the centre
+	if x, y := randomPointInCircle(5, 6, 0, rng); x != 5 || y != 6 {
+		t.Errorf("radius 0: (%v, %v), want (5, 6)", x, y)
 	}
 }

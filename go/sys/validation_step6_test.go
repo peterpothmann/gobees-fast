@@ -62,11 +62,12 @@ func step6Metrics(w *ecs.World, counters *obs.Counters) map[string]float64 {
 	}
 	m["trips"] = counters.TotalForagingTripsToday
 
-	fs := ecs.NewFilter1[comp.FoodsourceState](w).Query()
+	fs := ecs.NewFilter1[comp.FlowerPatch](w).Query()
 	for fs.Next() {
-		s := fs.Get()
-		m["nectar_left_l"] += s.Nectar
-		m["pollen_left_kg"] += s.Pollen
+		for _, s := range fs.Get().Layers {
+			m["nectar_left_l"] += s.Nectar
+			m["pollen_left_kg"] += s.Pollen
+		}
 	}
 	m["nectar_left_l"] /= 1000000
 	m["pollen_left_kg"] /= 1000

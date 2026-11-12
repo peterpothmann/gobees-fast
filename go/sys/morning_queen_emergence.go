@@ -30,17 +30,15 @@ type queenEmergence struct {
 	parameters *params.Parameters
 	constants  *params.Constants
 	derived    *params.Derived
-	landscape  *globals.Landscape
 	nestSites  *globals.NestSites
-	world      *params.World
 	death      beeDeath
 	colonies   colonyFounder
 
-	beeFilter     *ecs.Filter1[comp.Bee]
-	colonyFilter  *ecs.Filter2[comp.Position, comp.Colony]
-	beeMap        *beeMapper
-	speciesMap    *speciesTable
-	foodsourceMap *ecs.Map2[comp.Position, comp.Foodsource]
+	beeFilter    *ecs.Filter1[comp.Bee]
+	colonyFilter *ecs.Filter2[comp.Position, comp.Colony]
+	beeMap       *beeMapper
+	speciesMap   *speciesTable
+	patchMap     *ecs.Map2[comp.Position, comp.FlowerPatch]
 }
 
 func (s *queenEmergence) Initialize(w *ecs.World) {
@@ -49,9 +47,7 @@ func (s *queenEmergence) Initialize(w *ecs.World) {
 	s.parameters = ecs.GetResource[params.Parameters](w)
 	s.constants = ecs.GetResource[params.Constants](w)
 	s.derived = ecs.GetResource[params.Derived](w)
-	s.landscape = ecs.GetResource[globals.Landscape](w)
 	s.nestSites = ecs.GetResource[globals.NestSites](w)
-	s.world = ecs.GetResource[params.World](w)
 	s.death = newBeeDeath(w)
 	s.colonies = newColonyFounder(w)
 
@@ -59,7 +55,7 @@ func (s *queenEmergence) Initialize(w *ecs.World) {
 	s.colonyFilter = ecs.NewFilter2[comp.Position, comp.Colony](w)
 	s.beeMap = newBeeMapper(w)
 	s.speciesMap = newSpeciesTable(w)
-	s.foodsourceMap = ecs.NewMap2[comp.Position, comp.Foodsource](w)
+	s.patchMap = ecs.NewMap2[comp.Position, comp.FlowerPatch](w)
 }
 
 func (s *queenEmergence) Update(w *ecs.World) {
@@ -168,18 +164,12 @@ func (s *queenEmergence) copyBee(e ecs.Entity, n int) {
 func (s *queenEmergence) searchNestSite(w *ecs.World, e ecs.Entity, sp *params.Species, ns *globals.SpeciesNestSites) {
 	if s.rng.Float64() <= sp.DailyNestSiteChance {
 		fsE := s.chooseNestSite(ns)
-		fsPos, fs := s.foodsourceMap.Get(fsE)
-		// a random patch centre within the circle
-		candidates := patchCentresWithin(fsPos.X, fsPos.Y, fs.Radius*s.landscape.Scale,
-			int(s.world.MinPxcor), int(s.world.MaxPxcor), int(s.world.MinPycor), int(s.world.MaxPycor))
-		// No patch centre within the circle: the nearest patch centre, the one of the patch cell of the
-		// foodsource, without a random number. NetLogo stops here with a runtime error.
-		c := [2]int{pcor(fsPos.X), pcor(fsPos.Y)}
-		if len(candidates) > 0 {
-			c = candidates[s.rng.IntN(len(candidates))]
-		}
+		fsPos, fs := s.patchMap.Get(fsE)
+		// a uniform random point within the circle of the flower patch. NetLogo: a random patch centre within the
+		// circle (one-of patches in-radius), and a runtime error if the circle holds no patch centre.
+		x, y := randomPointInCircle(fsPos.X, fsPos.Y, fs.Radius, s.rng)
 		pos, bee, _, _, _, _ := s.beeMap.Get(e)
-		pos.X, pos.Y = float64(c[0]), float64(c[1])
+		pos.X, pos.Y = x, y
 		bee.Activity = activity.NestConstruction
 		return
 	}
@@ -195,13 +185,13 @@ func (s *queenEmergence) searchMortality() float64 {
 
 // chooseNestSite chooses a nest site, weighted by area.
 func (s *queenEmergence) chooseNestSite(ns *globals.SpeciesNestSites) ecs.Entity {
-	// Sites is in the order of globals.Landscape.Masterpatches. ORDER: irrelevant, with one uniform number p each
+	// Sites is in the order of globals.Landscape.Patches. ORDER: irrelevant, with one uniform number p each
 	// site is chosen with the probability area / total area in any order. Not shuffled (NetLogo: shuffle).
 	list := ns.Sites
 	p := s.rng.Float64()
 	probsSummedUp := 0.0
 	for _, e := range list {
-		_, fs := s.foodsourceMap.Get(e)
+		_, fs := s.patchMap.Get(e)
 		probsSummedUp += fs.Area / ns.Area
 		if probsSummedUp > p {
 			return e

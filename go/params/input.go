@@ -29,24 +29,23 @@ type Input struct {
 
 // Foodsources is the content of one landscape file (NetLogo: foodsources file).
 type Foodsources struct {
-	MetresPerPatch float64       // metres per NetLogo patch
-	Patches        []FlowerPatch // in file order
+	Patches []FlowerPatch // in file order
 }
 
 // FlowerPatch is one flower patch of a landscape file: a whole flower patch before it is split into layers.
 type FlowerPatch struct {
-	ID        float64 // column 1 of the landscape file. NetLogo: id_Beescout
+	ID        int // column id of the landscape file. NetLogo: id_Beescout
 	PatchType string
-	X, Y      float64
+	X, Y      float64       // centre [m]. NetLogo: xcor, ycor in NetLogo patches
 	Area      float64       // [m2]. NetLogo: size_sqm
-	Flowers   []FlowerEntry // NetLogo: flowerSpeciesList
+	Flowers   []FlowerEntry // the flower species and their relative abundance. NetLogo: flowerSpeciesList
 }
 
-// FlowerEntry is one item of a flowerSpeciesList, e.g. ["Bramble" 0.331] or ["Margin"].
+// FlowerEntry is one flower species of a flower patch and its relative abundance, e.g. ["Bramble" 0.331] of a NetLogo
+// flowerSpeciesList.
 type FlowerEntry struct {
-	Name     string
-	Value    float64
-	HasValue bool
+	Name  string
+	Value float64
 }
 
 // FlowerSpecies is the data per flower of one flower species (NetLogo: one row of the FlowerspeciesFile).

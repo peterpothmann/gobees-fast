@@ -54,20 +54,20 @@ type Forager struct {
 	// weight W [g] and GlossaLength G [mm] of the adult bee, which do not change. 0: not computed yet, handlingTime
 	// computes it at its first use. Whoever changes Weight or GlossaLength sets it to 0. Not in NetLogo.
 	IngestionFactor float64
-	// IngestionTime is the nectar ingestion time [s] of the bee at the foodsource IngestionSource, the last one
-	// forager.handlingTime computed it for. It depends only on the bee (weight, glossa) and on the foodsource
+	// IngestionTime is the nectar ingestion time [s] of the bee at the layer IngestionSource, the last one
+	// forager.handlingTime computed it for. It depends only on the bee (weight, glossa) and on the layer
 	// (corolla depth, nectar per flower), not on the filling level, so handlingTime computes it again only for
-	// another foodsource. The zero entity: not computed yet. Whoever changes Weight or GlossaLength sets
-	// IngestionSource to the zero entity. The crop rotation makes new foodsource entities, so an old
+	// another layer. The zero Source: not computed yet. Whoever changes Weight or GlossaLength sets
+	// IngestionSource to the zero Source. The crop rotation makes new flower patch entities, so an old
 	// IngestionSource never matches one of them. Not in NetLogo.
-	IngestionSource    ecs.Entity
+	IngestionSource    Source
 	IngestionTime      float64
-	CurrentFoodsource  ecs.Entity
-	NectarSource       ecs.Entity // the nectar layer of the next trip. NetLogo: nectarsourceToGoTo
-	PollenSource       ecs.Entity // the pollen layer of the next trip. NetLogo: pollensourceToGoTo
+	CurrentFoodsource  Source
+	NectarSource       Source // the nectar layer of the next trip. NetLogo: nectarsourceToGoTo
+	PollenSource       Source // the pollen layer of the next trip. NetLogo: pollensourceToGoTo
 	PollenForager      bool
-	KnownNectarPatches []ecs.Entity // known masterpatches with nectar, sorted by distance. NetLogo: knownMasterpatchesNectarList
-	KnownPollenPatches []ecs.Entity // known masterpatches with pollen, sorted by distance. NetLogo: knownMasterpatchesPollenList
+	KnownNectarPatches []ecs.Entity // known flower patches with nectar, sorted by distance. NetLogo: knownMasterpatchesNectarList
+	KnownPollenPatches []ecs.Entity // known flower patches with pollen, sorted by distance. NetLogo: knownMasterpatchesPollenList
 	CarriedNectar      float64      // nectar load of the bee or cohort [kJ]. NetLogo: nectarLoadSquadron_kJ
 	CarriedPollen      float64      // pollen load of the bee or cohort [g]. NetLogo: pollenLoadSquadron_g
 	ExpectedNectarTrip float64      // expected duration of a nectar trip [s]. NetLogo: expectation_NectarTrip_s

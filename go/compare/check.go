@@ -2,7 +2,6 @@ package compare
 
 import (
 	"fmt"
-	"math"
 	"slices"
 	"strings"
 )
@@ -51,9 +50,10 @@ func ExactCell(reference, current []Run, columns []string) Cell {
 }
 
 // StatisticalCell compares the distributions over the runs on the columns: passed if the daily median of the
-// current runs lies within the 5 to 95 % band of the other runs on every day and column (Band), and no yearly
-// summary differs in a two-sample Kolmogorov-Smirnov test at FamilyAlpha divided by the number of tests
-// (CompareSummaries).
+// current runs lies within the 5 to 95 % band of the other runs on every day and column (Band, relative tolerance
+// 1e-9), and no yearly summary differs in a two-sample Kolmogorov-Smirnov test at FamilyAlpha divided by the number
+// of tests (CompareSummaries, values rounded to 9 significant digits). Tolerance and rounding as against NetLogo:
+// float sums whose last digits depend on the order are no difference of the model.
 func StatisticalCell(other, current []Run, columns []string) Cell {
 	columns = dataColumns(columns)
 	checks, violations := Band(other, current, columns)
@@ -90,7 +90,7 @@ func NetLogoCell(r NetLogoResult) Cell {
 		}
 		for d, median := range m.Medians {
 			q := m.Bands[d]
-			tol := 1e-9 * math.Max(1, math.Abs(q.Q50))
+			tol := tolerance(q.Q50)
 			if median < q.Q05-tol || median > q.Q95+tol {
 				fmt.Fprintf(&b, "- %s: %d of %d days inside the band, first outside: day %d, median %v, NetLogo "+
 					"[%v, %v]\n", m.Metric, m.Inside, r.Days, d+1, median, q.Q05, q.Q95)

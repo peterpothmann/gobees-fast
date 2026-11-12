@@ -78,11 +78,11 @@ func TestValidationStep4aAgainstNetLogo(t *testing.T) {
 // model. Added right after flowerRefill: the values of the morning, before foraging.
 type foodsourceTotals struct {
 	nectar, pollen float64 // [l], [kg]
-	filter         *ecs.Filter1[comp.FoodsourceState]
+	filter         *ecs.Filter1[comp.FlowerPatch]
 }
 
 func (s *foodsourceTotals) Initialize(w *ecs.World) {
-	s.filter = ecs.NewFilter1[comp.FoodsourceState](w)
+	s.filter = ecs.NewFilter1[comp.FlowerPatch](w)
 	s.Update(w) // flowerRefill runs in Setup too
 }
 
@@ -90,9 +90,10 @@ func (s *foodsourceTotals) Update(w *ecs.World) {
 	s.nectar, s.pollen = 0, 0
 	query := s.filter.Query()
 	for query.Next() {
-		st := query.Get()
-		s.nectar += st.Nectar / (1000 * 1000)
-		s.pollen += st.Pollen / 1000
+		for _, st := range query.Get().Layers {
+			s.nectar += st.Nectar / (1000 * 1000)
+			s.pollen += st.Pollen / 1000
+		}
 	}
 }
 

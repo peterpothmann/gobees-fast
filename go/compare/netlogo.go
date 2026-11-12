@@ -2,9 +2,7 @@ package compare
 
 import (
 	"fmt"
-	"math"
 	"slices"
-	"strconv"
 
 	"gobees/validation"
 )
@@ -89,7 +87,7 @@ func CompareNetLogo(s Scenario, runs, base []Run) (NetLogoResult, error) {
 				return result, fmt.Errorf("%s: the runs end before day %d", s.Name, day)
 			}
 			median := Quantile(values, 0.5)
-			tol := 1e-9 * math.Max(1, math.Abs(q.Q50))
+			tol := tolerance(q.Q50)
 			if median >= q.Q05-tol && median <= q.Q95+tol {
 				m.Inside++
 			}
@@ -144,12 +142,4 @@ func netLogoTests(runs []Run, metric string, netlogo map[validation.Summary][]fl
 	}
 	sortTests(tests)
 	return tests
-}
-
-func round9(values []float64) []float64 {
-	r := make([]float64, len(values))
-	for i, x := range values {
-		r[i], _ = strconv.ParseFloat(strconv.FormatFloat(x, 'g', 9, 64), 64)
-	}
-	return r
 }

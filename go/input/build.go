@@ -152,14 +152,10 @@ func deriveSpecies(s Species, constants *params.Constants) params.Species {
 
 // foodsources returns the flower patches of a landscape file.
 func foodsources(l Landscape) params.Foodsources {
-	f := params.Foodsources{MetresPerPatch: l.MetresPerPatch, Patches: make([]params.FlowerPatch, len(l.Patches))}
+	f := params.Foodsources{Patches: make([]params.FlowerPatch, len(l.Patches))}
 	for i, p := range l.Patches {
-		list := make([]params.FlowerEntry, len(p.Flowers))
-		for j, e := range p.Flowers {
-			list[j] = params.FlowerEntry(e)
-		}
 		f.Patches[i] = params.FlowerPatch{ID: p.ID, PatchType: p.PatchType, X: p.X, Y: p.Y,
-			Area: p.Area, Flowers: list}
+			Area: p.Area, Flowers: slices.Clone(p.Flowers)}
 	}
 	return f
 }

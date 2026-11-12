@@ -58,9 +58,9 @@ func TestDailyOutputExtended(t *testing.T) {
 		&comp.ColonyStores{Energy: 50, Pollen: 1})
 	colonies.NewEntity(&comp.Colony{CompetitionPointDate: day.Date{}, Species: terrestris},
 		&comp.ColonyStores{Energy: 10})
-	foodsources := ecs.NewMap2[comp.Foodsource, comp.FoodsourceState](w)
-	foodsources.NewEntity(&comp.Foodsource{}, &comp.FoodsourceState{Nectar: 1500000, Pollen: 2000})
-	foodsources.NewEntity(&comp.Foodsource{}, &comp.FoodsourceState{Nectar: 500000, Pollen: 500})
+	// one flower patch with two layers: two foodsources
+	ecs.NewMap1[comp.FlowerPatch](w).NewEntity(&comp.FlowerPatch{Layers: []comp.Layer{
+		{Nectar: 1500000, Pollen: 2000}, {Nectar: 500000, Pollen: 500}}})
 	ecs.NewMap1[comp.Badger](w).NewEntity(&comp.Badger{})
 
 	// Setup ends here: the counters start

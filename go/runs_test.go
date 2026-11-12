@@ -217,13 +217,14 @@ func TestRunSetFailure(t *testing.T) {
 	}
 }
 
-// seedJobs returns n jobs of p without output, the job i with the seed p.Seed + i.
+// seedJobs returns n jobs of p (one combination) without output, the job i with the seed p.Seed + i.
 func seedJobs(p params.Params, n int) []job {
+	in := newCombinationInput(n, func() (params.Params, error) { return p, nil })
 	jobs := make([]job, n)
 	for i := range jobs {
-		jobs[i].p = p
-		jobs[i].p.Seed += int64(i)
-		jobs[i].label = fmt.Sprintf("run %d (seed %d)", i+1, jobs[i].p.Seed)
+		jobs[i].input = in
+		jobs[i].seed = p.Seed + int64(i)
+		jobs[i].label = fmt.Sprintf("run %d (seed %d)", i+1, jobs[i].seed)
 	}
 	return jobs
 }

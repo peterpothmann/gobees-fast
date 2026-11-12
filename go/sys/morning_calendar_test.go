@@ -127,14 +127,15 @@ func TestFlowerRefill(t *testing.T) {
 	}
 
 	w, ticks := morningWorld(t, nil)
-	fsMap := ecs.NewMap2[comp.Foodsource, comp.FoodsourceState](w)
+	// one flower patch per flower species, each with one layer
+	fpMap := ecs.NewMap1[comp.FlowerPatch](w)
 	names := []string{"Dandelion", "Daisy", "Crop_Cereals"}
 	entities := map[string]ecs.Entity{}
 	for i, n := range names {
-		fs := comp.Foodsource{StartDay: periods[n][0], StopDay: periods[n][1],
-			NectarMax: float64(i+1) * 1e6, PollenMax: float64(i+1) * 1000}
 		// state left over from the day before: is overwritten every morning
-		entities[n] = fsMap.NewEntity(&fs, &comp.FoodsourceState{Nectar: 7, Pollen: 7})
+		l := comp.Layer{StartDay: periods[n][0], StopDay: periods[n][1],
+			NectarMax: float64(i+1) * 1e6, PollenMax: float64(i+1) * 1000, Nectar: 7, Pollen: 7}
+		entities[n] = fpMap.NewEntity(&comp.FlowerPatch{Layers: []comp.Layer{l}, PollenInFlower: true, NectarInFlower: true})
 	}
 	morning := &calendarUpdate{}
 	morning.Initialize(w)
@@ -142,12 +143,17 @@ func TestFlowerRefill(t *testing.T) {
 	s.Initialize(w)
 	today := ecs.GetResource[globals.Flowering](w)
 
+	// inFlower also checks the flags of the flower patch: its only layer has food above 0 exactly when it is full
 	inFlower := func(n string) bool {
-		fs, st := fsMap.Get(entities[n])
-		full := st.Nectar == fs.NectarMax && st.Pollen == fs.PollenMax
+		fp := fpMap.Get(entities[n])
+		st := &fp.Layers[0]
+		full := st.Nectar == st.NectarMax && st.Pollen == st.PollenMax
 		empty := st.Nectar == 0 && st.Pollen == 0
 		if full == empty {
 			t.Fatalf("%s: nectar %v, pollen %v is neither full nor empty", n, st.Nectar, st.Pollen)
+		}
+		if fp.PollenInFlower != full || fp.NectarInFlower != full {
+			t.Fatalf("%s: full %v, flags pollen %v, nectar %v", n, full, fp.PollenInFlower, fp.NectarInFlower)
 		}
 		return full
 	}
@@ -156,7 +162,7 @@ func TestFlowerRefill(t *testing.T) {
 		dandelion, daisy, cereal bool
 		update                   bool
 	}{
-		{0, false, false, false, true}, // Setup: Crop_Cereals sets the flag (startDay = stopDay = 0)
+		{0, false, false, false, true}, // Setup: Crop_Cereals sets Changed (startDay = stopDay = 0)
 		{1, true, true, false, true},
 		{2, true, true, false, false},
 		{363, true, true, false, false},
@@ -180,6 +186,6 @@ func TestFlowerRefill(t *testing.T) {
 	}
 
 	// assertion: no flowering period across the turn of the year
-	fsMap.NewEntity(&comp.Foodsource{StartDay: 300, StopDay: 20}, &comp.FoodsourceState{})
+	fpMap.NewEntity(&comp.FlowerPatch{Layers: []comp.Layer{{StartDay: 300, StopDay: 20}}})
 	expectPanic(t, "startDay > stopDay", func() { s.Update(w) })
 }

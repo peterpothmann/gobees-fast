@@ -78,14 +78,14 @@ func TestMergeHedgesEquallyNearFieldIsRandom(t *testing.T) {
 	}
 }
 
-// testFlower returns the flower species of a layer of TestCreateLayers (Flower, an index in the flower species
-// A, B, C of the test), or the patch type of a flower patch that is not split (NetLogo:
-// flowerSpecies_relativeAbundanceList (list patchType 1)).
-func testFlower(fs comp.Foodsource) string {
-	if fs.Flower == -1 {
-		return fs.PatchType
+// testFlowers returns the flower species of the layers of a flower patch of TestCreateLayers (Flower, an index in the
+// flower species A, B, C of the test).
+func testFlowers(fp *comp.FlowerPatch) []string {
+	names := []string{}
+	for _, l := range fp.Layers {
+		names = append(names, []string{"A", "B", "C"}[l.Flower])
 	}
-	return []string{"A", "B", "C"}[fs.Flower]
+	return names
 }
 
 func TestCreateLayers(t *testing.T) {
@@ -100,83 +100,63 @@ func TestCreateLayers(t *testing.T) {
 	}
 	file := &params.Parameters{AbundanceBoost: 1, FoodsourceLimit: 1, LimitFoodsources: true, RemoveEmptyFoodsources: true}
 	// limits: 180 microlitres nectar, 0.05 g pollen
-	p1 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Grassland", X: 10.2, Y: 20.4,
-		Area: 100, Flowers: []params.FlowerEntry{{Name: "A", Value: 2, HasValue: true}, {Name: "Margin"},
-			{Name: "B", Value: 1, HasValue: true}, {Name: "C", Value: 1, HasValue: true}}}}
-	p2 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Crop_Cereals", X: 10.4, Y: 19.6,
-		Area: 100, Flowers: []params.FlowerEntry{{Name: "B", Value: 1, HasValue: true}}}}
-	p3 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Scrub", X: 50, Y: 50, Area: 400}}
+	p1 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Grassland", X: 102, Y: 204,
+		Area: 100, Flowers: []params.FlowerEntry{{Name: "A", Value: 2}, {Name: "Margin", Value: 1}, {Name: "B", Value: 1},
+			{Name: "C", Value: 1}}}}
+	p2 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Crop_Cereals", X: 104, Y: 196,
+		Area: 100, Flowers: []params.FlowerEntry{{Name: "B", Value: 1}}}}
+	p3 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Scrub", X: 500, Y: 500, Area: 400}}
+	// every layer of the woodland is removed: no flower patch (NetLogo: no masterpatch)
+	p4 := &flowerPatch{FlowerPatch: params.FlowerPatch{PatchType: "Woodland", X: 700, Y: 700,
+		Area: 100, Flowers: []params.FlowerEntry{{Name: "B", Value: 1}}}}
 
-	masterpatches, err := createLayers(w, []*flowerPatch{p1, p2, p3}, flowers, file, &defaults.Landscape, []string{"Margin", "Plot"}, rand.New(rand.NewPCG(1, 1)))
+	patches, err := createLayers(w, []*flowerPatch{p1, p2, p3, p4}, flowers, file, &defaults.Landscape,
+		[]string{"Margin", "Plot"})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	byKey := map[string]testLayer{}
-	query := ecs.NewFilter2[comp.Foodsource, comp.Layer](w).Query()
+	byType := map[string]ecs.Entity{}
+	query := ecs.NewFilter1[comp.FlowerPatch](w).Query()
 	for query.Next() {
-		fs, l := query.Get()
-		byKey[fs.PatchType+"/"+testFlower(*fs)] = testLayer{query.Entity(), *fs, *l}
+		byType[query.Get().PatchType] = query.Entity()
 	}
-	if len(byKey) != 4 {
-		t.Fatalf("got %d foodsources, want 4: %v", len(byKey), byKey)
+	if len(byType) != 3 {
+		t.Fatalf("got %d flower patches, want 3 (no woodland): %v", len(byType), byType)
 	}
-	a, c, crop, scrub := byKey["Grassland/A"], byKey["Grassland/C"], byKey["Crop_Cereals/B"], byKey["Scrub/Scrub"]
+	fpMap := ecs.NewMap1[comp.FlowerPatch](w)
+	grass, crop, scrub := fpMap.Get(byType["Grassland"]), fpMap.Get(byType["Crop_Cereals"]), fpMap.Get(byType["Scrub"])
 
+	// the stewardship option "Margin" gets no layer, also with a value, B on the grassland is removed (both below the limits). A and C
+	// stay in the order of the flower list (NetLogo: who order).
+	if got := testFlowers(grass); !slices.Equal(got, []string{"A", "C"}) {
+		t.Fatalf("grassland layers %v, want [A C]", got)
+	}
+	a, c := grass.Layers[0], grass.Layers[1]
 	// A: pollen 100 * 2 * 0.01 = 2 g, nectar 100 * 2 * 1 microlitre = 200 microlitres, flowering period from the table
-	if a.fs.PollenMax != 2 || a.fs.NectarMax != 200 || a.fs.NectarPerFlower != 1 || a.fs.StartDay != 100 || a.fs.StopDay != 200 {
-		t.Errorf("layer A = %+v", a.fs)
+	if a.PollenMax != 2 || a.NectarMax != 200 || a.NectarPerFlower != 1 || a.StartDay != 100 || a.StopDay != 200 {
+		t.Errorf("layer A = %+v", a)
 	}
-	// the stewardship option "Margin" gets no layer: 4 foodsources (checked above)
 	// C: nectar 0 below the limit, pollen 1 g kept
-	if c.fs.NectarMax != 0 || c.fs.PollenMax != 1 {
-		t.Errorf("layer C nectar %v, pollen %v; want 0, 1", c.fs.NectarMax, c.fs.PollenMax)
+	if c.NectarMax != 0 || c.PollenMax != 1 {
+		t.Errorf("layer C nectar %v, pollen %v; want 0, 1", c.NectarMax, c.PollenMax)
 	}
-	// B on the grassland is removed (both below the limits), but kept on the crop field ("Crop_")
-	if _, ok := byKey["Grassland/B"]; ok {
-		t.Error("layer B on Grassland should be removed")
+	// B is kept on the crop field ("Crop_"), without food
+	if got := testFlowers(crop); !slices.Equal(got, []string{"B"}) || crop.Layers[0].NectarMax != 0 ||
+		crop.Layers[0].PollenMax != 0 {
+		t.Errorf("crop layers %v = %+v, want B without food", got, crop.Layers)
 	}
-	if crop.fs.NectarMax != 0 || crop.fs.PollenMax != 0 {
-		t.Errorf("crop layer B = %+v, want no food", crop.fs)
+	// a flower patch with an empty list stays, without layers
+	if len(scrub.Layers) != 0 || scrub.Area != 400 {
+		t.Errorf("scrub = %+v", *scrub)
 	}
-	// masterpatches
-	if !a.l.IsMasterpatch || a.l.Masterpatch != a.e || c.l.IsMasterpatch || c.l.Masterpatch != a.e {
-		t.Errorf("A master %v -> %v, C master %v -> %v", a.l.IsMasterpatch, a.l.Masterpatch, c.l.IsMasterpatch, c.l.Masterpatch)
+	// A, C and the crop layer would lie in the same NetLogo patch cell (10, 20) at 10 m per patch. The grassland and
+	// the crop field keep their own layers (NetLogo: one list of all three, finding 15).
+	// the flower patches in file order, without the woodland (NetLogo: who order of the masterpatches, the unsplit
+	// scrub first, then the split ones in random order)
+	if !slices.Equal(patches, []ecs.Entity{byType["Grassland"], byType["Crop_Cereals"], byType["Scrub"]}) {
+		t.Errorf("patches %v, want grassland, crop field and scrub in file order: %v", patches, byType)
 	}
-	if !crop.l.IsMasterpatch || crop.l.Masterpatch != crop.e {
-		t.Error("the crop layer must be its own masterpatch")
-	}
-	// a flower patch with an empty list stays, without food
-	if !scrub.l.IsMasterpatch || scrub.fs.NectarMax != 0 || scrub.fs.PollenMax != 0 ||
-		scrub.fs.StartDay != 0 || scrub.fs.StopDay != 0 {
-		t.Errorf("scrub = %+v %+v", scrub.fs, scrub.l)
-	}
-	// A, C and the crop layer lie in the same patch cell (10, 20). A and C share the list of the grassland, in the
-	// order of creation (A before C). The crop layer has its own list (NetLogo: one list of all three).
-	for _, l := range []testLayer{a, c} {
-		if want := []ecs.Entity{a.e, c.e}; !slices.Equal(l.l.PatchLayers, want) {
-			t.Errorf("%s/%s: layersInPatchList %v, want %v", l.fs.PatchType, testFlower(l.fs), l.l.PatchLayers, want)
-		}
-	}
-	if !slices.Equal(crop.l.PatchLayers, []ecs.Entity{crop.e}) {
-		t.Errorf("crop: layersInPatchList %v, want %v", crop.l.PatchLayers, []ecs.Entity{crop.e})
-	}
-	if !slices.Equal(scrub.l.PatchLayers, []ecs.Entity{scrub.e}) {
-		t.Errorf("scrub: layersInPatchList %v", scrub.l.PatchLayers)
-	}
-	// the masterpatches in NetLogo's who order. The scrub is not split and gets its who number before all layers,
-	// so it comes first. The grassland and the crop field follow in shuffled order.
-	if len(masterpatches) != 3 || masterpatches[0] != scrub.e ||
-		!slices.Contains(masterpatches[1:], a.e) || !slices.Contains(masterpatches[1:], crop.e) {
-		t.Errorf("masterpatches %v, want scrub %v first, then A %v and crop %v", masterpatches, scrub.e, a.e, crop.e)
-	}
-}
-
-// testLayer is a foodsource as read back in TestCreateLayers.
-type testLayer struct {
-	e  ecs.Entity
-	fs comp.Foodsource
-	l  comp.Layer
 }
 
 // newExampleFarmSetup runs landscapeSetup and nestSitesSetup on the example farm (the run file built into
@@ -243,22 +223,21 @@ func TestCreateFoodsourcesExampleFarm(t *testing.T) {
 		a := newExampleFarmSetup(t, float64(seed))
 		w := a.World
 		landscape := ecs.GetResource[globals.Landscape](w)
-		if landscape.Scale != 0.1 {
-			t.Fatalf("Scaling_NLpatches/m = %v, want 0.1 (1 / 10 m)", landscape.Scale)
-		}
 
-		masterpatches := collectMasterpatches(w)
-		counts[len(masterpatches)]++
+		patches := collectPatches(w)
+		counts[len(patches)]++
 
-		// every layer points to a masterpatch of the same flower patch, i.e. same position and patch type
-		posMap := ecs.NewMap2[comp.Position, comp.Foodsource](w)
-		query := ecs.NewFilter3[comp.Position, comp.Foodsource, comp.Layer](w).Query()
+		// landscape.Patches holds every flower patch once
+		all := []ecs.Entity{}
+		query := ecs.NewFilter1[comp.FlowerPatch](w).Query()
 		for query.Next() {
-			pos, fs, l := query.Get()
-			mpos, mfs := posMap.Get(l.Masterpatch)
-			if *mpos != *pos || mfs.PatchType != fs.PatchType || mfs.Area != fs.Area {
-				t.Errorf("layer %s at %v points to masterpatch %s at %v", fs.PatchType, *pos, mfs.PatchType, *mpos)
-			}
+			all = append(all, query.Entity())
+		}
+		sorted := slices.Clone(landscape.Patches)
+		slices.SortFunc(sorted, func(a, b ecs.Entity) int { return int(a.ID()) - int(b.ID()) })
+		slices.SortFunc(all, func(a, b ecs.Entity) int { return int(a.ID()) - int(b.ID()) })
+		if !slices.Equal(sorted, all) {
+			t.Errorf("seed %d: landscape.Patches %v, flower patches %v", seed, landscape.Patches, all)
 		}
 	}
 	// NetLogo gives 36 masterpatches after the setup. 36 with every seed: the random

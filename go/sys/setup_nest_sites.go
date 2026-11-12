@@ -27,18 +27,18 @@ func (s *nestSitesSetup) Initialize(w *ecs.World) {
 	// one species per species of the run file, in FILE order. Package input has read the rows into
 	// params.Input.Species and set the derived values. Bees and colonies hold the index of their species.
 
-	// Collect all masterpatches, in NetLogo's who order, to expand the nest habitats list and find the nest sites.
-	masterpatches := collectMasterpatches(w)
+	// Collect all flower patches, in file order, to expand the nest habitats list and find the nest sites.
+	patches := collectPatches(w)
 	s.nestSites.BySpecies = make([]globals.SpeciesNestSites, len(in.Species))
 	for i := range in.Species {
 		sp := &in.Species[i]
 		ns := &s.nestSites.BySpecies[i]
-		expanded, err := expandNestHabitats(sp.NestHabitats, masterpatches)
+		expanded, err := expandNestHabitats(sp.NestHabitats, patches)
 		if err != nil {
 			panic(err)
 		}
 		ns.Habitats = expanded
-		ns.Sites, ns.Area = nestSites(ns.Habitats, masterpatches)
+		ns.Sites, ns.Area = nestSites(ns.Habitats, patches)
 		// message only
 		if len(ns.Sites) == 0 && !sp.Parasitic {
 			log.Printf("%s has no suitable nesting foodsources. No colonies will form", sp.Name)
@@ -75,29 +75,29 @@ func (t *speciesTable) all() []int {
 	return result
 }
 
-// masterpatch is a masterpatch foodsource with the values expandNestHabitats and nestSites need.
-type masterpatch struct {
+// patchSite is a flower patch with the values expandNestHabitats and nestSites need. NetLogo: a masterpatch.
+type patchSite struct {
 	entity    ecs.Entity
 	patchType string
 	area      float64 // [m2]
 }
 
-// collectMasterpatches returns all masterpatches in NetLogo's who order, which is the order of
-// globals.Landscape.Masterpatches.
-func collectMasterpatches(w *ecs.World) []masterpatch {
+// collectPatches returns all flower patches in the order of globals.Landscape.Patches (file order). NetLogo: who
+// order of the masterpatches.
+func collectPatches(w *ecs.World) []patchSite {
 	landscape := ecs.GetResource[globals.Landscape](w)
-	fsMap := ecs.NewMap1[comp.Foodsource](w)
-	result := make([]masterpatch, len(landscape.Masterpatches))
-	for i, e := range landscape.Masterpatches {
-		fs := fsMap.Get(e)
-		result[i] = masterpatch{e, fs.PatchType, fs.Area}
+	fpMap := ecs.NewMap1[comp.FlowerPatch](w)
+	result := make([]patchSite, len(landscape.Patches))
+	for i, e := range landscape.Patches {
+		fp := fpMap.Get(e)
+		result[i] = patchSite{e, fp.PatchType, fp.Area}
 	}
 	return result
 }
 
 // expandNestHabitats expands entries ending with "*" to all habitat types of the masterpatches that contain
 // the text before the "*".
-func expandNestHabitats(list []string, masterpatches []masterpatch) ([]string, error) {
+func expandNestHabitats(list []string, masterpatches []patchSite) ([]string, error) {
 	// ORDER: irrelevant, the nest habitats list is only used with member?. Not shuffled (NetLogo collects the habitat
 	// types of the masterpatches in random order).
 	allHabitats := []string{}
@@ -128,7 +128,7 @@ func expandNestHabitats(list []string, masterpatches []masterpatch) ([]string, e
 
 // nestSites returns all masterpatches whose patchType is in the nest habitat list (exact match), in the order of
 // masterpatches, and the sum of their areas.
-func nestSites(habitats []string, masterpatches []masterpatch) ([]ecs.Entity, float64) {
+func nestSites(habitats []string, masterpatches []patchSite) ([]ecs.Entity, float64) {
 	sites := []ecs.Entity{}
 	area := 0.0
 	for _, m := range masterpatches {

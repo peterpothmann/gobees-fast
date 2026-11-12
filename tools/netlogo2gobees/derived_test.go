@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"gobees/examplefiles"
-	"gobees/input"
 	"gobees/params"
 )
 
@@ -80,14 +79,14 @@ func TestConvertExampleFarm(t *testing.T) {
 	// [PAR-05] MyMap _SYSTEM_Example_Farm.png -> _SYSTEM_Example_Farm_Foodsources.txt, as a landscape file
 	l, ok := conv.Landscapes[c.Landscape]
 	if c.Landscape != "_SYSTEM_Example_Farm_Foodsources.yaml" || len(conv.Landscapes) != 1 || !ok ||
-		l.MetresPerPatch != 10 || len(l.Patches) != 73 || c.CropRotation != nil {
+		len(l.Patches) != 73 || c.CropRotation != nil {
 		t.Errorf("Landscape %q, %d landscape files, crop rotation %q", c.Landscape, len(conv.Landscapes), c.CropRotation)
 	}
 	// Line 4: 0 "Hedgerow" 105 130 175 200 [["Average_Willow" 1.275] ...] 20  "no info": colour, perimeter and info
-	// are not converted
+	// are not converted, the coordinates in metres (line 1: 10 m per patch)
 	p := l.Patches[0]
-	if p.ID != 0 || p.PatchType != "Hedgerow" || p.X != 130 || p.Y != 175 || p.Area != 200 ||
-		len(p.Flowers) != 33 || p.Flowers[0] != (input.FlowerEntry{Name: "Average_Willow", Value: 1.275, HasValue: true}) {
+	if p.ID != 0 || p.PatchType != "Hedgerow" || p.X != 1300 || p.Y != 1750 || p.Area != 200 ||
+		len(p.Flowers) != 33 || p.Flowers[0] != (params.FlowerEntry{Name: "Average_Willow", Value: 1.275}) {
 		t.Errorf("first flower patch = %+v", p)
 	}
 }

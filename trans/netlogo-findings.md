@@ -135,8 +135,8 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Checked from the input file (2026-10-23, PP):** the 73 flower patches of `_SYSTEM_Example_Farm_Foodsources.txt` lie in 73 different patch cells, with every rounding rule for coordinates ending in .5 (finding 24). The case does not occur for the example farm.
 - **Consequence for gobees:** compute the list by patch cell exactly as NetLogo does (rounded coordinates, see the patch cells in `trans/data-model.md`), not by masterpatch. Translate the assertion, so that gobees stops in the same situation.
 - **Second Check**: 23.10.2026, PP
-- **Implemented:** `setLayersInPatchList` in `sys/setup_landscape.go`, grouped by `util.Pcor` (`pcor` in `sys/shared_space.go` in gobees-fast). Test: `TestCreateLayers` (two flower patches in cell (10, 20) share one list). The assertion in `choosePatch` comes with step 6. Step 6: the assertion in `forager.choosePatch` (`sys/day_foraging.go`, `[PCH-03]`) panics. `bestLayer` reads `Layer.PatchLayers` (`LayersInPatchList` in gobees).
-- **gobees-fast:** fixed. `setLayersInPatchList` groups by `Layer.Masterpatch` (`MasterpatchID` in gobees): the list holds the layers of the same flower patch, sorted by `who`. The assertion in [PCH-03] stays as a check of the state. Same lists as before for the example farm and `Example_Farm_PlotTest` (no patch cell with two flower patches). Test: `TestCreateLayersProc` (two flower patches in cell (10, 20) get two lists).
+- **Implemented:** `setLayersInPatchList` in `sys/setup_landscape.go`, grouped by `util.Pcor`. Test: `TestCreateLayers` (two flower patches in cell (10, 20) share one list). The assertion in `choosePatch` comes with step 6. Step 6: the assertion in `forager.choosePatch` (`sys/day_foraging.go`, `[PCH-03]`) panics. `bestLayer` reads `Layer.PatchLayers` (`LayersInPatchList` in gobees).
+- **gobees-fast:** fixed. One entity per flower patch (`comp.FlowerPatch`), its layers are `FlowerPatch.Layers` in the order of creation (`who` order), so `bestLayer` sees only the layers of the same flower patch. The assertion in [PCH-03] stays as a check of the state. Same lists as before for the example farm and `Example_Farm_PlotTest` (no patch cell with two flower patches). Test: `TestCreateLayers` (two flower patches in cell (10, 20) keep their own layers).
 
 <a id="finding-16"></a>
 
@@ -156,7 +156,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Finding:** `CreateFoodsourcesProc` and `CreateLayersProc` set `farmland?` by comparing the `who` number with the parameter `MyFarmlandPatches`. No procedure reads `farmland?`. In `CreateLayersProc` the comparison even uses the layer's random `who` number (finding 16). Both have no effect.
 - **Consequence for gobees:** do not translate `farmland?`. `MyFarmlandPatches` is read from the parameter file but not used (like `MaxForagingRange_m`, finding 8).
 - **Second Check**: 23.10.2026, PP
-- **Implemented:** `farmland?` and `MyFarmlandPatches` are not translated (`comp.Foodsource` has no such field).
+- **Implemented:** `farmland?` and `MyFarmlandPatches` are not translated (`comp.Foodsource` has no such field, in gobees-fast `comp.FlowerPatch`).
 
 <a id="finding-18"></a>
 
@@ -166,7 +166,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Finding:** A flower patch outside `MapAreaIncluded` and a layer without nectar and pollen are first created and then removed with `die`. Each has already used up a `who` number. NetLogo never reuses `who` numbers within a run.
 - **Consequence for gobees:** the `Who` counter must also count these removed foodsources, otherwise the `who` order differs from NetLogo whenever it matters (finding 16).
 - **Second Check**: 23.10.2026, PP
-- **Implemented:** in gobees `globals.WhoCounter`, which counted every flower patch, also outside `MapAreaIncluded`, and every removed layer (test: gap between layers A and C). gobees-fast keeps no `who` numbers: `createLayers` keeps the foodsources in the order of creation, which is the `who` order (`globals.Landscape.Masterpatches`, `Layer.PatchLayers`). `MapAreaIncluded` is removed. Test: `TestCreateLayers` (order of the masterpatches).
+- **Implemented:** in gobees `globals.WhoCounter`, which counted every flower patch, also outside `MapAreaIncluded`, and every removed layer (test: gap between layers A and C). gobees-fast keeps no `who` numbers: `createLayers` keeps the flower patches and their layers in the order of creation, which is the `who` order (`globals.Landscape.Patches`, `FlowerPatch.Layers`). `MapAreaIncluded` is removed. Test: `TestCreateLayers` (order of the masterpatches).
 
 <a id="finding-19"></a>
 
@@ -223,7 +223,8 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Side result:** the 6 layers have the `who` numbers 360, 363, 366, 367, 368 and 373. The gaps are layers of the same flower patch that were removed as empty, which confirms finding 18.
 - **Consequence for gobees:** patch cell of a point = `math.Floor(v + 0.5)` (round half up; all coordinates of the world are >= 0). Test with the 13 border coordinates of the example farm, e.g. 121.5 → 122 and 210.5 → 211.
 - **Second Check**: 23.10.2026, PP
-- **Implemented:** `util.Pcor` (`pcor` in `sys/shared_space.go` in gobees-fast). Test: `TestPcor` with the 13 border coordinates of the example farm.
+- **Implemented:** `util.Pcor`. Test: `TestPcor` with the 13 border coordinates of the example farm.
+- **gobees-fast:** no patch cells. Coordinates are in metres, a badger sits at the position of its flower patch, at most one per flower patch (finding 25 for the colonies, docs/changes.md "Landscape in metres").
 
 ## Findings from step 3 (queens and colony foundation)
 
@@ -238,7 +239,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Consequence for gobees:** reproduce the random choice among the patch centres within the circle (strict `<`, distance in patch units). Translate the runtime error as an error. This also corrects finding 24.
 - **Second Check**: 24.10.2026, PP
 - **Implemented:** `searchNestSite` in `sys/morning_queen_emergence.go` with `util.PatchCentresWithin` (strict `<`). No patch centre: panic. Tests: `TestNestSearchFoundsColonies` (colonies at patch centres, the 100 m2 hedge only at (50, 50)), `TestPatchCentresWithin`.
-- **gobees-fast:** edge case fixed. Without a patch centre in the circle, the colony is placed at the centre of the patch cell of the foodsource (`pcor`), without a random number. Test: `TestNestSearchNoPatchCentre` (the 100 m² hedge at (133.548, 112.5): colony at (134, 113)).
+- **gobees-fast:** no patch cells. The colony is placed at a uniform random point within the circle of the flower patch (`randomPointInCircle`), so the edge case cannot occur (docs/changes.md "Landscape in metres"). Tests: `TestNestSearchFoundsColonies` (colonies within the circles), `TestRandomPointInCircle`.
 
 <a id="finding-26"></a>
 
@@ -499,6 +500,18 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Second Check**: 25.10.2026, PP 
 - **Implemented:** `createBadgers` in `sys/setup_badgers.go`: all badgers are created at (0, 0), then placed in random order, the candidates are recomputed with all living badgers. Test: `TestCreateBadgersOriginBlocks` (Scrub patch 140 m from the corner and two far ones, 2 badgers: the near patch is occupied in about 1/3 of 3000 runs, without the blocking it would be 2/3).
 - **gobees-fast:** fixed. The candidates are recomputed with the badgers placed so far, the badgers still at the origin block nothing. Same placement as before for the example farm (the nearest Scrub patch lies 1495 m from the origin). Test: `TestCreateBadgersNearOrigin` (the near patch is occupied in about 2/3 of 3000 runs).
+
+<a id="finding-50"></a>
+
+### 50. The crop rotation changes the landscape on the last day of the year and starts with its second file
+
+- **Code:** `[MORN-09]`, `[CROP-01]`
+- **Finding:** `UpdateMorning_Proc` calls `CropRotationProc` in the morning of `Day = 365`, the last day of each year. `CropRotationProc` takes the item `ceiling (ticks / 365) mod length CropRotationList`: on tick 365 the item 1, on tick 730 the item 2, and so on, the item 0 only after one full cycle. The first year runs on the foodsources file of `MyMap` (gobees-fast: `landscape`), not on an item of the list. With `[a, b, c]` the landscapes are: year 1 days 1 to 364 the start, from day 365 of year 1 `b`, from day 365 of year 2 `c`, from day 365 of year 3 `a`. Two consequences: (1) the last day of each year already has the landscape of the next year; (2) the cycle is right only if the start is the first item of the list. With a start `x` other than `a`, the run has `x, b, c, a, b, c, ...`: `x` never comes back and `a` comes only in year 4.
+- **Affects:** only runs with a crop rotation (`CropRotationListAsString` with 2 files or more, empty in `_SYSTEM_Parameters.csv` and `_SYSTEM_Example_Farm_Parameters.csv`). (1) changes little with the species of `_SYSTEM_BumbleSpecies_UK_01.csv`: all colonies die on `seasonStop` = day 305, so no bee forages on day 365, but the nest sites of the species are computed anew on day 365 ([CROP-03]). (2) changes the landscapes of whole years if the start is not the first item. The scenario `step7_crop` and the example of the sites in docs/usage.md start with the first item.
+- **Consequence for gobees:** translate the day and the item number as they are. docs/usage.md describes the rule at `cropRotation`.
+- **Second Check**:
+- **Implemented:** `cropRotation.Update` and `cropRotation.rotate` in `sys/morning_crop_rotation.go` (the worked example in the comment: 2 files, ticks 365 item 1, ticks 730 item 0). Test: `TestCropRotation`.
+- **gobees-fast:** open. Candidate fix (class C, not active in the default run): change the landscape on day 1 of the new year, and take the start as the item 0 of the rotation.
 
 ## Findings from the model map and from `Go`
 

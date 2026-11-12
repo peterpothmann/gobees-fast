@@ -18,13 +18,12 @@ import (
 // with the same definitions as in NetLogo. Initial queens are the queens with 0 < emergingDate < 365.
 func step3Metrics(w *ecs.World) map[string]float64 {
 	m := map[string]float64{}
-	fs := ecs.NewFilter2[comp.Foodsource, comp.Layer](w).Query()
+	// NetLogo: foodsources are the layers and the flower patches without layers, one masterpatch per flower patch
+	fs := ecs.NewFilter1[comp.FlowerPatch](w).Query()
 	for fs.Next() {
-		_, l := fs.Get()
-		m["foodsources"]++
-		if l.IsMasterpatch {
-			m["masterpatches"]++
-		}
+		fp := fs.Get()
+		m["foodsources"] += float64(max(len(fp.Layers), 1))
+		m["masterpatches"]++
 	}
 	nestSites := ecs.GetResource[globals.NestSites](w).BySpecies
 	for i, s := range ecs.GetResource[params.Input](w).Species {

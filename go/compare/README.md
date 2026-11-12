@@ -53,7 +53,8 @@ The experiments of parts of the model (`step3`, `step4a`, `step6`) cannot run as
 Every version runs as a command line program (`go/main.go`) with `-s <seed> --days <days>`, the flag of its daily output (`-f <file>`, the current code `-o <folder>`) and its input:
 gobees (`BASE_COMMIT`) the NetLogo files (`-d <folder> -p <parameter file>`), the current code the run file of the
 scenario (`--config`, converted with `tools/netlogo2gobees` into [scenarios](scenarios)), the reference the format of
-`REFERENCE_INPUT` in `commits.env`. The programs run with seeds 1 to 100, and is compared on its daily output (`obs.DailyOutputExtended`) from day 1 on (the
+`REFERENCE_INPUT` in `commits.env`: with `yaml` the run files of its own commit (`COMPARE_REFERENCE_DIR`, set by
+`run_compare.sh` to `go/compare` of the reference worktree), so the landscape files may change their format. The programs run with seeds 1 to 100, and is compared on its daily output (`obs.DailyOutputExtended`) from day 1 on (the
 programs write no row for the setup). The columns are matched by name. Columns only the current code has are listed
 in the comment and not compared. A column of the other version that the current code no longer has is an error, unless
 it is listed in `REMOVED_COLUMNS`: a column is removed only together with its model branch.
@@ -79,6 +80,16 @@ example weather year the value misses the whole second in the last bit (e.g. 2.2
 gobees-fast reads whole seconds from the weather file (`step8_weather`). The model gives the same results, only this
 column differs. Without the rounding, `step8_weather` would fail exactly against the previous step and, with a band
 of width 0, against gobees.
+
+**Last digits of float sums.** The statistical comparisons (previous step, gobees and NetLogo) allow a relative
+tolerance of 1e-9 at the band (`tolerance` in [stats.go](stats.go)), and round the yearly summaries to 9 significant
+digits before the Kolmogorov-Smirnov tests (`round9`). A sum of floats depends in its last digits (about 1e-15
+relative) on the order of its terms, and the steps change such orders on purpose. Example: the landscape in metres
+(2026-11-11) gives a map area of 2.485726977543863 km² instead of 2.485726977543862 in every run of
+`step8_settings`, and the yearly maximum of `nectar_left_l` (the full stock of all layers, reached on days without
+foraging) was summed in random order, now in file order. Without the tolerance, the band of width 0 of the map area
+failed on all 730 days, and the Kolmogorov-Smirnov tests of the stocks gave D up to 0.89 in 4 scenarios. A real
+change of the model moves the values by far more than 1e-9 relative.
 
 **Why the Kolmogorov-Smirnov tests are needed.** The daily band alone is a weak check. Tested with the current
 code against itself with a higher foraging mortality (`ForagingMortalityFactor` in the parameter file, 100 seeds,

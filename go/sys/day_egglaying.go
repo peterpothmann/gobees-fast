@@ -132,9 +132,9 @@ func (l *eggLayer) initEggs(e ecs.Entity, beesInCohort int, diploid bool) {
 	dev.LarvaTime = 0
 	f.CropVolume = 0
 	f.PollenPellets = 0
-	f.CurrentFoodsource = ecs.Entity{}
-	f.NectarSource = ecs.Entity{}
-	f.PollenSource = ecs.Entity{}
+	f.CurrentFoodsource = comp.Source{}
+	f.NectarSource = comp.Source{}
+	f.PollenSource = comp.Source{}
 	b.Stage = stage.Egg
 	b.Mated = false
 	*th = thresholds(&l.constants.Thresholds, sitEgg)
@@ -147,7 +147,7 @@ func (l *eggLayer) initEggs(e ecs.Entity, beesInCohort int, diploid bool) {
 	f.ExpectedPollenTrip = 0
 	f.GlossaLength = 0
 	f.IngestionFactor = 0
-	f.IngestionSource = ecs.Entity{}
+	f.IngestionSource = comp.Source{}
 	f.CarriedNectar = 0
 	b.PersonalTime = 0
 	f.PollenForager = false

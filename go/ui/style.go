@@ -8,8 +8,6 @@ import (
 	"image/color"
 	"strings"
 
-	"gobees/params"
-
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -108,21 +106,26 @@ const (
 	pad        = 16
 )
 
-// layout holds the screen regions and the transformation from NetLogo coordinates to the screen.
+// bounds is the part of the landscape the map shows [m].
+type bounds struct {
+	MinX, MaxX, MinY, MaxY float64
+}
+
+// layout holds the screen regions and the transformation from model coordinates [m] to the screen.
 type layout struct {
 	mapRect   image.Rectangle
 	panelRect image.Rectangle
-	scale     float64 // screen pixels per NetLogo patch
-	world     params.World
+	scale     float64 // screen pixels per metre
+	bounds    bounds
 }
 
-func newLayout(w, h int, world *params.World) layout {
-	l := layout{world: *world}
-	worldW := world.MaxPxcor - world.MinPxcor + 1
-	worldH := world.MaxPycor - world.MinPycor + 1
+func newLayout(w, h int, b bounds) layout {
+	l := layout{bounds: b}
+	worldW := b.MaxX - b.MinX
+	worldH := b.MaxY - b.MinY
 	availW := float64(w - panelWidth - 3*pad)
 	availH := float64(h - 2*pad)
-	l.scale = max(min(availW/worldW, availH/worldH), 0.1)
+	l.scale = max(min(availW/worldW, availH/worldH), 0.001)
 	mw, mh := int(worldW*l.scale), int(worldH*l.scale)
 	x0 := pad + (int(availW)-mw)/2
 	y0 := pad + (int(availH)-mh)/2
@@ -131,17 +134,17 @@ func newLayout(w, h int, world *params.World) layout {
 	return l
 }
 
-// toScreen converts NetLogo coordinates (patch centres at integers, y upwards) to screen pixels.
+// toScreen converts model coordinates [m] (y upwards) to screen pixels.
 func (l *layout) toScreen(x, y float64) (float64, float64) {
-	sx := float64(l.mapRect.Min.X) + (x-l.world.MinPxcor+0.5)*l.scale
-	sy := float64(l.mapRect.Min.Y) + (l.world.MaxPycor+0.5-y)*l.scale
+	sx := float64(l.mapRect.Min.X) + (x-l.bounds.MinX)*l.scale
+	sy := float64(l.mapRect.Min.Y) + (l.bounds.MaxY-y)*l.scale
 	return sx, sy
 }
 
-// fromScreen converts screen pixels to NetLogo coordinates.
+// fromScreen converts screen pixels to model coordinates [m].
 func (l *layout) fromScreen(sx, sy float64) (float64, float64) {
-	x := (sx-float64(l.mapRect.Min.X))/l.scale + l.world.MinPxcor - 0.5
-	y := l.world.MaxPycor + 0.5 - (sy-float64(l.mapRect.Min.Y))/l.scale
+	x := (sx-float64(l.mapRect.Min.X))/l.scale + l.bounds.MinX
+	y := l.bounds.MaxY - (sy-float64(l.mapRect.Min.Y))/l.scale
 	return x, y
 }
 

@@ -58,7 +58,7 @@ type Game struct {
 	app           *app.App
 	drv           *driver
 	ticks         *globals.Ticks
-	world         *params.World
+	bounds        bounds // the part of the landscape the map shows, from the landscape of the start
 	land          *landscape
 	model         *modelState
 	hist          history
@@ -87,7 +87,7 @@ type Game struct {
 	hover          *flowerPatch // patch under the mouse
 	hoverColony    *colonyView  // colony under the mouse
 	selected       *flowerPatch // clicked patch
-	nest           *[2]float64  // test nest in NetLogo coordinates, nil if none
+	nest           *[2]float64  // test nest [m], nil if none
 	lastRightClick time.Time
 	buttons        []button
 
@@ -185,8 +185,8 @@ func (g *Game) setup(a *app.App, counters *obs.Counters) (err error) {
 
 	g.app = a
 	g.ticks = ecs.GetResource[globals.Ticks](a.World)
-	g.world = ecs.GetResource[params.World](a.World)
 	g.land = newLandscape(a.World)
+	g.bounds = g.land.bounds()
 	g.model = newModel(a.World, counters)
 	g.hist = history{}
 	g.colHist = map[int64]*colonyHistory{}
@@ -432,7 +432,7 @@ func (g *Game) slower() { g.speed = max(g.speed-1, 0) }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	g.width, g.height = outsideWidth, outsideHeight
-	g.layout = newLayout(outsideWidth, outsideHeight, g.world)
+	g.layout = newLayout(outsideWidth, outsideHeight, g.bounds)
 	return outsideWidth, outsideHeight
 }
 

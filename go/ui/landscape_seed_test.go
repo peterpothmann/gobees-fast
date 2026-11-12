@@ -65,7 +65,7 @@ func patchLayout(t *testing.T, seed int64, queens []params.SpeciesQueens) []flow
 	for i := range out { // entities differ between worlds
 		out[i].Entity = ecs.Entity{}
 		for j := range out[i].Layers {
-			out[i].Layers[j].Entity = ecs.Entity{}
+			out[i].Layers[j].Source.Patch = ecs.Entity{}
 		}
 	}
 	return out
@@ -88,7 +88,7 @@ func TestLandscapeSeed(t *testing.T) {
 	}
 }
 
-// TestLandscapeFlowers: every layer of the example farm names its flower species (comp.Foodsource.Flower), and the
+// TestLandscapeFlowers: every layer of the example farm names its flower species (comp.Layer.Flower), and the
 // flowering period of the layer is the one of that species in the run file.
 func TestLandscapeFlowers(t *testing.T) {
 	rows := map[string]params.FlowerSpecies{}

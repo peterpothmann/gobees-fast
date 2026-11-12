@@ -295,7 +295,7 @@ func (g *Game) drawPatchVisitors(screen *ebiten.Image, p *flowerPatch) []mapLabe
 
 // drawBadgers draws every badger with the range in which it can dig up colonies.
 func (g *Game) drawBadgers(screen *ebiten.Image) {
-	rad := float32(g.land.BadgerRange * g.land.Scale * g.layout.scale)
+	rad := float32(g.land.BadgerRange * g.layout.scale)
 	for _, b := range g.shown().Badgers {
 		x, y := g.layout.toScreen(b[0], b[1])
 		vector.StrokeCircle(screen, float32(x), float32(y), rad, 1, withAlpha(colText, 0.3), true)
@@ -326,7 +326,7 @@ func (g *Game) colonyAt(sx, sy float64) *colonyView {
 
 // drawRange draws the foraging range around a nest at screen position (x, y).
 func (g *Game) drawRange(screen *ebiten.Image, x, y float64) {
-	rad := float32(g.land.MaxForagingRange * g.land.Scale * g.layout.scale)
+	rad := float32(g.land.MaxForagingRange * g.layout.scale)
 	vector.DrawFilledCircle(screen, float32(x), float32(y), rad, color.RGBA{0x18, 0x18, 0x18, 0x18}, true)
 	const segments = 90
 	for i := 0; i < segments; i += 2 { // dashed
@@ -456,7 +456,7 @@ func (g *Game) legendSpecies() []string {
 
 // drawScaleBar draws a scale bar with a round length in metres.
 func (g *Game) drawScaleBar(screen *ebiten.Image) {
-	pxPerMetre := g.land.Scale * g.layout.scale
+	pxPerMetre := g.layout.scale
 	if pxPerMetre <= 0 {
 		return
 	}
