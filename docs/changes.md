@@ -101,4 +101,4 @@ Effect: a nest lies anywhere in the circle instead of on one of the patch centre
 
 ## Fixes
 
-Fixes of edge cases that change no result of the scenarios, e.g. an unknown `ForagingMortalityModel` is an error instead of a warning: the lines "gobees-fast" in [trans/netlogo-findings.md](../trans/netlogo-findings.md). Fixes that change the results follow in phase 3, each with its measured effect here.
+Fixes of edge cases that change no result of the scenarios, e.g. an unknown `ForagingMortalityModel` is an error instead of a warning: the lines "gobees-fast" in [trans/netlogo-findings.md](../trans/netlogo-findings.md). The findings that would change the results are kept for now. A fix of one of them would be listed here with its measured effect.

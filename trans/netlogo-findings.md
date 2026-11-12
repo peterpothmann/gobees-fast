@@ -1,6 +1,6 @@
 # Findings in the BEE-STEWARD NetLogo code
 
-This file collects places in the NetLogo code that are easily lost when translating to Go, or that would change the model dynamics. Principle for gobees: the NetLogo code is the reference. Quirks are kept and documented, not fixed. Someone could fix them in another model version, though.
+This file collects places in the NetLogo code that are easily lost when translating to Go, or that would change the model dynamics. Principle for gobees: the NetLogo code is the reference. Such places are kept and documented, not fixed. Someone could fix them in another model version, though.
 
 Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square brackets (e.g. `[FPER-02]`) refer to the annotations in the NetLogo code. Line numbers are deliberately omitted because they shift as comments are added.
 
@@ -268,7 +268,7 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 
 - **Code:** `[DIE]`, e.g. `[EMER-03]`
 - **Finding:** `DieProc` calls `die`. In NetLogo, `die` ends the execution of the dying agent immediately: commands after `DieProc` in the same `ask` block are not run for this agent. Example: a queen that dies over winter in `EmergenceNewQueensProc` never gets `activity "resting"` and `colonyID -1`.
-- **Consequence for gobees:** after the Go equivalent of `DieProc` the calling code must stop working on this agent (`return` or `continue`). This is a rule for every translated procedure, not a quirk.
+- **Consequence for gobees:** after the Go equivalent of `DieProc` the calling code must stop working on this agent (`return` or `continue`). This is a rule for every translated procedure, not a finding of the NetLogo code.
 - **Second Check**: 24.10.2026, PP
 - **Implemented:** `beeDeath.die` in `sys/shared_die.go`; the callers `continue` or `return` after it. Test: `TestDieRemovesFromActiveBees`.
 

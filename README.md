@@ -6,7 +6,12 @@
 
 </div>
 
-`gobees-fast` is a fast version of the bumblebee model [BEE-STEWARD](https://beehave-model.net/bee-steward-is-published/) ([Twiston-Davies et al. 2021](#ref-twiston-davies2021)) in Go, built on the [Ark](https://github.com/mlange-42/ark) entity component system. It started as a copy of [gobees](https://github.com/peterpothmann/gobees), the faithful port of the NetLogo model, and is simplified step by step.
+`gobees-fast` is a fast version of the bumblebee model [BEE-STEWARD](https://beehave-model.net/bee-steward-is-published/) ([Twiston-Davies et al. 2021](#ref-twiston-davies2021)) in Go, built on the [Ark](https://github.com/mlange-42/ark) entity component system. It started as a copy of [gobees](https://github.com/peterpothmann/gobees), the faithful port of the NetLogo model, and was simplified and sped up in two phases:
+
+1. changes that give the same output as gobees for the same seed, value by value
+2. changes that alter the random numbers but not the distribution of the results, listed in [docs/changes.md](docs/changes.md)
+
+On the example farm (365 days, median of 6 seeds, including reading the input) gobees-fast takes 82 ms, gobees 267 ms and NetLogo 16.7 s: about 200 times faster than NetLogo and 3 times faster than gobees ([go/benchmark/benchmark-report.md](go/benchmark/benchmark-report.md), as with commit 9ca7cf1).
 
 ## Quick start
 
@@ -39,7 +44,7 @@ output:
 | --- | --- | --- |
 | `--config PATH` | `-c` | run file (YAML). Default: the built-in example farm. Repeat `-c` for several run files. |
 | `--seed N` | `-s` | seed of the first run, 1 or more |
-| `--days N` | | days to run, 0 = until the population is extinct |
+| `--days N` | | days to run, 0 = no limit (the run ends when the population is extinct and `stopExtinct` is true) |
 | `--repetitions N` | | number of runs (of each combination of the variations). Repetition i gets the seed `seed + i - 1`. |
 | `--threads T` | | runs at the same time, each on one CPU core. `1` = one after the other. The output does not depend on it. |
 | `--part I/N` | | run only the part I of N of the runs, for the jobs of an array on a cluster ([docs/usage.md](docs/usage.md#parts-on-a-cluster)) |
@@ -86,7 +91,7 @@ go run . --ui
 go run . --ui -c compare/scenarios/step8_species.yaml -o output
 ```
 
-On Linux the window is built only with the tag `ui` (`go run -tags ui . --ui`), because Ebitengine needs cgo and the X11 and OpenGL headers there. Without the tag, gobees stays pure Go, e.g. on a cluster. On macOS cgo must be on (Xcode command line tools).
+On Linux the window is built only with the tag `ui` (`go run -tags ui . --ui`), because Ebitengine needs cgo and the X11 and OpenGL headers there. Without the tag, gobees-fast stays pure Go, e.g. on a cluster. On macOS cgo must be on (Xcode command line tools).
 
 ![the window of --ui](docs/ui-screenshot.png)
 
@@ -96,10 +101,10 @@ Details: [go/ui/README.md](go/ui/README.md).
 
 | Version | For whom |
 | --- | --- |
-| **[gobees](https://github.com/peterpothmann/gobees)** | users who know BEE-STEWARD in NetLogo and need to trace every result back to the NetLogo code. Same quirks, names and structure as NetLogo. |
-| **gobees-fast** (this repository) | users who learn BEE-STEWARD from scratch or need speed. Dead code removed, data model simplified, names cleaned up. Quirks of the NetLogo code ([trans/netlogo-findings.md](trans/netlogo-findings.md)) will be fixed. |
+| **[gobees](https://github.com/peterpothmann/gobees)** | users who know BEE-STEWARD in NetLogo and need to trace every result back to the NetLogo code. Same behaviour, names and structure as NetLogo, including the findings in its code. |
+| **gobees-fast** (this repository) | users who learn BEE-STEWARD from scratch or need speed. Dead code removed, data model simplified, names cleaned up, landscape in metres as YAML and CSV, many landscapes in one experiment. |
 
-Once a quirk that is active in the default run is fixed, gobees-fast gives different results than NetLogo. From then on, gobees-fast is a modified model, not BEE-STEWARD in Go. [docs/changes.md](docs/changes.md) lists every difference to NetLogo and its effect. `git diff upstream/main` shows every change against gobees (remote `upstream` = [gobees](https://github.com/peterpothmann/gobees)).
+gobees-fast gives the same results as NetLogo in distribution, not run by run: the same seed gives other numbers than in NetLogo and gobees. The findings in the NetLogo code that act in the default run ([trans/netlogo-findings.md](trans/netlogo-findings.md)) are kept, so the model is still BEE-STEWARD. Only edge cases that change no result of the scenarios are fixed. [docs/changes.md](docs/changes.md) lists every difference to NetLogo and how it was checked. `git diff upstream/main` shows every change against gobees (remote `upstream` = [gobees](https://github.com/peterpothmann/gobees)).
 
 ## Tests and checks
 
@@ -144,6 +149,10 @@ GOBEES_PGO=$PWD/default.pgo go test -run '^TestWritePGOProfile$' -count=1 .
 | `go/validation` | comparison with NetLogo |
 | `go/benchmark` | run time of NetLogo, gobees and gobees-fast |
 | `go/enum` | castes, stages and activities |
+| `go/day` | types for days: day of the run and day of the year |
+| `go/event` | custom Ark events for the observers of the output |
+| `go/examplefiles` | NetLogo example input files, copied verbatim for the import tests |
+| `go/internal/check` | checks of the model state that the tests run every day |
 | `go/ui` | window of `--ui` |
 | `tools/netlogo2gobees` | converter of NetLogo input files into run files |
 | `netlogo` | the annotated NetLogo model and its input files |
