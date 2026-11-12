@@ -91,13 +91,21 @@ func flowNode(v any) (*yaml.Node, error) {
 	return n, nil
 }
 
-// ReadConfig reads a run file. An unknown key, a second document and a wrong section variations are errors.
+// ReadConfig reads a run file. An unknown key, a second document, a wrong section variations and, with sites, the keys
+// landscape or cropRotation are errors.
 func ReadConfig(r io.Reader) (Config, error) {
 	c := Config{}
 	if err := decodeStrict(r, &c); err != nil {
 		return c, err
 	}
-	return c, checkVariations(c.Variations)
+	if err := checkVariations(c.Variations); err != nil {
+		return c, err
+	}
+	if hasSites(c.Variations) && (c.Landscape != "" || len(c.CropRotation) > 0) {
+		return c, fmt.Errorf("landscape and cropRotation come from the site files of %s.sites: remove them from the "+
+			"run file", variationsKey)
+	}
+	return c, nil
 }
 
 // decodeStrict decodes one YAML document into v (a pointer). An unknown key, a second document and a number with a

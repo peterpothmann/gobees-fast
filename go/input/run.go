@@ -3,6 +3,8 @@ package input
 import (
 	"fmt"
 	"regexp"
+	"strconv"
+	"strings"
 )
 
 // Run is the section run of a run file: the seed, the days, the number of repetitions and of threads, and a record of
@@ -23,6 +25,11 @@ type Run struct {
 	// Threads is the number of runs at the same time, 1 or more. It does not change the output. On a cluster: the CPUs
 	// of the job. The flag --threads overrides it.
 	Threads int `yaml:"threads" doc:"runs at the same time, 1 or more. Does not change the output"`
+	// Part is the part of the runs that runs, I/N with 1 <= I <= N (ParsePart): the runs of all combinations are
+	// split into N blocks of consecutive runs, and only the block I runs, with the run numbers and seeds of all runs
+	// (a job of an array on a cluster). No key: all runs. The flag --part overrides it. gobees writes it into the
+	// provenance of a part, so that the provenance repeats the part.
+	Part string `yaml:"part,omitempty"`
 
 	// Started is the start time of the run (RFC 3339).
 	Started string `yaml:"started,omitempty"`
@@ -36,6 +43,9 @@ type Run struct {
 	Output string `yaml:"output,omitempty"`
 	// Landscapes are the copies of the landscape files and their tables next to the provenance.
 	Landscapes []LandscapeCopy `yaml:"landscapes,omitempty"`
+	// Sites are the sites of the variation sites with the SHA-256 of their landscape files. The provenance does not
+	// copy them: its key sites lists the site files, relative to its folder.
+	Sites []SiteRecord `yaml:"sites,omitempty"`
 }
 
 // Version is the build of gobees, from runtime/debug.ReadBuildInfo. The keys of the version control system are
@@ -57,6 +67,19 @@ type LandscapeCopy struct {
 	SHA256 string `yaml:"sha256"` // SHA-256 of the source file, hexadecimal
 }
 
+// SiteRecord is a site of a run with the SHA-256 of its landscape files.
+type SiteRecord struct {
+	Site       string         `yaml:"site"`       // name of the site, the value of the column site
+	File       string         `yaml:"file"`       // the site file, as in the key sites of the provenance
+	Landscapes []LandscapeSum `yaml:"landscapes"` // the landscape files of the site: the start, then the crop rotation
+}
+
+// LandscapeSum is a landscape file of a run that the provenance does not copy, with its SHA-256.
+type LandscapeSum struct {
+	Source string `yaml:"source"` // name of the landscape file in the run file of the run (relative to its folder)
+	SHA256 string `yaml:"sha256"` // SHA-256 of the file at the start of the run, hexadecimal
+}
+
 // checkRun checks the section run of a run file: it must be there, with seed, repetitions and threads of 1 or more.
 // A missing key reads as 0 and fails the same way.
 func checkRun(r *Run) error {
@@ -74,7 +97,23 @@ func checkRun(r *Run) error {
 	if r.Days != nil && *r.Days < 0 {
 		return fmt.Errorf("run.days is %d, want 0 (no limit) or more", *r.Days)
 	}
+	if r.Part != "" {
+		if _, _, err := ParsePart(r.Part); err != nil {
+			return fmt.Errorf("run.part: %w", err)
+		}
+	}
 	return nil
+}
+
+// ParsePart reads a part of the runs (Run.Part): I/N with whole numbers 1 <= I <= N, e.g. 3/50.
+func ParsePart(s string) (i, n int, err error) {
+	a, b, ok := strings.Cut(s, "/")
+	i, errI := strconv.Atoi(strings.TrimSpace(a))
+	n, errN := strconv.Atoi(strings.TrimSpace(b))
+	if !ok || errI != nil || errN != nil || i < 1 || i > n {
+		return 0, 0, fmt.Errorf("%q: want I/N with whole numbers 1 <= I <= N, e.g. 3/50", s)
+	}
+	return i, n, nil
 }
 
 // validName matches a valid key name: letters, digits, - and _, at least one.

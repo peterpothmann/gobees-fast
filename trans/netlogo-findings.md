@@ -501,6 +501,18 @@ Source: `netlogo/__BEE-STEWARD_RC_ColourVersionMB.nlogo`. Codes in square bracke
 - **Implemented:** `createBadgers` in `sys/setup_badgers.go`: all badgers are created at (0, 0), then placed in random order, the candidates are recomputed with all living badgers. Test: `TestCreateBadgersOriginBlocks` (Scrub patch 140 m from the corner and two far ones, 2 badgers: the near patch is occupied in about 1/3 of 3000 runs, without the blocking it would be 2/3).
 - **gobees-fast:** fixed. The candidates are recomputed with the badgers placed so far, the badgers still at the origin block nothing. Same placement as before for the example farm (the nearest Scrub patch lies 1495 m from the origin). Test: `TestCreateBadgersNearOrigin` (the near patch is occupied in about 2/3 of 3000 runs).
 
+<a id="finding-50"></a>
+
+### 50. The crop rotation changes the landscape on the last day of the year and starts with its second file
+
+- **Code:** `[MORN-09]`, `[CROP-01]`
+- **Finding:** `UpdateMorning_Proc` calls `CropRotationProc` in the morning of `Day = 365`, the last day of each year. `CropRotationProc` takes the item `ceiling (ticks / 365) mod length CropRotationList`: on tick 365 the item 1, on tick 730 the item 2, and so on, the item 0 only after one full cycle. The first year runs on the foodsources file of `MyMap` (gobees-fast: `landscape`), not on an item of the list. With `[a, b, c]` the landscapes are: year 1 days 1 to 364 the start, from day 365 of year 1 `b`, from day 365 of year 2 `c`, from day 365 of year 3 `a`. Two consequences: (1) the last day of each year already has the landscape of the next year; (2) the cycle is right only if the start is the first item of the list. With a start `x` other than `a`, the run has `x, b, c, a, b, c, ...`: `x` never comes back and `a` comes only in year 4.
+- **Affects:** only runs with a crop rotation (`CropRotationListAsString` with 2 files or more, empty in `_SYSTEM_Parameters.csv` and `_SYSTEM_Example_Farm_Parameters.csv`). (1) changes little with the species of `_SYSTEM_BumbleSpecies_UK_01.csv`: all colonies die on `seasonStop` = day 305, so no bee forages on day 365, but the nest sites of the species are computed anew on day 365 ([CROP-03]). (2) changes the landscapes of whole years if the start is not the first item. The scenario `step7_crop` and the example of the sites in docs/usage.md start with the first item.
+- **Consequence for gobees:** translate the day and the item number as they are. docs/usage.md describes the rule at `cropRotation`.
+- **Second Check**:
+- **Implemented:** `cropRotation.Update` and `cropRotation.rotate` in `sys/morning_crop_rotation.go` (the worked example in the comment: 2 files, ticks 365 item 1, ticks 730 item 0). Test: `TestCropRotation`.
+- **gobees-fast:** open. Candidate fix (class C, not active in the default run): change the landscape on day 1 of the new year, and take the start as the item 0 of the rotation.
+
 ## Findings from the model map and from `Go`
 
 <a id="finding-8"></a>

@@ -38,9 +38,11 @@ type provenance struct {
 // columns (the key output.columns of the provenance, always written in full). The landscape files and their tables
 // keep their name in the output folder. A second file of the same name gets _2 in front of the extension (a.yaml,
 // a_2.yaml). The tables are copied byte for byte. A landscape file is copied byte for byte if its tables keep their
-// names, else it is written again with the names of the copies.
+// names, else it is written again with the names of the copies. The landscape files of sites are not copied: sums
+// holds their SHA-256 at the start, by their name in the run file. part is the part of the runs (--part), "" for all
+// runs.
 func newProvenance(f input.Files, config string, p *params.Params, repetitions, threads int, output string,
-	columns []string, started time.Time) provenance {
+	columns []string, started time.Time, sums map[string]string, part string) provenance {
 	c := f.Config
 	if config == "" {
 		config = exampleFarmConfig
@@ -51,6 +53,7 @@ func newProvenance(f input.Files, config string, p *params.Params, repetitions, 
 		Days:        &days,
 		Repetitions: repetitions,
 		Threads:     threads,
+		Part:        part,
 		Started:     started.Format(time.RFC3339),
 		Command:     slices.Clone(os.Args),
 		Version:     buildVersion(),
@@ -58,6 +61,9 @@ func newProvenance(f input.Files, config string, p *params.Params, repetitions, 
 		Output:      output,
 	}
 	c.Output.Columns = slices.Clone(columns)
+	if len(f.Sites) > 0 {
+		run.Sites, c.Variations = siteRecords(f, config, filepath.Dir(output), sums)
+	}
 
 	// The landscape files in the order of the run file, each with its tables. Two of them may have the same name in
 	// different folders, and none may take the name of the daily output or the provenance. Lower case, because the
@@ -79,9 +85,8 @@ func newProvenance(f input.Files, config string, p *params.Params, repetitions, 
 		return name
 	}
 	record := func(name, source string, raw, content []byte) {
-		sum := sha256.Sum256(raw)
 		run.Landscapes = append(run.Landscapes, input.LandscapeCopy{File: name, Source: source,
-			SHA256: hex.EncodeToString(sum[:])})
+			SHA256: sha256Hex(raw)})
 		prov.Files[name] = content
 	}
 	for _, source := range sources {
@@ -130,6 +135,64 @@ func newProvenance(f input.Files, config string, p *params.Params, repetitions, 
 	}
 	prov.Config = c
 	return prov
+}
+
+// siteRecords returns the record of the sites of f (read from the run file config) and the variations of the
+// provenance in the folder dir. The patterns of the sites become the site files they matched, relative to dir (or
+// absolute without a relative path, e.g. on another drive), so that the provenance runs the same sites also when the
+// folder of the sites gets more files. The provenance does not copy the sites: it needs them in their place.
+func siteRecords(f input.Files, config, dir string, sums map[string]string) ([]input.SiteRecord, []input.Variation) {
+	base := filepath.Dir(config)
+	files := make([]string, len(f.Sites))
+	records := make([]input.SiteRecord, len(f.Sites))
+	for i, s := range f.Sites {
+		files[i] = relativeTo(dir, base, s.File)
+		records[i] = input.SiteRecord{Site: s.Name, File: files[i]}
+		// the files read for the site: the start and, with a crop rotation of 2 files or more, the rotation
+		names := []string{s.Landscape}
+		if len(s.CropRotation) > 1 {
+			names = append(names, s.CropRotation...)
+		}
+		seen := map[string]bool{}
+		for _, n := range names {
+			if !seen[n] {
+				seen[n] = true
+				records[i].Landscapes = append(records[i].Landscapes, input.LandscapeSum{Source: n, SHA256: sums[n]})
+			}
+		}
+	}
+	vs := slices.Clone(f.Config.Variations)
+	for i := range vs {
+		if len(vs[i].Sites) > 0 {
+			vs[i].Sites = files
+		}
+	}
+	return records, vs
+}
+
+// relativeTo returns the file name, relative to the folder base, as a path relative to the folder dir with / as
+// separator, or absolute if there is none.
+func relativeTo(dir, base, name string) string {
+	abs := name
+	if !filepath.IsAbs(abs) {
+		abs = filepath.Join(base, name)
+	}
+	abs, err := filepath.Abs(abs)
+	if err != nil {
+		return filepath.ToSlash(name)
+	}
+	if d, err := filepath.Abs(dir); err == nil {
+		if r, err := filepath.Rel(d, abs); err == nil {
+			return filepath.ToSlash(r)
+		}
+	}
+	return filepath.ToSlash(abs)
+}
+
+// sha256Hex returns the SHA-256 of data, hexadecimal.
+func sha256Hex(data []byte) string {
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:])
 }
 
 // write writes the provenance (provenanceFile) and the copies of the landscape files into the folder dir. It creates a
