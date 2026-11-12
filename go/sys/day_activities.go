@@ -45,10 +45,13 @@ type activities struct {
 	colonyMap    *ecs.Map4[comp.Colony, comp.ColonyStores, comp.ColonyStimuli, comp.ColonyCounts]
 	speciesMap   *speciesTable
 
-	// broodOf holds the brood (eggs, larvae and pupae) of each colony for incubateBrood. Built at the start of the
+	// broodOf holds the brood (eggs, larvae and pupae) of each colony for giveHeat. Built at the start of the
 	// loop. During the day brood neither develops nor dies, and new eggs are added when they are laid.
 	// NetLogo: bees with [ colonyID = x and (stage = "egg" or stage = "larva" or stage = "pupa") ].
 	broodOf map[ecs.Entity][]ecs.Entity
+	// heatOf holds the heat [kJ] each brood agent of a colony has got today, the sum of heatPerBrood of all
+	// incubations of the colony (incubateBrood). giveHeat adds it to the brood at the end of the day loop.
+	heatOf map[ecs.Entity]float64
 }
 
 func (s *activities) Initialize(w *ecs.World) {
@@ -69,10 +72,12 @@ func (s *activities) Initialize(w *ecs.World) {
 	s.colonyMap = ecs.NewMap4[comp.Colony, comp.ColonyStores, comp.ColonyStimuli, comp.ColonyCounts](w)
 	s.speciesMap = newSpeciesTable(w)
 	s.broodOf = map[ecs.Entity][]ecs.Entity{}
+	s.heatOf = map[ecs.Entity]float64{}
 }
 
 func (s *activities) Update(w *ecs.World) {
 	s.broodOf = beesByColony(s.broodOf, s.beeFilter, func(b *comp.Bee) bool { return b.Stage != stage.Adult })
+	clear(s.heatOf)
 
 	// the queue holds exactly the active adult workers and queens: wakeUp put all of them into it, no bee becomes
 	// one during the day, and beeDeath.die removes dying bees from it. Its length is therefore NetLogo's count,
@@ -103,6 +108,7 @@ func (s *activities) Update(w *ecs.World) {
 			b.PersonalTime = s.constants.Activities.CallItADay + 1
 		}
 	}
+	s.giveHeat(w)
 }
 
 func (s *activities) Finalize(w *ecs.World) {}
@@ -187,18 +193,28 @@ func (s *activities) act(w *ecs.World, e ecs.Entity) {
 	case activity.Resting:
 		b.PersonalTime = b.PersonalTime + pause
 	case activity.Egglaying:
-		col := b.Colony
-		eggs := s.eggs.layEggs(e)
-		s.broodOf[col] = append(s.broodOf[col], eggs...)
+		s.layEggs(e)
 	case activity.Nursing:
-		s.incubateBrood(w, e)
+		s.incubateBrood(e)
 	case activity.PollenForaging, activity.NectarForaging:
 		s.foraging.forage(w, e)
 	}
 }
 
+// layEggs lets the queen e lay a batch of eggs and adds them to the brood of her colony (broodOf).
+func (s *activities) layEggs(e ecs.Entity) {
+	col := s.beeMap.Get(e).Colony
+	eggs := s.eggs.layEggs(e)
+	s.broodOf[col] = append(s.broodOf[col], eggs...)
+	// the new eggs get only the heat of the incubations after their laying: giveHeat adds the whole sum of the
+	// day, so they start with minus the sum so far. 0 - sum, not -sum: without heat so far an egg starts with +0.
+	for _, x := range eggs {
+		s.devMap.Get(x).IncubationReceived = 0 - s.heatOf[col]
+	}
+}
+
 // incubateBrood lets the nurse e heat the brood of her colony for 48 min.
-func (s *activities) incubateBrood(w *ecs.World, e ecs.Entity) {
+func (s *activities) incubateBrood(e ecs.Entity) {
 	heatingPeriod := s.constants.Activities.NursingTime         // [s]
 	incubationEnergy := s.constants.Activities.IncubationEnergy // [kJ/(mg s)]
 	b := s.beeMap.Get(e)
@@ -209,15 +225,30 @@ func (s *activities) incubateBrood(w *ecs.World, e ecs.Entity) {
 	if counts.Eggs+counts.Larvae+counts.Pupae > 0 {
 		heatPerBrood = heatProvided / float64(counts.Eggs+counts.Larvae+counts.Pupae)
 	}
-	// ORDER: irrelevant, each brood agent gets the same heat, no random number. Not shuffled (NetLogo: random order).
-	for _, x := range s.broodOf[b.Colony] {
-		if !w.Alive(x) {
-			continue
-		}
-		dev := s.devMap.Get(x)
-		dev.IncubationReceived = dev.IncubationReceived + heatPerBrood
-	}
+	// every brood agent of the colony gets heatPerBrood, giveHeat adds the sum of the day at the end of the loop.
+	// NetLogo adds it to each brood agent at once (in random order). Nobody reads IncubationReceived during the
+	// day, so only the rounding of the sum differs (docs/changes.md).
+	s.heatOf[b.Colony] = s.heatOf[b.Colony] + heatPerBrood
 	stores.IncubationToday = stores.IncubationToday + heatProvided
 	stores.Energy = stores.Energy - heatProvided
 	b.PersonalTime = b.PersonalTime + heatingPeriod
+}
+
+// giveHeat adds the heat of the day (heatOf) to every living brood agent of its colony. Called at the end of the
+// day loop, before the evening reads IncubationReceived (broodMortality, development).
+func (s *activities) giveHeat(w *ecs.World) {
+	// ORDER: irrelevant, each brood agent gets the heat of its colony, no random number.
+	for col, brood := range s.broodOf {
+		heat := s.heatOf[col]
+		if heat == 0 {
+			continue // no incubation in this colony today, its new eggs started with 0
+		}
+		for _, x := range brood {
+			if !w.Alive(x) {
+				continue
+			}
+			dev := s.devMap.Get(x)
+			dev.IncubationReceived = dev.IncubationReceived + heat
+		}
+	}
 }
