@@ -49,15 +49,19 @@ jobs:
       (github.event.action != 'edited' || github.event.changes.base))
     runs-on: ubuntu-latest
     permissions:
-      contents: write # to commit the report to main
+      contents: read # the report is pushed to main with the deploy key, see the checkout step
       pull-requests: write # to comment in the pull request
     steps:
       # In a pull request the branch, on main its newest state, so that the report is committed on top of it. The
       # full history: the base commit is checked out as a worktree.
+      # On main with the deploy key: the ruleset of main requires a pull request, and in a personal repository only a
+      # deploy key can bypass it, not the GITHUB_TOKEN. The key is the secret DEPLOY_KEY, its public part is the deploy
+      # key "CI report push to main" with write access. In a pull request no key, the GITHUB_TOKEN reads the branch.
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref || github.ref }}
           fetch-depth: 0
+          ssh-key: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.DEPLOY_KEY || '' }}
 
       - uses: actions/setup-go@v5
         with:
