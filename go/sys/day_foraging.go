@@ -248,19 +248,24 @@ func (f *forager) handlingTime(e ecs.Entity, myPatch ecs.Entity, pollenPatch boo
 		// The coefficients of the fitted equations stay in the code.
 		// float64(...): no fused multiply-add, so the result equals NetLogo (Java)
 		accessTime := 0.3 + float64(0.04*corollaDepth) // Ta [s]
-		numerator := log10(nectarVolume + 1)
-		// the same for every flower the bee visits: computed once per adult bee (comp.Forager.IngestionFactor)
-		if fo.IngestionFactor == 0 {
-			fo.IngestionFactor = 0.3 * math.Pow(beeWeight, 0.3333) * glossaLength
+		// the same at every visit of this bee to this foodsource: computed again only for another foodsource
+		// (comp.Forager.IngestionTime)
+		if fo.IngestionSource != myPatch {
+			numerator := log10(nectarVolume + 1)
+			// the same for every flower the bee visits: computed once per adult bee (comp.Forager.IngestionFactor)
+			if fo.IngestionFactor == 0 {
+				fo.IngestionFactor = 0.3 * math.Pow(beeWeight, 0.3333) * glossaLength
+			}
+			num := fo.IngestionFactor
+			base := 1.41 - corollaDepth/glossaLength
+			if base < 0.001 {
+				base = 0.001
+			}
+			den := powMinus04(base) - float64(0.3*accessTime)
+			denominator := log10(num/den + 1)
+			fo.IngestionSource, fo.IngestionTime = myPatch, numerator/denominator
 		}
-		num := fo.IngestionFactor
-		base := 1.41 - corollaDepth/glossaLength
-		if base < 0.001 {
-			base = 0.001
-		}
-		den := powMinus04(base) - float64(0.3*accessTime)
-		denominator := log10(num/den + 1)
-		ingestionTime := numerator / denominator // Ti [s]
+		ingestionTime := fo.IngestionTime // Ti [s]
 
 		handlingTimePerFlower := maxHandlingTime // [s]
 		if fillingLevel > 0 {

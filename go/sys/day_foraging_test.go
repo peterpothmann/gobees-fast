@@ -129,6 +129,30 @@ func TestHandlingTime(t *testing.T) {
 	}
 }
 
+// TestHandlingTimeIngestionCache checks the cache of the ingestion time (comp.Forager.IngestionTime): a bee that
+// comes back to a foodsource, at another filling level or after another foodsource, gets bit for bit the handling
+// time of a new bee without a cache.
+func TestHandlingTimeIngestionCache(t *testing.T) {
+	aw, col, f := newForagingWorld(t, 1)
+	bee := aw.worker(col, 1)
+	willow := aw.flowerPatch(5, 0, 10, willowherb())[0]
+	deep := aw.flowerPatch(50, 0, 10, alsike())[0]
+	fsMap := ecs.NewMap1[comp.Foodsource](aw.w)
+	for i, v := range []struct {
+		p    ecs.Entity
+		fill float64
+	}{{willow, 1}, {willow, 0.5}, {deep, 1}, {willow, 0.5}, {willow, 0.25}, {deep, 0.5}} {
+		aw.state(v.p).Nectar = fsMap.Get(v.p).NectarMax * v.fill
+		got := f.handlingTime(bee, v.p, false)
+		if want := f.handlingTime(aw.worker(col, 1), v.p, false); got != want {
+			t.Errorf("visit %d: %v s, want %v (new bee)", i+1, got, want)
+		}
+	}
+	if _, _, _, fo, _ := aw.bee(bee); fo.IngestionSource != deep {
+		t.Errorf("IngestionSource %v, want the last foodsource %v", fo.IngestionSource, deep)
+	}
+}
+
 func TestPowMinus04(t *testing.T) {
 	// bit for bit equal to math.Pow: the base of handlingTime lies in [0.001, 1.41], checked far beyond that
 	rng := rand.New(rand.NewPCG(1, 2))
