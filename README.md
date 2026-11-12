@@ -117,6 +117,15 @@ The CI checks every pull request. It runs each scenario 100 times and compares t
 
 One comment in the pull request shows the results. Details: [go/compare/README.md](go/compare/README.md), [go/validation/README.md](go/validation/README.md). In pull requests with the label `benchmark`, the CI also times NetLogo, gobees and gobees-fast ([go/benchmark/README.md](go/benchmark/README.md)).
 
+### Profile-guided optimisation
+
+`go build` in `go/` uses the CPU profile [go/default.pgo](go/default.pgo) to optimise the hot code paths ([profile-guided optimisation](https://go.dev/doc/pgo)). It changes no result. After larger changes of the model, renew the profile (example farm, 20 runs of 730 days):
+
+```shell
+cd go
+GOBEES_PGO=$PWD/default.pgo go test -run '^TestWritePGOProfile$' -count=1 .
+```
+
 ## Repository layout
 
 | Folder | Content |
