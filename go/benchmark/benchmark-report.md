@@ -4,7 +4,7 @@ The example farm with 6 seeds, 365 days each, 2 runs at the same time in all mod
 
 | | NetLogo median (min-max) | gobees median (min-max) | gobees-fast median (min-max) | NetLogo / gobees-fast | gobees / gobees-fast |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Whole run | 14.0 s (12.4 s-18.4 s) | 185 ms (144 ms-226 ms) | 61 ms (49 ms-64 ms) | 228 | 3.02 |
+| Whole run | 9.4 s (8.2 s-13.8 s) | 160 ms (122 ms-178 ms) | 51 ms (43 ms-60 ms) | 185 | 3.16 |
 
 ## Runs
 
@@ -12,18 +12,18 @@ The runs of NetLogo and of the Go versions with the same seed are not the same r
 
 | Run | Seed | NetLogo | NetLogo colonies founded | gobees | gobees colonies founded | gobees-fast | gobees-fast colonies founded |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1 | 1 | 18.4 s | 154 | 165 ms | 132 | 64 ms | 142 |
-| 2 | 2 | 14.7 s | 150 | 144 ms | 123 | 49 ms | 157 |
-| 3 | 3 | 13.7 s | 124 | 203 ms | 140 | 60 ms | 149 |
-| 4 | 4 | 13.2 s | 127 | 180 ms | 138 | 64 ms | 153 |
-| 5 | 5 | 14.3 s | 144 | 190 ms | 120 | 56 ms | 145 |
-| 6 | 6 | 12.4 s | 130 | 226 ms | 141 | 63 ms | 125 |
+| 1 | 1 | 13.8 s | 154 | 142 ms | 132 | 60 ms | 142 |
+| 2 | 2 | 11.0 s | 150 | 122 ms | 123 | 48 ms | 157 |
+| 3 | 3 | 9.5 s | 124 | 168 ms | 140 | 53 ms | 149 |
+| 4 | 4 | 9.0 s | 127 | 174 ms | 138 | 57 ms | 153 |
+| 5 | 5 | 9.2 s | 144 | 153 ms | 120 | 43 ms | 145 |
+| 6 | 6 | 8.2 s | 130 | 178 ms | 141 | 48 ms | 125 |
 
 ## Machine
 
-- CPU: Intel(R) Xeon(R) 6975P-C
+- CPU: AMD EPYC 9V45 96-Core Processor
 - Logical cores: 4
 - OS: linux/amd64
 - Go: go1.26.5
 - Java: openjdk version "21.0.13" 2026-10-20 LTS
-- Commit: a293765
+- Commit: bd36658
